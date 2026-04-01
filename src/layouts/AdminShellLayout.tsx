@@ -42,7 +42,7 @@ export function AdminShellLayout() {
         </nav>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <main className="flex-1 overflow-auto p-6 md:p-8">
+        <main className="w-full min-w-0 flex-1 overflow-auto px-4 py-6 md:px-6 md:py-8 lg:px-8">
           <Outlet />
         </main>
       </div>
