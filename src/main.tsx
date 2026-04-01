@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { HashRouter } from 'react-router-dom';
+import { RouterProvider } from 'react-router-dom';
 import shellui from '@shellui/sdk';
 import { LangProvider, getLangFromSettings } from '@/contexts/LangContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
@@ -8,7 +8,7 @@ import { getAppearanceFromSettings, applyThemeToDocument } from '@/lib/theme';
 import { isEmbeddedInShell } from '@/lib/embed';
 import { StandaloneNotice } from '@/components/StandaloneNotice';
 import i18n, { i18nInit } from '@/i18n';
-import App from '@/App';
+import { router } from '@/router';
 import '@/index.css';
 
 async function bootstrap() {
@@ -33,9 +33,7 @@ async function bootstrap() {
     <StrictMode>
       <ThemeProvider initialAppearance={initialTheme}>
         <LangProvider>
-          <HashRouter>
-            <App />
-          </HashRouter>
+          <RouterProvider router={router} />
         </LangProvider>
       </ThemeProvider>
     </StrictMode>,
