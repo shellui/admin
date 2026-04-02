@@ -21,8 +21,8 @@ importers:
         specifier: ^1.1.1
         version: 1.2.4(@types/react@18.3.28)(react@18.3.1)
       '@shellui/sdk':
-        specifier: ^0.2.0
-        version: 0.2.0
+        specifier: file:../shellui/packages/sdk
+        version: file:../shellui/packages/sdk
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -602,8 +602,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@shellui/sdk@0.2.0':
-    resolution: {integrity: sha512-Tliw9I4vYtvf/G+TM9R0fgyS7EW8St7FI/8xU8RyGOfgrNvfwED1BG7E6/tQsrsR+RuiaoxNpae9vGVptBM3XA==}
+  '@shellui/sdk@file:../shellui/packages/sdk':
+    resolution: {directory: ../shellui/packages/sdk, type: directory}
 
   '@testing-library/dom@10.4.1':
     resolution: {integrity: sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg==}
@@ -1938,7 +1938,7 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.60.1':
     optional: true
 
-  '@shellui/sdk@0.2.0':
+  '@shellui/sdk@file:../shellui/packages/sdk':
     dependencies:
       roarr: 7.21.4
 

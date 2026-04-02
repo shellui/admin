@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "serve:dist": "node tools/serve/serve.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:sdk": "pnpm -C ../shellui run build:sdk"
   },
   "author": "ShellUI",
   "license": "MIT",
@@ -23,7 +24,7 @@
     "@radix-ui/react-label": "^2.1.1",
     "@radix-ui/react-separator": "^1.1.1",
     "@radix-ui/react-slot": "^1.1.1",
-    "@shellui/sdk": "^0.2.0",
+    "@shellui/sdk": "file:../shellui/packages/sdk",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "i18next": "^24.2.0",
