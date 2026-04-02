@@ -1,10 +1,13 @@
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LucideIcon } from 'lucide-react';
-import { Activity, Cpu, Database, ShieldCheck } from 'lucide-react';
+import { Link2, Loader2, LogIn, Shield, UserCheck, Users } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Text } from '@/components/ui/text';
+import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
+import { fetchAuthMetricsSnapshot, type AuthMetricsSnapshot } from '@/lib/authMetricsApi';
 
 function StatBlock({
   label,
@@ -33,40 +36,80 @@ function StatBlock({
   );
 }
 
-/** Placeholder bars suggesting a time-series or histogram panel */
-function ChartPlaceholder({ caption }: { caption: string }) {
-  const heights = [40, 65, 35, 80, 55, 90, 45, 70, 50, 85, 60, 75];
+function formatInt(n: number): string {
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.round(n));
+}
+
+function LoginMixPanel({ snapshot }: { snapshot: AuthMetricsSnapshot }) {
+  const { t } = useTranslation();
+  const rows = snapshot.loginsByProvider;
+  const max = rows.length ? Math.max(...rows.map((r) => r.count), 1) : 1;
+
+  if (rows.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed border-border bg-muted/15 p-6">
+        <Text className="font-mono text-xs text-muted-foreground">{t('dashboardLoginsEmpty')}</Text>
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-lg border border-dashed border-border bg-muted/20 p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <Text asChild className="font-mono text-xs">
-          <span>{caption}</span>
-        </Text>
-        <Badge variant="muted" className="font-mono text-[10px]">
-          mock
-        </Badge>
-      </div>
-      <div className="flex h-36 items-end gap-1">
-        {heights.map((h, i) => (
-          <div
-            key={i}
-            className="flex-1 rounded-t bg-primary/20 ring-1 ring-inset ring-primary/30"
-            style={{ height: `${h}%` }}
-            title={`t+${i}m`}
-          />
-        ))}
-      </div>
-      <div className="mt-2 flex justify-between font-mono text-[10px] text-muted-foreground">
-        <span>t0</span>
-        <span>t+6m</span>
-        <span>t+12m</span>
-      </div>
+    <div className="space-y-3">
+      {rows.map((r) => (
+        <div key={r.provider} className="space-y-1">
+          <div className="flex justify-between font-mono text-[11px] text-muted-foreground">
+            <span className="uppercase tracking-wider">{r.provider}</span>
+            <span className="tabular-nums">{formatInt(r.count)}</span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded bg-muted">
+            <div
+              className="h-full rounded bg-primary/60"
+              style={{ width: `${Math.min(100, (r.count / max) * 100)}%` }}
+            />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
 
 export function DashboardPage() {
   const { t } = useTranslation();
+  const accessToken = useShelluiAccessToken();
+  const [snapshot, setSnapshot] = useState<AuthMetricsSnapshot | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!accessToken) {
+      setLoading(false);
+      setSnapshot(null);
+      setError(null);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      setSnapshot(await fetchAuthMetricsSnapshot(accessToken));
+    } catch (e) {
+      setSnapshot(null);
+      const msg = e instanceof Error ? e.message : t('dashboardError');
+      if (msg === 'Forbidden' || /403/.test(msg)) {
+        setError(t('dashboardForbidden'));
+      } else {
+        setError(msg);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [accessToken, t]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const inactive =
+    snapshot != null ? Math.max(0, Math.round(snapshot.usersTotal - snapshot.usersActive)) : 0;
 
   return (
     <div className="w-full space-y-8">
@@ -79,81 +122,103 @@ export function DashboardPage() {
             {t('dashboardEnvBadge')}
           </Badge>
         </div>
-        <Text className="max-w-3xl font-mono">{t('dashboardDescription')}</Text>
+        <Text className="max-w-3xl font-mono text-sm">{t('dashboardDescription')}</Text>
       </header>
 
-      <section
-        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
-        aria-label={t('dashboardKpiSection')}
-      >
-        <StatBlock
-          label={t('dashboardStatRequests')}
-          value="12.4k"
-          hint={t('dashboardStatRequestsHint')}
-          icon={Activity}
-        />
-        <StatBlock
-          label={t('dashboardStatLatency')}
-          value="142ms"
-          hint={t('dashboardStatLatencyHint')}
-          icon={Cpu}
-        />
-        <StatBlock
-          label={t('dashboardStatStorage')}
-          value="2.1 GB"
-          hint={t('dashboardStatStorageHint')}
-          icon={Database}
-        />
-        <StatBlock
-          label={t('dashboardStatAuth')}
-          value="99.2%"
-          hint={t('dashboardStatAuthHint')}
-          icon={ShieldCheck}
-        />
-      </section>
+      {!accessToken && (
+        <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
+      )}
 
-      <div className="grid gap-6 lg:grid-cols-5">
-        <Card className="border-border/80 lg:col-span-3">
-          <CardHeader>
-            <CardTitle className="font-heading text-lg">{t('dashboardChartTitle')}</CardTitle>
-            <CardDescription className="font-mono text-xs">
-              {t('dashboardChartDescription')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartPlaceholder caption={t('dashboardChartCaption')} />
-          </CardContent>
-        </Card>
+      {accessToken && loading && (
+        <div className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" aria-hidden />
+          {t('dashboardLoading')}
+        </div>
+      )}
 
-        <Card className="border-border/80 lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="font-heading text-lg">{t('dashboardFeedTitle')}</CardTitle>
-            <CardDescription className="font-mono text-xs">
-              {t('dashboardFeedDescription')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-0">
-            <ul className="divide-y divide-border font-mono text-xs">
-              {[t('dashboardFeedItem1'), t('dashboardFeedItem2'), t('dashboardFeedItem3')].map(
-                (line, i) => (
-                  <li key={i} className="flex gap-2 py-2.5">
-                    <span className="shrink-0 text-[10px] text-primary/70">
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                    <Text asChild className="min-w-0 break-all font-mono text-xs">
-                      <span>{line}</span>
-                    </Text>
-                  </li>
-                ),
-              )}
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
+      {accessToken && error && (
+        <Text className="font-mono text-sm text-destructive">{error}</Text>
+      )}
+
+      {accessToken && !loading && !error && snapshot && (
+        <>
+          <section
+            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+            aria-label={t('dashboardKpiSection')}
+          >
+            <StatBlock
+              label={t('dashboardStatUsersTotal')}
+              value={formatInt(snapshot.usersTotal)}
+              hint={t('dashboardStatUsersTotalHint')}
+              icon={Users}
+            />
+            <StatBlock
+              label={t('dashboardStatUsersActive')}
+              value={formatInt(snapshot.usersActive)}
+              hint={t('dashboardStatUsersActiveHint', { inactive: formatInt(inactive) })}
+              icon={UserCheck}
+            />
+            <StatBlock
+              label={t('dashboardStatUsersStaff')}
+              value={formatInt(snapshot.usersStaff)}
+              hint={t('dashboardStatUsersStaffHint')}
+              icon={Shield}
+            />
+            <StatBlock
+              label={t('dashboardStatSocialLinks')}
+              value={formatInt(snapshot.socialAccountsTotal)}
+              hint={t('dashboardStatSocialLinksHint')}
+              icon={Link2}
+            />
+          </section>
+
+          <div className="grid gap-6 lg:grid-cols-5">
+            <Card className="border-border/80 lg:col-span-3">
+              <CardHeader>
+                <CardTitle className="font-heading flex items-center gap-2 text-lg">
+                  <LogIn className="size-4 text-muted-foreground" aria-hidden />
+                  {t('dashboardLoginsTitle')}
+                </CardTitle>
+                <CardDescription className="font-mono text-xs">
+                  {t('dashboardLoginsDescription')}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <Text className="font-mono text-xs text-muted-foreground">
+                    {t('dashboardLoginsTotalLabel')}
+                  </Text>
+                  <span className="font-mono text-xl font-semibold tabular-nums">
+                    {formatInt(snapshot.loginsSinceProcessStart)}
+                  </span>
+                </div>
+                <LoginMixPanel snapshot={snapshot} />
+                <Text className="font-mono text-[10px] text-muted-foreground">
+                  {t('dashboardLoginsProcessNote')}
+                </Text>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/80 lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="font-heading text-lg">{t('dashboardExpositionTitle')}</CardTitle>
+                <CardDescription className="font-mono text-xs">
+                  {t('dashboardExpositionDescription')}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <pre className="max-h-64 overflow-auto rounded-md border border-border bg-muted/30 p-3 font-mono text-[10px] leading-relaxed text-muted-foreground">
+                  {snapshot.rawText.trim()}
+                </pre>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
 
       <Separator className="bg-border" />
 
-      <Text className="font-mono text-xs">{t('dashboardUiHint')}</Text>
+      <Text className="font-mono text-xs text-muted-foreground">{t('dashboardUiHint')}</Text>
     </div>
   );
 }
