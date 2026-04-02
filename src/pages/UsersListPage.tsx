@@ -137,34 +137,39 @@ export function UsersListPage() {
             <p className="text-sm text-muted-foreground">{t('usersNoSession')}</p>
           ) : (
             <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end"
-              >
+              <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
                 <FormField
                   control={form.control}
                   name="query"
                   render={({ field }) => (
-                    <FormItem className="min-w-[min(100%,280px)] flex-1">
+                    <FormItem className="w-full">
                       <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         {t('usersFieldQuery')}
                       </FormLabel>
-                      <FormControl>
-                        <Input
-                          className="w-full font-mono text-sm"
-                          placeholder={t('usersFieldQueryPlaceholder')}
-                          autoComplete="off"
-                          {...field}
-                        />
-                      </FormControl>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <FormControl className="w-full flex-1 sm:min-w-0">
+                          <Input
+                            className="w-full font-mono text-sm"
+                            placeholder={t('usersFieldQueryPlaceholder')}
+                            autoComplete="off"
+                            {...field}
+                          />
+                        </FormControl>
+                        <Button
+                          type="submit"
+                          variant="secondary"
+                          size="sm"
+                          disabled={loading}
+                          className="w-full shrink-0 sm:w-auto"
+                        >
+                          {t('usersFormSearch')}
+                        </Button>
+                      </div>
                       <FormDescription className="text-xs">{t('usersFieldQueryHint')}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <Button type="submit" variant="secondary" size="sm" disabled={loading} className="shrink-0">
-                  {t('usersFormSearch')}
-                </Button>
               </form>
             </Form>
           )}
