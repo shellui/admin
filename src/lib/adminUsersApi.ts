@@ -1,5 +1,10 @@
 import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
 
+export type AdminUserGroupRef = {
+  id: number;
+  name: string;
+};
+
 export type AdminUserRow = {
   id: number;
   email: string;
@@ -8,6 +13,7 @@ export type AdminUserRow = {
   last_name: string;
   is_staff: boolean;
   is_active: boolean;
+  groups: AdminUserGroupRef[];
   user_metadata: Record<string, unknown>;
 };
 
@@ -74,6 +80,7 @@ export type AdminUserUpdatePayload = {
   last_name?: string;
   is_staff?: boolean;
   is_active?: boolean;
+  group_ids?: number[];
   data?: Record<string, unknown>;
 };
 

@@ -1,6 +1,7 @@
 import { createHashRouter, Navigate } from 'react-router-dom';
 import { AdminShellLayout } from '@/layouts/AdminShellLayout';
 import { DashboardPage } from '@/pages/DashboardPage';
+import { GroupsListPage } from '@/pages/GroupsListPage';
 import { UserEditPage } from '@/pages/UserEditPage';
 import { UsersListPage } from '@/pages/UsersListPage';
 
@@ -14,6 +15,7 @@ export const router = createHashRouter([
     element: <AdminShellLayout />,
     children: [
       { index: true, element: <DashboardPage /> },
+      { path: 'groups', element: <GroupsListPage /> },
       { path: 'users/:userId', element: <UserEditPage /> },
       { path: 'users', element: <UsersListPage /> },
       { path: '*', element: <Navigate to="/" replace /> },

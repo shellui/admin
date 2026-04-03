@@ -20,6 +20,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
+import { fetchAdminGroups, type AdminGroupRow } from '@/lib/adminGroupsApi';
 import { fetchAdminUser, updateAdminUser } from '@/lib/adminUsersApi';
 
 const editSchema = z.object({
@@ -42,6 +43,8 @@ export function UserEditPage() {
   const [loadingUser, setLoadingUser] = useState(true);
   const [emailReadonly, setEmailReadonly] = useState('');
   const [usernameReadonly, setUsernameReadonly] = useState('');
+  const [allGroups, setAllGroups] = useState<AdminGroupRow[]>([]);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
 
   const form = useForm<EditValues>({
     resolver: zodResolver(editSchema),
@@ -64,11 +67,13 @@ export function UserEditPage() {
     let cancelled = false;
     setLoadingUser(true);
     setLoadError(null);
-    void fetchAdminUser(accessToken, idNum)
-      .then((user) => {
+    void Promise.all([fetchAdminUser(accessToken, idNum), fetchAdminGroups(accessToken)])
+      .then(([user, groups]) => {
         if (cancelled) return;
         setEmailReadonly(user.email);
         setUsernameReadonly(user.username);
+        setAllGroups(groups);
+        setSelectedGroupIds((user.groups ?? []).map((g) => g.id));
         resetForm({
           first_name: user.first_name ?? '',
           last_name: user.last_name ?? '',
@@ -99,6 +104,7 @@ export function UserEditPage() {
         last_name: values.last_name,
         is_staff: values.is_staff,
         is_active: values.is_active,
+        group_ids: selectedGroupIds,
       });
       shellui.toast({ title: t('userEditSaved'), type: 'success' });
       navigate(-1);
@@ -225,6 +231,37 @@ export function UserEditPage() {
                     </FormItem>
                   )}
                 />
+                <div className="space-y-2 rounded-md border p-3">
+                  <FormLabel>{t('userEditGroups')}</FormLabel>
+                  <FormDescription className="text-xs">{t('userEditGroupsHint')}</FormDescription>
+                  {allGroups.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">{t('userEditGroupsEmpty')}</p>
+                  ) : (
+                    <ul className="mt-2 max-h-48 space-y-2 overflow-auto pr-1">
+                      {allGroups.map((g) => {
+                        const checked = selectedGroupIds.includes(g.id);
+                        return (
+                          <li key={g.id} className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id={`group-${g.id}`}
+                              className="size-4 rounded border"
+                              checked={checked}
+                              onChange={() => {
+                                setSelectedGroupIds((prev) =>
+                                  checked ? prev.filter((id) => id !== g.id) : [...prev, g.id],
+                                );
+                              }}
+                            />
+                            <label htmlFor={`group-${g.id}`} className="cursor-pointer text-sm">
+                              {g.name}
+                            </label>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
                 <div className="flex gap-2 pt-2">
                   <Button type="submit" disabled={form.formState.isSubmitting} className="inline-flex items-center gap-2">
                     {form.formState.isSubmitting ? (

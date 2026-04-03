@@ -219,17 +219,20 @@ export function UsersListPage() {
                 </div>
               ) : null}
               <div className="w-full overflow-x-auto">
-                <Table className="w-full min-w-[640px] table-fixed">
+                <Table className="w-full min-w-[800px] table-fixed">
                   <TableHeader>
                     <TableRow className="bg-muted/30 hover:bg-muted/30">
                       <TableHead className="w-[4.5rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         {t('usersColId')}
                       </TableHead>
-                      <TableHead className="w-[28%] text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <TableHead className="w-[24%] text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         {t('usersColEmail')}
                       </TableHead>
-                      <TableHead className="w-[22%] text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <TableHead className="w-[18%] text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         {t('usersColName')}
+                      </TableHead>
+                      <TableHead className="w-[18%] text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {t('usersColGroups')}
                       </TableHead>
                       <TableHead className="w-[7rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         {t('usersColStaff')}
@@ -256,6 +259,9 @@ export function UsersListPage() {
                               <Skeleton className="h-4 w-full max-w-[10rem]" />
                             </TableCell>
                             <TableCell>
+                              <Skeleton className="h-4 w-full max-w-[8rem]" />
+                            </TableCell>
+                            <TableCell>
                               <Skeleton className="h-4 w-8" />
                             </TableCell>
                             <TableCell>
@@ -267,7 +273,7 @@ export function UsersListPage() {
                       : null}
                     {!loading && data && rows.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="py-12 text-center text-muted-foreground">
+                        <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
                           {t('usersEmpty')}
                         </TableCell>
                       </TableRow>
@@ -280,6 +286,19 @@ export function UsersListPage() {
                         </TableCell>
                         <TableCell className="truncate" title={displayName(row)}>
                           {displayName(row)}
+                        </TableCell>
+                        <TableCell className="align-top">
+                          <div className="flex flex-wrap gap-1">
+                            {(row.groups ?? []).length ? (
+                              (row.groups ?? []).map((g) => (
+                                <Badge key={g.id} variant="outline" className="max-w-[10rem] truncate text-[10px] font-normal" title={g.name}>
+                                  {g.name}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant={row.is_staff ? 'default' : 'outline'} className="text-[10px]">

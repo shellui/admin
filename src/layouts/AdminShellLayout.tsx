@@ -1,10 +1,11 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, Users } from 'lucide-react';
+import { LayoutDashboard, Tags, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { to: '/', key: 'navDashboard' as const, icon: LayoutDashboard },
+  { to: '/groups', key: 'navGroups' as const, icon: Tags },
   { to: '/users', key: 'navUsers' as const, icon: Users },
 ];
 
