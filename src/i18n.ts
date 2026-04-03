@@ -23,6 +23,7 @@ const resources = {
       standaloneNoteUrl:
         'Use the same host and port as shown in your terminal. For production, set adminUrl to your deployed admin origin (for example https://admin.shellui.com/).',
       navDashboard: 'Dashboard',
+      navAuthGroup: 'Authentication',
       navGroups: 'Groups',
       navUsers: 'Users',
       dashboardTitle: 'Operations overview',
@@ -156,6 +157,7 @@ const resources = {
       standaloneNoteUrl:
         'Utilisez le même hôte et port qu’indiqués dans le terminal. En production, définissez adminUrl vers l’URL déployée (par ex. https://admin.shellui.com/).',
       navDashboard: 'Tableau de bord',
+      navAuthGroup: 'Authentification',
       navGroups: 'Groupes',
       navUsers: 'Utilisateurs',
       dashboardTitle: 'Vue opérations',
