@@ -14,7 +14,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
-import { fetchAdminUsers, type AdminUserListResponse } from '@/lib/adminUsersApi';
+import { fetchAdminUsers, type AdminUserListResponse, type AdminUserRow } from '@/lib/adminUsersApi';
 
 /** Page size for directory fetch; use `page` in URL for additional pages (full directory is all pages together). */
 const PAGE_SIZE = 50;
@@ -25,8 +25,18 @@ const filterSchema = z.object({
 
 type FilterValues = z.infer<typeof filterSchema>;
 
+function avatarFromRow(row: AdminUserRow): string | null {
+  const u = row.user_metadata?.avatar_url;
+  return typeof u === 'string' && u.trim() ? u.trim() : null;
+}
+
+function lastSeenFromRow(row: AdminUserRow): string | null {
+  const v = row.user_metadata?.last_seen_at;
+  return typeof v === 'string' && v.trim() ? v.trim() : null;
+}
+
 export function UsersListPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const accessToken = useShelluiAccessToken();
 
@@ -109,6 +119,13 @@ export function UsersListPage() {
     if (typeof meta.full_name === 'string' && meta.full_name.trim()) return meta.full_name;
     const combined = `${row.first_name} ${row.last_name}`.trim();
     return combined || '—';
+  };
+
+  const formatShortDateTime = (iso: string | null) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return new Intl.DateTimeFormat(i18n.language || 'en', { dateStyle: 'short', timeStyle: 'short' }).format(d);
   };
 
   const rows = data?.results ?? [];
@@ -219,28 +236,31 @@ export function UsersListPage() {
                 </div>
               ) : null}
               <div className="w-full overflow-x-auto">
-                <Table className="w-full min-w-[800px] table-fixed">
+                <Table className="w-full min-w-[min(100%,22rem)] table-fixed md:min-w-[44rem] lg:min-w-[56rem] xl:min-w-[72rem]">
                   <TableHeader>
                     <TableRow className="bg-muted/30 hover:bg-muted/30">
-                      <TableHead className="w-[4.5rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <TableHead className="w-[3.5rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         {t('usersColId')}
                       </TableHead>
-                      <TableHead className="w-[24%] text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('usersColEmail')}
+                      <TableHead className="w-[38%] min-w-0 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {t('usersColUser')}
                       </TableHead>
-                      <TableHead className="w-[18%] text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('usersColName')}
-                      </TableHead>
-                      <TableHead className="w-[18%] text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <TableHead className="hidden lg:table-cell w-[18%] text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         {t('usersColGroups')}
                       </TableHead>
-                      <TableHead className="w-[7rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <TableHead className="hidden md:table-cell w-[5rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         {t('usersColStaff')}
                       </TableHead>
-                      <TableHead className="w-[7rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <TableHead className="hidden md:table-cell w-[5rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         {t('usersColActive')}
                       </TableHead>
-                      <TableHead className="w-[5rem] text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <TableHead className="hidden xl:table-cell w-[10%] text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {t('usersColUsername')}
+                      </TableHead>
+                      <TableHead className="hidden xl:table-cell w-[11rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {t('usersColLastSeen')}
+                      </TableHead>
+                      <TableHead className="hidden w-[4.5rem] text-right text-xs font-medium uppercase tracking-wide text-muted-foreground sm:table-cell">
                         {t('usersColActions')}
                       </TableHead>
                     </TableRow>
@@ -250,73 +270,118 @@ export function UsersListPage() {
                       ? Array.from({ length: 6 }).map((_, i) => (
                           <TableRow key={i}>
                             <TableCell>
-                              <Skeleton className="h-4 w-10" />
-                            </TableCell>
-                            <TableCell>
-                              <Skeleton className="h-4 w-full max-w-[14rem]" />
-                            </TableCell>
-                            <TableCell>
-                              <Skeleton className="h-4 w-full max-w-[10rem]" />
-                            </TableCell>
-                            <TableCell>
-                              <Skeleton className="h-4 w-full max-w-[8rem]" />
-                            </TableCell>
-                            <TableCell>
                               <Skeleton className="h-4 w-8" />
                             </TableCell>
                             <TableCell>
+                              <div className="flex gap-2">
+                                <Skeleton className="hidden size-8 shrink-0 rounded-full sm:block" />
+                                <div className="min-w-0 flex-1 space-y-1">
+                                  <Skeleton className="h-4 w-full max-w-[12rem]" />
+                                  <Skeleton className="h-3 w-full max-w-[14rem]" />
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell">
+                              <Skeleton className="h-4 w-24" />
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
                               <Skeleton className="h-4 w-8" />
                             </TableCell>
-                            <TableCell />
+                            <TableCell className="hidden md:table-cell">
+                              <Skeleton className="h-4 w-8" />
+                            </TableCell>
+                            <TableCell className="hidden xl:table-cell">
+                              <Skeleton className="h-4 w-20" />
+                            </TableCell>
+                            <TableCell className="hidden xl:table-cell">
+                              <Skeleton className="h-4 w-24" />
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell" />
                           </TableRow>
                         ))
                       : null}
                     {!loading && data && rows.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
+                        <TableCell colSpan={8} className="py-12 text-center text-muted-foreground">
                           {t('usersEmpty')}
                         </TableCell>
                       </TableRow>
                     ) : null}
-                    {rows.map((row) => (
-                      <TableRow key={row.id} className="hover:bg-muted/40">
-                        <TableCell className="tabular-nums text-muted-foreground">{row.id}</TableCell>
-                        <TableCell className="truncate" title={row.email}>
-                          {row.email}
-                        </TableCell>
-                        <TableCell className="truncate" title={displayName(row)}>
-                          {displayName(row)}
-                        </TableCell>
-                        <TableCell className="align-top">
-                          <div className="flex flex-wrap gap-1">
-                            {(row.groups ?? []).length ? (
-                              (row.groups ?? []).map((g) => (
-                                <Badge key={g.id} variant="outline" className="max-w-[10rem] truncate text-[10px] font-normal" title={g.name}>
-                                  {g.name}
-                                </Badge>
-                              ))
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={row.is_staff ? 'default' : 'outline'} className="text-[10px]">
-                            {row.is_staff ? t('usersStaffYes') : t('usersStaffNo')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={row.is_active ? 'secondary' : 'muted'} className="text-[10px]">
-                            {row.is_active ? t('usersActiveYes') : t('usersActiveNo')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="link" className="h-auto p-0 text-xs" asChild>
-                            <Link to={`/users/${row.id}`}>{t('usersActionEdit')}</Link>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {rows.map((row) => {
+                      const av = avatarFromRow(row);
+                      return (
+                        <TableRow key={row.id} className="hover:bg-muted/40">
+                          <TableCell className="tabular-nums text-muted-foreground">{row.id}</TableCell>
+                          <TableCell className="min-w-0 p-0">
+                            <Link
+                              to={`/users/${row.id}`}
+                              className="group flex items-start gap-2 rounded-md px-2 py-2 text-left no-underline outline-none transition-colors hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                              aria-label={t('usersRowOpenProfile', { name: displayName(row) })}
+                            >
+                              <div className="hidden shrink-0 sm:block">
+                                {av ? (
+                                  <img src={av} alt="" className="size-8 rounded-full border border-border object-cover" />
+                                ) : (
+                                  <div
+                                    className="flex size-8 items-center justify-center rounded-full border border-dashed border-border bg-muted text-[10px] font-medium text-muted-foreground"
+                                    aria-hidden
+                                  >
+                                    {displayName(row).slice(0, 1).toUpperCase()}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate font-sans text-sm font-medium text-primary underline-offset-4 group-hover:underline">
+                                  {displayName(row)}
+                                </div>
+                                <div className="truncate font-mono text-[11px] text-muted-foreground" title={row.email}>
+                                  {row.email}
+                                </div>
+                              </div>
+                            </Link>
+                          </TableCell>
+                          <TableCell className="hidden align-top lg:table-cell">
+                            <div className="flex flex-wrap gap-1">
+                              {(row.groups ?? []).length ? (
+                                (row.groups ?? []).map((g) => (
+                                  <Badge
+                                    key={g.id}
+                                    variant="outline"
+                                    className="max-w-[10rem] truncate text-[10px] font-normal"
+                                    title={g.name}
+                                  >
+                                    {g.name}
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <Badge variant={row.is_staff ? 'default' : 'outline'} className="text-[10px]">
+                              {row.is_staff ? t('usersStaffYes') : t('usersStaffNo')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <Badge variant={row.is_active ? 'secondary' : 'muted'} className="text-[10px]">
+                              {row.is_active ? t('usersActiveYes') : t('usersActiveNo')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="hidden truncate xl:table-cell" title={row.username}>
+                            {row.username}
+                          </TableCell>
+                          <TableCell className="hidden whitespace-nowrap text-muted-foreground xl:table-cell">
+                            {formatShortDateTime(lastSeenFromRow(row))}
+                          </TableCell>
+                          <TableCell className="hidden text-right sm:table-cell">
+                            <Button variant="link" className="h-auto p-0 text-xs" asChild>
+                              <Link to={`/users/${row.id}`}>{t('usersActionView')}</Link>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>

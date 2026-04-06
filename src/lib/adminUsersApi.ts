@@ -5,6 +5,14 @@ export type AdminUserGroupRef = {
   name: string;
 };
 
+/** Persisted ShellUI preferences (also nested under `user_metadata.shelluiPreferences` for admin payloads). */
+export type ShellUIPreferencesPayload = {
+  themeName: string | null;
+  language: string | null;
+  region: string | null;
+  colorScheme: string | null;
+};
+
 export type AdminUserRow = {
   id: number;
   email: string;
@@ -14,6 +22,7 @@ export type AdminUserRow = {
   is_staff: boolean;
   is_active: boolean;
   groups: AdminUserGroupRef[];
+  /** Includes `avatar_url`, `shelluiPreferences`, `last_seen_at`, `groups` (names), etc. */
   user_metadata: Record<string, unknown>;
 };
 
@@ -98,4 +107,47 @@ export async function updateAdminUser(
     throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
   }
   return body as AdminUserRow;
+}
+
+export type AdminLoginEventRow = {
+  id: number;
+  created_at: string;
+  user_id: number | null;
+  user_email: string | null;
+  outcome: string;
+  provider: string;
+  failure_reason: string;
+  is_staff_at_event: boolean;
+  ip_hash: string;
+  user_agent: string;
+  client_timezone: string;
+  client_device_id_hash: string;
+  client_country: string;
+  client_city: string;
+};
+
+export type AdminLoginEventListResponse = {
+  count: number;
+  page: number;
+  page_size: number;
+  results: AdminLoginEventRow[];
+};
+
+/** Paginated OAuth login audit rows (`LoginEvent`); filter with `user_id` for one account. */
+export async function fetchAdminLoginEvents(
+  accessToken: string,
+  params: { user_id?: number; page?: number; pageSize?: number },
+): Promise<AdminLoginEventListResponse> {
+  const sp = new URLSearchParams();
+  if (params.user_id != null) sp.set('user_id', String(params.user_id));
+  if (params.page != null) sp.set('page', String(params.page));
+  if (params.pageSize != null) sp.set('page_size', String(params.pageSize));
+  const q = sp.toString();
+  const path = `/auth/v1/admin/login-events${q ? `?${q}` : ''}`;
+  const res = await authFetch(path, accessToken);
+  const body = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
+  }
+  return body as AdminLoginEventListResponse;
 }
