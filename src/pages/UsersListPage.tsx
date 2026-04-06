@@ -249,7 +249,7 @@ export function UsersListPage() {
                         {t('usersColGroups')}
                       </TableHead>
                       <TableHead className="hidden md:table-cell w-[5rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('usersColStaff')}
+                        {t('usersColOwner')}
                       </TableHead>
                       <TableHead className="hidden md:table-cell w-[5rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         {t('usersColActive')}
@@ -359,8 +359,11 @@ export function UsersListPage() {
                             </div>
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
-                            <Badge variant={row.is_staff ? 'default' : 'outline'} className="text-[10px]">
-                              {row.is_staff ? t('usersStaffYes') : t('usersStaffNo')}
+                            <Badge
+                              variant={row.is_company_owner ? 'default' : 'outline'}
+                              className="text-[10px]"
+                            >
+                              {row.is_company_owner ? t('usersOwnerYes') : t('usersOwnerNo')}
                             </Badge>
                           </TableCell>
                           <TableCell className="hidden md:table-cell">

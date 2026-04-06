@@ -21,6 +21,8 @@ export type AdminUserRow = {
   first_name: string;
   last_name: string;
   is_staff: boolean;
+  /** Member of `Company.owners` for the requested `company_id`. */
+  is_company_owner: boolean;
   is_active: boolean;
   groups: AdminUserGroupRef[];
   /** Includes `avatar_url`, `shelluiPreferences`, `last_seen_at`, `last_seen_client_timezone`, `groups` (names), etc. */
