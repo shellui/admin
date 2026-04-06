@@ -13,15 +13,16 @@ describe('parsePrometheusSamples', () => {
 # TYPE shellui_auth_users_total gauge
 shellui_auth_users_total 3.0
 # TYPE shellui_auth_successful_logins_total counter
-shellui_auth_successful_logins_total{provider="github"} 2.0
-shellui_auth_successful_logins_total{provider="google"} 1.0
+shellui_auth_successful_logins_total{provider="github",company_id="1"} 2.0
+shellui_auth_successful_logins_total{provider="google",company_id="1"} 1.0
+shellui_auth_successful_logins_total{provider="google",company_id="2"} 9.0
 `.trim();
     const m = parsePrometheusSamples(text);
     expect(getUnlabeled(m, 'shellui_auth_users_total')).toBe(3);
-    expect(getLoginCountsByProvider(m)).toEqual([
+    expect(getLoginCountsByProvider(m, 1)).toEqual([
       { provider: 'github', count: 2 },
       { provider: 'google', count: 1 },
     ]);
-    expect(sumLoginCounts(m)).toBe(3);
+    expect(sumLoginCounts(m, 1)).toBe(3);
   });
 });

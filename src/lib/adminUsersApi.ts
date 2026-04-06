@@ -1,4 +1,5 @@
 import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
+import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
 
 export type AdminUserGroupRef = {
   id: number;
@@ -48,13 +49,21 @@ function parseErrorMessage(body: unknown): string | null {
 /** `accessToken` is `Settings.accessToken` from the shell (session JWT). */
 async function authFetch(path: string, accessToken: string, init: RequestInit = {}): Promise<Response> {
   const base = getAuthBackendBaseUrl();
+  const companyId = getCompanyIdFromJwt(accessToken);
+  if (!companyId) {
+    throw new Error('Missing company_id in access token.');
+  }
+  const url = new URL(`${base}${path}`);
+  if (!url.searchParams.get('company_id')) {
+    url.searchParams.set('company_id', String(companyId));
+  }
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
   if (!headers.has('Content-Type') && init.body) {
     headers.set('Content-Type', 'application/json');
   }
   headers.set('Authorization', `Bearer ${accessToken}`);
-  return fetch(`${base}${path}`, { ...init, headers });
+  return fetch(url.toString(), { ...init, headers });
 }
 
 export async function fetchAdminUsers(
@@ -111,6 +120,7 @@ export async function updateAdminUser(
 
 export type AdminLoginEventRow = {
   id: number;
+  company_id: number | null;
   created_at: string;
   user_id: number | null;
   user_email: string | null;

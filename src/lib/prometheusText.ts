@@ -22,20 +22,20 @@ export function getUnlabeled(samples: Map<string, number>, name: string): number
   return samples.get(name);
 }
 
-const LOGIN_SERIES = /^shellui_auth_successful_logins_total\{provider="([^"]+)"\}$/;
+const LOGIN_SERIES = /^shellui_auth_successful_logins_total\{provider="([^"]+)",company_id="([^"]+)"\}$/;
 
 export type LoginCountRow = { provider: string; count: number };
 
-export function getLoginCountsByProvider(samples: Map<string, number>): LoginCountRow[] {
+export function getLoginCountsByProvider(samples: Map<string, number>, companyId: number): LoginCountRow[] {
   const out: LoginCountRow[] = [];
   for (const [k, v] of samples) {
     const m = k.match(LOGIN_SERIES);
-    if (m) out.push({ provider: m[1], count: v });
+    if (m && m[2] === String(companyId)) out.push({ provider: m[1], count: v });
   }
   out.sort((a, b) => b.count - a.count);
   return out;
 }
 
-export function sumLoginCounts(samples: Map<string, number>): number {
-  return getLoginCountsByProvider(samples).reduce((s, x) => s + x.count, 0);
+export function sumLoginCounts(samples: Map<string, number>, companyId: number): number {
+  return getLoginCountsByProvider(samples, companyId).reduce((s, x) => s + x.count, 0);
 }
