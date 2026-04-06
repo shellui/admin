@@ -133,15 +133,41 @@ export type AdminLoginEventListResponse = {
   results: AdminLoginEventRow[];
 };
 
-/** Paginated OAuth login audit rows (`LoginEvent`); filter with `user_id` for one account. */
+export type AdminLoginEventListParams = {
+  user_id?: number;
+  page?: number;
+  pageSize?: number;
+  outcome?: 'success' | 'failure';
+  provider?: string;
+  is_staff_at_event?: boolean;
+  created_after?: string;
+  created_before?: string;
+  client_country?: string;
+  client_city?: string;
+  client_timezone?: string;
+  /** Matches `UserPreference.language` for the event user (en / fr); excludes rows without a user. */
+  language?: string;
+};
+
+/** Paginated OAuth login audit rows (`LoginEvent`). */
 export async function fetchAdminLoginEvents(
   accessToken: string,
-  params: { user_id?: number; page?: number; pageSize?: number },
+  params: AdminLoginEventListParams = {},
 ): Promise<AdminLoginEventListResponse> {
   const sp = new URLSearchParams();
   if (params.user_id != null) sp.set('user_id', String(params.user_id));
   if (params.page != null) sp.set('page', String(params.page));
   if (params.pageSize != null) sp.set('page_size', String(params.pageSize));
+  if (params.outcome) sp.set('outcome', params.outcome);
+  if (params.provider?.trim()) sp.set('provider', params.provider.trim().toLowerCase());
+  if (params.is_staff_at_event === true) sp.set('is_staff_at_event', 'true');
+  if (params.is_staff_at_event === false) sp.set('is_staff_at_event', 'false');
+  if (params.created_after?.trim()) sp.set('created_after', params.created_after.trim());
+  if (params.created_before?.trim()) sp.set('created_before', params.created_before.trim());
+  if (params.client_country?.trim()) sp.set('client_country', params.client_country.trim());
+  if (params.client_city?.trim()) sp.set('client_city', params.client_city.trim());
+  if (params.client_timezone?.trim()) sp.set('client_timezone', params.client_timezone.trim());
+  if (params.language?.trim()) sp.set('language', params.language.trim().toLowerCase());
   const q = sp.toString();
   const path = `/auth/v1/admin/login-events${q ? `?${q}` : ''}`;
   const res = await authFetch(path, accessToken);
@@ -150,4 +176,13 @@ export async function fetchAdminLoginEvents(
     throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
   }
   return body as AdminLoginEventListResponse;
+}
+
+export async function fetchAdminLoginEvent(accessToken: string, eventId: number): Promise<AdminLoginEventRow> {
+  const res = await authFetch(`/auth/v1/admin/login-events/${eventId}`, accessToken);
+  const body = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
+  }
+  return body as AdminLoginEventRow;
 }

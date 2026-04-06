@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import shellui from "@shellui/sdk";
 import {
@@ -575,7 +575,12 @@ export function UserDetailPage() {
                             {events.results.map((ev) => (
                               <TableRow key={ev.id}>
                                 <TableCell className="whitespace-nowrap text-muted-foreground">
-                                  {formatDateTime(ev.created_at, locale)}
+                                  <Link
+                                    className="text-primary underline-offset-2 hover:underline"
+                                    to={`/login-events/${ev.id}`}
+                                  >
+                                    {formatDateTime(ev.created_at, locale)}
+                                  </Link>
                                 </TableCell>
                                 <TableCell>{ev.provider}</TableCell>
                                 <TableCell>

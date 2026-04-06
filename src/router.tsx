@@ -2,12 +2,14 @@ import { createHashRouter, Navigate } from 'react-router-dom';
 import { AdminShellLayout } from '@/layouts/AdminShellLayout';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { GroupsListPage } from '@/pages/GroupsListPage';
+import { LoginEventDetailPage } from '@/pages/LoginEventDetailPage';
+import { LoginEventsListPage } from '@/pages/LoginEventsListPage';
 import { UserDetailPage } from '@/pages/UserDetailPage';
 import { UsersListPage } from '@/pages/UsersListPage';
 
 /**
- * Hash routes: `#/`, `#/users?q=&page=`, `#/users/:userId`. Same-origin iframe paths stay bookmarkable.
- * Detail route is registered before the list route so `#/users` always hits the directory table.
+ * Hash routes: `#/`, `#/users?q=&page=`, `#/users/:userId`, `#/login-events`, `#/login-events/:eventId`.
+ * Detail routes are registered before list routes so directory URLs resolve to tables.
  */
 export const router = createHashRouter([
   {
@@ -18,6 +20,8 @@ export const router = createHashRouter([
       { path: 'groups', element: <GroupsListPage /> },
       { path: 'users/:userId', element: <UserDetailPage /> },
       { path: 'users', element: <UsersListPage /> },
+      { path: 'login-events/:eventId', element: <LoginEventDetailPage /> },
+      { path: 'login-events', element: <LoginEventsListPage /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },
