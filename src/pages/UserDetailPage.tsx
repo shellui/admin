@@ -99,7 +99,6 @@ export function UserDetailPage() {
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [allGroups, setAllGroups] = useState<AdminGroupRow[]>([]);
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
-  const [isActiveDraft, setIsActiveDraft] = useState(true);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -118,7 +117,6 @@ export function UserDetailPage() {
       setUser(u);
       setAllGroups(groups);
       setSelectedGroupIds((u.groups ?? []).map((g) => g.id));
-      setIsActiveDraft(u.is_active);
       setSaveError(null);
     } catch (e) {
       setUser(null);
@@ -209,12 +207,10 @@ export function UserDetailPage() {
     setSaving(true);
     try {
       const updated = await updateAdminUser(accessToken, idNum, {
-        is_active: isActiveDraft,
         group_ids: selectedGroupIds,
       });
       setUser(updated);
       setSelectedGroupIds((updated.groups ?? []).map((g) => g.id));
-      setIsActiveDraft(updated.is_active);
       shellui.toast({ title: t("userDetailSaved"), type: "success" });
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : t("usersErrorUnknown"));
@@ -296,10 +292,10 @@ export function UserDetailPage() {
                       {t("usersColActive")}
                     </span>
                     <Badge
-                      variant={isActiveDraft ? "secondary" : "muted"}
+                      variant={user.is_active ? "secondary" : "muted"}
                       className="tabular-nums"
                     >
-                      {isActiveDraft ? t("usersActiveYes") : t("usersActiveNo")}
+                      {user.is_active ? t("usersActiveYes") : t("usersActiveNo")}
                     </Badge>
                   </div>
                 </div>
@@ -357,26 +353,6 @@ export function UserDetailPage() {
                     {saveError}
                   </p>
                 ) : null}
-                <div className="flex flex-row items-start gap-3 rounded-md border p-3">
-                  <input
-                    id="user-detail-active"
-                    type="checkbox"
-                    className="mt-1 size-4 rounded border"
-                    checked={isActiveDraft}
-                    onChange={(e) => setIsActiveDraft(e.target.checked)}
-                  />
-                  <div className="space-y-1 leading-none">
-                    <Label
-                      htmlFor="user-detail-active"
-                      className="cursor-pointer"
-                    >
-                      {t("usersColActive")}
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      {t("userDetailActiveEditableHint")}
-                    </p>
-                  </div>
-                </div>
                 <div className="space-y-2 rounded-md border p-3">
                   <Label>{t("userDetailGroups")}</Label>
                   <p className="text-xs text-muted-foreground">
