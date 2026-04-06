@@ -39,6 +39,16 @@ const resources = {
       dashboardStatUsersStaffHint: 'Accounts allowed to use admin APIs.',
       dashboardStatSocialLinks: 'OAuth links',
       dashboardStatSocialLinksHint: 'Linked provider accounts (allauth SocialAccount).',
+      dashboardActivitySection: 'Active users from UserActivity',
+      dashboardStatDau: 'DAU',
+      dashboardStatDauHint:
+        'Users with last_seen_at on or after midnight at the start of the current calendar day (server timezone).',
+      dashboardStatWau: 'WAU',
+      dashboardStatWauHint:
+        'Users with last_seen_at on or after Monday 00:00 of the current ISO week (server timezone).',
+      dashboardStatMau: 'MAU',
+      dashboardStatMauHint:
+        'Users with last_seen_at in the current calendar month (timezone-aware, typically UTC).',
       dashboardLoginsTitle: 'Successful OAuth logins',
       dashboardLoginsDescription:
         'Counter by provider since this API process started (in-memory; resets on restart).',
@@ -173,6 +183,16 @@ const resources = {
       dashboardStatUsersStaffHint: 'Comptes autorisés à appeler les API admin.',
       dashboardStatSocialLinks: 'Liens OAuth',
       dashboardStatSocialLinksHint: 'Comptes fournisseurs liés (SocialAccount allauth).',
+      dashboardActivitySection: 'Utilisateurs actifs (UserActivity)',
+      dashboardStatDau: 'DAU',
+      dashboardStatDauHint:
+        'Utilisateurs avec last_seen_at depuis minuit au début du jour civil courant (fuseau serveur).',
+      dashboardStatWau: 'WAU',
+      dashboardStatWauHint:
+        'Utilisateurs avec last_seen_at depuis lundi 00:00 de la semaine ISO courante (fuseau serveur).',
+      dashboardStatMau: 'MAU',
+      dashboardStatMauHint:
+        'Utilisateurs avec last_seen_at dans le mois civil courant (fuseau horaire du serveur, souvent UTC).',
       dashboardLoginsTitle: 'Connexions OAuth réussies',
       dashboardLoginsDescription:
         'Compteur par fournisseur depuis le démarrage de ce processus API (mémoire ; remis à zéro au redémarrage).',

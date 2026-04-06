@@ -11,6 +11,9 @@ export const SHELLUI_AUTH_METRIC_NAMES = {
   usersActive: 'shellui_auth_users_active',
   usersStaff: 'shellui_auth_users_staff',
   socialAccountsTotal: 'shellui_auth_social_accounts_total',
+  dailyActiveUsers: 'shellui_auth_daily_active_users',
+  weeklyActiveUsers: 'shellui_auth_weekly_active_users',
+  monthlyActiveUsers: 'shellui_auth_monthly_active_users',
 } as const;
 
 export type AuthMetricsSnapshot = {
@@ -19,6 +22,9 @@ export type AuthMetricsSnapshot = {
   usersActive: number;
   usersStaff: number;
   socialAccountsTotal: number;
+  dailyActiveUsers: number;
+  weeklyActiveUsers: number;
+  monthlyActiveUsers: number;
   loginsSinceProcessStart: number;
   loginsByProvider: { provider: string; count: number }[];
 };
@@ -70,6 +76,9 @@ export async function fetchAuthMetricsSnapshot(accessToken: string): Promise<Aut
   const usersActive = requireFinite(samples, SHELLUI_AUTH_METRIC_NAMES.usersActive);
   const usersStaff = requireFinite(samples, SHELLUI_AUTH_METRIC_NAMES.usersStaff);
   const socialAccountsTotal = requireFinite(samples, SHELLUI_AUTH_METRIC_NAMES.socialAccountsTotal);
+  const dailyActiveUsers = requireFinite(samples, SHELLUI_AUTH_METRIC_NAMES.dailyActiveUsers);
+  const weeklyActiveUsers = requireFinite(samples, SHELLUI_AUTH_METRIC_NAMES.weeklyActiveUsers);
+  const monthlyActiveUsers = requireFinite(samples, SHELLUI_AUTH_METRIC_NAMES.monthlyActiveUsers);
   const loginsByProvider = getLoginCountsByProvider(samples);
   const loginsSinceProcessStart = sumLoginCounts(samples);
 
@@ -79,6 +88,9 @@ export async function fetchAuthMetricsSnapshot(accessToken: string): Promise<Aut
     usersActive,
     usersStaff,
     socialAccountsTotal,
+    dailyActiveUsers,
+    weeklyActiveUsers,
+    monthlyActiveUsers,
     loginsSinceProcessStart,
     loginsByProvider,
   };

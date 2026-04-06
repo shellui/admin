@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LucideIcon } from 'lucide-react';
-import { Link2, Loader2, LogIn, Shield, UserCheck, Users } from 'lucide-react';
+import {
+  Calendar,
+  CalendarDays,
+  CalendarRange,
+  Link2,
+  Loader2,
+  LogIn,
+  Shield,
+  UserCheck,
+  Users,
+} from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -169,6 +179,30 @@ export function DashboardPage() {
               value={formatInt(snapshot.socialAccountsTotal)}
               hint={t('dashboardStatSocialLinksHint')}
               icon={Link2}
+            />
+          </section>
+
+          <section
+            className="grid gap-4 sm:grid-cols-3"
+            aria-label={t('dashboardActivitySection')}
+          >
+            <StatBlock
+              label={t('dashboardStatDau')}
+              value={formatInt(snapshot.dailyActiveUsers)}
+              hint={t('dashboardStatDauHint')}
+              icon={Calendar}
+            />
+            <StatBlock
+              label={t('dashboardStatWau')}
+              value={formatInt(snapshot.weeklyActiveUsers)}
+              hint={t('dashboardStatWauHint')}
+              icon={CalendarRange}
+            />
+            <StatBlock
+              label={t('dashboardStatMau')}
+              value={formatInt(snapshot.monthlyActiveUsers)}
+              hint={t('dashboardStatMauHint')}
+              icon={CalendarDays}
             />
           </section>
 
