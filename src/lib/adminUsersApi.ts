@@ -22,7 +22,7 @@ export type AdminUserRow = {
   is_staff: boolean;
   is_active: boolean;
   groups: AdminUserGroupRef[];
-  /** Includes `avatar_url`, `shelluiPreferences`, `last_seen_at`, `groups` (names), etc. */
+  /** Includes `avatar_url`, `shelluiPreferences`, `last_seen_at`, `last_seen_client_timezone`, `groups` (names), etc. */
   user_metadata: Record<string, unknown>;
 };
 
