@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, ScrollText, Tags, Users } from 'lucide-react';
+import { Building2, LayoutDashboard, ScrollText, Tags, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navLinkBase =
@@ -8,6 +8,7 @@ const navLinkBase =
 
 const topNavItems = [
   { to: '/', key: 'navDashboard' as const, icon: LayoutDashboard },
+  { to: '/company', key: 'navCompany' as const, icon: Building2 },
 ] as const;
 
 const authNavItems = [

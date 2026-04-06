@@ -1,5 +1,6 @@
 import { createHashRouter, Navigate } from 'react-router-dom';
 import { AdminShellLayout } from '@/layouts/AdminShellLayout';
+import { CompanyPage } from '@/pages/CompanyPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { GroupsListPage } from '@/pages/GroupsListPage';
 import { LoginEventDetailPage } from '@/pages/LoginEventDetailPage';
@@ -8,7 +9,7 @@ import { UserDetailPage } from '@/pages/UserDetailPage';
 import { UsersListPage } from '@/pages/UsersListPage';
 
 /**
- * Hash routes: `#/`, `#/users?q=&page=`, `#/users/:userId`, `#/login-events`, `#/login-events/:eventId`.
+ * Hash routes: `#/`, `#/company`, `#/users`, …
  * Detail routes are registered before list routes so directory URLs resolve to tables.
  */
 export const router = createHashRouter([
@@ -17,6 +18,7 @@ export const router = createHashRouter([
     element: <AdminShellLayout />,
     children: [
       { index: true, element: <DashboardPage /> },
+      { path: 'company', element: <CompanyPage /> },
       { path: 'groups', element: <GroupsListPage /> },
       { path: 'users/:userId', element: <UserDetailPage /> },
       { path: 'users', element: <UsersListPage /> },

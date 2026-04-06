@@ -25,3 +25,20 @@ export function getCompanyIdFromJwt(accessToken: string): number | null {
   }
   return null;
 }
+
+function jwtUserMetadata(accessToken: string): Record<string, unknown> | null {
+  const payload = decodeJwtPayload(accessToken);
+  if (!payload) return null;
+  const raw = payload.user_metadata;
+  return raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : null;
+}
+
+/** From ShellUI JWT `user_metadata.is_staff`. */
+export function getIsStaffFromJwt(accessToken: string): boolean {
+  return jwtUserMetadata(accessToken)?.is_staff === true;
+}
+
+/** From ShellUI JWT `user_metadata.is_company_owner` for the active `company_id`. */
+export function getIsCompanyOwnerFromJwt(accessToken: string): boolean {
+  return jwtUserMetadata(accessToken)?.is_company_owner === true;
+}

@@ -46,7 +46,7 @@ function parseErrorMessage(body: unknown): string | null {
   return null;
 }
 
-/** Staff-only Prometheus text from shellui-auth `GET /auth/v1/admin/metrics`. */
+/** Prometheus text from shellui-auth `GET /auth/v1/admin/metrics` (staff or company owner). */
 export async function fetchStaffPrometheusMetrics(accessToken: string): Promise<string> {
   const base = getAuthBackendBaseUrl();
   const companyId = getCompanyIdFromJwt(accessToken);

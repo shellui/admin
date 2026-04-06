@@ -23,6 +23,7 @@ const resources = {
       standaloneNoteUrl:
         'Use the same host and port as shown in your terminal. For production, set adminUrl to your deployed admin origin (for example https://admin.shellui.com/).',
       navDashboard: 'Dashboard',
+      navCompany: 'Company',
       navAuthGroup: 'Authentication',
       navGroups: 'Groups',
       navUsers: 'Users',
@@ -92,7 +93,7 @@ const resources = {
       dashboardTitle: 'Operations overview',
       dashboardEnvBadge: 'shellui-auth',
       dashboardDescription:
-        'Figures below come from the staff-only Prometheus text endpoint on shellui-auth (`/auth/v1/admin/metrics`). Use the same exposition for Prometheus or Grafana once you add a scrape token.',
+        'Figures below come from the Prometheus text endpoint on shellui-auth (`GET /auth/v1/admin/metrics` with `company_id`), authorized for Django staff or company owners. Use the same exposition for Prometheus or Grafana once you add a scrape token.',
       dashboardKpiSection: 'Identity database',
       dashboardStatUsersTotal: 'Users',
       dashboardStatUsersTotalHint: 'Rows in Django auth user table.',
@@ -123,14 +124,33 @@ const resources = {
       dashboardExpositionDescription: 'Raw exposition returned for this request (text/plain).',
       dashboardLoading: 'Loading metrics…',
       dashboardError: 'Could not load metrics.',
-      dashboardForbidden: 'Metrics require a staff account. Ask an administrator to grant staff, then reopen Admin.',
+      dashboardForbidden:
+        'Could not load metrics (forbidden). You need staff or company-owner access for this company.',
       dashboardNoSession: 'Waiting for shell session… Open Admin from ShellUI while signed in.',
       dashboardUiHint:
         'Later you can let operators pick cards and queries; for now this page mirrors the guarded metrics route.',
+      companyPageTitle: 'Organization',
+      companyPageDescription:
+        'Edit your company record for this tenant. Requires company-owner access (JWT `user_metadata.is_company_owner`).',
+      companyPageForbidden:
+        'You need to be a company owner to change these settings. Ask an owner to grant access, or use the Dashboard if you have staff privileges.',
+      dashboardCompanySectionLabel: 'Company settings',
+      dashboardCompanyTitle: 'Organization',
+      dashboardCompanyDescription:
+        'Update your company record for this shell tenant (API: PATCH /api/companies/…). More fields will appear here over time.',
+      dashboardCompanyNameLabel: 'Company name',
+      dashboardCompanySlugLabel: 'Slug',
+      dashboardCompanySave: 'Save',
+      dashboardCompanySaving: 'Saving…',
+      dashboardCompanySaved: 'Saved.',
+      dashboardCompanyLoading: 'Loading company…',
+      dashboardCompanyLoadError: 'Could not load company.',
+      dashboardCompanySaveError: 'Could not save company.',
+      dashboardCompanyMissing: 'No company matched your session tenant.',
       usersTitle: 'Identity directory',
       usersSchemaBadge: 'shellui-auth',
       usersDescription:
-        'Staff-only directory backed by shellui-auth. Search is server-side; pagination is reflected in the URL for iframe-friendly bookmarks.',
+        'Directory for this company (staff or company owners). Search is server-side; pagination is reflected in the URL for iframe-friendly bookmarks.',
       usersTableTitle: 'Accounts',
       usersTableDescription: 'View profile opens a read-only page per account (`#/users/:id`).',
       usersFieldQuery: 'Search',
@@ -256,6 +276,7 @@ const resources = {
       standaloneNoteUrl:
         'Utilisez le même hôte et port qu’indiqués dans le terminal. En production, définissez adminUrl vers l’URL déployée (par ex. https://admin.shellui.com/).',
       navDashboard: 'Tableau de bord',
+      navCompany: 'Entreprise',
       navAuthGroup: 'Authentification',
       navGroups: 'Groupes',
       navUsers: 'Utilisateurs',
@@ -330,7 +351,7 @@ const resources = {
       dashboardTitle: 'Vue opérations',
       dashboardEnvBadge: 'shellui-auth',
       dashboardDescription:
-        'Les chiffres viennent du point Prometheus texte réservé au staff sur shellui-auth (`/auth/v1/admin/metrics`). La même exposition pourra être scrapée par Prometheus ou Grafana après ajout d’un jeton de scrape.',
+        'Les chiffres viennent du point Prometheus texte sur shellui-auth (`GET /auth/v1/admin/metrics` avec `company_id`), autorisé pour le staff Django ou les propriétaires d’entreprise. La même exposition pourra être scrapée par Prometheus ou Grafana après ajout d’un jeton de scrape.',
       dashboardKpiSection: 'Base identités',
       dashboardStatUsersTotal: 'Utilisateurs',
       dashboardStatUsersTotalHint: 'Lignes dans la table utilisateurs Django.',
@@ -362,15 +383,33 @@ const resources = {
       dashboardLoading: 'Chargement des métriques…',
       dashboardError: 'Impossible de charger les métriques.',
       dashboardForbidden:
-        'Les métriques nécessitent un compte staff. Demandez à un administrateur d’accorder le statut staff, puis rouvrez l’admin.',
+        'Impossible de charger les métriques (interdit). Il faut le staff Django ou être propriétaire de l’entreprise pour cette société.',
       dashboardNoSession:
         'En attente de la session shell… Ouvrez l’admin depuis ShellUI en étant connecté.',
       dashboardUiHint:
         'Plus tard, les opérateurs pourront choisir cartes et requêtes ; pour l’instant cette page reflète la route métriques protégée.',
+      companyPageTitle: 'Organisation',
+      companyPageDescription:
+        'Modifiez la fiche entreprise pour ce tenant. Accès réservé aux propriétaires (`user_metadata.is_company_owner` dans le JWT).',
+      companyPageForbidden:
+        'Il faut être propriétaire de l’entreprise pour modifier ces paramètres. Demandez à un propriétaire, ou utilisez le tableau de bord si vous avez le statut staff.',
+      dashboardCompanySectionLabel: 'Paramètres entreprise',
+      dashboardCompanyTitle: 'Organisation',
+      dashboardCompanyDescription:
+        'Mettez à jour la fiche entreprise pour ce tenant Shell (API : PATCH /api/companies/…). D’autres champs suivront.',
+      dashboardCompanyNameLabel: 'Nom de l’entreprise',
+      dashboardCompanySlugLabel: 'Identifiant (slug)',
+      dashboardCompanySave: 'Enregistrer',
+      dashboardCompanySaving: 'Enregistrement…',
+      dashboardCompanySaved: 'Enregistré.',
+      dashboardCompanyLoading: 'Chargement de l’entreprise…',
+      dashboardCompanyLoadError: 'Impossible de charger l’entreprise.',
+      dashboardCompanySaveError: 'Impossible d’enregistrer l’entreprise.',
+      dashboardCompanyMissing: 'Aucune entreprise ne correspond au tenant de votre session.',
       usersTitle: 'Annuaire identités',
       usersSchemaBadge: 'shellui-auth',
       usersDescription:
-        'Annuaire réservé au staff, branché sur shellui-auth. La recherche est côté serveur ; la pagination est dans l’URL pour favoriser les favoris en iframe.',
+        'Annuaire pour cette société (staff ou propriétaires), branché sur shellui-auth. La recherche est côté serveur ; la pagination est dans l’URL pour favoriser les favoris en iframe.',
       usersTableTitle: 'Comptes',
       usersTableDescription: 'Consulter le profil ouvre une page en lecture seule par compte (`#/users/:id`).',
       usersFieldQuery: 'Recherche',
