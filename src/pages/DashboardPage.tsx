@@ -5,6 +5,7 @@ import {
   Calendar,
   CalendarDays,
   CalendarRange,
+  ExternalLink,
   Link2,
   Loader2,
   LogIn,
@@ -17,7 +18,8 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Text } from '@/components/ui/text';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
-import { fetchAuthMetricsSnapshot, type AuthMetricsSnapshot } from '@/lib/authMetricsApi';
+import { buildStaffPrometheusMetricsUrl, fetchAuthMetricsSnapshot, type AuthMetricsSnapshot } from '@/lib/authMetricsApi';
+import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
 
 function StatBlock({
   label,
@@ -120,6 +122,9 @@ export function DashboardPage() {
 
   const inactive =
     snapshot != null ? Math.max(0, Math.round(snapshot.usersTotal - snapshot.usersActive)) : 0;
+
+  const companyId = accessToken ? getCompanyIdFromJwt(accessToken) : null;
+  const metricsEndpointUrl = companyId != null ? buildStaffPrometheusMetricsUrl(companyId) : null;
 
   return (
     <div className="w-full space-y-8">
@@ -239,6 +244,22 @@ export function DashboardPage() {
                 <CardDescription className="font-mono text-xs">
                   {t('dashboardExpositionDescription')}
                 </CardDescription>
+                {metricsEndpointUrl && (
+                  <div className="pt-2">
+                    <a
+                      href={metricsEndpointUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 font-mono text-xs text-primary underline-offset-4 hover:underline"
+                    >
+                      <ExternalLink className="size-3.5 shrink-0" aria-hidden />
+                      {t('dashboardMetricsEndpointLink')}
+                    </a>
+                    <Text className="mt-1.5 block font-mono text-[10px] text-muted-foreground">
+                      {t('dashboardMetricsEndpointHint')}
+                    </Text>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 <pre className="max-h-64 overflow-auto rounded-md border border-border bg-muted/30 p-3 font-mono text-[10px] leading-relaxed text-muted-foreground">

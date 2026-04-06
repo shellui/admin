@@ -46,14 +46,19 @@ function parseErrorMessage(body: unknown): string | null {
   return null;
 }
 
+/** Full URL for `GET /auth/v1/admin/metrics?company_id=…` (Bearer token required). */
+export function buildStaffPrometheusMetricsUrl(companyId: number): string {
+  const base = getAuthBackendBaseUrl();
+  return `${base}/auth/v1/admin/metrics?company_id=${companyId}`;
+}
+
 /** Prometheus text from shellui-auth `GET /auth/v1/admin/metrics` (staff or company owner). */
 export async function fetchStaffPrometheusMetrics(accessToken: string): Promise<string> {
-  const base = getAuthBackendBaseUrl();
   const companyId = getCompanyIdFromJwt(accessToken);
   if (!companyId) {
     throw new Error('Missing company_id in access token.');
   }
-  const res = await fetch(`${base}/auth/v1/admin/metrics?company_id=${companyId}`, {
+  const res = await fetch(buildStaffPrometheusMetricsUrl(companyId), {
     headers: {
       Accept: 'text/plain',
       Authorization: `Bearer ${accessToken}`,

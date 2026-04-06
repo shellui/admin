@@ -122,6 +122,9 @@ const resources = {
       dashboardLoginsEmpty: 'No successful logins recorded yet in this worker.',
       dashboardExpositionTitle: 'Prometheus snapshot',
       dashboardExpositionDescription: 'Raw exposition returned for this request (text/plain).',
+      dashboardMetricsEndpointLink: 'Open metrics endpoint',
+      dashboardMetricsEndpointHint:
+        'This URL expects an Authorization: Bearer header. A new tab may show 401 — copy the link for curl, Prometheus, or Grafana.',
       dashboardLoading: 'Loading metrics…',
       dashboardError: 'Could not load metrics.',
       dashboardForbidden:
@@ -381,6 +384,9 @@ const resources = {
       dashboardLoginsEmpty: 'Aucune connexion réussie enregistrée sur ce worker pour l’instant.',
       dashboardExpositionTitle: 'Instantané Prometheus',
       dashboardExpositionDescription: 'Exposition brute renvoyée pour cette requête (text/plain).',
+      dashboardMetricsEndpointLink: 'Ouvrir le point métriques',
+      dashboardMetricsEndpointHint:
+        'Cette URL attend un en-tête Authorization: Bearer. Un nouvel onglet peut afficher 401 — copiez le lien pour curl, Prometheus ou Grafana.',
       dashboardLoading: 'Chargement des métriques…',
       dashboardError: 'Impossible de charger les métriques.',
       dashboardForbidden:
