@@ -1,10 +1,6 @@
 import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
 import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
-import {
-  getLoginCountsByProvider,
-  parsePrometheusSamples,
-  sumLoginCounts,
-} from '@/lib/prometheusText';
+import { parsePrometheusSamples } from '@/lib/prometheusText';
 
 export const SHELLUI_AUTH_METRIC_NAMES = {
   usersTotal: 'shellui_auth_company_users_total',
@@ -25,8 +21,6 @@ export type AuthMetricsSnapshot = {
   dailyActiveUsers: number;
   weeklyActiveUsers: number;
   monthlyActiveUsers: number;
-  loginsSinceProcessStart: number;
-  loginsByProvider: { provider: string; count: number }[];
 };
 
 function readCompanySeries(samples: Map<string, number>, metricName: string, companyId: number): number {
@@ -107,8 +101,6 @@ export async function fetchAuthMetricsSnapshot(accessToken: string): Promise<Aut
   const dailyActiveUsers = readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.dailyActiveUsers, companyId);
   const weeklyActiveUsers = readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.weeklyActiveUsers, companyId);
   const monthlyActiveUsers = readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.monthlyActiveUsers, companyId);
-  const loginsByProvider = getLoginCountsByProvider(samples, companyId);
-  const loginsSinceProcessStart = sumLoginCounts(samples, companyId);
 
   return {
     rawText,
@@ -119,7 +111,5 @@ export async function fetchAuthMetricsSnapshot(accessToken: string): Promise<Aut
     dailyActiveUsers,
     weeklyActiveUsers,
     monthlyActiveUsers,
-    loginsSinceProcessStart,
-    loginsByProvider,
   };
 }

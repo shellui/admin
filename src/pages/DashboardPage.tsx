@@ -8,7 +8,6 @@ import {
   ExternalLink,
   Link2,
   Loader2,
-  LogIn,
   Shield,
   UserCheck,
   Users,
@@ -50,39 +49,6 @@ function StatBlock({
 
 function formatInt(n: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.round(n));
-}
-
-function LoginMixPanel({ snapshot }: { snapshot: AuthMetricsSnapshot }) {
-  const { t } = useTranslation();
-  const rows = snapshot.loginsByProvider;
-  const max = rows.length ? Math.max(...rows.map((r) => r.count), 1) : 1;
-
-  if (rows.length === 0) {
-    return (
-      <div className="rounded-lg border border-dashed border-border bg-muted/15 p-6">
-        <Text className="font-mono text-xs text-muted-foreground">{t('dashboardLoginsEmpty')}</Text>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {rows.map((r) => (
-        <div key={r.provider} className="space-y-1">
-          <div className="flex justify-between font-mono text-[11px] text-muted-foreground">
-            <span className="uppercase tracking-wider">{r.provider}</span>
-            <span className="tabular-nums">{formatInt(r.count)}</span>
-          </div>
-          <div className="h-2 w-full overflow-hidden rounded bg-muted">
-            <div
-              className="h-full rounded bg-primary/60"
-              style={{ width: `${Math.min(100, (r.count / max) * 100)}%` }}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
 }
 
 export function DashboardPage() {
@@ -211,34 +177,8 @@ export function DashboardPage() {
             />
           </section>
 
-          <div className="grid gap-6 lg:grid-cols-5">
-            <Card className="border-border/80 lg:col-span-3">
-              <CardHeader>
-                <CardTitle className="font-heading flex items-center gap-2 text-lg">
-                  <LogIn className="size-4 text-muted-foreground" aria-hidden />
-                  {t('dashboardLoginsTitle')}
-                </CardTitle>
-                <CardDescription className="font-mono text-xs">
-                  {t('dashboardLoginsDescription')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <Text className="font-mono text-xs text-muted-foreground">
-                    {t('dashboardLoginsTotalLabel')}
-                  </Text>
-                  <span className="font-mono text-xl font-semibold tabular-nums">
-                    {formatInt(snapshot.loginsSinceProcessStart)}
-                  </span>
-                </div>
-                <LoginMixPanel snapshot={snapshot} />
-                <Text className="font-mono text-[10px] text-muted-foreground">
-                  {t('dashboardLoginsProcessNote')}
-                </Text>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border/80 lg:col-span-2">
+          <div className="grid gap-6">
+            <Card className="border-border/80">
               <CardHeader>
                 <CardTitle className="font-heading text-lg">{t('dashboardExpositionTitle')}</CardTitle>
                 <CardDescription className="font-mono text-xs">

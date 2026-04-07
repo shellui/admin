@@ -113,13 +113,6 @@ const resources = {
       dashboardStatMau: 'MAU',
       dashboardStatMauHint:
         'Users with last_seen_at in the current calendar month (timezone-aware, typically UTC).',
-      dashboardLoginsTitle: 'Successful OAuth logins',
-      dashboardLoginsDescription:
-        'Counter by provider since this API process started (in-memory; resets on restart).',
-      dashboardLoginsTotalLabel: 'Total (all providers)',
-      dashboardLoginsProcessNote:
-        'For long-lived totals or dashboards, scrape the same metrics from Prometheus rather than relying on process memory.',
-      dashboardLoginsEmpty: 'No successful logins recorded yet in this worker.',
       dashboardExpositionTitle: 'Prometheus snapshot',
       dashboardExpositionDescription: 'Raw exposition returned for this request (text/plain).',
       dashboardMetricsEndpointLink: 'Open metrics endpoint',
@@ -375,13 +368,6 @@ const resources = {
       dashboardStatMau: 'MAU',
       dashboardStatMauHint:
         'Utilisateurs avec last_seen_at dans le mois civil courant (fuseau horaire du serveur, souvent UTC).',
-      dashboardLoginsTitle: 'Connexions OAuth réussies',
-      dashboardLoginsDescription:
-        'Compteur par fournisseur depuis le démarrage de ce processus API (mémoire ; remis à zéro au redémarrage).',
-      dashboardLoginsTotalLabel: 'Total (tous fournisseurs)',
-      dashboardLoginsProcessNote:
-        'Pour des totaux durables ou des tableaux de bord, scrapez les mêmes métriques via Prometheus plutôt que cette mémoire de processus.',
-      dashboardLoginsEmpty: 'Aucune connexion réussie enregistrée sur ce worker pour l’instant.',
       dashboardExpositionTitle: 'Instantané Prometheus',
       dashboardExpositionDescription: 'Exposition brute renvoyée pour cette requête (text/plain).',
       dashboardMetricsEndpointLink: 'Ouvrir le point métriques',
