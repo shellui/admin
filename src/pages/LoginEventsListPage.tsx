@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, createSearchParams, useSearchParams } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -54,10 +55,29 @@ function selectFieldClassName() {
   );
 }
 
+const LG_PX = 1024;
+
+function subscribeMinWidth1024(onChange: () => void) {
+  const mq = window.matchMedia(`(min-width: ${LG_PX}px)`);
+  mq.addEventListener('change', onChange);
+  return () => mq.removeEventListener('change', onChange);
+}
+
+function getMinWidth1024Snapshot() {
+  return window.matchMedia(`(min-width: ${LG_PX}px)`).matches;
+}
+
+function useIsLgViewport() {
+  return useSyncExternalStore(subscribeMinWidth1024, getMinWidth1024Snapshot, () => false);
+}
+
 export function LoginEventsListPage() {
   const { t, i18n } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const accessToken = useShelluiAccessToken();
+  const isLg = useIsLgViewport();
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const sidebarOpen = isLg || mobileSidebarOpen;
 
   const pageParam = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
   const filtersFromUrl = useMemo(() => readFiltersFromSearch(searchParams), [searchParams]);
@@ -213,214 +233,251 @@ export function LoginEventsListPage() {
         <Text className="max-w-3xl text-sm text-muted-foreground">{t('loginEventsDescription')}</Text>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card className="border-border/80 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="font-heading text-base">{t('loginEventsStat24hTitle')}</CardTitle>
-            <CardDescription className="text-xs">{t('loginEventsStat24hHint')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {!accessToken ? (
-              <p className="text-sm text-muted-foreground">{t('loginEventsNoSession')}</p>
-            ) : loading24h ? (
-              <Skeleton className="h-10 w-24" />
-            ) : error24h ? (
-              <p className="text-sm text-destructive">{error24h}</p>
-            ) : (
-              <p className="font-mono text-3xl font-semibold tabular-nums">{count24h ?? '—'}</p>
-            )}
-          </CardContent>
-        </Card>
-        <Card className="border-border/80 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="font-heading text-base">{t('loginEventsStatTotalTitle')}</CardTitle>
-            <CardDescription className="text-xs">{t('loginEventsStatTotalHint')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {!accessToken ? (
-              <p className="text-sm text-muted-foreground">{t('loginEventsNoSession')}</p>
-            ) : loading && !data ? (
-              <Skeleton className="h-10 w-24" />
-            ) : error ? (
-              <p className="text-sm text-destructive">{error}</p>
-            ) : (
-              <p className="font-mono text-3xl font-semibold tabular-nums">{data?.count ?? '—'}</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <div className="grid gap-6 lg:grid-cols-[1fr_minmax(17rem,20rem)] lg:items-start">
+        <aside className="min-w-0 lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1 lg:self-start">
+          <details
+            className="group rounded-xl border border-border/80 bg-card shadow-sm lg:border-0 lg:bg-transparent lg:shadow-none"
+            open={sidebarOpen}
+            onToggle={(e) => {
+              if (isLg) return;
+              setMobileSidebarOpen(e.currentTarget.open);
+            }}
+          >
+            <summary
+              className={cn(
+                'flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-4 py-3.5 text-left',
+                'marker:content-none [&::-webkit-details-marker]:hidden lg:hidden',
+              )}
+            >
+              <span className="font-heading text-sm font-semibold tracking-tight">{t('loginEventsSidebarSummary')}</span>
+              <ChevronDown
+                className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+                aria-hidden
+              />
+            </summary>
+            <div className="space-y-4 border-t border-border/60 px-4 pb-4 pt-4 lg:border-t-0 lg:px-0 lg:pb-0 lg:pt-0">
+              <div className="space-y-4">
+                <Card className="border-border/80 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="font-heading text-base">{t('loginEventsStat24hTitle')}</CardTitle>
+                    <CardDescription className="text-xs">{t('loginEventsStat24hHint')}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {!accessToken ? (
+                      <p className="text-sm text-muted-foreground">{t('loginEventsNoSession')}</p>
+                    ) : loading24h ? (
+                      <Skeleton className="h-10 w-24" />
+                    ) : error24h ? (
+                      <p className="text-sm text-destructive">{error24h}</p>
+                    ) : (
+                      <p className="font-mono text-3xl font-semibold tabular-nums">{count24h ?? '—'}</p>
+                    )}
+                  </CardContent>
+                </Card>
+                <Card className="border-border/80 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="font-heading text-base">{t('loginEventsStatTotalTitle')}</CardTitle>
+                    <CardDescription className="text-xs">{t('loginEventsStatTotalHint')}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {!accessToken ? (
+                      <p className="text-sm text-muted-foreground">{t('loginEventsNoSession')}</p>
+                    ) : loading && !data ? (
+                      <Skeleton className="h-10 w-24" />
+                    ) : error ? (
+                      <p className="text-sm text-destructive">{error}</p>
+                    ) : (
+                      <p className="font-mono text-3xl font-semibold tabular-nums">{data?.count ?? '—'}</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
 
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader className="space-y-1 pb-4">
-          <CardTitle className="font-heading text-lg">{t('loginEventsFiltersTitle')}</CardTitle>
-          <CardDescription className="text-sm">{t('loginEventsFiltersDescription')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!accessToken ? (
-            <p className="text-sm text-muted-foreground">{t('loginEventsNoSession')}</p>
-          ) : (
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <FormField
-                    control={form.control}
-                    name="outcome"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          {t('loginEventsFieldOutcome')}
-                        </FormLabel>
-                        <FormControl>
-                          <select {...field} className={selectFieldClassName()}>
-                            <option value="">{t('loginEventsFilterAny')}</option>
-                            <option value="success">{t('loginEventsOutcomeSuccess')}</option>
-                            <option value="failure">{t('loginEventsOutcomeFailure')}</option>
-                          </select>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="staff"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          {t('loginEventsFieldStaff')}
-                        </FormLabel>
-                        <FormControl>
-                          <select {...field} className={selectFieldClassName()}>
-                            <option value="">{t('loginEventsFilterAny')}</option>
-                            <option value="true">{t('usersStaffYes')}</option>
-                            <option value="false">{t('usersStaffNo')}</option>
-                          </select>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="language"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          {t('loginEventsFieldLanguage')}
-                        </FormLabel>
-                        <FormControl>
-                          <select {...field} className={selectFieldClassName()}>
-                            <option value="">{t('loginEventsFilterAny')}</option>
-                            <option value="en">{t('loginEventsLanguageEn')}</option>
-                            <option value="fr">{t('loginEventsLanguageFr')}</option>
-                          </select>
-                        </FormControl>
-                        <FormMessage />
-                        <p className="text-[11px] text-muted-foreground">{t('loginEventsFieldLanguageHint')}</p>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="provider"
-                    render={({ field }) => (
-                      <FormItem className="sm:col-span-2 lg:col-span-1">
-                        <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          {t('loginEventsFieldProvider')}
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            className="font-mono text-sm"
-                            placeholder={t('loginEventsFieldProviderPlaceholder')}
-                            autoComplete="off"
-                            {...field}
+              <Card className="border-border/80 shadow-sm">
+                <CardHeader className="space-y-1 pb-4">
+                  <CardTitle className="font-heading text-lg">{t('loginEventsFiltersTitle')}</CardTitle>
+                  <CardDescription className="text-sm">{t('loginEventsFiltersDescription')}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {!accessToken ? (
+                    <p className="text-sm text-muted-foreground">{t('loginEventsNoSession')}</p>
+                  ) : (
+                    <Form {...form}>
+                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                        <div className="grid grid-cols-1 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="outcome"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                  {t('loginEventsFieldOutcome')}
+                                </FormLabel>
+                                <FormControl>
+                                  <select {...field} className={selectFieldClassName()}>
+                                    <option value="">{t('loginEventsFilterAny')}</option>
+                                    <option value="success">{t('loginEventsOutcomeSuccess')}</option>
+                                    <option value="failure">{t('loginEventsOutcomeFailure')}</option>
+                                  </select>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="country"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          {t('loginEventsFieldCountry')}
-                        </FormLabel>
-                        <FormControl>
-                          <Input className="text-sm" placeholder={t('loginEventsFieldCountryPlaceholder')} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="city"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          {t('loginEventsFieldCity')}
-                        </FormLabel>
-                        <FormControl>
-                          <Input className="text-sm" placeholder={t('loginEventsFieldCityPlaceholder')} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="tz"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          {t('loginEventsFieldTimezone')}
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            className="font-mono text-sm"
-                            placeholder={t('loginEventsFieldTimezonePlaceholder')}
-                            autoComplete="off"
-                            {...field}
+                          <FormField
+                            control={form.control}
+                            name="staff"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                  {t('loginEventsFieldStaff')}
+                                </FormLabel>
+                                <FormControl>
+                                  <select {...field} className={selectFieldClassName()}>
+                                    <option value="">{t('loginEventsFilterAny')}</option>
+                                    <option value="true">{t('usersStaffYes')}</option>
+                                    <option value="false">{t('usersStaffNo')}</option>
+                                  </select>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                  <Button type="submit" variant="secondary" size="sm" disabled={loading} className="w-full sm:w-auto">
-                    {t('loginEventsApplyFilters')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={loading || !hasActiveFilters}
-                    className="w-full sm:w-auto"
-                    onClick={clearFilters}
-                  >
-                    {t('loginEventsClearFilters')}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          )}
-        </CardContent>
-      </Card>
+                          <FormField
+                            control={form.control}
+                            name="language"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                  {t('loginEventsFieldLanguage')}
+                                </FormLabel>
+                                <FormControl>
+                                  <select {...field} className={selectFieldClassName()}>
+                                    <option value="">{t('loginEventsFilterAny')}</option>
+                                    <option value="en">{t('loginEventsLanguageEn')}</option>
+                                    <option value="fr">{t('loginEventsLanguageFr')}</option>
+                                  </select>
+                                </FormControl>
+                                <FormMessage />
+                                <p className="text-[11px] text-muted-foreground">{t('loginEventsFieldLanguageHint')}</p>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="provider"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                  {t('loginEventsFieldProvider')}
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    className="font-mono text-sm"
+                                    placeholder={t('loginEventsFieldProviderPlaceholder')}
+                                    autoComplete="off"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="country"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                  {t('loginEventsFieldCountry')}
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    className="text-sm"
+                                    placeholder={t('loginEventsFieldCountryPlaceholder')}
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="city"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                  {t('loginEventsFieldCity')}
+                                </FormLabel>
+                                <FormControl>
+                                  <Input className="text-sm" placeholder={t('loginEventsFieldCityPlaceholder')} {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="tz"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                  {t('loginEventsFieldTimezone')}
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    className="font-mono text-sm"
+                                    placeholder={t('loginEventsFieldTimezonePlaceholder')}
+                                    autoComplete="off"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                          <Button
+                            type="submit"
+                            variant="secondary"
+                            size="sm"
+                            disabled={loading}
+                            className="w-full sm:w-auto"
+                          >
+                            {t('loginEventsApplyFilters')}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={loading || !hasActiveFilters}
+                            className="w-full sm:w-auto"
+                            onClick={clearFilters}
+                          >
+                            {t('loginEventsClearFilters')}
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </details>
+        </aside>
 
-      {accessToken && hasActiveFilters ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary" className="text-[11px]">
-            {t('loginEventsFiltersActive')}
-          </Badge>
-        </div>
-      ) : null}
+        <div className="min-w-0 space-y-6 lg:col-start-1 lg:row-start-1">
+          {accessToken && hasActiveFilters ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="text-[11px]">
+                {t('loginEventsFiltersActive')}
+              </Badge>
+            </div>
+          ) : null}
 
-      <section aria-label={t('loginEventsListAria')}>
+          <section aria-label={t('loginEventsListAria')}>
         {accessToken && loading && !data ? (
           <div className="flex items-center gap-2 py-12 text-muted-foreground">
             <Loader2 className="size-5 animate-spin" aria-hidden />
@@ -445,25 +502,75 @@ export function LoginEventsListPage() {
                 pages: totalPages,
               })}
             </p>
-            <ul className="space-y-2">
-              {rows.map((ev) => {
-                const href = `/login-events/${ev.id}`;
-                return (
-                  <li key={ev.id}>
-                    <Link
-                      to={href}
-                      className={cn(
-                        'block rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/50',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                      )}
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div className="min-w-0 space-y-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-mono text-xs text-muted-foreground">#{ev.id}</span>
+            <div className="rounded-md border border-border">
+              <div className="w-full overflow-x-auto">
+                <Table className="min-w-[36rem] md:min-w-[52rem] lg:min-w-[60rem]">
+                  <TableHeader>
+                    <TableRow className="bg-muted/30 hover:bg-muted/30">
+                      <TableHead className="w-[4rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {t('usersColId')}
+                      </TableHead>
+                      <TableHead className="whitespace-nowrap text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {t('userDetailLoginColWhen')}
+                      </TableHead>
+                      <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {t('userDetailLoginColOutcome')}
+                      </TableHead>
+                      <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {t('userDetailLoginColProvider')}
+                      </TableHead>
+                      <TableHead className="min-w-0 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {t('usersColUser')}
+                      </TableHead>
+                      <TableHead className="hidden md:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {t('userDetailLoginColStaff')}
+                      </TableHead>
+                      <TableHead className="hidden md:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {t('loginEventsColLocation')}
+                      </TableHead>
+                      <TableHead className="hidden lg:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {t('userDetailLoginColTimezone')}
+                      </TableHead>
+                      <TableHead className="hidden w-[5rem] text-right text-xs font-medium uppercase tracking-wide text-muted-foreground sm:table-cell">
+                        {t('usersColActions')}
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="font-mono text-xs">
+                    {rows.map((ev) => {
+                      const href = `/login-events/${ev.id}`;
+                      const locationLabel =
+                        [ev.client_city, ev.client_country].filter(Boolean).join(', ') || '—';
+                      const userLabel =
+                        ev.user_id != null
+                          ? t('loginEventsRowUser', {
+                              email: ev.user_email || String(ev.user_id),
+                            })
+                          : t('loginEventsRowAnonymous');
+                      return (
+                        <TableRow key={ev.id} className="hover:bg-muted/40">
+                          <TableCell className="tabular-nums text-muted-foreground">
+                            <Link
+                              to={href}
+                              className="text-primary underline-offset-2 hover:underline"
+                              aria-label={t('loginEventsDetailTitle', { id: ev.id })}
+                            >
+                              {ev.id}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-muted-foreground">
+                            <Link
+                              to={href}
+                              className="text-primary underline-offset-2 hover:underline"
+                              aria-label={t('loginEventsDetailTitle', { id: ev.id })}
+                            >
+                              {formatShortDateTime(ev.created_at)}
+                            </Link>
+                          </TableCell>
+                          <TableCell>
                             <span
                               className={cn(
-                                'rounded px-1.5 py-0.5 text-xs font-medium',
+                                'rounded px-1.5 py-0.5 font-medium',
                                 ev.outcome === 'success'
                                   ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
                                   : 'bg-destructive/15 text-destructive',
@@ -471,34 +578,43 @@ export function LoginEventsListPage() {
                             >
                               {ev.outcome}
                             </span>
-                            <span className="text-sm font-medium">{ev.provider}</span>
-                          </div>
-                          <p className="truncate text-sm text-muted-foreground">
-                            {ev.user_id != null
-                              ? t('loginEventsRowUser', {
-                                  email: ev.user_email || String(ev.user_id),
-                                })
-                              : t('loginEventsRowAnonymous')}
-                          </p>
-                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
-                            <span>{formatShortDateTime(ev.created_at)}</span>
-                            {(ev.client_country || ev.client_city) && (
-                              <span>
-                                {[ev.client_city, ev.client_country].filter(Boolean).join(', ') || '—'}
+                            {ev.failure_reason ? (
+                              <span
+                                className="mt-1 block max-w-[12rem] truncate text-[10px] text-muted-foreground md:max-w-[14rem]"
+                                title={ev.failure_reason}
+                              >
+                                {ev.failure_reason}
                               </span>
-                            )}
-                            {ev.client_timezone ? (
-                              <span className="font-mono">{ev.client_timezone}</span>
                             ) : null}
-                          </div>
-                        </div>
-                        <span className="shrink-0 text-xs text-primary">{t('loginEventsOpenDetail')}</span>
-                      </div>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+                          </TableCell>
+                          <TableCell>{ev.provider}</TableCell>
+                          <TableCell className="max-w-[10rem] truncate sm:max-w-[14rem] lg:max-w-[18rem]" title={userLabel}>
+                            {userLabel}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {ev.is_staff_at_event ? t('usersStaffYes') : t('usersStaffNo')}
+                          </TableCell>
+                          <TableCell className="hidden max-w-[10rem] truncate md:table-cell" title={locationLabel}>
+                            {locationLabel}
+                          </TableCell>
+                          <TableCell className="hidden max-w-[9rem] truncate font-mono text-[10px] lg:table-cell" title={ev.client_timezone || undefined}>
+                            {ev.client_timezone || '—'}
+                          </TableCell>
+                          <TableCell className="hidden text-right sm:table-cell">
+                            <Link
+                              to={href}
+                              className="text-primary underline-offset-2 hover:underline"
+                            >
+                              {t('loginEventsOpenDetail')}
+                            </Link>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
             {totalPages > 1 ? (
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <p className="text-xs text-muted-foreground">
@@ -530,7 +646,9 @@ export function LoginEventsListPage() {
             ) : null}
           </>
         ) : null}
-      </section>
+          </section>
+        </div>
+      </div>
     </div>
   );
 }
