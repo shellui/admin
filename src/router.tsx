@@ -5,6 +5,8 @@ import { DashboardPage } from '@/pages/DashboardPage';
 import { GroupsListPage } from '@/pages/GroupsListPage';
 import { LoginEventDetailPage } from '@/pages/LoginEventDetailPage';
 import { LoginEventsListPage } from '@/pages/LoginEventsListPage';
+import { OAuthSetupPage } from '@/pages/OAuthSetupPage';
+import { RouteErrorPage } from '@/pages/RouteErrorPage';
 import { UserDetailPage } from '@/pages/UserDetailPage';
 import { UsersListPage } from '@/pages/UsersListPage';
 
@@ -16,10 +18,12 @@ export const router = createHashRouter([
   {
     path: '/',
     element: <AdminShellLayout />,
+    errorElement: <RouteErrorPage />,
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'company', element: <CompanyPage /> },
       { path: 'groups', element: <GroupsListPage /> },
+      { path: 'oauth', element: <OAuthSetupPage /> },
       { path: 'users/:userId', element: <UserDetailPage /> },
       { path: 'users', element: <UsersListPage /> },
       { path: 'login-events/:eventId', element: <LoginEventDetailPage /> },

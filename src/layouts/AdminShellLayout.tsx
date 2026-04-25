@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Building2, LayoutDashboard, ScrollText, Tags, Users } from 'lucide-react';
+import { Building2, KeyRound, LayoutDashboard, ScrollText, Tags, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navLinkBase =
@@ -15,6 +15,7 @@ const authNavItems = [
   { to: '/users', key: 'navUsers' as const, icon: Users },
   { to: '/groups', key: 'navGroups' as const, icon: Tags },
   { to: '/login-events', key: 'navLoginEvents' as const, icon: ScrollText },
+  { to: '/oauth', key: 'navOAuth' as const, icon: KeyRound },
 ] as const;
 
 function adminNavLinkClassName(isActive: boolean) {
