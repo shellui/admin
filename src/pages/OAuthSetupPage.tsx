@@ -15,6 +15,19 @@ import {
   updateOAuthSocialApp,
 } from '@/lib/adminOauthClientsApi';
 import { getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
+import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
+
+const resolveShellUiOrigin = (): string => {
+  if (typeof window === 'undefined') return '';
+  if (window.parent !== window && typeof document.referrer === 'string' && document.referrer.trim()) {
+    try {
+      return new URL(document.referrer).origin;
+    } catch {
+      // Fall through to current origin.
+    }
+  }
+  return window.location.origin;
+};
 
 export function OAuthSetupPage() {
   const { t } = useTranslation();
@@ -29,6 +42,7 @@ export function OAuthSetupPage() {
   const [formClientId, setFormClientId] = useState('');
   const [formClientSecret, setFormClientSecret] = useState('');
   const [formTenant, setFormTenant] = useState('');
+  const [copyState, setCopyState] = useState<'idle' | 'done' | 'error'>('idle');
 
   const load = useCallback(async () => {
     if (!accessToken || !isOwner) {
@@ -77,6 +91,16 @@ export function OAuthSetupPage() {
 
   const selectedLinked = selectedEntry?.linked ?? null;
   const isCreateMode = !selectedLinked;
+  const callbackUrl = useMemo(() => {
+    if (!selectedProvider) return '';
+    const baseOrigin = resolveShellUiOrigin();
+    const callback = new URL('/login/callback', baseOrigin || getAuthBackendBaseUrl());
+    callback.searchParams.set('provider', selectedProvider);
+    if (selectedLinked?.mapping_id) {
+      callback.searchParams.set('company_oauth_client_id', String(selectedLinked.mapping_id));
+    }
+    return callback.toString();
+  }, [selectedLinked?.mapping_id, selectedProvider]);
 
   const initialFormSnapshot = useMemo(
     () => ({
@@ -106,6 +130,10 @@ export function OAuthSetupPage() {
     setFormTenant(selectedLinked?.tenant ?? '');
     setFormClientSecret('');
   }, [selectedLinked?.id, selectedLinked?.client_id, selectedLinked?.tenant]);
+
+  useEffect(() => {
+    setCopyState('idle');
+  }, [callbackUrl]);
 
   const confirmDiscardIfDirty = useCallback(async (): Promise<boolean> => {
     if (!formDirty) return true;
@@ -196,6 +224,16 @@ export function OAuthSetupPage() {
     }
   }
 
+  const onCopyCallbackUrl = useCallback(async () => {
+    if (!callbackUrl) return;
+    try {
+      await navigator.clipboard.writeText(callbackUrl);
+      setCopyState('done');
+    } catch {
+      setCopyState('error');
+    }
+  }, [callbackUrl]);
+
   return (
     <div className="w-full space-y-8">
       <header className="space-y-1">
@@ -254,6 +292,25 @@ export function OAuthSetupPage() {
                   </div>
                 </aside>
                 <section className="space-y-3">
+                  <div className="space-y-2 rounded-md border border-border/70 p-3">
+                    <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                      OAuth callback URL
+                    </p>
+                    <p className="font-mono text-xs text-muted-foreground">
+                      Configure this exact URL as an authorized redirect/callback URI in your OAuth provider app.
+                    </p>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Input value={callbackUrl} readOnly className="font-mono text-xs" />
+                      <Button type="button" size="sm" variant="secondary" onClick={() => void onCopyCallbackUrl()}>
+                        {copyState === 'done' ? 'Copied' : 'Copy'}
+                      </Button>
+                    </div>
+                    {copyState === 'error' ? (
+                      <Text className="font-mono text-xs text-destructive">
+                        Could not copy automatically. Copy the URL manually.
+                      </Text>
+                    ) : null}
+                  </div>
                   <p className="font-mono text-[10px] text-muted-foreground">
                     {isCreateMode ? t('oauthSetupCreateHint') : t('oauthSetupEditHint')}
                   </p>

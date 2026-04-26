@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
-import { DashboardOAuthRedirectsSection } from '@/components/DashboardOAuthRedirectsSection';
 import { fetchMemberCompanies, patchCompany, type CompanyDto } from '@/lib/companiesApi';
 import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
 
@@ -97,63 +96,59 @@ export function DashboardCompanySection({ accessToken }: Props) {
   }
 
   return (
-    <div className="space-y-8">
-      <section
-        className="space-y-4"
-        aria-label={t('dashboardCompanySectionLabel')}
-      >
-        <Card className="border-border/80 shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-heading flex items-center gap-2 text-lg">
-              <Building2 className="size-4 text-muted-foreground" aria-hidden />
-              {t('dashboardCompanyTitle')}
-            </CardTitle>
-            <CardDescription className="font-mono text-xs">{t('dashboardCompanyDescription')}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label
-                htmlFor="dashboard-company-name"
-                className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground"
-              >
-                {t('dashboardCompanyNameLabel')}
-              </label>
-              <Input
-                id="dashboard-company-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="font-mono text-sm"
-                autoComplete="organization"
-              />
-            </div>
-            <p className="font-mono text-[10px] text-muted-foreground">
-              <span className="text-muted-foreground/80">{t('dashboardCompanySlugLabel')}: </span>
-              {company.slug}
-            </p>
-            {error ? <Text className="font-mono text-sm text-destructive">{error}</Text> : null}
-            {saveMessage ? (
-              <Text className="font-mono text-sm text-muted-foreground">{saveMessage}</Text>
-            ) : null}
-            <Button
-              type="button"
-              size="sm"
-              disabled={saving || name.trim() === '' || name.trim() === company.name}
-              onClick={() => void handleSave()}
+    <section
+      className="space-y-4"
+      aria-label={t('dashboardCompanySectionLabel')}
+    >
+      <Card className="border-border/80 shadow-sm">
+        <CardHeader>
+          <CardTitle className="font-heading flex items-center gap-2 text-lg">
+            <Building2 className="size-4 text-muted-foreground" aria-hidden />
+            {t('dashboardCompanyTitle')}
+          </CardTitle>
+          <CardDescription className="font-mono text-xs">{t('dashboardCompanyDescription')}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <label
+              htmlFor="dashboard-company-name"
+              className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground"
             >
-              {saving ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" aria-hidden />
-                  {t('dashboardCompanySaving')}
-                </>
-              ) : (
-                t('dashboardCompanySave')
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-      </section>
-
-      <DashboardOAuthRedirectsSection accessToken={accessToken} />
-    </div>
+              {t('dashboardCompanyNameLabel')}
+            </label>
+            <Input
+              id="dashboard-company-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="font-mono text-sm"
+              autoComplete="organization"
+            />
+          </div>
+          <p className="font-mono text-[10px] text-muted-foreground">
+            <span className="text-muted-foreground/80">{t('dashboardCompanySlugLabel')}: </span>
+            {company.slug}
+          </p>
+          {error ? <Text className="font-mono text-sm text-destructive">{error}</Text> : null}
+          {saveMessage ? (
+            <Text className="font-mono text-sm text-muted-foreground">{saveMessage}</Text>
+          ) : null}
+          <Button
+            type="button"
+            size="sm"
+            disabled={saving || name.trim() === '' || name.trim() === company.name}
+            onClick={() => void handleSave()}
+          >
+            {saving ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+                {t('dashboardCompanySaving')}
+              </>
+            ) : (
+              t('dashboardCompanySave')
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+    </section>
   );
 }
