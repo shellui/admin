@@ -1,22 +1,72 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Building2, KeyRound, LayoutDashboard, ScrollText, Tags, Users } from 'lucide-react';
+import { BookOpen, Building2, KeyRound, LayoutDashboard, ScrollText, Tags, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useShelluiDeveloperMode } from '@/hooks/useShelluiDeveloperMode';
+import { adminShellUiConfig } from '@/admin.shellui.config';
+import type { AdminNavigationItem, AdminNavigationGroup } from '@/admin.shellui.config';
 
 const navLinkBase =
   'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium no-underline transition-colors hover:no-underline';
 
-const topNavItems = [
-  { to: '/', key: 'navDashboard' as const, icon: LayoutDashboard },
-  { to: '/company', key: 'navCompany' as const, icon: Building2 },
-] as const;
+type AdminNavItem = { to: string; key: string; icon: typeof LayoutDashboard };
 
-const authNavItems = [
-  { to: '/users', key: 'navUsers' as const, icon: Users },
-  { to: '/groups', key: 'navGroups' as const, icon: Tags },
-  { to: '/login-events', key: 'navLoginEvents' as const, icon: ScrollText },
-  { to: '/oauth', key: 'navOAuth' as const, icon: KeyRound },
-] as const;
+const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
+  '': LayoutDashboard,
+  company: Building2,
+  users: Users,
+  groups: Tags,
+  'login-events': ScrollText,
+  oauth: KeyRound,
+  swagger: BookOpen,
+  redoc: BookOpen,
+};
+
+const mapLabelToTranslationKey = (label: string): string => {
+  const normalized = label.toLowerCase();
+  if (normalized === 'dashboard' || normalized === 'tableau de bord') return 'navDashboard';
+  if (normalized === 'company' || normalized === 'entreprise') return 'navCompany';
+  if (normalized === 'users' || normalized === 'utilisateurs') return 'navUsers';
+  if (normalized === 'groups' || normalized === 'groupes') return 'navGroups';
+  if (normalized === 'log events' || normalized === 'événements de connexion') return 'navLoginEvents';
+  if (normalized === 'oauth apps' || normalized === 'apps oauth') return 'navOAuth';
+  if (normalized === 'swagger') return 'navSwagger';
+  if (normalized === 'redoc') return 'navRedoc';
+  return label;
+};
+
+const toRoutePath = (path: string) => (path ? `/${path.replace(/^\/+/, '')}` : '/');
+
+const buildNavItems = (
+  navigation: (AdminNavigationItem | AdminNavigationGroup)[],
+  includeDevModeItems: boolean,
+): { top: AdminNavItem[]; auth: AdminNavItem[] } => {
+  const top: AdminNavItem[] = [];
+  const auth: AdminNavItem[] = [];
+
+  for (const entry of navigation) {
+    if ('title' in entry && 'items' in entry) {
+      for (const item of entry.items) {
+        if (item.requiresDevMode && !includeDevModeItems) continue;
+        const key =
+          typeof item.label === 'string'
+            ? mapLabelToTranslationKey(item.label)
+            : mapLabelToTranslationKey(item.label.en || item.label.fr || item.path);
+        auth.push({ to: toRoutePath(item.path), key, icon: NAV_ICONS[item.path] ?? BookOpen });
+      }
+      continue;
+    }
+    const item = entry as AdminNavigationItem;
+    if (item.requiresDevMode && !includeDevModeItems) continue;
+    const key =
+      typeof item.label === 'string'
+        ? mapLabelToTranslationKey(item.label)
+        : mapLabelToTranslationKey(item.label.en || item.label.fr || item.path);
+    top.push({ to: toRoutePath(item.path), key, icon: NAV_ICONS[item.path] ?? LayoutDashboard });
+  }
+
+  return { top, auth };
+};
 
 function adminNavLinkClassName(isActive: boolean) {
   return cn(
@@ -29,6 +79,11 @@ function adminNavLinkClassName(isActive: boolean) {
 
 export function AdminShellLayout() {
   const { t } = useTranslation();
+  const isDeveloperMode = useShelluiDeveloperMode();
+  const location = useLocation();
+  const isDocsRoute = location.pathname === '/swagger' || location.pathname === '/redoc';
+  const shellNavigation = adminShellUiConfig.navigation ?? [];
+  const { top: topNavItems, auth: authNavItems } = buildNavItems(shellNavigation, isDeveloperMode);
 
   return (
     <div className="flex min-h-screen w-full bg-background">
@@ -71,7 +126,12 @@ export function AdminShellLayout() {
         </nav>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <main className="w-full min-w-0 flex-1 overflow-auto px-4 py-6 md:px-6 md:py-8 lg:px-8">
+        <main
+          className={cn(
+            'w-full min-w-0 flex-1',
+            isDocsRoute ? 'overflow-hidden p-0' : 'overflow-auto px-4 py-6 md:px-6 md:py-8 lg:px-8',
+          )}
+        >
           <Outlet />
         </main>
       </div>

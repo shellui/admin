@@ -29,6 +29,10 @@ const resources = {
       navGroups: 'Groups',
       navUsers: 'Users',
       navLoginEvents: 'Log events',
+      navSwagger: 'Swagger',
+      navRedoc: 'ReDoc',
+      authDocsSwaggerTitle: 'Swagger API docs',
+      authDocsRedocTitle: 'ReDoc API docs',
       loginEventsTitle: 'Login audit log',
       loginEventsBadge: 'shellui-auth',
       loginEventsDescription:
@@ -365,6 +369,10 @@ const resources = {
       navGroups: 'Groupes',
       navUsers: 'Utilisateurs',
       navLoginEvents: 'Événements de connexion',
+      navSwagger: 'Swagger',
+      navRedoc: 'ReDoc',
+      authDocsSwaggerTitle: 'Documentation API Swagger',
+      authDocsRedocTitle: 'Documentation API ReDoc',
       loginEventsTitle: 'Journal des connexions',
       loginEventsBadge: 'shellui-auth',
       loginEventsDescription:
