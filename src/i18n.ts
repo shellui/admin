@@ -100,7 +100,7 @@ const resources = {
       dashboardTitle: 'Operations overview',
       dashboardEnvBadge: 'shellui-auth',
       dashboardDescription:
-        'Figures below come from the Prometheus text endpoint on shellui-auth (`GET /auth/v1/admin/metrics` with `company_id`), authorized for Django staff or company owners. Use the same exposition for Prometheus or Grafana once you add a scrape token.',
+        'Figures below come from the Prometheus text endpoint on shellui-auth (`GET /api/v1/metrics`), authorized for Django staff or company owners. Use the same exposition for Prometheus or Grafana once you add a scrape token.',
       dashboardKpiSection: 'Identity database',
       dashboardStatUsersTotal: 'Users',
       dashboardStatUsersTotalHint: 'Rows in Django auth user table.',
@@ -140,7 +140,7 @@ const resources = {
       dashboardCompanySectionLabel: 'Company settings',
       dashboardCompanyTitle: 'Organization',
       dashboardCompanyDescription:
-        'Update your company record for this shell tenant (API: PATCH /api/companies/…). More fields will appear here over time.',
+        'Update your company record for this shell tenant (API: PATCH /api/v1/companies/…). More fields will appear here over time.',
       dashboardCompanyNameLabel: 'Company name',
       dashboardCompanySlugLabel: 'Slug',
       dashboardCompanySave: 'Save',
@@ -153,7 +153,7 @@ const resources = {
       loginRedirectsSectionLabel: 'OAuth redirect allow list',
       loginRedirectsTitle: 'Login redirect URLs',
       loginRedirectsDescription:
-        'Browser OAuth may only return tokens to the default callback on this auth host or to absolute URL prefixes you list here (GET /auth/v1/authorize … &redirect_to=).',
+        'Browser OAuth may only return tokens to the default callback on this auth host or to absolute URL prefixes you list here (GET /api/v1/authorize … &redirect_to=).',
       loginRedirectsLoading: 'Loading allow list…',
       loginRedirectsLoadError: 'Could not load redirect rules.',
       loginRedirectsSaveError: 'Could not save redirect rules.',
@@ -445,7 +445,7 @@ const resources = {
       dashboardTitle: 'Vue opérations',
       dashboardEnvBadge: 'shellui-auth',
       dashboardDescription:
-        'Les chiffres viennent du point Prometheus texte sur shellui-auth (`GET /auth/v1/admin/metrics` avec `company_id`), autorisé pour le staff Django ou les propriétaires d’entreprise. La même exposition pourra être scrapée par Prometheus ou Grafana après ajout d’un jeton de scrape.',
+        'Les chiffres viennent du point Prometheus texte sur shellui-auth (`GET /api/v1/metrics`), autorisé pour le staff Django ou les propriétaires d’entreprise. La même exposition pourra être scrapée par Prometheus ou Grafana après ajout d’un jeton de scrape.',
       dashboardKpiSection: 'Base identités',
       dashboardStatUsersTotal: 'Utilisateurs',
       dashboardStatUsersTotalHint: 'Lignes dans la table utilisateurs Django.',
@@ -486,7 +486,7 @@ const resources = {
       dashboardCompanySectionLabel: 'Paramètres entreprise',
       dashboardCompanyTitle: 'Organisation',
       dashboardCompanyDescription:
-        'Mettez à jour la fiche entreprise pour ce tenant Shell (API : PATCH /api/companies/…). D’autres champs suivront.',
+        'Mettez à jour la fiche entreprise pour ce tenant Shell (API : PATCH /api/v1/companies/…). D’autres champs suivront.',
       dashboardCompanyNameLabel: 'Nom de l’entreprise',
       dashboardCompanySlugLabel: 'Identifiant (slug)',
       dashboardCompanySave: 'Enregistrer',
@@ -499,7 +499,7 @@ const resources = {
       loginRedirectsSectionLabel: 'Liste blanche des redirections OAuth',
       loginRedirectsTitle: 'URL de retour de connexion',
       loginRedirectsDescription:
-        'Le navigateur ne peut recevoir les jetons OAuth que sur le callback par défaut de cet hôte d’auth ou sur les préfixes d’URL absolus listés ici (GET /auth/v1/authorize … &redirect_to=).',
+        'Le navigateur ne peut recevoir les jetons OAuth que sur le callback par défaut de cet hôte d’auth ou sur les préfixes d’URL absolus listés ici (GET /api/v1/authorize … &redirect_to=).',
       loginRedirectsLoading: 'Chargement de la liste…',
       loginRedirectsLoadError: 'Impossible de charger les règles de redirection.',
       loginRedirectsSaveError: 'Impossible d’enregistrer les règles de redirection.',

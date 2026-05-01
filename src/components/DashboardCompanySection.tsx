@@ -50,14 +50,14 @@ export function DashboardCompanySection({ accessToken }: Props) {
   }, [load]);
 
   const handleSave = useCallback(async () => {
-    if (!company?.slug) return;
+    if (!company?.id) return;
     const trimmed = name.trim();
     if (!trimmed) return;
     setSaving(true);
     setError(null);
     setSaveMessage(null);
     try {
-      const updated = await patchCompany(accessToken, company.slug, { name: trimmed });
+      const updated = await patchCompany(accessToken, company.id, { name: trimmed });
       setCompany(updated);
       setName(updated.name);
       setSaveMessage(t('dashboardCompanySaved'));
@@ -67,7 +67,7 @@ export function DashboardCompanySection({ accessToken }: Props) {
     } finally {
       setSaving(false);
     }
-  }, [accessToken, company?.slug, name, t]);
+  }, [accessToken, company?.id, name, t]);
 
   if (loading) {
     return (

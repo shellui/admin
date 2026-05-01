@@ -1,5 +1,4 @@
 import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
-import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
 
 export type CompanyDto = {
   id: number;
@@ -26,14 +25,7 @@ async function companiesAuthFetch(
   init: RequestInit = {},
 ): Promise<Response> {
   const base = getAuthBackendBaseUrl();
-  const companyId = getCompanyIdFromJwt(accessToken);
-  if (!companyId) {
-    throw new Error('Missing company_id in access token.');
-  }
   const url = new URL(`${base}${path}`);
-  if (!url.searchParams.get('company_id')) {
-    url.searchParams.set('company_id', String(companyId));
-  }
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
   if (!headers.has('Content-Type') && init.body) {
@@ -44,7 +36,7 @@ async function companiesAuthFetch(
 }
 
 export async function fetchMemberCompanies(accessToken: string): Promise<CompanyDto[]> {
-  const res = await companiesAuthFetch('/api/companies/', accessToken);
+  const res = await companiesAuthFetch('/api/v1/companies/', accessToken);
   const body = await res.json().catch(() => null);
   if (!res.ok) {
     throw new Error(parseErrorMessage(body) ?? `HTTP ${res.status}`);
@@ -57,10 +49,10 @@ export async function fetchMemberCompanies(accessToken: string): Promise<Company
 
 export async function patchCompany(
   accessToken: string,
-  slug: string,
+  companyId: number,
   payload: { name: string },
 ): Promise<CompanyDto> {
-  const res = await companiesAuthFetch(`/api/companies/${encodeURIComponent(slug)}/`, accessToken, {
+  const res = await companiesAuthFetch(`/api/v1/companies/${companyId}/`, accessToken, {
     method: 'PATCH',
     body: JSON.stringify(payload),
   });

@@ -40,19 +40,15 @@ function parseErrorMessage(body: unknown): string | null {
   return null;
 }
 
-/** Full URL for `GET /auth/v1/admin/metrics?company_id=…` (Bearer token required). */
-export function buildStaffPrometheusMetricsUrl(companyId: number): string {
+/** Full URL for `GET /api/v1/metrics` (Bearer token required). */
+export function buildStaffPrometheusMetricsUrl(): string {
   const base = getAuthBackendBaseUrl();
-  return `${base}/auth/v1/admin/metrics?company_id=${companyId}`;
+  return `${base}/api/v1/metrics`;
 }
 
-/** Prometheus text from shellui-auth `GET /auth/v1/admin/metrics` (staff or company owner). */
+/** Prometheus text from shellui-auth `GET /api/v1/metrics` (staff or company owner). */
 export async function fetchStaffPrometheusMetrics(accessToken: string): Promise<string> {
-  const companyId = getCompanyIdFromJwt(accessToken);
-  if (!companyId) {
-    throw new Error('Missing company_id in access token.');
-  }
-  const res = await fetch(buildStaffPrometheusMetricsUrl(companyId), {
+  const res = await fetch(buildStaffPrometheusMetricsUrl(), {
     headers: {
       Accept: 'text/plain',
       Authorization: `Bearer ${accessToken}`,
@@ -75,7 +71,7 @@ export async function fetchStaffPrometheusMetrics(accessToken: string): Promise<
 
 export async function fetchGlobalStaffPrometheusMetrics(accessToken: string): Promise<string> {
   const base = getAuthBackendBaseUrl();
-  const res = await fetch(`${base}/auth/v1/admin/metrics/all`, {
+  const res = await fetch(`${base}/api/v1/metrics/all`, {
     headers: {
       Accept: 'text/plain',
       Authorization: `Bearer ${accessToken}`,

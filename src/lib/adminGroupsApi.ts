@@ -1,5 +1,4 @@
 import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
-import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
 
 export type AdminGroupRow = {
   id: number;
@@ -21,14 +20,7 @@ function parseErrorMessage(body: unknown): string | null {
 
 async function authFetch(path: string, accessToken: string, init: RequestInit = {}): Promise<Response> {
   const base = getAuthBackendBaseUrl();
-  const companyId = getCompanyIdFromJwt(accessToken);
-  if (!companyId) {
-    throw new Error('Missing company_id in access token.');
-  }
   const url = new URL(`${base}${path}`);
-  if (!url.searchParams.get('company_id')) {
-    url.searchParams.set('company_id', String(companyId));
-  }
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
   if (!headers.has('Content-Type') && init.body) {
@@ -39,7 +31,7 @@ async function authFetch(path: string, accessToken: string, init: RequestInit = 
 }
 
 export async function fetchAdminGroups(accessToken: string): Promise<AdminGroupRow[]> {
-  const res = await authFetch('/auth/v1/admin/groups', accessToken);
+  const res = await authFetch('/api/v1/groups', accessToken);
   const body = await res.json().catch(() => null);
   if (!res.ok) {
     throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
@@ -48,7 +40,7 @@ export async function fetchAdminGroups(accessToken: string): Promise<AdminGroupR
 }
 
 export async function createAdminGroup(accessToken: string, name: string): Promise<AdminGroupRow> {
-  const res = await authFetch('/auth/v1/admin/groups', accessToken, {
+  const res = await authFetch('/api/v1/groups', accessToken, {
     method: 'POST',
     body: JSON.stringify({ name }),
   });
@@ -64,7 +56,7 @@ export async function renameAdminGroup(
   groupId: number,
   name: string,
 ): Promise<AdminGroupRow> {
-  const res = await authFetch(`/auth/v1/admin/groups/${groupId}`, accessToken, {
+  const res = await authFetch(`/api/v1/groups/${groupId}`, accessToken, {
     method: 'PUT',
     body: JSON.stringify({ name }),
   });
@@ -76,7 +68,7 @@ export async function renameAdminGroup(
 }
 
 export async function deleteAdminGroup(accessToken: string, groupId: number): Promise<void> {
-  const res = await authFetch(`/auth/v1/admin/groups/${groupId}`, accessToken, {
+  const res = await authFetch(`/api/v1/groups/${groupId}`, accessToken, {
     method: 'DELETE',
   });
   if (res.status === 204) return;

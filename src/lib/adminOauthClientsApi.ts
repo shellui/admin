@@ -1,5 +1,4 @@
 import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
-import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
 
 export type OAuthClientRow = {
   id: number;
@@ -43,14 +42,7 @@ function parseErrorMessage(body: unknown): string | null {
 
 async function authFetch(path: string, accessToken: string, init: RequestInit = {}): Promise<Response> {
   const base = getAuthBackendBaseUrl();
-  const companyId = getCompanyIdFromJwt(accessToken);
-  if (!companyId) {
-    throw new Error('Missing company_id in access token.');
-  }
   const url = new URL(`${base}${path}`);
-  if (!url.searchParams.get('company_id')) {
-    url.searchParams.set('company_id', String(companyId));
-  }
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
   if (!headers.has('Content-Type') && init.body) {
@@ -61,7 +53,7 @@ async function authFetch(path: string, accessToken: string, init: RequestInit = 
 }
 
 export async function fetchOAuthClients(accessToken: string): Promise<OAuthClientRow[]> {
-  const res = await authFetch('/auth/v1/admin/oauth-clients', accessToken);
+  const res = await authFetch('/api/v1/oauth-clients', accessToken);
   const body = await res.json().catch(() => null);
   if (!res.ok) {
     throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
@@ -79,7 +71,7 @@ export async function createOAuthClient(
     is_active?: boolean;
   },
 ): Promise<OAuthClientRow> {
-  const res = await authFetch('/auth/v1/admin/oauth-clients', accessToken, {
+  const res = await authFetch('/api/v1/oauth-clients', accessToken, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
@@ -98,7 +90,7 @@ export async function updateOAuthClient(
     is_active?: boolean;
   },
 ): Promise<OAuthClientRow> {
-  const res = await authFetch(`/auth/v1/admin/oauth-clients/${id}`, accessToken, {
+  const res = await authFetch(`/api/v1/oauth-clients/${id}`, accessToken, {
     method: 'PUT',
     body: JSON.stringify(payload),
   });
@@ -110,7 +102,7 @@ export async function updateOAuthClient(
 }
 
 export async function deleteOAuthClient(accessToken: string, id: number): Promise<void> {
-  const res = await authFetch(`/auth/v1/admin/oauth-clients/${id}`, accessToken, {
+  const res = await authFetch(`/api/v1/oauth-clients/${id}`, accessToken, {
     method: 'DELETE',
   });
   if (res.status === 204) return;
@@ -119,7 +111,7 @@ export async function deleteOAuthClient(accessToken: string, id: number): Promis
 }
 
 export async function fetchOAuthSocialApps(accessToken: string): Promise<OAuthSocialAppsCatalog> {
-  const res = await authFetch('/auth/v1/admin/oauth-social-apps', accessToken);
+  const res = await authFetch('/api/v1/oauth-social-apps', accessToken);
   const body = await res.json().catch(() => null);
   if (!res.ok) {
     throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
@@ -145,7 +137,7 @@ export async function createOAuthSocialApp(
     tenant?: string;
   },
 ): Promise<void> {
-  const res = await authFetch('/auth/v1/admin/oauth-social-apps', accessToken, {
+  const res = await authFetch('/api/v1/oauth-social-apps', accessToken, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
@@ -156,7 +148,7 @@ export async function createOAuthSocialApp(
 }
 
 export async function deleteOAuthSocialApp(accessToken: string, id: number): Promise<void> {
-  const res = await authFetch(`/auth/v1/admin/oauth-social-apps/${id}`, accessToken, {
+  const res = await authFetch(`/api/v1/oauth-social-apps/${id}`, accessToken, {
     method: 'DELETE',
   });
   if (res.status === 204) return;
@@ -173,7 +165,7 @@ export async function updateOAuthSocialApp(
     tenant?: string;
   },
 ): Promise<OAuthSocialAppRow> {
-  const res = await authFetch(`/auth/v1/admin/oauth-social-apps/${id}`, accessToken, {
+  const res = await authFetch(`/api/v1/oauth-social-apps/${id}`, accessToken, {
     method: 'PUT',
     body: JSON.stringify(payload),
   });

@@ -1,5 +1,4 @@
 import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
-import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
 
 export type AdminUserGroupRef = {
   id: number;
@@ -51,14 +50,7 @@ function parseErrorMessage(body: unknown): string | null {
 /** `accessToken` is `Settings.accessToken` from the shell (session JWT). */
 async function authFetch(path: string, accessToken: string, init: RequestInit = {}): Promise<Response> {
   const base = getAuthBackendBaseUrl();
-  const companyId = getCompanyIdFromJwt(accessToken);
-  if (!companyId) {
-    throw new Error('Missing company_id in access token.');
-  }
   const url = new URL(`${base}${path}`);
-  if (!url.searchParams.get('company_id')) {
-    url.searchParams.set('company_id', String(companyId));
-  }
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
   if (!headers.has('Content-Type') && init.body) {
@@ -77,7 +69,7 @@ export async function fetchAdminUsers(
   if (params.page != null) sp.set('page', String(params.page));
   if (params.pageSize != null) sp.set('page_size', String(params.pageSize));
   const q = sp.toString();
-  const path = `/auth/v1/admin/users${q ? `?${q}` : ''}`;
+  const path = `/api/v1/users${q ? `?${q}` : ''}`;
   const res = await authFetch(path, accessToken);
   const body = await res.json().catch(() => null);
   if (!res.ok) {
@@ -87,7 +79,7 @@ export async function fetchAdminUsers(
 }
 
 export async function fetchAdminUser(accessToken: string, userId: number): Promise<AdminUserRow> {
-  const res = await authFetch(`/auth/v1/admin/users/${userId}`, accessToken);
+  const res = await authFetch(`/api/v1/users/${userId}`, accessToken);
   const body = await res.json().catch(() => null);
   if (!res.ok) {
     throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
@@ -109,7 +101,7 @@ export async function updateAdminUser(
   userId: number,
   payload: AdminUserUpdatePayload,
 ): Promise<AdminUserRow> {
-  const res = await authFetch(`/auth/v1/admin/users/${userId}`, accessToken, {
+  const res = await authFetch(`/api/v1/users/${userId}`, accessToken, {
     method: 'PUT',
     body: JSON.stringify(payload),
   });
@@ -181,7 +173,7 @@ export async function fetchAdminLoginEvents(
   if (params.client_timezone?.trim()) sp.set('client_timezone', params.client_timezone.trim());
   if (params.language?.trim()) sp.set('language', params.language.trim().toLowerCase());
   const q = sp.toString();
-  const path = `/auth/v1/admin/login-events${q ? `?${q}` : ''}`;
+  const path = `/api/v1/login-events${q ? `?${q}` : ''}`;
   const res = await authFetch(path, accessToken);
   const body = await res.json().catch(() => null);
   if (!res.ok) {
@@ -191,7 +183,7 @@ export async function fetchAdminLoginEvents(
 }
 
 export async function fetchAdminLoginEvent(accessToken: string, eventId: number): Promise<AdminLoginEventRow> {
-  const res = await authFetch(`/auth/v1/admin/login-events/${eventId}`, accessToken);
+  const res = await authFetch(`/api/v1/login-events/${eventId}`, accessToken);
   const body = await res.json().catch(() => null);
   if (!res.ok) {
     throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
