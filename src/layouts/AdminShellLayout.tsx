@@ -88,12 +88,6 @@ export function AdminShellLayout() {
   return (
     <div className="flex min-h-screen w-full bg-background">
       <aside className="flex w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-        <div className="flex h-14 items-center border-b border-sidebar-border px-4">
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold tracking-tight">ShellUI</span>
-            <span className="text-xs text-muted-foreground">{t('brandSubtitle')}</span>
-          </div>
-        </div>
         <nav className="flex flex-1 flex-col gap-1 p-3" aria-label="Admin">
           {topNavItems.map(({ to, key, icon: Icon }) => (
             <NavLink
@@ -106,7 +100,7 @@ export function AdminShellLayout() {
               {t(key)}
             </NavLink>
           ))}
-          <div className="mt-4 border-t border-sidebar-border pt-3">
+          <div className={cn(topNavItems.length > 0 && 'mt-4 border-t border-sidebar-border pt-3')}>
             <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('navAuthGroup')}
             </p>
