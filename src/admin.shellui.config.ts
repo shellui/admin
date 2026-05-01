@@ -32,13 +32,9 @@ export const adminShellUiConfig: AdminShellUIConfig = {
       url: '#/',
     },
     {
-      label: { en: 'Company', fr: 'Entreprise' },
-      path: 'company',
-      url: '#/company',
-    },
-    {
-      title: { en: 'Authentication', fr: 'Authentification' },
+      title: { en: 'Identity', fr: 'Identité' },
       items: [
+        { label: { en: 'Company', fr: 'Entreprise' }, path: 'company', url: '#/company' },
         { label: { en: 'Users', fr: 'Utilisateurs' }, path: 'users', url: '#/users' },
         { label: { en: 'Groups', fr: 'Groupes' }, path: 'groups', url: '#/groups' },
         {
