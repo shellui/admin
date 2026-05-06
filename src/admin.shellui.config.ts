@@ -44,6 +44,11 @@ export const adminShellUiConfig: AdminShellUIConfig = {
         },
         { label: { en: 'OAuth apps', fr: 'Apps OAuth' }, path: 'oauth', url: '#/oauth' },
         {
+          label: { en: 'Access tokens', fr: 'Jetons d’accès' },
+          path: 'personal-access-tokens',
+          url: '#/personal-access-tokens',
+        },
+        {
           label: { en: 'Swagger', fr: 'Swagger' },
           path: 'swagger',
           url: '#/swagger',

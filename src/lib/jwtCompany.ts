@@ -14,6 +14,19 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   }
 }
 
+/** Django SimpleJWT `user_id` claim (string or number). */
+export function getUserIdFromJwt(accessToken: string): number | null {
+  const payload = decodeJwtPayload(accessToken);
+  if (!payload) return null;
+  const raw = payload.user_id;
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  if (typeof raw === 'string' && raw.trim()) {
+    const parsed = Number.parseInt(raw, 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 export function getCompanyIdFromJwt(accessToken: string): number | null {
   const payload = decodeJwtPayload(accessToken);
   if (!payload) return null;

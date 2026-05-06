@@ -8,6 +8,7 @@ import { LoginEventsListPage } from '@/pages/LoginEventsListPage';
 import { AuthDocsPage } from '@/pages/AuthDocsPage';
 import { OAuthSetupPage } from '@/pages/OAuthSetupPage';
 import { RouteErrorPage } from '@/pages/RouteErrorPage';
+import { AccessTokensPage } from '@/pages/AccessTokensPage';
 import { UserDetailPage } from '@/pages/UserDetailPage';
 import { UsersListPage } from '@/pages/UsersListPage';
 
@@ -29,6 +30,16 @@ export const router = createHashRouter([
       { path: 'redoc', element: <AuthDocsPage kind="redoc" /> },
       { path: 'users/:userId', element: <UserDetailPage /> },
       { path: 'users', element: <UsersListPage /> },
+      { path: 'personal-access-tokens', element: <AccessTokensPage /> },
+      {
+        path: 'access-tokens',
+        element: (
+          <Navigate
+            to="/personal-access-tokens"
+            replace
+          />
+        ),
+      },
       { path: 'login-events/:eventId', element: <LoginEventDetailPage /> },
       { path: 'login-events', element: <LoginEventsListPage /> },
       {

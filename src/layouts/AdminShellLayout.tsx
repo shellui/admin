@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   BookOpen,
   Building2,
+  Fingerprint,
   KeyRound,
   LayoutDashboard,
   ScrollText,
@@ -23,6 +24,7 @@ const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
   '': LayoutDashboard,
   company: Building2,
   users: Users,
+  'personal-access-tokens': Fingerprint,
   groups: Tags,
   'login-events': ScrollText,
   oauth: KeyRound,
@@ -39,6 +41,12 @@ const mapLabelToTranslationKey = (label: string): string => {
   if (normalized === 'log events' || normalized === 'événements de connexion')
     return 'navLoginEvents';
   if (normalized === 'oauth apps' || normalized === 'apps oauth') return 'navOAuth';
+  if (
+    normalized === 'access tokens' ||
+    normalized === "jetons d'accès" ||
+    normalized === 'jetons d’accès'
+  )
+    return 'navAccessTokens';
   if (normalized === 'swagger') return 'navSwagger';
   if (normalized === 'redoc') return 'navRedoc';
   return label;
