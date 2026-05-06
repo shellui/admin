@@ -19,7 +19,11 @@ import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
 
 const resolveShellUiOrigin = (): string => {
   if (typeof window === 'undefined') return '';
-  if (window.parent !== window && typeof document.referrer === 'string' && document.referrer.trim()) {
+  if (
+    window.parent !== window &&
+    typeof document.referrer === 'string' &&
+    document.referrer.trim()
+  ) {
     try {
       return new URL(document.referrer).origin;
     } catch {
@@ -78,7 +82,9 @@ export function OAuthSetupPage() {
   const providerRows = useMemo(() => {
     const safeRows = Array.isArray(rows) ? rows : [];
     return providers.map((provider) => {
-      const matches = safeRows.filter((row) => row?.provider?.toLowerCase() === provider.toLowerCase());
+      const matches = safeRows.filter(
+        (row) => row?.provider?.toLowerCase() === provider.toLowerCase(),
+      );
       const linked = matches.find((row) => row.is_linked) ?? null;
       return { provider, rows: matches, linked };
     });
@@ -115,7 +121,13 @@ export function OAuthSetupPage() {
     if (formTenant.trim() !== (initialFormSnapshot.tenant || '').trim()) return true;
     if (formClientSecret.trim()) return true;
     return false;
-  }, [formClientId, formClientSecret, formTenant, initialFormSnapshot.client_id, initialFormSnapshot.tenant]);
+  }, [
+    formClientId,
+    formClientSecret,
+    formTenant,
+    initialFormSnapshot.client_id,
+    initialFormSnapshot.tenant,
+  ]);
 
   useEffect(() => {
     if (!selectedProvider && providers.length > 0) {
@@ -165,7 +177,13 @@ export function OAuthSetupPage() {
   );
 
   async function onCreateSocialApp() {
-    if (!accessToken || !selectedProvider || !isCreateMode || !formClientId.trim() || !formClientSecret.trim()) {
+    if (
+      !accessToken ||
+      !selectedProvider ||
+      !isCreateMode ||
+      !formClientId.trim() ||
+      !formClientSecret.trim()
+    ) {
       return;
     }
     setBusy(true);
@@ -175,7 +193,10 @@ export function OAuthSetupPage() {
         provider: selectedProvider,
         client_id: formClientId.trim(),
         client_secret: formClientSecret.trim(),
-        tenant: selectedProvider.toLowerCase() === 'microsoft' ? (formTenant.trim() || undefined) : undefined,
+        tenant:
+          selectedProvider.toLowerCase() === 'microsoft'
+            ? formTenant.trim() || undefined
+            : undefined,
       });
       await load();
     } catch (e) {
@@ -191,7 +212,10 @@ export function OAuthSetupPage() {
     if (formClientId.trim() !== (initialFormSnapshot.client_id || '').trim()) {
       payload.client_id = formClientId.trim();
     }
-    if (selectedProvider.toLowerCase() === 'microsoft' && formTenant.trim() !== (initialFormSnapshot.tenant || '').trim()) {
+    if (
+      selectedProvider.toLowerCase() === 'microsoft' &&
+      formTenant.trim() !== (initialFormSnapshot.tenant || '').trim()
+    ) {
       payload.tenant = formTenant.trim();
     }
     if (formClientSecret.trim()) {
@@ -241,16 +265,23 @@ export function OAuthSetupPage() {
           <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
             {t('oauthSetupPageTitle')}
           </h1>
-          <Badge variant="secondary" className="font-mono text-[10px] uppercase">
+          <Badge
+            variant="secondary"
+            className="font-mono text-[10px] uppercase"
+          >
             {t('dashboardEnvBadge')}
           </Badge>
         </div>
         <Text className="max-w-4xl font-mono text-sm">{t('oauthSetupPageDescription')}</Text>
       </header>
 
-      {!accessToken && <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>}
+      {!accessToken && (
+        <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
+      )}
       {accessToken && !isOwner && (
-        <Text className="font-mono text-sm text-muted-foreground">{t('oauthSetupPageForbidden')}</Text>
+        <Text className="font-mono text-sm text-muted-foreground">
+          {t('oauthSetupPageForbidden')}
+        </Text>
       )}
       {error ? <Text className="font-mono text-sm text-destructive">{error}</Text> : null}
 
@@ -258,12 +289,20 @@ export function OAuthSetupPage() {
         <Card className="border-border/80 shadow-sm">
           <CardHeader>
             <CardTitle className="font-heading text-lg">{t('oauthSetupCatalogTitle')}</CardTitle>
-            <CardDescription className="font-mono text-xs">{t('oauthSetupCatalogDescription')}</CardDescription>
+            <CardDescription className="font-mono text-xs">
+              {t('oauthSetupCatalogDescription')}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {loading ? <Text className="font-mono text-sm text-muted-foreground">{t('oauthSetupLoading')}</Text> : null}
+            {loading ? (
+              <Text className="font-mono text-sm text-muted-foreground">
+                {t('oauthSetupLoading')}
+              </Text>
+            ) : null}
             {!loading && providers.length === 0 ? (
-              <Text className="font-mono text-sm text-muted-foreground">{t('oauthSetupEmpty')}</Text>
+              <Text className="font-mono text-sm text-muted-foreground">
+                {t('oauthSetupEmpty')}
+              </Text>
             ) : null}
             {!loading && providers.length > 0 ? (
               <div className="grid gap-4 md:grid-cols-[220px_1fr]">
@@ -285,7 +324,9 @@ export function OAuthSetupPage() {
                       >
                         <span>{entry.provider}</span>
                         <Badge variant={entry.linked ? 'default' : 'outline'}>
-                          {entry.linked ? t('oauthSetupStatusEnabled') : t('oauthSetupStatusNotInitialized')}
+                          {entry.linked
+                            ? t('oauthSetupStatusEnabled')
+                            : t('oauthSetupStatusNotInitialized')}
                         </Badge>
                       </button>
                     ))}
@@ -297,11 +338,21 @@ export function OAuthSetupPage() {
                       OAuth callback URL
                     </p>
                     <p className="font-mono text-xs text-muted-foreground">
-                      Configure this exact URL as an authorized redirect/callback URI in your OAuth provider app.
+                      Configure this exact URL as an authorized redirect/callback URI in your OAuth
+                      provider app.
                     </p>
                     <div className="flex flex-col gap-2 sm:flex-row">
-                      <Input value={callbackUrl} readOnly className="font-mono text-xs" />
-                      <Button type="button" size="sm" variant="secondary" onClick={() => void onCopyCallbackUrl()}>
+                      <Input
+                        value={callbackUrl}
+                        readOnly
+                        className="font-mono text-xs"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => void onCopyCallbackUrl()}
+                      >
                         {copyState === 'done' ? 'Copied' : 'Copy'}
                       </Button>
                     </div>
@@ -319,13 +370,21 @@ export function OAuthSetupPage() {
                       <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
                         {t('oauthClientsProvider')}
                       </label>
-                      <Input value={selectedProvider} readOnly className="font-mono text-sm" />
+                      <Input
+                        value={selectedProvider}
+                        readOnly
+                        className="font-mono text-sm"
+                      />
                     </div>
                     <div className="space-y-1 sm:col-span-2">
                       <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
                         {t('oauthSetupColClientId')}
                       </label>
-                      <Input value={formClientId} onChange={(e) => setFormClientId(e.target.value)} className="font-mono text-sm" />
+                      <Input
+                        value={formClientId}
+                        onChange={(e) => setFormClientId(e.target.value)}
+                        className="font-mono text-sm"
+                      />
                     </div>
                     <div className="space-y-1 sm:col-span-2">
                       <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -345,18 +404,37 @@ export function OAuthSetupPage() {
                         <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
                           {t('oauthClientsTenant')}
                         </label>
-                        <Input value={formTenant} onChange={(e) => setFormTenant(e.target.value)} className="font-mono text-sm" />
+                        <Input
+                          value={formTenant}
+                          onChange={(e) => setFormTenant(e.target.value)}
+                          className="font-mono text-sm"
+                        />
                       </div>
                     ) : null}
                   </div>
                   <div className="flex items-center gap-2">
                     {isCreateMode ? (
-                      <Button type="button" size="sm" disabled={busy || !selectedProvider || !formClientId.trim() || !formClientSecret.trim()} onClick={() => void onCreateSocialApp()}>
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={
+                          busy ||
+                          !selectedProvider ||
+                          !formClientId.trim() ||
+                          !formClientSecret.trim()
+                        }
+                        onClick={() => void onCreateSocialApp()}
+                      >
                         {busy ? t('oauthSetupCreateLoading') : t('oauthSetupCreateAction')}
                       </Button>
                     ) : (
                       <>
-                        <Button type="button" size="sm" disabled={busy || !formDirty} onClick={() => void onUpdateSocialApp()}>
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={busy || !formDirty}
+                          onClick={() => void onUpdateSocialApp()}
+                        >
                           {busy ? t('oauthSetupSaveLoading') : t('oauthSetupSaveAction')}
                         </Button>
                         <Button

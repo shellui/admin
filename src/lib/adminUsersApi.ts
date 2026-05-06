@@ -48,7 +48,11 @@ function parseErrorMessage(body: unknown): string | null {
 }
 
 /** `accessToken` is `Settings.accessToken` from the shell (session JWT). */
-async function authFetch(path: string, accessToken: string, init: RequestInit = {}): Promise<Response> {
+async function authFetch(
+  path: string,
+  accessToken: string,
+  init: RequestInit = {},
+): Promise<Response> {
   const base = getAuthBackendBaseUrl();
   const url = new URL(`${base}${path}`);
   const headers = new Headers(init.headers);
@@ -182,7 +186,10 @@ export async function fetchAdminLoginEvents(
   return body as AdminLoginEventListResponse;
 }
 
-export async function fetchAdminLoginEvent(accessToken: string, eventId: number): Promise<AdminLoginEventRow> {
+export async function fetchAdminLoginEvent(
+  accessToken: string,
+  eventId: number,
+): Promise<AdminLoginEventRow> {
   const res = await authFetch(`/api/v1/login-events/${eventId}`, accessToken);
   const body = await res.json().catch(() => null);
   if (!res.ok) {

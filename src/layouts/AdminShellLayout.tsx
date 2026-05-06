@@ -1,6 +1,14 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, Building2, KeyRound, LayoutDashboard, ScrollText, Tags, Users } from 'lucide-react';
+import {
+  BookOpen,
+  Building2,
+  KeyRound,
+  LayoutDashboard,
+  ScrollText,
+  Tags,
+  Users,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useShelluiDeveloperMode } from '@/hooks/useShelluiDeveloperMode';
 import { adminShellUiConfig } from '@/admin.shellui.config';
@@ -28,7 +36,8 @@ const mapLabelToTranslationKey = (label: string): string => {
   if (normalized === 'company' || normalized === 'entreprise') return 'navCompany';
   if (normalized === 'users' || normalized === 'utilisateurs') return 'navUsers';
   if (normalized === 'groups' || normalized === 'groupes') return 'navGroups';
-  if (normalized === 'log events' || normalized === 'événements de connexion') return 'navLoginEvents';
+  if (normalized === 'log events' || normalized === 'événements de connexion')
+    return 'navLoginEvents';
   if (normalized === 'oauth apps' || normalized === 'apps oauth') return 'navOAuth';
   if (normalized === 'swagger') return 'navSwagger';
   if (normalized === 'redoc') return 'navRedoc';
@@ -88,7 +97,10 @@ export function AdminShellLayout() {
   return (
     <div className="flex min-h-screen w-full bg-background">
       <aside className="flex w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-        <nav className="flex flex-1 flex-col gap-1 p-3" aria-label="Admin">
+        <nav
+          className="flex flex-1 flex-col gap-1 p-3"
+          aria-label="Admin"
+        >
           {topNavItems.map(({ to, key, icon: Icon }) => (
             <NavLink
               key={to}
@@ -96,7 +108,10 @@ export function AdminShellLayout() {
               end={to === '/'}
               className={({ isActive }) => adminNavLinkClassName(isActive)}
             >
-              <Icon className="size-4 shrink-0" aria-hidden />
+              <Icon
+                className="size-4 shrink-0"
+                aria-hidden
+              />
               {t(key)}
             </NavLink>
           ))}
@@ -111,7 +126,10 @@ export function AdminShellLayout() {
                   to={to}
                   className={({ isActive }) => adminNavLinkClassName(isActive)}
                 >
-                  <Icon className="size-4 shrink-0" aria-hidden />
+                  <Icon
+                    className="size-4 shrink-0"
+                    aria-hidden
+                  />
                   {t(key)}
                 </NavLink>
               ))}

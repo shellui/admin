@@ -40,7 +40,11 @@ function parseErrorMessage(body: unknown): string | null {
   return null;
 }
 
-async function authFetch(path: string, accessToken: string, init: RequestInit = {}): Promise<Response> {
+async function authFetch(
+  path: string,
+  accessToken: string,
+  init: RequestInit = {},
+): Promise<Response> {
   const base = getAuthBackendBaseUrl();
   const url = new URL(`${base}${path}`);
   const headers = new Headers(init.headers);
@@ -121,10 +125,10 @@ export async function fetchOAuthSocialApps(accessToken: string): Promise<OAuthSo
   }
   const obj = body as Record<string, unknown>;
   return {
-    providers: Array.isArray(obj.providers) ? (obj.providers.filter((v): v is string => typeof v === 'string')) : [],
-    social_apps: Array.isArray(obj.social_apps)
-      ? (obj.social_apps as OAuthSocialAppRow[])
+    providers: Array.isArray(obj.providers)
+      ? obj.providers.filter((v): v is string => typeof v === 'string')
       : [],
+    social_apps: Array.isArray(obj.social_apps) ? (obj.social_apps as OAuthSocialAppRow[]) : [],
   };
 }
 

@@ -31,8 +31,7 @@ export function LangProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const initial =
-      getLangFromSettings(shellui.initialSettings) || i18n.language || 'en';
+    const initial = getLangFromSettings(shellui.initialSettings) || i18n.language || 'en';
     applyLang(initial);
 
     const cleanupUpdated = shellui.addMessageListener('SHELLUI_SETTINGS_UPDATED', handleSettings);

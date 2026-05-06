@@ -23,7 +23,11 @@ export type AuthMetricsSnapshot = {
   monthlyActiveUsers: number;
 };
 
-function readCompanySeries(samples: Map<string, number>, metricName: string, companyId: number): number {
+function readCompanySeries(
+  samples: Map<string, number>,
+  metricName: string,
+  companyId: number,
+): number {
   const key = `${metricName}{company_id="${companyId}"}`;
   const v = samples.get(key);
   if (v === undefined || !Number.isFinite(v)) {
@@ -93,10 +97,26 @@ export async function fetchAuthMetricsSnapshot(accessToken: string): Promise<Aut
   const usersTotal = readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.usersTotal, companyId);
   const usersActive = readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.usersActive, companyId);
   const usersStaff = readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.usersStaff, companyId);
-  const socialAccountsTotal = readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.socialAccountsTotal, companyId);
-  const dailyActiveUsers = readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.dailyActiveUsers, companyId);
-  const weeklyActiveUsers = readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.weeklyActiveUsers, companyId);
-  const monthlyActiveUsers = readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.monthlyActiveUsers, companyId);
+  const socialAccountsTotal = readCompanySeries(
+    samples,
+    SHELLUI_AUTH_METRIC_NAMES.socialAccountsTotal,
+    companyId,
+  );
+  const dailyActiveUsers = readCompanySeries(
+    samples,
+    SHELLUI_AUTH_METRIC_NAMES.dailyActiveUsers,
+    companyId,
+  );
+  const weeklyActiveUsers = readCompanySeries(
+    samples,
+    SHELLUI_AUTH_METRIC_NAMES.weeklyActiveUsers,
+    companyId,
+  );
+  const monthlyActiveUsers = readCompanySeries(
+    samples,
+    SHELLUI_AUTH_METRIC_NAMES.monthlyActiveUsers,
+    companyId,
+  );
 
   return {
     rawText,

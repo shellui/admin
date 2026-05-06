@@ -10,7 +10,13 @@
     "preview": "vite preview",
     "serve:dist": "node tools/serve/serve.js",
     "test": "vitest run",
-    "build:sdk": "pnpm -C ../shellui run build:sdk"
+    "build:sdk": "pnpm -C ../shellui run build:sdk",
+    "format": "pnpm exec prettier --write .",
+    "format:check": "pnpm exec prettier --check .",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*": "pnpm exec prettier --write --ignore-unknown"
   },
   "author": "ShellUI",
   "license": "MIT",
@@ -43,8 +49,11 @@
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
+    "husky": "^9.1.7",
     "jsdom": "^25.0.1",
+    "lint-staged": "^16.4.0",
     "postcss": "^8.4.49",
+    "prettier": "^3.8.1",
     "tailwindcss": "^3.4.16",
     "typescript": "~5.7.2",
     "vite": "^6.0.3",

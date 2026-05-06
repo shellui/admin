@@ -76,7 +76,10 @@ export function DashboardCompanySection({ accessToken }: Props) {
         aria-label={t('dashboardCompanySectionLabel')}
       >
         <div className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" aria-hidden />
+          <Loader2
+            className="size-4 animate-spin"
+            aria-hidden
+          />
           {t('dashboardCompanyLoading')}
         </div>
       </section>
@@ -89,7 +92,9 @@ export function DashboardCompanySection({ accessToken }: Props) {
         {error ? (
           <Text className="font-mono text-sm text-destructive">{error}</Text>
         ) : (
-          <Text className="font-mono text-sm text-muted-foreground">{t('dashboardCompanyMissing')}</Text>
+          <Text className="font-mono text-sm text-muted-foreground">
+            {t('dashboardCompanyMissing')}
+          </Text>
         )}
       </section>
     );
@@ -103,10 +108,15 @@ export function DashboardCompanySection({ accessToken }: Props) {
       <Card className="border-border/80 shadow-sm">
         <CardHeader>
           <CardTitle className="font-heading flex items-center gap-2 text-lg">
-            <Building2 className="size-4 text-muted-foreground" aria-hidden />
+            <Building2
+              className="size-4 text-muted-foreground"
+              aria-hidden
+            />
             {t('dashboardCompanyTitle')}
           </CardTitle>
-          <CardDescription className="font-mono text-xs">{t('dashboardCompanyDescription')}</CardDescription>
+          <CardDescription className="font-mono text-xs">
+            {t('dashboardCompanyDescription')}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -140,7 +150,10 @@ export function DashboardCompanySection({ accessToken }: Props) {
           >
             {saving ? (
               <>
-                <Loader2 className="size-4 animate-spin" aria-hidden />
+                <Loader2
+                  className="size-4 animate-spin"
+                  aria-hidden
+                />
                 {t('dashboardCompanySaving')}
               </>
             ) : (

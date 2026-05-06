@@ -10,7 +10,9 @@ import type { Settings } from '@shellui/sdk';
  * Value is updated when a new `SHELLUI_SETTINGS` message arrives (e.g. after token refresh).
  */
 export function useShelluiAccessToken(): string | null {
-  const [token, setToken] = useState<string | null>(() => shellui.initialSettings?.accessToken ?? null);
+  const [token, setToken] = useState<string | null>(
+    () => shellui.initialSettings?.accessToken ?? null,
+  );
 
   useEffect(() => {
     const off = addMessageListener('SHELLUI_SETTINGS', (message) => {

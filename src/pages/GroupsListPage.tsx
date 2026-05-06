@@ -5,7 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import {
@@ -119,7 +126,9 @@ export function GroupsListPage() {
   return (
     <div className="w-full space-y-6">
       <header className="space-y-1">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">{t('groupsTitle')}</h1>
+        <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
+          {t('groupsTitle')}
+        </h1>
         <Text className="max-w-3xl text-sm text-muted-foreground">{t('groupsDescription')}</Text>
       </header>
 
@@ -132,9 +141,15 @@ export function GroupsListPage() {
           {!accessToken ? (
             <Text className="text-sm text-muted-foreground">{t('usersNoSession')}</Text>
           ) : (
-            <form onSubmit={(e) => void onCreate(e)} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <form
+              onSubmit={(e) => void onCreate(e)}
+              className="flex flex-col gap-2 sm:flex-row sm:items-end"
+            >
               <div className="flex-1 space-y-1">
-                <label htmlFor="new-group-name" className="text-xs font-medium text-muted-foreground">
+                <label
+                  htmlFor="new-group-name"
+                  className="text-xs font-medium text-muted-foreground"
+                >
                   {t('groupsFieldName')}
                 </label>
                 <Input
@@ -146,7 +161,11 @@ export function GroupsListPage() {
                   disabled={creating}
                 />
               </div>
-              <Button type="submit" variant="secondary" disabled={creating || !newName.trim()}>
+              <Button
+                type="submit"
+                variant="secondary"
+                disabled={creating || !newName.trim()}
+              >
                 {creating ? t('groupsCreating') : t('groupsCreate')}
               </Button>
             </form>
@@ -170,7 +189,10 @@ export function GroupsListPage() {
             <div className="relative rounded-md border border-border">
               {loading ? (
                 <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/65 backdrop-blur-[1px]">
-                  <Loader2 className="size-8 animate-spin text-muted-foreground" aria-hidden />
+                  <Loader2
+                    className="size-8 animate-spin text-muted-foreground"
+                    aria-hidden
+                  />
                   <span className="sr-only">{t('groupsLoading')}</span>
                 </div>
               ) : null}
@@ -211,14 +233,22 @@ export function GroupsListPage() {
                       : null}
                     {!loading && rows.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="py-12 text-center text-muted-foreground">
+                        <TableCell
+                          colSpan={4}
+                          className="py-12 text-center text-muted-foreground"
+                        >
                           {t('groupsEmpty')}
                         </TableCell>
                       </TableRow>
                     ) : null}
                     {rows.map((row) => (
-                      <TableRow key={row.id} className="hover:bg-muted/40">
-                        <TableCell className="tabular-nums text-muted-foreground">{row.id}</TableCell>
+                      <TableRow
+                        key={row.id}
+                        className="hover:bg-muted/40"
+                      >
+                        <TableCell className="tabular-nums text-muted-foreground">
+                          {row.id}
+                        </TableCell>
                         <TableCell>
                           {editingId === row.id ? (
                             <Input
@@ -232,7 +262,10 @@ export function GroupsListPage() {
                             <span className="font-medium text-foreground">{row.name}</span>
                           )}
                         </TableCell>
-                        <TableCell className="tabular-nums text-muted-foreground" title={t('groupsColMembers')}>
+                        <TableCell
+                          className="tabular-nums text-muted-foreground"
+                          title={t('groupsColMembers')}
+                        >
                           {typeof row.user_count === 'number' ? row.user_count : '—'}
                         </TableCell>
                         <TableCell className="text-right">
@@ -246,7 +279,11 @@ export function GroupsListPage() {
                                 disabled={savingId === row.id || !editName.trim()}
                                 onClick={() => void onSaveEdit(row.id)}
                               >
-                                {savingId === row.id ? <Loader2 className="size-3 animate-spin" /> : t('groupsSave')}
+                                {savingId === row.id ? (
+                                  <Loader2 className="size-3 animate-spin" />
+                                ) : (
+                                  t('groupsSave')
+                                )}
                               </Button>
                               <Button
                                 type="button"

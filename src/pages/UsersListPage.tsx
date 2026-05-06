@@ -4,17 +4,36 @@ import { Link, createSearchParams, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
-import { fetchAdminUsers, type AdminUserListResponse, type AdminUserRow } from '@/lib/adminUsersApi';
+import {
+  fetchAdminUsers,
+  type AdminUserListResponse,
+  type AdminUserRow,
+} from '@/lib/adminUsersApi';
 
 /** Page size for directory fetch; use `page` in URL for additional pages (full directory is all pages together). */
 const PAGE_SIZE = 50;
@@ -68,7 +87,11 @@ export function UsersListPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchAdminUsers(accessToken, { q: qParam || undefined, page: pageParam, pageSize: PAGE_SIZE });
+      const res = await fetchAdminUsers(accessToken, {
+        q: qParam || undefined,
+        page: pageParam,
+        pageSize: PAGE_SIZE,
+      });
       setData(res);
     } catch (e) {
       setData(null);
@@ -114,7 +137,11 @@ export function UsersListPage() {
     return Math.max(1, Math.ceil(data.count / PAGE_SIZE));
   }, [data?.count]);
 
-  const displayName = (row: { first_name: string; last_name: string; user_metadata: Record<string, unknown> }) => {
+  const displayName = (row: {
+    first_name: string;
+    last_name: string;
+    user_metadata: Record<string, unknown>;
+  }) => {
     const meta = row.user_metadata;
     if (typeof meta.full_name === 'string' && meta.full_name.trim()) return meta.full_name;
     const combined = `${row.first_name} ${row.last_name}`.trim();
@@ -125,7 +152,10 @@ export function UsersListPage() {
     if (!iso) return '—';
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return iso;
-    return new Intl.DateTimeFormat(i18n.language || 'en', { dateStyle: 'short', timeStyle: 'short' }).format(d);
+    return new Intl.DateTimeFormat(i18n.language || 'en', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    }).format(d);
   };
 
   const rows = data?.results ?? [];
@@ -135,8 +165,13 @@ export function UsersListPage() {
     <div className="w-full space-y-6">
       <header className="space-y-1">
         <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">{t('usersTitle')}</h1>
-          <Badge variant="secondary" className="font-mono text-[10px] uppercase">
+          <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
+            {t('usersTitle')}
+          </h1>
+          <Badge
+            variant="secondary"
+            className="font-mono text-[10px] uppercase"
+          >
             {t('usersSchemaBadge')}
           </Badge>
         </div>
@@ -154,7 +189,10 @@ export function UsersListPage() {
             <p className="text-sm text-muted-foreground">{t('usersNoSession')}</p>
           ) : (
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="w-full"
+              >
                 <FormField
                   control={form.control}
                   name="query"
@@ -182,7 +220,9 @@ export function UsersListPage() {
                           {t('usersFormSearch')}
                         </Button>
                       </div>
-                      <FormDescription className="text-xs">{t('usersFieldQueryHint')}</FormDescription>
+                      <FormDescription className="text-xs">
+                        {t('usersFieldQueryHint')}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -193,7 +233,10 @@ export function UsersListPage() {
 
           {accessToken && hasSearch ? (
             <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="font-mono text-[11px]">
+              <Badge
+                variant="secondary"
+                className="font-mono text-[11px]"
+              >
                 <span className="max-w-[26ch] truncate">
                   {t('usersFilterBadgePrefix')}: {qParam}
                 </span>
@@ -231,7 +274,10 @@ export function UsersListPage() {
             <div className="relative rounded-md border border-border">
               {loading ? (
                 <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/65 backdrop-blur-[1px]">
-                  <Loader2 className="size-8 animate-spin text-muted-foreground" aria-hidden />
+                  <Loader2
+                    className="size-8 animate-spin text-muted-foreground"
+                    aria-hidden
+                  />
                   <span className="sr-only">{t('usersLoading')}</span>
                 </div>
               ) : null}
@@ -302,7 +348,10 @@ export function UsersListPage() {
                       : null}
                     {!loading && data && rows.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="py-12 text-center text-muted-foreground">
+                        <TableCell
+                          colSpan={8}
+                          className="py-12 text-center text-muted-foreground"
+                        >
                           {t('usersEmpty')}
                         </TableCell>
                       </TableRow>
@@ -310,8 +359,13 @@ export function UsersListPage() {
                     {rows.map((row) => {
                       const av = avatarFromRow(row);
                       return (
-                        <TableRow key={row.id} className="hover:bg-muted/40">
-                          <TableCell className="tabular-nums text-muted-foreground">{row.id}</TableCell>
+                        <TableRow
+                          key={row.id}
+                          className="hover:bg-muted/40"
+                        >
+                          <TableCell className="tabular-nums text-muted-foreground">
+                            {row.id}
+                          </TableCell>
                           <TableCell className="min-w-0 p-0">
                             <Link
                               to={`/users/${row.id}`}
@@ -320,7 +374,11 @@ export function UsersListPage() {
                             >
                               <div className="hidden shrink-0 sm:block">
                                 {av ? (
-                                  <img src={av} alt="" className="size-8 rounded-full border border-border object-cover" />
+                                  <img
+                                    src={av}
+                                    alt=""
+                                    className="size-8 rounded-full border border-border object-cover"
+                                  />
                                 ) : (
                                   <div
                                     className="flex size-8 items-center justify-center rounded-full border border-dashed border-border bg-muted text-[10px] font-medium text-muted-foreground"
@@ -334,7 +392,10 @@ export function UsersListPage() {
                                 <div className="truncate font-sans text-sm font-medium text-primary underline-offset-4 group-hover:underline">
                                   {displayName(row)}
                                 </div>
-                                <div className="truncate font-mono text-[11px] text-muted-foreground" title={row.email}>
+                                <div
+                                  className="truncate font-mono text-[11px] text-muted-foreground"
+                                  title={row.email}
+                                >
                                   {row.email}
                                 </div>
                               </div>
@@ -367,18 +428,28 @@ export function UsersListPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
-                            <Badge variant={row.is_active ? 'secondary' : 'muted'} className="text-[10px]">
+                            <Badge
+                              variant={row.is_active ? 'secondary' : 'muted'}
+                              className="text-[10px]"
+                            >
                               {row.is_active ? t('usersActiveYes') : t('usersActiveNo')}
                             </Badge>
                           </TableCell>
-                          <TableCell className="hidden truncate xl:table-cell" title={row.username}>
+                          <TableCell
+                            className="hidden truncate xl:table-cell"
+                            title={row.username}
+                          >
                             {row.username}
                           </TableCell>
                           <TableCell className="hidden whitespace-nowrap text-muted-foreground xl:table-cell">
                             {formatShortDateTime(lastSeenFromRow(row))}
                           </TableCell>
                           <TableCell className="hidden text-right sm:table-cell">
-                            <Button variant="link" className="h-auto p-0 text-xs" asChild>
+                            <Button
+                              variant="link"
+                              className="h-auto p-0 text-xs"
+                              asChild
+                            >
                               <Link to={`/users/${row.id}`}>{t('usersActionView')}</Link>
                             </Button>
                           </TableCell>
@@ -391,7 +462,11 @@ export function UsersListPage() {
               {!loading && data && data.count > 0 ? (
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-3 py-2">
                   <p className="text-xs text-muted-foreground">
-                    {t('usersPageStatus', { page: pageParam, pages: totalPages, total: data.count })}
+                    {t('usersPageStatus', {
+                      page: pageParam,
+                      pages: totalPages,
+                      total: data.count,
+                    })}
                   </p>
                   <div className="flex gap-2">
                     <Button

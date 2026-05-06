@@ -53,11 +53,11 @@ pnpm test
 
 ## Structure
 
-| Path | Role |
-|------|------|
-| `src/` | Vite + React source |
-| `public/` | Static files copied to `dist/` (including `CNAME` for **admin.shellui.com**) |
-| `tools/serve/serve.js` | Optional local static server after `pnpm build` |
+| Path                   | Role                                                                         |
+| ---------------------- | ---------------------------------------------------------------------------- |
+| `src/`                 | Vite + React source                                                          |
+| `public/`              | Static files copied to `dist/` (including `CNAME` for **admin.shellui.com**) |
+| `tools/serve/serve.js` | Optional local static server after `pnpm build`                              |
 
 ## License
 

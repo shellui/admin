@@ -22,7 +22,9 @@ function detailField(label: string, value: string | null | undefined) {
   const v = value != null && String(value).trim() !== '' ? String(value) : '—';
   return (
     <div className="min-w-0 space-y-0.5">
-      <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </dt>
       <dd className="break-words font-mono text-sm">{v}</dd>
     </div>
   );
@@ -125,9 +127,16 @@ export function LoginEventDetailPage() {
     return (
       <div className="space-y-4">
         <p className="text-sm text-destructive">{t('loginEventsInvalidId')}</p>
-        <Button variant="outline" size="sm" asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          asChild
+        >
           <Link to="/login-events">
-            <ArrowLeft className="mr-2 size-4" aria-hidden />
+            <ArrowLeft
+              className="mr-2 size-4"
+              aria-hidden
+            />
             {t('loginEventsBackToList')}
           </Link>
         </Button>
@@ -138,9 +147,17 @@ export function LoginEventDetailPage() {
   return (
     <div className="w-full space-y-6">
       <div className="flex flex-wrap items-center gap-3">
-        <Button variant="ghost" size="sm" className="-ml-2 h-8 px-2" asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="-ml-2 h-8 px-2"
+          asChild
+        >
           <Link to="/login-events">
-            <ArrowLeft className="mr-1 size-4" aria-hidden />
+            <ArrowLeft
+              className="mr-1 size-4"
+              aria-hidden
+            />
             {t('loginEventsBackToList')}
           </Link>
         </Button>
@@ -152,7 +169,10 @@ export function LoginEventDetailPage() {
 
       {accessToken && loadingEvent && !event ? (
         <div className="flex items-center gap-2 py-12 text-muted-foreground">
-          <Loader2 className="size-5 animate-spin" aria-hidden />
+          <Loader2
+            className="size-5 animate-spin"
+            aria-hidden
+          />
           <span className="text-sm">{t('loginEventsDetailLoading')}</span>
         </div>
       ) : null}
@@ -170,7 +190,10 @@ export function LoginEventDetailPage() {
               <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
                 {t('loginEventsDetailTitle', { id: event.id })}
               </h1>
-              <Badge variant="secondary" className="font-mono text-[10px] uppercase">
+              <Badge
+                variant="secondary"
+                className="font-mono text-[10px] uppercase"
+              >
                 {t('loginEventsBadge')}
               </Badge>
               <span
@@ -184,9 +207,15 @@ export function LoginEventDetailPage() {
                 {event.outcome}
               </span>
             </div>
-            <Text className="text-sm text-muted-foreground">{formatDateTime(event.created_at)}</Text>
+            <Text className="text-sm text-muted-foreground">
+              {formatDateTime(event.created_at)}
+            </Text>
             {event.user_id != null ? (
-              <Button variant="link" className="h-auto p-0 text-sm" asChild>
+              <Button
+                variant="link"
+                className="h-auto p-0 text-sm"
+                asChild
+              >
                 <Link to={`/users/${event.user_id}`}>{t('loginEventsOpenUserProfile')}</Link>
               </Button>
             ) : null}
@@ -194,8 +223,12 @@ export function LoginEventDetailPage() {
 
           <Card className="border-border/80 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="font-heading text-lg">{t('loginEventsDetailPayloadTitle')}</CardTitle>
-              <CardDescription className="text-sm">{t('loginEventsDetailPayloadHint')}</CardDescription>
+              <CardTitle className="font-heading text-lg">
+                {t('loginEventsDetailPayloadTitle')}
+              </CardTitle>
+              <CardDescription className="text-sm">
+                {t('loginEventsDetailPayloadHint')}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -203,9 +236,15 @@ export function LoginEventDetailPage() {
                 {detailField(t('userDetailLoginColProvider'), event.provider)}
                 {detailField(t('userDetailLoginColOutcome'), event.outcome)}
                 {detailField(t('loginEventsDetailFailureReason'), event.failure_reason || null)}
-                {detailField(t('userDetailLoginColStaff'), event.is_staff_at_event ? t('usersStaffYes') : t('usersStaffNo'))}
+                {detailField(
+                  t('userDetailLoginColStaff'),
+                  event.is_staff_at_event ? t('usersStaffYes') : t('usersStaffNo'),
+                )}
                 {detailField(t('loginEventsDetailUserEmail'), event.user_email)}
-                {detailField(t('loginEventsDetailUserId'), event.user_id != null ? String(event.user_id) : null)}
+                {detailField(
+                  t('loginEventsDetailUserId'),
+                  event.user_id != null ? String(event.user_id) : null,
+                )}
                 {detailField(t('loginEventsDetailIpHash'), event.ip_hash)}
                 {detailField(t('userDetailLoginColUserAgent'), event.user_agent)}
                 {detailField(t('userDetailLoginColTimezone'), event.client_timezone)}
@@ -229,7 +268,10 @@ export function LoginEventDetailPage() {
               <p className="text-sm text-destructive">{siblingsError}</p>
             ) : loadingSiblings && !siblings ? (
               <div className="flex items-center gap-2 py-8 text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" aria-hidden />
+                <Loader2
+                  className="size-4 animate-spin"
+                  aria-hidden
+                />
                 <span className="text-sm">{t('loginEventsSiblingLoading')}</span>
               </div>
             ) : siblingRows.length === 0 ? (
@@ -249,7 +291,9 @@ export function LoginEventDetailPage() {
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="min-w-0 space-y-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-mono text-[11px] text-muted-foreground">#{ev.id}</span>
+                              <span className="font-mono text-[11px] text-muted-foreground">
+                                #{ev.id}
+                              </span>
                               <span className="text-sm font-medium">{ev.provider}</span>
                               <span
                                 className={cn(
@@ -262,9 +306,13 @@ export function LoginEventDetailPage() {
                                 {ev.outcome}
                               </span>
                             </div>
-                            <p className="text-xs text-muted-foreground">{formatDateTime(ev.created_at)}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDateTime(ev.created_at)}
+                            </p>
                           </div>
-                          <span className="shrink-0 text-xs text-primary">{t('loginEventsOpenDetail')}</span>
+                          <span className="shrink-0 text-xs text-primary">
+                            {t('loginEventsOpenDetail')}
+                          </span>
                         </div>
                       </Link>
                     </li>

@@ -31,7 +31,15 @@ export const router = createHashRouter([
       { path: 'users', element: <UsersListPage /> },
       { path: 'login-events/:eventId', element: <LoginEventDetailPage /> },
       { path: 'login-events', element: <LoginEventsListPage /> },
-      { path: '*', element: <Navigate to="/" replace /> },
+      {
+        path: '*',
+        element: (
+          <Navigate
+            to="/"
+            replace
+          />
+        ),
+      },
     ],
   },
 ]);

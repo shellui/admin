@@ -3,9 +3,23 @@ import { useTranslation } from 'react-i18next';
 import { Link, createSearchParams, useSearchParams } from 'react-router-dom';
 import { ChevronDown, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -139,8 +153,7 @@ export function LoginEventsListPage() {
     setError(null);
     try {
       const f = filtersFromUrl;
-      const is_staff_at_event =
-        f.staff === 'true' ? true : f.staff === 'false' ? false : undefined;
+      const is_staff_at_event = f.staff === 'true' ? true : f.staff === 'false' ? false : undefined;
       const res = await fetchAdminLoginEvents(accessToken, {
         page: pageParam,
         pageSize: PAGE_SIZE,
@@ -211,12 +224,12 @@ export function LoginEventsListPage() {
   const rows = data?.results ?? [];
   const hasActiveFilters = Boolean(
     filtersFromUrl.outcome ||
-      filtersFromUrl.provider.trim() ||
-      filtersFromUrl.country.trim() ||
-      filtersFromUrl.city.trim() ||
-      filtersFromUrl.tz.trim() ||
-      filtersFromUrl.language ||
-      filtersFromUrl.staff,
+    filtersFromUrl.provider.trim() ||
+    filtersFromUrl.country.trim() ||
+    filtersFromUrl.city.trim() ||
+    filtersFromUrl.tz.trim() ||
+    filtersFromUrl.language ||
+    filtersFromUrl.staff,
   );
 
   return (
@@ -226,11 +239,16 @@ export function LoginEventsListPage() {
           <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
             {t('loginEventsTitle')}
           </h1>
-          <Badge variant="secondary" className="font-mono text-[10px] uppercase">
+          <Badge
+            variant="secondary"
+            className="font-mono text-[10px] uppercase"
+          >
             {t('loginEventsBadge')}
           </Badge>
         </div>
-        <Text className="max-w-3xl text-sm text-muted-foreground">{t('loginEventsDescription')}</Text>
+        <Text className="max-w-3xl text-sm text-muted-foreground">
+          {t('loginEventsDescription')}
+        </Text>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_minmax(17rem,20rem)] lg:items-start">
@@ -249,7 +267,9 @@ export function LoginEventsListPage() {
                 'marker:content-none [&::-webkit-details-marker]:hidden lg:hidden',
               )}
             >
-              <span className="font-heading text-sm font-semibold tracking-tight">{t('loginEventsSidebarSummary')}</span>
+              <span className="font-heading text-sm font-semibold tracking-tight">
+                {t('loginEventsSidebarSummary')}
+              </span>
               <ChevronDown
                 className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
                 aria-hidden
@@ -259,8 +279,12 @@ export function LoginEventsListPage() {
               <div className="space-y-4">
                 <Card className="border-border/80 shadow-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="font-heading text-base">{t('loginEventsStat24hTitle')}</CardTitle>
-                    <CardDescription className="text-xs">{t('loginEventsStat24hHint')}</CardDescription>
+                    <CardTitle className="font-heading text-base">
+                      {t('loginEventsStat24hTitle')}
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      {t('loginEventsStat24hHint')}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     {!accessToken ? (
@@ -270,14 +294,20 @@ export function LoginEventsListPage() {
                     ) : error24h ? (
                       <p className="text-sm text-destructive">{error24h}</p>
                     ) : (
-                      <p className="font-mono text-3xl font-semibold tabular-nums">{count24h ?? '—'}</p>
+                      <p className="font-mono text-3xl font-semibold tabular-nums">
+                        {count24h ?? '—'}
+                      </p>
                     )}
                   </CardContent>
                 </Card>
                 <Card className="border-border/80 shadow-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="font-heading text-base">{t('loginEventsStatTotalTitle')}</CardTitle>
-                    <CardDescription className="text-xs">{t('loginEventsStatTotalHint')}</CardDescription>
+                    <CardTitle className="font-heading text-base">
+                      {t('loginEventsStatTotalTitle')}
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      {t('loginEventsStatTotalHint')}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     {!accessToken ? (
@@ -287,7 +317,9 @@ export function LoginEventsListPage() {
                     ) : error ? (
                       <p className="text-sm text-destructive">{error}</p>
                     ) : (
-                      <p className="font-mono text-3xl font-semibold tabular-nums">{data?.count ?? '—'}</p>
+                      <p className="font-mono text-3xl font-semibold tabular-nums">
+                        {data?.count ?? '—'}
+                      </p>
                     )}
                   </CardContent>
                 </Card>
@@ -295,15 +327,22 @@ export function LoginEventsListPage() {
 
               <Card className="border-border/80 shadow-sm">
                 <CardHeader className="space-y-1 pb-4">
-                  <CardTitle className="font-heading text-lg">{t('loginEventsFiltersTitle')}</CardTitle>
-                  <CardDescription className="text-sm">{t('loginEventsFiltersDescription')}</CardDescription>
+                  <CardTitle className="font-heading text-lg">
+                    {t('loginEventsFiltersTitle')}
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    {t('loginEventsFiltersDescription')}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {!accessToken ? (
                     <p className="text-sm text-muted-foreground">{t('loginEventsNoSession')}</p>
                   ) : (
                     <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                      <form
+                        onSubmit={form.handleSubmit(onSubmit)}
+                        className="space-y-5"
+                      >
                         <div className="grid grid-cols-1 gap-4">
                           <FormField
                             control={form.control}
@@ -314,10 +353,17 @@ export function LoginEventsListPage() {
                                   {t('loginEventsFieldOutcome')}
                                 </FormLabel>
                                 <FormControl>
-                                  <select {...field} className={selectFieldClassName()}>
+                                  <select
+                                    {...field}
+                                    className={selectFieldClassName()}
+                                  >
                                     <option value="">{t('loginEventsFilterAny')}</option>
-                                    <option value="success">{t('loginEventsOutcomeSuccess')}</option>
-                                    <option value="failure">{t('loginEventsOutcomeFailure')}</option>
+                                    <option value="success">
+                                      {t('loginEventsOutcomeSuccess')}
+                                    </option>
+                                    <option value="failure">
+                                      {t('loginEventsOutcomeFailure')}
+                                    </option>
                                   </select>
                                 </FormControl>
                                 <FormMessage />
@@ -333,7 +379,10 @@ export function LoginEventsListPage() {
                                   {t('loginEventsFieldStaff')}
                                 </FormLabel>
                                 <FormControl>
-                                  <select {...field} className={selectFieldClassName()}>
+                                  <select
+                                    {...field}
+                                    className={selectFieldClassName()}
+                                  >
                                     <option value="">{t('loginEventsFilterAny')}</option>
                                     <option value="true">{t('usersStaffYes')}</option>
                                     <option value="false">{t('usersStaffNo')}</option>
@@ -352,14 +401,19 @@ export function LoginEventsListPage() {
                                   {t('loginEventsFieldLanguage')}
                                 </FormLabel>
                                 <FormControl>
-                                  <select {...field} className={selectFieldClassName()}>
+                                  <select
+                                    {...field}
+                                    className={selectFieldClassName()}
+                                  >
                                     <option value="">{t('loginEventsFilterAny')}</option>
                                     <option value="en">{t('loginEventsLanguageEn')}</option>
                                     <option value="fr">{t('loginEventsLanguageFr')}</option>
                                   </select>
                                 </FormControl>
                                 <FormMessage />
-                                <p className="text-[11px] text-muted-foreground">{t('loginEventsFieldLanguageHint')}</p>
+                                <p className="text-[11px] text-muted-foreground">
+                                  {t('loginEventsFieldLanguageHint')}
+                                </p>
                               </FormItem>
                             )}
                           />
@@ -411,7 +465,11 @@ export function LoginEventsListPage() {
                                   {t('loginEventsFieldCity')}
                                 </FormLabel>
                                 <FormControl>
-                                  <Input className="text-sm" placeholder={t('loginEventsFieldCityPlaceholder')} {...field} />
+                                  <Input
+                                    className="text-sm"
+                                    placeholder={t('loginEventsFieldCityPlaceholder')}
+                                    {...field}
+                                  />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -471,181 +529,205 @@ export function LoginEventsListPage() {
         <div className="min-w-0 space-y-6 lg:col-start-1 lg:row-start-1">
           {accessToken && hasActiveFilters ? (
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary" className="text-[11px]">
+              <Badge
+                variant="secondary"
+                className="text-[11px]"
+              >
                 {t('loginEventsFiltersActive')}
               </Badge>
             </div>
           ) : null}
 
           <section aria-label={t('loginEventsListAria')}>
-        {accessToken && loading && !data ? (
-          <div className="flex items-center gap-2 py-12 text-muted-foreground">
-            <Loader2 className="size-5 animate-spin" aria-hidden />
-            <span className="text-sm">{t('loginEventsLoading')}</span>
-          </div>
-        ) : null}
-        {error && data === null && !loading ? (
-          <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {error}
-          </p>
-        ) : null}
-        {data && rows.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">{t('loginEventsEmpty')}</p>
-        ) : null}
-        {rows.length > 0 ? (
-          <>
-            <p className="mb-3 text-xs text-muted-foreground">
-              {t('loginEventsListingSummary', {
-                shown: rows.length,
-                total: data?.count ?? 0,
-                page: pageParam,
-                pages: totalPages,
-              })}
-            </p>
-            <div className="rounded-md border border-border">
-              <div className="w-full overflow-x-auto">
-                <Table className="min-w-[36rem] md:min-w-[52rem] lg:min-w-[60rem]">
-                  <TableHeader>
-                    <TableRow className="bg-muted/30 hover:bg-muted/30">
-                      <TableHead className="w-[4rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('usersColId')}
-                      </TableHead>
-                      <TableHead className="whitespace-nowrap text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('userDetailLoginColWhen')}
-                      </TableHead>
-                      <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('userDetailLoginColOutcome')}
-                      </TableHead>
-                      <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('userDetailLoginColProvider')}
-                      </TableHead>
-                      <TableHead className="min-w-0 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('usersColUser')}
-                      </TableHead>
-                      <TableHead className="hidden md:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('userDetailLoginColStaff')}
-                      </TableHead>
-                      <TableHead className="hidden md:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('loginEventsColLocation')}
-                      </TableHead>
-                      <TableHead className="hidden lg:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('userDetailLoginColTimezone')}
-                      </TableHead>
-                      <TableHead className="hidden w-[5rem] text-right text-xs font-medium uppercase tracking-wide text-muted-foreground sm:table-cell">
-                        {t('usersColActions')}
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody className="font-mono text-xs">
-                    {rows.map((ev) => {
-                      const href = `/login-events/${ev.id}`;
-                      const locationLabel =
-                        [ev.client_city, ev.client_country].filter(Boolean).join(', ') || '—';
-                      const userLabel =
-                        ev.user_id != null
-                          ? t('loginEventsRowUser', {
-                              email: ev.user_email || String(ev.user_id),
-                            })
-                          : t('loginEventsRowAnonymous');
-                      return (
-                        <TableRow key={ev.id} className="hover:bg-muted/40">
-                          <TableCell className="tabular-nums text-muted-foreground">
-                            <Link
-                              to={href}
-                              className="text-primary underline-offset-2 hover:underline"
-                              aria-label={t('loginEventsDetailTitle', { id: ev.id })}
-                            >
-                              {ev.id}
-                            </Link>
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap text-muted-foreground">
-                            <Link
-                              to={href}
-                              className="text-primary underline-offset-2 hover:underline"
-                              aria-label={t('loginEventsDetailTitle', { id: ev.id })}
-                            >
-                              {formatShortDateTime(ev.created_at)}
-                            </Link>
-                          </TableCell>
-                          <TableCell>
-                            <span
-                              className={cn(
-                                'rounded px-1.5 py-0.5 font-medium',
-                                ev.outcome === 'success'
-                                  ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
-                                  : 'bg-destructive/15 text-destructive',
-                              )}
-                            >
-                              {ev.outcome}
-                            </span>
-                            {ev.failure_reason ? (
-                              <span
-                                className="mt-1 block max-w-[12rem] truncate text-[10px] text-muted-foreground md:max-w-[14rem]"
-                                title={ev.failure_reason}
-                              >
-                                {ev.failure_reason}
-                              </span>
-                            ) : null}
-                          </TableCell>
-                          <TableCell>{ev.provider}</TableCell>
-                          <TableCell className="max-w-[10rem] truncate sm:max-w-[14rem] lg:max-w-[18rem]" title={userLabel}>
-                            {userLabel}
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {ev.is_staff_at_event ? t('usersStaffYes') : t('usersStaffNo')}
-                          </TableCell>
-                          <TableCell className="hidden max-w-[10rem] truncate md:table-cell" title={locationLabel}>
-                            {locationLabel}
-                          </TableCell>
-                          <TableCell className="hidden max-w-[9rem] truncate font-mono text-[10px] lg:table-cell" title={ev.client_timezone || undefined}>
-                            {ev.client_timezone || '—'}
-                          </TableCell>
-                          <TableCell className="hidden text-right sm:table-cell">
-                            <Link
-                              to={href}
-                              className="text-primary underline-offset-2 hover:underline"
-                            >
-                              {t('loginEventsOpenDetail')}
-                            </Link>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-            {totalPages > 1 ? (
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                <p className="text-xs text-muted-foreground">
-                  {t('loginEventsPageStatus', { page: pageParam, pages: totalPages, total: data?.count ?? 0 })}
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={pageParam <= 1 || loading}
-                    className="min-w-[7rem] sm:min-w-0"
-                    onClick={() => goToPage(Math.max(1, pageParam - 1))}
-                  >
-                    {t('usersPrevPage')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={pageParam >= totalPages || loading}
-                    className="min-w-[7rem] sm:min-w-0"
-                    onClick={() => goToPage(pageParam + 1)}
-                  >
-                    {t('usersNextPage')}
-                  </Button>
-                </div>
+            {accessToken && loading && !data ? (
+              <div className="flex items-center gap-2 py-12 text-muted-foreground">
+                <Loader2
+                  className="size-5 animate-spin"
+                  aria-hidden
+                />
+                <span className="text-sm">{t('loginEventsLoading')}</span>
               </div>
             ) : null}
-          </>
-        ) : null}
+            {error && data === null && !loading ? (
+              <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {error}
+              </p>
+            ) : null}
+            {data && rows.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                {t('loginEventsEmpty')}
+              </p>
+            ) : null}
+            {rows.length > 0 ? (
+              <>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  {t('loginEventsListingSummary', {
+                    shown: rows.length,
+                    total: data?.count ?? 0,
+                    page: pageParam,
+                    pages: totalPages,
+                  })}
+                </p>
+                <div className="rounded-md border border-border">
+                  <div className="w-full overflow-x-auto">
+                    <Table className="min-w-[36rem] md:min-w-[52rem] lg:min-w-[60rem]">
+                      <TableHeader>
+                        <TableRow className="bg-muted/30 hover:bg-muted/30">
+                          <TableHead className="w-[4rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            {t('usersColId')}
+                          </TableHead>
+                          <TableHead className="whitespace-nowrap text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            {t('userDetailLoginColWhen')}
+                          </TableHead>
+                          <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            {t('userDetailLoginColOutcome')}
+                          </TableHead>
+                          <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            {t('userDetailLoginColProvider')}
+                          </TableHead>
+                          <TableHead className="min-w-0 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            {t('usersColUser')}
+                          </TableHead>
+                          <TableHead className="hidden md:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            {t('userDetailLoginColStaff')}
+                          </TableHead>
+                          <TableHead className="hidden md:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            {t('loginEventsColLocation')}
+                          </TableHead>
+                          <TableHead className="hidden lg:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            {t('userDetailLoginColTimezone')}
+                          </TableHead>
+                          <TableHead className="hidden w-[5rem] text-right text-xs font-medium uppercase tracking-wide text-muted-foreground sm:table-cell">
+                            {t('usersColActions')}
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody className="font-mono text-xs">
+                        {rows.map((ev) => {
+                          const href = `/login-events/${ev.id}`;
+                          const locationLabel =
+                            [ev.client_city, ev.client_country].filter(Boolean).join(', ') || '—';
+                          const userLabel =
+                            ev.user_id != null
+                              ? t('loginEventsRowUser', {
+                                  email: ev.user_email || String(ev.user_id),
+                                })
+                              : t('loginEventsRowAnonymous');
+                          return (
+                            <TableRow
+                              key={ev.id}
+                              className="hover:bg-muted/40"
+                            >
+                              <TableCell className="tabular-nums text-muted-foreground">
+                                <Link
+                                  to={href}
+                                  className="text-primary underline-offset-2 hover:underline"
+                                  aria-label={t('loginEventsDetailTitle', { id: ev.id })}
+                                >
+                                  {ev.id}
+                                </Link>
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap text-muted-foreground">
+                                <Link
+                                  to={href}
+                                  className="text-primary underline-offset-2 hover:underline"
+                                  aria-label={t('loginEventsDetailTitle', { id: ev.id })}
+                                >
+                                  {formatShortDateTime(ev.created_at)}
+                                </Link>
+                              </TableCell>
+                              <TableCell>
+                                <span
+                                  className={cn(
+                                    'rounded px-1.5 py-0.5 font-medium',
+                                    ev.outcome === 'success'
+                                      ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
+                                      : 'bg-destructive/15 text-destructive',
+                                  )}
+                                >
+                                  {ev.outcome}
+                                </span>
+                                {ev.failure_reason ? (
+                                  <span
+                                    className="mt-1 block max-w-[12rem] truncate text-[10px] text-muted-foreground md:max-w-[14rem]"
+                                    title={ev.failure_reason}
+                                  >
+                                    {ev.failure_reason}
+                                  </span>
+                                ) : null}
+                              </TableCell>
+                              <TableCell>{ev.provider}</TableCell>
+                              <TableCell
+                                className="max-w-[10rem] truncate sm:max-w-[14rem] lg:max-w-[18rem]"
+                                title={userLabel}
+                              >
+                                {userLabel}
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {ev.is_staff_at_event ? t('usersStaffYes') : t('usersStaffNo')}
+                              </TableCell>
+                              <TableCell
+                                className="hidden max-w-[10rem] truncate md:table-cell"
+                                title={locationLabel}
+                              >
+                                {locationLabel}
+                              </TableCell>
+                              <TableCell
+                                className="hidden max-w-[9rem] truncate font-mono text-[10px] lg:table-cell"
+                                title={ev.client_timezone || undefined}
+                              >
+                                {ev.client_timezone || '—'}
+                              </TableCell>
+                              <TableCell className="hidden text-right sm:table-cell">
+                                <Link
+                                  to={href}
+                                  className="text-primary underline-offset-2 hover:underline"
+                                >
+                                  {t('loginEventsOpenDetail')}
+                                </Link>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+                {totalPages > 1 ? (
+                  <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                    <p className="text-xs text-muted-foreground">
+                      {t('loginEventsPageStatus', {
+                        page: pageParam,
+                        pages: totalPages,
+                        total: data?.count ?? 0,
+                      })}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={pageParam <= 1 || loading}
+                        className="min-w-[7rem] sm:min-w-0"
+                        onClick={() => goToPage(Math.max(1, pageParam - 1))}
+                      >
+                        {t('usersPrevPage')}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={pageParam >= totalPages || loading}
+                        className="min-w-[7rem] sm:min-w-0"
+                        onClick={() => goToPage(pageParam + 1)}
+                      >
+                        {t('usersNextPage')}
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+              </>
+            ) : null}
           </section>
         </div>
       </div>

@@ -17,7 +17,10 @@ export function CompanyPage() {
           <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
             {t('companyPageTitle')}
           </h1>
-          <Badge variant="secondary" className="font-mono text-[10px] uppercase">
+          <Badge
+            variant="secondary"
+            className="font-mono text-[10px] uppercase"
+          >
             {t('dashboardEnvBadge')}
           </Badge>
         </div>

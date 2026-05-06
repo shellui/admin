@@ -17,7 +17,11 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Text } from '@/components/ui/text';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
-import { buildStaffPrometheusMetricsUrl, fetchAuthMetricsSnapshot, type AuthMetricsSnapshot } from '@/lib/authMetricsApi';
+import {
+  buildStaffPrometheusMetricsUrl,
+  fetchAuthMetricsSnapshot,
+  type AuthMetricsSnapshot,
+} from '@/lib/authMetricsApi';
 import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
 
 function StatBlock({
@@ -37,7 +41,10 @@ function StatBlock({
         <CardDescription className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
           {label}
         </CardDescription>
-        <Icon className="size-4 text-muted-foreground" aria-hidden />
+        <Icon
+          className="size-4 text-muted-foreground"
+          aria-hidden
+        />
       </CardHeader>
       <CardContent>
         <p className="font-mono text-2xl font-semibold tabular-nums tracking-tight">{value}</p>
@@ -99,7 +106,10 @@ export function DashboardPage() {
           <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
             {t('dashboardTitle')}
           </h1>
-          <Badge variant="secondary" className="font-mono text-[10px] uppercase">
+          <Badge
+            variant="secondary"
+            className="font-mono text-[10px] uppercase"
+          >
             {t('dashboardEnvBadge')}
           </Badge>
         </div>
@@ -112,14 +122,15 @@ export function DashboardPage() {
 
       {accessToken && loading && (
         <div className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" aria-hidden />
+          <Loader2
+            className="size-4 animate-spin"
+            aria-hidden
+          />
           {t('dashboardLoading')}
         </div>
       )}
 
-      {accessToken && error && (
-        <Text className="font-mono text-sm text-destructive">{error}</Text>
-      )}
+      {accessToken && error && <Text className="font-mono text-sm text-destructive">{error}</Text>}
 
       {accessToken && !loading && !error && snapshot && (
         <>
@@ -180,7 +191,9 @@ export function DashboardPage() {
           <div className="grid gap-6">
             <Card className="border-border/80">
               <CardHeader>
-                <CardTitle className="font-heading text-lg">{t('dashboardExpositionTitle')}</CardTitle>
+                <CardTitle className="font-heading text-lg">
+                  {t('dashboardExpositionTitle')}
+                </CardTitle>
                 <CardDescription className="font-mono text-xs">
                   {t('dashboardExpositionDescription')}
                 </CardDescription>
@@ -192,7 +205,10 @@ export function DashboardPage() {
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 font-mono text-xs text-primary underline-offset-4 hover:underline"
                     >
-                      <ExternalLink className="size-3.5 shrink-0" aria-hidden />
+                      <ExternalLink
+                        className="size-3.5 shrink-0"
+                        aria-hidden
+                      />
                       {t('dashboardMetricsEndpointLink')}
                     </a>
                     <Text className="mt-1.5 block font-mono text-[10px] text-muted-foreground">

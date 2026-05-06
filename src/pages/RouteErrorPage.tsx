@@ -20,10 +20,17 @@ export function RouteErrorPage() {
         <h1 className="font-heading text-xl font-semibold tracking-tight">{title}</h1>
         <Text className="font-mono text-sm text-muted-foreground">{detail}</Text>
         <div className="flex gap-2">
-          <Button type="button" onClick={() => window.location.reload()}>
+          <Button
+            type="button"
+            onClick={() => window.location.reload()}
+          >
             Reload
           </Button>
-          <Button type="button" variant="outline" onClick={() => (window.location.hash = '#/')}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => (window.location.hash = '#/')}
+          >
             Back to dashboard
           </Button>
         </div>

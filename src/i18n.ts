@@ -38,12 +38,14 @@ const resources = {
       loginEventsDescription:
         'OAuth sign-in attempts (success and failure). Open a row for full detail and other events from the same user. Filters and pagination keep the list light on mobile.',
       loginEventsStat24hTitle: 'Events (last 24 hours)',
-      loginEventsStat24hHint: 'All login audit rows with a timestamp in the last rolling 24 hours (ignores filters below).',
+      loginEventsStat24hHint:
+        'All login audit rows with a timestamp in the last rolling 24 hours (ignores filters below).',
       loginEventsStatTotalTitle: 'Matching events',
       loginEventsStatTotalHint: 'Total rows for the filters below (default: entire log).',
       loginEventsNoSession: 'Waiting for shell session… Open Admin from ShellUI while signed in.',
       loginEventsFiltersTitle: 'Filters',
-      loginEventsFiltersDescription: 'Narrow by outcome, provider, coarse location (country / city from GeoIP when available), client timezone, staff at event, or saved user language preference.',
+      loginEventsFiltersDescription:
+        'Narrow by outcome, provider, coarse location (country / city from GeoIP when available), client timezone, staff at event, or saved user language preference.',
       loginEventsFieldOutcome: 'Outcome',
       loginEventsFilterAny: 'Any',
       loginEventsOutcomeSuccess: 'Success',
@@ -93,8 +95,10 @@ const resources = {
       loginEventsDetailDeviceHash: 'Device id hash',
       loginEventsDetailCity: 'City (GeoIP)',
       loginEventsSiblingTitle: 'Other events for this user',
-      loginEventsSiblingHint: 'Same Django user as this row; pagination is separate from the main directory.',
-      loginEventsSiblingNoUser: 'This event has no linked user, so there are no related sign-in rows.',
+      loginEventsSiblingHint:
+        'Same Django user as this row; pagination is separate from the main directory.',
+      loginEventsSiblingNoUser:
+        'This event has no linked user, so there are no related sign-in rows.',
       loginEventsSiblingLoading: 'Loading related events…',
       loginEventsSiblingEmpty: 'No other events for this user on this page.',
       dashboardTitle: 'Operations overview',
@@ -157,13 +161,15 @@ const resources = {
       loginRedirectsLoading: 'Loading allow list…',
       loginRedirectsLoadError: 'Could not load redirect rules.',
       loginRedirectsSaveError: 'Could not save redirect rules.',
-      loginRedirectsAddHint: 'Use an https URL prefix that covers your ShellUI login callback page.',
+      loginRedirectsAddHint:
+        'Use an https URL prefix that covers your ShellUI login callback page.',
       loginRedirectsBaseUrlLabel: 'Allowed base URL',
       loginRedirectsLabelField: 'Label (optional)',
       loginRedirectsLabelPlaceholder: 'Production app',
       loginRedirectsAdd: 'Add URL',
       loginRedirectsAdding: 'Adding…',
-      loginRedirectsEmpty: 'No extra redirect URLs yet. Only the default /login/callback on this auth server is allowed until you add one.',
+      loginRedirectsEmpty:
+        'No extra redirect URLs yet. Only the default /login/callback on this auth server is allowed until you add one.',
       loginRedirectsColUrl: 'Base URL',
       loginRedirectsColLabel: 'Label',
       loginRedirectsColActive: 'Active',
@@ -241,7 +247,8 @@ const resources = {
       usersTableDescription: 'View profile opens a read-only page per account (`#/users/:id`).',
       usersFieldQuery: 'Search',
       usersFieldQueryPlaceholder: 'Email, id, username, or name…',
-      usersFieldQueryHint: 'Runs against the auth database (case-insensitive contains, except exact id match for numeric queries).',
+      usersFieldQueryHint:
+        'Runs against the auth database (case-insensitive contains, except exact id match for numeric queries).',
       usersFormSearch: 'Search',
       usersFilterBadgePrefix: 'Search',
       usersClearSearch: 'Clear search',
@@ -272,7 +279,8 @@ const resources = {
       usersPrevPage: 'Previous',
       usersNextPage: 'Next',
       usersErrorUnknown: 'Something went wrong.',
-      usersNoSession: 'Waiting for shell session… If this persists, open Admin from ShellUI while signed in.',
+      usersNoSession:
+        'Waiting for shell session… If this persists, open Admin from ShellUI while signed in.',
       userDetailTitle: 'User profile',
       userDetailBack: 'Back',
       userDetailLoading: 'Loading profile…',
@@ -312,7 +320,8 @@ const resources = {
       userDetailSave: 'Save groups',
       userDetailSaving: 'Saving…',
       userDetailSaved: 'User updated',
-      userDetailGroupsEditableHint: 'Django auth groups; names appear in JWT user_metadata.groups after refresh.',
+      userDetailGroupsEditableHint:
+        'Django auth groups; names appear in JWT user_metadata.groups after refresh.',
       userDetailGroupsEmpty: 'No groups exist yet. Create them on the Groups page.',
       brandSubtitle: 'Administration',
       groupsTitle: 'Groups',
@@ -329,7 +338,8 @@ const resources = {
       groupsDeleted: 'Group deleted',
       groupsError: 'Could not save group',
       groupsTableTitle: 'All groups',
-      groupsTableDescription: 'Rename or delete unused groups. Members keep working until you save user changes.',
+      groupsTableDescription:
+        'Rename or delete unused groups. Members keep working until you save user changes.',
       groupsColId: 'ID',
       groupsColName: 'Name',
       groupsColMembers: 'Members',
@@ -381,7 +391,8 @@ const resources = {
       loginEventsStat24hHint:
         'Toutes les lignes d’audit avec un horodatage dans les dernières 24 h glissantes (sans les filtres ci-dessous).',
       loginEventsStatTotalTitle: 'Événements correspondants',
-      loginEventsStatTotalHint: 'Nombre de lignes pour les filtres ci-dessous (par défaut : journal complet).',
+      loginEventsStatTotalHint:
+        'Nombre de lignes pour les filtres ci-dessous (par défaut : journal complet).',
       loginEventsNoSession:
         'En attente de la session shell… Ouvrez l’admin depuis ShellUI en étant connecté.',
       loginEventsFiltersTitle: 'Filtres',
@@ -503,7 +514,8 @@ const resources = {
       loginRedirectsLoading: 'Chargement de la liste…',
       loginRedirectsLoadError: 'Impossible de charger les règles de redirection.',
       loginRedirectsSaveError: 'Impossible d’enregistrer les règles de redirection.',
-      loginRedirectsAddHint: 'Utilisez un préfixe https qui couvre la page de callback de connexion ShellUI.',
+      loginRedirectsAddHint:
+        'Utilisez un préfixe https qui couvre la page de callback de connexion ShellUI.',
       loginRedirectsBaseUrlLabel: 'URL de base autorisée',
       loginRedirectsLabelField: 'Libellé (optionnel)',
       loginRedirectsLabelPlaceholder: 'Application production',
@@ -587,7 +599,8 @@ const resources = {
       usersDescription:
         'Annuaire pour cette société (staff ou propriétaires), branché sur shellui-auth. La recherche est côté serveur ; la pagination est dans l’URL pour favoriser les favoris en iframe.',
       usersTableTitle: 'Comptes',
-      usersTableDescription: 'Consulter le profil ouvre une page en lecture seule par compte (`#/users/:id`).',
+      usersTableDescription:
+        'Consulter le profil ouvre une page en lecture seule par compte (`#/users/:id`).',
       usersFieldQuery: 'Recherche',
       usersFieldQueryPlaceholder: 'E-mail, id, identifiant ou nom…',
       usersFieldQueryHint:
@@ -636,14 +649,16 @@ const resources = {
       userDetailLastSeenTimezone: 'Dernier fuseau client',
       userDetailGroups: 'Groupes',
       userDetailPreferencesTitle: 'Préférences ShellUI',
-      userDetailPreferencesHint: 'Préférences applicatives stockées pour ce compte (lecture seule).',
+      userDetailPreferencesHint:
+        'Préférences applicatives stockées pour ce compte (lecture seule).',
       userDetailPreferencesEmpty: 'Aucune donnée de préférences pour ce compte.',
       userDetailPrefTheme: 'Thème',
       userDetailPrefLanguage: 'Langue',
       userDetailPrefRegion: 'Région',
       userDetailPrefColorScheme: 'Schéma de couleurs',
       userDetailLoginHistoryTitle: 'Historique de connexion',
-      userDetailLoginHistoryHint: 'Événements d’audit OAuth (succès et échec) pour cet utilisateur.',
+      userDetailLoginHistoryHint:
+        'Événements d’audit OAuth (succès et échec) pour cet utilisateur.',
       userDetailLoginHistoryLoading: 'Chargement des connexions…',
       userDetailLoginHistoryDefer:
         'L’historique de connexion n’est chargé que lorsque cette section est affichée (ou via le bouton ci-dessous), pour éviter de tout télécharger à l’ouverture du profil.',
@@ -663,7 +678,8 @@ const resources = {
       userDetailSave: 'Enregistrer les groupes',
       userDetailSaving: 'Enregistrement…',
       userDetailSaved: 'Utilisateur mis à jour',
-      userDetailGroupsEditableHint: 'Groupes Django ; les noms apparaissent dans user_metadata.groups du JWT après rafraîchissement.',
+      userDetailGroupsEditableHint:
+        'Groupes Django ; les noms apparaissent dans user_metadata.groups du JWT après rafraîchissement.',
       userDetailGroupsEmpty: 'Aucun groupe pour l’instant. Créez-en depuis la page Groupes.',
       brandSubtitle: 'Administration',
       groupsTitle: 'Groupes',
