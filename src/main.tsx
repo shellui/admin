@@ -6,6 +6,7 @@ import { LangProvider, getLangFromSettings } from '@/contexts/LangContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { getAppearanceFromSettings, applyThemeToDocument } from '@/lib/theme';
 import { isEmbeddedInShell } from '@/lib/embed';
+import { hydrateAuthBackendBaseUrlFromSdk } from '@/lib/backendUrl';
 import { StandaloneNotice } from '@/components/StandaloneNotice';
 import i18n, { i18nInit } from '@/i18n';
 import { router } from '@/router';
@@ -25,6 +26,7 @@ async function bootstrap() {
   }
 
   await shellui.init();
+  hydrateAuthBackendBaseUrlFromSdk();
   const initialLang = getLangFromSettings(shellui.initialSettings) || i18n.language || 'en';
   await i18n.changeLanguage(initialLang);
   const initialTheme = getAppearanceFromSettings(shellui.initialSettings);
