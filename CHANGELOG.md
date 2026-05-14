@@ -21,17 +21,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
-## [Unreleased]
-
-### 🚨 Changed
-
-- Single dev entrypoint: `pnpm start` at repo root runs only the Vite app (no `@shellui/cli` shell). Static assets and `CNAME` live under `public/`; production build outputs to `dist/` at repo root
-- When the app is not loaded in an iframe, show instructions to set `backend.adminUrl` in the main app’s `shellui.config.ts` instead of the full admin UI
-- Flatten repo layout: one `package.json` at the root (no `app/` subfolder or pnpm workspace)
-
-## [0.1.0] - 2026-04-01
+## [0.1.0] - 2026-05-14
 
 ### ✨ Feature
 
-- Initial admin app scaffold: ShellUI + Vite + React + TypeScript, `@shellui/sdk` theme and language sync, shadcn-style UI (button, card, separator), dashboard and users placeholder routes, Vitest smoke test
-- GitHub Pages workflow and `admin.shellui.com` custom domain via `static/CNAME`
+- **Session:** use the shell **JWT access token** for **shellui-auth** API calls, with **backend URL** hydration from SDK settings
+- **Dashboard:** staff **auth metrics** KPIs for total, active, and staff users, linked social accounts, and **DAU** / **WAU** / **MAU** activity
+- **Metrics exposition:** preview **Prometheus** text and link to the staff metrics endpoint for the signed-in company
+- **Company:** **company owners** can view and rename the current company
+- **Users:** searchable, paginated directory with avatars, groups, owner and active flags, username, and last seen; **user detail** with profile fields, editable **group membership**, stored **ShellUI preferences**, and lazy-loaded per-user **login history**
+- **Groups:** create, rename, and delete company groups
+- **OAuth apps:** **company-owner** management of social login providers with create, update, and delete flows, **callback URL** helper with copy, **Microsoft tenant** support, and unsaved-change confirmation through shell **dialogs**
+- **Login events:** filterable **audit log** by outcome, provider, location, timezone, staff flag, and language, plus paginated **event detail** with related events for the same user
+- **Access tokens:** create **personal access tokens** with optional **read-only** scope, staff-only **global metrics** access, one-time token reveal, and revoke
+- **API docs:** embedded **Swagger** and **ReDoc** views of the auth backend OpenAPI docs in **developer mode**
+- **Developer mode:** **Swagger** and **ReDoc** nav entries and routes appear only when shell **developer features** are enabled
