@@ -1,6 +1,7 @@
 import { createHashRouter, Navigate } from 'react-router-dom';
 import { AdminShellLayout } from '@/layouts/AdminShellLayout';
 import { CompanyPage } from '@/pages/CompanyPage';
+import { CustomAppPage } from '@/pages/CustomAppPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { GroupsListPage } from '@/pages/GroupsListPage';
 import { LoginEventDetailPage } from '@/pages/LoginEventDetailPage';
@@ -42,6 +43,7 @@ export const router = createHashRouter([
       },
       { path: 'login-events/:eventId', element: <LoginEventDetailPage /> },
       { path: 'login-events', element: <LoginEventsListPage /> },
+      { path: 'app/:appPath', element: <CustomAppPage /> },
       {
         path: '*',
         element: (
