@@ -27,6 +27,27 @@ import type { SettingsAdministrationNavigationItem } from '@shellui/sdk';
 const navLinkBase =
   'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium no-underline transition-colors hover:no-underline';
 
+/** localStorage key for the Identity sidebar section open/closed state. */
+const ADMIN_IDENTITY_KEY = 'admin-identity';
+
+function readIdentityOpen(): boolean {
+  try {
+    const raw = localStorage.getItem(ADMIN_IDENTITY_KEY);
+    if (raw === null) return true;
+    return raw === '1';
+  } catch {
+    return true;
+  }
+}
+
+function writeIdentityOpen(open: boolean) {
+  try {
+    localStorage.setItem(ADMIN_IDENTITY_KEY, open ? '1' : '0');
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
 type AdminNavItem = {
   key: string;
   icon: typeof LayoutDashboard;
@@ -279,16 +300,11 @@ export function AdminShellLayout() {
     return items;
   }, [authNavItems, djangoAdminHref, isStaff, t]);
 
-  const isOnIdentityRoute = useMemo(() => {
-    if (location.pathname.startsWith('/app/') || location.pathname === '/') return false;
-    return identityItems.some((item) => item.to && location.pathname.startsWith(item.to));
-  }, [identityItems, location.pathname]);
-
-  const [identityOpen, setIdentityOpen] = useState(true);
+  const [identityOpen, setIdentityOpen] = useState(readIdentityOpen);
 
   useEffect(() => {
-    if (isOnIdentityRoute) setIdentityOpen(true);
-  }, [isOnIdentityRoute]);
+    writeIdentityOpen(identityOpen);
+  }, [identityOpen]);
 
   return (
     <div className="flex min-h-screen w-full bg-background">
