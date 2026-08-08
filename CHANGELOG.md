@@ -26,6 +26,7 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 ### ✨ Feature
 
 - **Administration navigation:** host apps can inject custom sidebar links via `administration` in `shellui.config.ts`, rendered below Dashboard (iframe embed or external open)
+- **Company access:** Organization panel configures join mode (public / domain allow list / invitation only) and allowed email domains.
 
 ## [0.1.0] - 2026-05-14
 

@@ -49,6 +49,10 @@ Production deploy (GitHub Pages) outputs the site at the **root** of the domain 
 
 The host app can inject extra sidebar links via top-level `administration` in `shellui.config.ts` (title + flat `navigation` items). The shell propagates them through SDK settings; this admin app renders them **below Dashboard**. See the ShellUI docs page **Administration panel**.
 
+## Company access
+
+**Organization** (company owners) can set join mode: public, domain allow list, or invitation only. The **Users** directory Enable / Disable actions toggle access for **this company only** (`CompanyMembership.is_enabled` via `PUT /api/v1/users/<id>`).
+
 ## Tests
 
 ```bash

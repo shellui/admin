@@ -20,8 +20,9 @@ export type AdminUserRow = {
   first_name: string;
   last_name: string;
   is_staff: boolean;
-  /** Member of `Company.owners` for the requested `company_id`. */
+  /** Member of `Company.owners` for the requested company (JWT tenant). */
   is_company_owner: boolean;
+  /** Per-company membership access (`CompanyMembership.is_enabled`), not Django User.is_active. */
   is_active: boolean;
   groups: AdminUserGroupRef[];
   /** Includes `avatar_url`, `shelluiPreferences`, `last_seen_at`, `last_seen_client_timezone`, `groups` (names), etc. */
@@ -95,6 +96,7 @@ export type AdminUserUpdatePayload = {
   first_name?: string;
   last_name?: string;
   is_staff?: boolean;
+  /** Enable/disable access for the current company only. */
   is_active?: boolean;
   group_ids?: number[];
   data?: Record<string, unknown>;

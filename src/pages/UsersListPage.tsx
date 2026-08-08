@@ -31,6 +31,7 @@ import { z } from 'zod';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import {
   fetchAdminUsers,
+  updateAdminUser,
   type AdminUserListResponse,
   type AdminUserRow,
 } from '@/lib/adminUsersApi';
@@ -76,6 +77,7 @@ export function UsersListPage() {
   const [data, setData] = useState<AdminUserListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     if (!accessToken) {
@@ -130,6 +132,28 @@ export function UsersListPage() {
         page: '1',
       }),
     );
+  }
+
+  async function setAccess(row: AdminUserRow, enabled: boolean) {
+    if (!accessToken || togglingId != null || row.is_active === enabled) return;
+    setTogglingId(row.id);
+    setError(null);
+    try {
+      const updated = await updateAdminUser(accessToken, row.id, {
+        is_active: enabled,
+      });
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          results: prev.results.map((r) => (r.id === updated.id ? { ...r, ...updated } : r)),
+        };
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('usersErrorUnknown'));
+    } finally {
+      setTogglingId(null);
+    }
   }
 
   const totalPages = useMemo(() => {
@@ -297,7 +321,7 @@ export function UsersListPage() {
                       <TableHead className="hidden md:table-cell w-[5rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         {t('usersColOwner')}
                       </TableHead>
-                      <TableHead className="hidden md:table-cell w-[5rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <TableHead className="hidden md:table-cell w-[7.5rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         {t('usersColActive')}
                       </TableHead>
                       <TableHead className="hidden xl:table-cell w-[10%] text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -428,12 +452,33 @@ export function UsersListPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
-                            <Badge
-                              variant={row.is_active ? 'secondary' : 'muted'}
-                              className="text-[10px]"
-                            >
-                              {row.is_active ? t('usersActiveYes') : t('usersActiveNo')}
-                            </Badge>
+                            <div className="relative inline-flex items-center">
+                              <select
+                                className="h-7 appearance-none rounded-md border border-border/70 bg-background py-0 pl-2 pr-6 font-mono text-[10px] text-foreground outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                                value={row.is_active ? 'enabled' : 'disabled'}
+                                disabled={togglingId === row.id}
+                                aria-label={t('usersAccessSelectLabel', { name: displayName(row) })}
+                                onChange={(e) => {
+                                  void setAccess(row, e.target.value === 'enabled');
+                                }}
+                              >
+                                <option value="enabled">{t('usersActiveYes')}</option>
+                                <option value="disabled">{t('usersActiveNo')}</option>
+                              </select>
+                              {togglingId === row.id ? (
+                                <Loader2
+                                  className="pointer-events-none absolute right-1.5 size-3 animate-spin text-muted-foreground"
+                                  aria-hidden
+                                />
+                              ) : (
+                                <span
+                                  className="pointer-events-none absolute right-1.5 text-[9px] leading-none text-muted-foreground"
+                                  aria-hidden
+                                >
+                                  ▾
+                                </span>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell
                             className="hidden truncate xl:table-cell"

@@ -90,6 +90,7 @@ export function UserDetailPage() {
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [togglingAccess, setTogglingAccess] = useState(false);
 
   const loadUser = useCallback(async () => {
     if (!accessToken || !Number.isFinite(idNum)) {
@@ -205,6 +206,26 @@ export function UserDetailPage() {
     }
   }
 
+  async function onToggleAccess() {
+    if (!accessToken || !Number.isFinite(idNum) || !user || togglingAccess) return;
+    setSaveError(null);
+    setTogglingAccess(true);
+    try {
+      const updated = await updateAdminUser(accessToken, idNum, {
+        is_active: !user.is_active,
+      });
+      setUser(updated);
+      shellui.toast({
+        title: updated.is_active ? t('usersAccessEnabledToast') : t('usersAccessDisabledToast'),
+        type: 'success',
+      });
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : t('usersErrorUnknown'));
+    } finally {
+      setTogglingAccess(false);
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6">
       <header className="flex flex-wrap items-center gap-3">
@@ -270,7 +291,7 @@ export function UserDetailPage() {
                       {user.is_staff ? t('usersStaffYes') : t('usersStaffNo')}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs font-medium text-muted-foreground">
                       {t('usersColActive')}
                     </span>
@@ -280,6 +301,25 @@ export function UserDetailPage() {
                     >
                       {user.is_active ? t('usersActiveYes') : t('usersActiveNo')}
                     </Badge>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      disabled={togglingAccess}
+                      onClick={() => void onToggleAccess()}
+                    >
+                      {togglingAccess ? (
+                        <Loader2
+                          className="size-3 animate-spin"
+                          aria-hidden
+                        />
+                      ) : user.is_active ? (
+                        t('usersActionDisable')
+                      ) : (
+                        t('usersActionEnable')
+                      )}
+                    </Button>
                   </div>
                 </div>
               </div>
