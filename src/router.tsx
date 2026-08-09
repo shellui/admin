@@ -12,6 +12,8 @@ import { RouteErrorPage } from '@/pages/RouteErrorPage';
 import { AccessTokensPage } from '@/pages/AccessTokensPage';
 import { UserDetailPage } from '@/pages/UserDetailPage';
 import { UsersListPage } from '@/pages/UsersListPage';
+import { StorageFilesPage } from '@/pages/StorageFilesPage';
+import { StorageStatisticsPage } from '@/pages/StorageStatisticsPage';
 
 /**
  * Hash routes: `#/`, `#/company`, `#/users`, …
@@ -43,6 +45,8 @@ export const router = createHashRouter([
       },
       { path: 'login-events/:eventId', element: <LoginEventDetailPage /> },
       { path: 'login-events', element: <LoginEventsListPage /> },
+      { path: 'storage/statistics', element: <StorageStatisticsPage /> },
+      { path: 'storage', element: <StorageFilesPage /> },
       { path: 'app/:appPath', element: <CustomAppPage /> },
       {
         path: '*',
