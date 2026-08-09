@@ -7,7 +7,17 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Import core ContentView without installing @shellui/core (workspace:* sdk breaks outside monorepo).
+      '@shellui/core/ContentView': path.resolve(
+        __dirname,
+        '../shellui/packages/core/src/components/ContentView.tsx',
+      ),
+      '@shellui/core/types': path.resolve(
+        __dirname,
+        '../shellui/packages/core/src/features/config/types.ts',
+      ),
     },
+    dedupe: ['react', 'react-dom', 'react-router', 'react-router-dom', '@shellui/sdk'],
   },
   base: '/',
   server: {

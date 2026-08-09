@@ -1,19 +1,11 @@
-import { useShelluiAdministration } from '@/hooks/useShelluiAdministration';
-import { useShelluiAuthBackendBaseUrl } from '@/hooks/useShelluiAuthBackendBaseUrl';
-import { useShelluiDeveloperMode } from '@/hooks/useShelluiDeveloperMode';
-import { useShelluiIsStaff } from '@/hooks/useShelluiIsStaff';
-import { useShelluiStorage } from '@/hooks/useShelluiStorage';
-import { resolveAdminAppUrl } from '@/lib/resolveAdminAppUrl';
-import { adminShellUiConfig } from '@/admin.shellui.config';
-import type {
-  AdminLocalizedString,
-  AdminNavigationItem,
-  AdminNavigationGroup,
-} from '@/admin.shellui.config';
-import type { SettingsAdministrationNavigationItem } from '@shellui/sdk';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ContentView } from '@shellui/core/ContentView';
+import type { NavigationItem } from '@shellui/core/types';
+import shellui, { type ShellUIMessage } from '@shellui/sdk';
+import { LoadingOverlay } from '@/components/LoadingOverlay';
+import { LOADING_OVERLAY_DURATION_MS } from '@/constants/loading';
 import {
   AppWindow,
   BarChart3,
@@ -30,6 +22,22 @@ import {
   Tags,
   Users,
 } from 'lucide-react';
+import { useShelluiAdministration } from '@/hooks/useShelluiAdministration';
+import { useShelluiAuthBackendBaseUrl } from '@/hooks/useShelluiAuthBackendBaseUrl';
+import { useShelluiDeveloperMode } from '@/hooks/useShelluiDeveloperMode';
+import { useShelluiIsStaff } from '@/hooks/useShelluiIsStaff';
+import { useShelluiStorage } from '@/hooks/useShelluiStorage';
+import { useAdminContentNavigation } from '@/hooks/useAdminContentNavigation';
+import type { AdminEmbedNavItem } from '@/hooks/useAdminContentNavigation';
+import { resolveAdminAppUrl } from '@/lib/resolveAdminAppUrl';
+import { isAdminContentFrame } from '@/lib/embed';
+import { adminShellUiConfig } from '@/admin.shellui.config';
+import type {
+  AdminLocalizedString,
+  AdminNavigationItem,
+  AdminNavigationGroup,
+} from '@/admin.shellui.config';
+import type { SettingsAdministrationNavigationItem } from '@shellui/sdk';
 import { cn } from '@/lib/utils';
 
 const navLinkBase =
@@ -336,6 +344,298 @@ function CollapsibleNavGroup({
   );
 }
 
+function getHashFragment(url: string): string {
+  const idx = url.indexOf('#');
+  if (idx === -1) return '#/';
+  const fragment = url.slice(idx);
+  return fragment === '#' ? '#/' : fragment;
+}
+
+function normalizeHash(hash: string | undefined | null): string {
+  if (!hash) return '#/';
+  const withHash = hash.startsWith('#') ? hash : `#${hash}`;
+  return withHash === '#' ? '#/' : withHash;
+}
+
+function softNavigateIframeHash(iframe: HTMLIFrameElement, targetUrl: string): boolean {
+  try {
+    const win = iframe.contentWindow;
+    if (!win) return false;
+    const loc = win.location;
+    // Setting hash on about:blank cancels the pending src navigation and leaves a blank frame.
+    if (!loc.href || loc.href === 'about:blank' || loc.origin === 'null') return false;
+    if (loc.origin !== window.location.origin) return false;
+    const nextHash = getHashFragment(targetUrl);
+    if (loc.hash !== nextHash) {
+      loc.hash = nextHash;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Stable ContentView mount: does not re-render when chrome hash updates from in-iframe navigation.
+ * Shows the loading bar until the nested frame initializes (core starts isLoading=false when
+ * ignoreMessages is false, so the overlay would otherwise be easy to miss).
+ */
+const StableAdminHashContentView = memo(function StableAdminHashContentView({
+  initialUrl,
+  navItem,
+}: {
+  initialUrl: string;
+  navItem: NavigationItem;
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const off = shellui.addMessageListener(
+      'SHELLUI_INITIALIZED',
+      (_data: ShellUIMessage, event: MessageEvent) => {
+        const iframe = wrapRef.current?.querySelector('iframe');
+        if (!iframe || event.source !== iframe.contentWindow) return;
+        setIsLoading(false);
+      },
+    );
+    const timeoutId = window.setTimeout(() => setIsLoading(false), LOADING_OVERLAY_DURATION_MS);
+    return () => {
+      off();
+      window.clearTimeout(timeoutId);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={wrapRef}
+      className="relative h-full w-full min-h-0"
+    >
+      <ContentView
+        url={initialUrl}
+        pathPrefix=""
+        navItem={navItem}
+      />
+      {isLoading ? <LoadingOverlay /> : null}
+    </div>
+  );
+});
+
+/**
+ * One ContentView for all same-origin hash pages.
+ * - In-iframe route changes only sync the chrome URL (no ContentView remount / soft-nav).
+ * - Sidebar chrome navigations soft-update the iframe hash without remounting.
+ */
+function AdminHashContentFrame({
+  targetUrl,
+  navItem,
+}: {
+  targetUrl: string;
+  navItem: NavigationItem;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const initialUrlRef = useRef(targetUrl);
+  const skipFirstSoftNavRef = useRef(true);
+  /** Hash last reported by the content iframe — chrome updates from that must not soft-nav. */
+  const lastIframeHashRef = useRef<string | null>(null);
+
+  // Register before ContentView's useEffect listeners so we record iframe hash first.
+  useLayoutEffect(() => {
+    const off = shellui.addMessageListener(
+      'SHELLUI_URL_CHANGED',
+      (data: ShellUIMessage, event: MessageEvent) => {
+        const iframe = containerRef.current?.querySelector('iframe');
+        if (!iframe || event.source !== iframe.contentWindow) return;
+        const hash = (data.payload as { hash?: string } | undefined)?.hash;
+        lastIframeHashRef.current = normalizeHash(hash);
+      },
+    );
+    return off;
+  }, []);
+
+  useLayoutEffect(() => {
+    const iframe = containerRef.current?.querySelector('iframe');
+    if (!iframe) return;
+
+    const targetHash = getHashFragment(targetUrl);
+
+    if (skipFirstSoftNavRef.current) {
+      skipFirstSoftNavRef.current = false;
+      if (getHashFragment(initialUrlRef.current) === targetHash) {
+        return;
+      }
+    }
+
+    // Chrome URL was updated from the iframe — do not push hash back in (avoids churn).
+    if (lastIframeHashRef.current === targetHash) {
+      return;
+    }
+
+    if (softNavigateIframeHash(iframe, targetUrl)) return;
+
+    const onLoad = () => {
+      if (lastIframeHashRef.current === getHashFragment(targetUrl)) return;
+      softNavigateIframeHash(iframe, targetUrl);
+    };
+    iframe.addEventListener('load', onLoad);
+    return () => iframe.removeEventListener('load', onLoad);
+  }, [targetUrl]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="h-full w-full min-h-0"
+    >
+      <StableAdminHashContentView
+        initialUrl={initialUrlRef.current}
+        navItem={navItem}
+      />
+    </div>
+  );
+}
+
+/**
+ * Stable ContentView for a single external admin app (e.g. playground on :4001).
+ * Subpath changes only sync the chrome URL — iframe src / ContentView props stay fixed.
+ */
+const StableExternalContentView = memo(function StableExternalContentView({
+  initialUrl,
+  navItem,
+  pathPrefix,
+  ignoreMessages,
+}: {
+  initialUrl: string;
+  navItem: NavigationItem;
+  pathPrefix: string;
+  ignoreMessages: boolean;
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const off = shellui.addMessageListener(
+      'SHELLUI_INITIALIZED',
+      (_data: ShellUIMessage, event: MessageEvent) => {
+        const iframe = wrapRef.current?.querySelector('iframe');
+        if (!iframe || event.source !== iframe.contentWindow) return;
+        setIsLoading(false);
+      },
+    );
+    const timeoutId = window.setTimeout(() => setIsLoading(false), LOADING_OVERLAY_DURATION_MS);
+    return () => {
+      off();
+      window.clearTimeout(timeoutId);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={wrapRef}
+      className="relative h-full w-full min-h-0"
+    >
+      <ContentView
+        url={initialUrl}
+        pathPrefix={pathPrefix}
+        navItem={navItem}
+        ignoreMessages={ignoreMessages}
+      />
+      {isLoading ? <LoadingOverlay /> : null}
+    </div>
+  );
+});
+
+/**
+ * One ContentView per external app path. Remounts only when switching apps (parent key),
+ * not when the chrome route is a subpath of the same app.
+ */
+function AdminExternalContentFrame({
+  targetUrl,
+  baseUrl,
+  pathPrefix,
+  currentItem,
+}: {
+  targetUrl: string;
+  baseUrl: string;
+  pathPrefix: string;
+  currentItem: AdminEmbedNavItem;
+}) {
+  // Deep-link on first mount; never update src when only the subpath changes.
+  const initialUrlRef = useRef(targetUrl);
+  const navItem = useMemo<NavigationItem>(
+    () => ({
+      label: currentItem.label,
+      path: pathPrefix,
+      url: currentItem.useHashRouter
+        ? currentItem.url.includes('#')
+          ? currentItem.url
+          : `${baseUrl.replace(/\/+$/, '')}/#/`
+        : baseUrl,
+      useHashRouter: currentItem.useHashRouter === true,
+    }),
+    [baseUrl, currentItem.label, currentItem.url, currentItem.useHashRouter, pathPrefix],
+  );
+
+  return (
+    <StableExternalContentView
+      initialUrl={initialUrlRef.current}
+      navItem={navItem}
+      pathPrefix={pathPrefix}
+      ignoreMessages={Boolean(currentItem.ignoreMessages)}
+    />
+  );
+}
+
+function AdminChromeMain() {
+  const frame = useAdminContentNavigation();
+
+  if (frame.kind === 'none') {
+    return (
+      <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
+        Not found
+      </div>
+    );
+  }
+
+  if (frame.kind === 'admin-hash') {
+    return (
+      <AdminHashContentFrame
+        targetUrl={frame.targetUrl}
+        navItem={frame.navItem as NavigationItem}
+      />
+    );
+  }
+
+  return (
+    <AdminExternalContentFrame
+      key={frame.currentItem.path}
+      targetUrl={frame.targetUrl}
+      baseUrl={frame.baseUrl}
+      pathPrefix={frame.pathPrefix}
+      currentItem={frame.currentItem}
+    />
+  );
+}
+
+function AdminContentMain() {
+  const location = useLocation();
+  const isFullBleed =
+    location.pathname.startsWith('/app/') ||
+    location.pathname === '/storage' ||
+    location.pathname === '/swagger' ||
+    location.pathname === '/redoc';
+
+  return (
+    <main
+      className={cn(
+        'h-full w-full min-w-0 flex-1',
+        isFullBleed ? 'overflow-hidden p-0' : 'overflow-auto px-4 py-6 md:px-6 md:py-8 lg:px-8',
+      )}
+    >
+      <Outlet />
+    </main>
+  );
+}
+
 export function AdminShellLayout() {
   const { t, i18n } = useTranslation();
   const isDeveloperMode = useShelluiDeveloperMode();
@@ -343,10 +643,7 @@ export function AdminShellLayout() {
   const administration = useShelluiAdministration();
   const storage = useShelluiStorage();
   const authBackendBaseUrl = useShelluiAuthBackendBaseUrl();
-  const location = useLocation();
-  const isDocsRoute = location.pathname === '/swagger' || location.pathname === '/redoc';
-  const isIframeContentRoute =
-    location.pathname.startsWith('/app/') || location.pathname === '/storage';
+  const contentFrame = isAdminContentFrame();
   const shellNavigation = adminShellUiConfig.navigation ?? [];
   const { top: topNavItems, groups } = buildNavSections(
     shellNavigation,
@@ -434,11 +731,21 @@ export function AdminShellLayout() {
     t,
   ]);
 
+  // Nested same-origin iframe: page content only (no sidebar).
+  if (contentFrame) {
+    return (
+      <div className="flex h-screen min-h-0 w-full flex-col bg-background">
+        <AdminContentMain />
+      </div>
+    );
+  }
+
+  // Chrome: sidebar + ContentView for every menu.
   return (
-    <div className="flex min-h-screen w-full bg-background">
-      <aside className="flex w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
+    <div className="flex h-screen min-h-0 w-full bg-background">
+      <aside className="flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
         <nav
-          className="flex flex-1 flex-col gap-1 p-3"
+          className="flex flex-1 flex-col gap-1 overflow-auto p-3"
           aria-label="Admin"
         >
           {topNavItems.map((item) => (
@@ -471,16 +778,9 @@ export function AdminShellLayout() {
           ))}
         </nav>
       </aside>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <main
-          className={cn(
-            'w-full min-w-0 flex-1',
-            isDocsRoute || isIframeContentRoute
-              ? 'overflow-hidden p-0'
-              : 'overflow-auto px-4 py-6 md:px-6 md:py-8 lg:px-8',
-          )}
-        >
-          <Outlet />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <main className="h-full w-full min-w-0 flex-1 overflow-hidden p-0">
+          <AdminChromeMain />
         </main>
       </div>
     </div>

@@ -2,6 +2,15 @@
 
 Administration UI for ShellUI: a React app embedded in the main shell (route `/admin`). This repo is **only the Vite + React app**—no ShellUI shell wrapper.
 
+## Architecture
+
+The admin app runs in two modes:
+
+1. **Chrome** (direct child of the shell `/admin` iframe): sidebar navigation stays in this frame; the main panel is ShellUI core [`ContentView`](https://github.com/shellui/shellui) for every menu item (loading overlay + `SHELLUI_URL_CHANGED` sync toward the root shell).
+2. **Content** (nested same-origin iframe loaded by chrome ContentView): no sidebar; built-in Identity / statistics pages render as normal React routes.
+
+External menus (host custom apps, storage files, Swagger/ReDoc) are opened as absolute URLs inside chrome ContentView. Django admin links remain `target="_blank"`.
+
 ## Prerequisites
 
 - [pnpm](https://pnpm.io/) (see `packageManager` in `package.json`)

@@ -119,3 +119,13 @@ a:hover {
 #root {
   min-height: 100vh;
 }
+
+/* Loading overlay top bar animation – grows from left to right (matches ShellUI core) */
+@keyframes loading-bar-slide {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}

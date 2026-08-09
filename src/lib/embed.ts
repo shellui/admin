@@ -9,3 +9,19 @@ export function isEmbeddedInShell(): boolean {
     return true;
   }
 }
+
+/**
+ * True when this frame is nested inside another same-origin admin frame (chrome ContentView).
+ * Cross-origin parent (the shell) means we are the admin chrome, not content.
+ */
+export function isAdminContentFrame(): boolean {
+  try {
+    if (window.parent === window) return false;
+    // Same origin: parent is also this admin app (chrome embedding content).
+    void window.parent.location.origin;
+    return window.parent.location.origin === window.location.origin;
+  } catch {
+    // Cross-origin parent (shell) — chrome mode.
+    return false;
+  }
+}
