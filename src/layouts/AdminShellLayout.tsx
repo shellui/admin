@@ -91,6 +91,8 @@ const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
   redoc: BookOpen,
   'django-admin': Lock,
   'storage/statistics': BarChart3,
+  'storage/swagger': BookOpen,
+  'storage/redoc': BookOpen,
 };
 
 function resolveLocalized(label: AdminLocalizedString, language: string): string {
@@ -621,6 +623,8 @@ function AdminContentMain() {
   const isFullBleed =
     location.pathname.startsWith('/app/') ||
     location.pathname === '/storage' ||
+    location.pathname === '/storage/swagger' ||
+    location.pathname === '/storage/redoc' ||
     location.pathname === '/swagger' ||
     location.pathname === '/redoc';
 
@@ -702,6 +706,22 @@ export function AdminShellLayout() {
         label: t('navStorageStatistics'),
         to: '/storage/statistics',
       });
+      if (isDeveloperMode) {
+        storageItems.push(
+          {
+            key: 'navStorageSwagger',
+            icon: BookOpen,
+            label: t('navSwagger'),
+            to: '/storage/swagger',
+          },
+          {
+            key: 'navStorageRedoc',
+            icon: BookOpen,
+            label: t('navRedoc'),
+            to: '/storage/redoc',
+          },
+        );
+      }
       if (isStaff && storageDjangoAdminHref) {
         storageItems.push({
           key: 'navStorageDjangoAdmin',
@@ -725,6 +745,7 @@ export function AdminShellLayout() {
     djangoAdminHref,
     filesUrl,
     groups,
+    isDeveloperMode,
     isStaff,
     storageDjangoAdminHref,
     storageUrl,

@@ -45,6 +45,8 @@ export const router = createHashRouter([
       { path: 'login-events/:eventId', element: <LoginEventDetailPage /> },
       { path: 'login-events', element: <LoginEventsListPage /> },
       { path: 'storage/statistics', element: <StorageStatisticsPage /> },
+      { path: 'storage/swagger', element: null },
+      { path: 'storage/redoc', element: null },
       { path: 'storage', element: null },
       { path: 'app/:appPath', element: null },
       {

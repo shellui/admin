@@ -156,6 +156,28 @@ export function useAdminContentNavigation(): AdminContentFrame {
         embedUrl: statsHash,
         useHashRouter: true,
       });
+      if (isDeveloperMode) {
+        const swaggerUrl = `${storageUrl}/api/docs/`;
+        const redocUrl = `${storageUrl}/api/docs/redoc/`;
+        items.push(
+          {
+            label: 'Swagger',
+            path: 'storage/swagger',
+            url: swaggerUrl,
+            embedUrl: swaggerUrl,
+            ignoreMessages: true,
+            useHashRouter: false,
+          },
+          {
+            label: 'ReDoc',
+            path: 'storage/redoc',
+            url: redocUrl,
+            embedUrl: redocUrl,
+            ignoreMessages: true,
+            useHashRouter: false,
+          },
+        );
+      }
     }
 
     return items;
