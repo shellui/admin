@@ -129,3 +129,15 @@ a:hover {
     width: 100%;
   }
 }
+
+/*
+ * ContentView LoadingOverlay uses Tailwind muted opacity utilities, but admin theme
+ * colors are hex CSS variables which do not generate those utilities. Define them
+ * explicitly so the core loading bar is visible.
+ */
+.bg-muted\/30 {
+  background-color: color-mix(in srgb, var(--muted) 30%, transparent);
+}
+.bg-muted-foreground\/50 {
+  background-color: color-mix(in srgb, var(--muted-foreground) 50%, transparent);
+}
