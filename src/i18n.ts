@@ -75,6 +75,7 @@ const resources = {
       navSwagger: 'Swagger',
       navRedoc: 'ReDoc',
       navDjangoAdmin: 'Django admin',
+      navOpensExternally: 'Opens in a new tab',
       customAppNotFoundTitle: 'Application not found',
       customAppNotFoundDescription:
         'This admin link is not in the host shell administration navigation. Check shellui.config.ts.',
@@ -541,6 +542,7 @@ const resources = {
       navSwagger: 'Swagger',
       navRedoc: 'ReDoc',
       navDjangoAdmin: 'Admin Django',
+      navOpensExternally: 'S’ouvre dans un nouvel onglet',
       customAppNotFoundTitle: 'Application introuvable',
       customAppNotFoundDescription:
         'Ce lien admin n’est pas dans la navigation d’administration de l’hôte. Vérifiez shellui.config.ts.',

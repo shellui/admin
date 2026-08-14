@@ -12,6 +12,7 @@ import {
   BookOpen,
   Building2,
   ChevronDown,
+  ExternalLink,
   Fingerprint,
   FolderOpen,
   HardDrive,
@@ -202,8 +203,8 @@ function adminNavLinkClassName(isActive: boolean) {
   return cn(
     navLinkBase,
     isActive
-      ? 'bg-primary text-primary-foreground'
-      : 'text-sidebar-foreground hover:bg-muted/60 hover:text-sidebar-foreground',
+      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+      : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
   );
 }
 
@@ -243,7 +244,7 @@ function NavSectionHeader({
       type="button"
       onClick={onToggle}
       aria-expanded={open}
-      className="flex w-full items-start gap-1 rounded-md px-3 pb-2 text-left hover:bg-muted/40"
+      className="flex w-full items-start gap-1 rounded-md px-3 pb-2 text-left transition-colors duration-150 hover:bg-sidebar-accent"
     >
       <div className="min-w-0 flex-1">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -280,13 +281,19 @@ function AdminSidebarLink({ item }: { item: AdminNavItem }) {
         href={item.href}
         target="_blank"
         rel="noopener noreferrer"
-        className={adminNavLinkClassName(false)}
+        title={t('navOpensExternally')}
+        aria-label={`${text} (${t('navOpensExternally')})`}
+        className={cn(adminNavLinkClassName(false), 'group')}
       >
         <Icon
           className="size-4 shrink-0"
           aria-hidden
         />
-        {text}
+        <span className="min-w-0 flex-1 truncate">{text}</span>
+        <ExternalLink
+          className="size-3 shrink-0 opacity-40 transition-opacity duration-150 group-hover:opacity-70"
+          aria-hidden
+        />
       </a>
     );
   }
