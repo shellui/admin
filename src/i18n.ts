@@ -152,7 +152,7 @@ const resources = {
       dashboardTitle: 'Operations overview',
       dashboardEnvBadge: 'shellui-auth',
       dashboardDescription:
-        'Figures below come from the Prometheus text endpoint on shellui-auth (`GET /api/v1/metrics`), authorized for Django staff or company owners. Use the same exposition for Prometheus or Grafana once you add a scrape token.',
+        'Identity figures come from shellui-auth (`GET /api/v1/metrics`). When storage is configured, storage figures come from storage-service (`GET /storage/v1/metrics`). Both require staff or company-owner access.',
       dashboardKpiSection: 'Identity database',
       dashboardStatUsersTotal: 'Users',
       dashboardStatUsersTotalHint: 'Rows in Django auth user table.',
@@ -173,7 +173,11 @@ const resources = {
       dashboardStatMauHint:
         'Users with last_seen_at in the current calendar month (timezone-aware, typically UTC).',
       dashboardExpositionTitle: 'Prometheus snapshot',
-      dashboardExpositionDescription: 'Raw exposition returned for this request (text/plain).',
+      dashboardExpositionDescription:
+        'Raw text/plain exposition. Collapsed by default — pick an endpoint when you need the scrape payload.',
+      dashboardExpositionSourceLabel: 'Endpoint',
+      dashboardExpositionSourceIdentity: 'Identity — GET /api/v1/metrics',
+      dashboardExpositionSourceStorage: 'Storage — GET /storage/v1/metrics',
       dashboardMetricsEndpointLink: 'Open metrics endpoint',
       dashboardMetricsEndpointHint:
         'This URL expects an Authorization: Bearer header. A new tab may show 401 — copy the link for curl, Prometheus, or Grafana.',
@@ -181,6 +185,22 @@ const resources = {
       dashboardError: 'Could not load metrics.',
       dashboardForbidden:
         'Could not load metrics (forbidden). You need staff or company-owner access for this company.',
+      dashboardStorageSection: 'Storage',
+      dashboardStorageBadge: 'storage-service',
+      dashboardStorageDescription:
+        'Company-scoped object counts, quota, and recent uploads from `GET /storage/v1/metrics`.',
+      dashboardStatStorageObjects: 'Objects',
+      dashboardStatStorageObjectsHint: '{{size}} stored.',
+      dashboardStatStorageDocuments: 'Documents',
+      dashboardStatStorageDocumentsHint: '{{size}} in document-like files.',
+      dashboardStatStorageQuota: 'Quota',
+      dashboardStatStorageQuotaHint: '{{used}} of {{max}} used.',
+      dashboardStatStorageUploads: 'Uploads (7d)',
+      dashboardStatStorageUploadsHint: '{{today}} in the last 24 hours · {{size}} this week.',
+      dashboardStorageLoading: 'Loading storage metrics…',
+      dashboardStorageError: 'Could not load storage metrics.',
+      dashboardStorageForbidden:
+        'Could not load storage metrics (forbidden). You need staff or company-owner access for this company.',
       dashboardNoSession: 'Waiting for shell session… Open Admin from ShellUI while signed in.',
       dashboardUiHint:
         'Later you can let operators pick cards and queries; for now this page mirrors the guarded metrics route.',
@@ -621,7 +641,7 @@ const resources = {
       dashboardTitle: 'Vue opérations',
       dashboardEnvBadge: 'shellui-auth',
       dashboardDescription:
-        'Les chiffres viennent du point Prometheus texte sur shellui-auth (`GET /api/v1/metrics`), autorisé pour le staff Django ou les propriétaires d’entreprise. La même exposition pourra être scrapée par Prometheus ou Grafana après ajout d’un jeton de scrape.',
+        'Les chiffres d’identité viennent de shellui-auth (`GET /api/v1/metrics`). Si le stockage est configuré, les chiffres de stockage viennent de storage-service (`GET /storage/v1/metrics`). Les deux exigent le staff ou un propriétaire d’entreprise.',
       dashboardKpiSection: 'Base identités',
       dashboardStatUsersTotal: 'Utilisateurs',
       dashboardStatUsersTotalHint: 'Lignes dans la table utilisateurs Django.',
@@ -642,7 +662,11 @@ const resources = {
       dashboardStatMauHint:
         'Utilisateurs avec last_seen_at dans le mois civil courant (fuseau horaire du serveur, souvent UTC).',
       dashboardExpositionTitle: 'Instantané Prometheus',
-      dashboardExpositionDescription: 'Exposition brute renvoyée pour cette requête (text/plain).',
+      dashboardExpositionDescription:
+        'Exposition brute text/plain. Repliée par défaut — choisissez un point d’accès si vous avez besoin du payload de scrape.',
+      dashboardExpositionSourceLabel: 'Point d’accès',
+      dashboardExpositionSourceIdentity: 'Identité — GET /api/v1/metrics',
+      dashboardExpositionSourceStorage: 'Stockage — GET /storage/v1/metrics',
       dashboardMetricsEndpointLink: 'Ouvrir le point métriques',
       dashboardMetricsEndpointHint:
         'Cette URL attend un en-tête Authorization: Bearer. Un nouvel onglet peut afficher 401 — copiez le lien pour curl, Prometheus ou Grafana.',
@@ -650,6 +674,22 @@ const resources = {
       dashboardError: 'Impossible de charger les métriques.',
       dashboardForbidden:
         'Impossible de charger les métriques (interdit). Il faut le staff Django ou être propriétaire de l’entreprise pour cette société.',
+      dashboardStorageSection: 'Stockage',
+      dashboardStorageBadge: 'storage-service',
+      dashboardStorageDescription:
+        'Objets, quota et téléversements récents de l’entreprise via `GET /storage/v1/metrics`.',
+      dashboardStatStorageObjects: 'Objets',
+      dashboardStatStorageObjectsHint: '{{size}} stockés.',
+      dashboardStatStorageDocuments: 'Documents',
+      dashboardStatStorageDocumentsHint: '{{size}} dans les fichiers de type document.',
+      dashboardStatStorageQuota: 'Quota',
+      dashboardStatStorageQuotaHint: '{{used}} sur {{max}} utilisés.',
+      dashboardStatStorageUploads: 'Téléversements (7j)',
+      dashboardStatStorageUploadsHint: '{{today}} sur 24 h · {{size}} cette semaine.',
+      dashboardStorageLoading: 'Chargement des métriques de stockage…',
+      dashboardStorageError: 'Impossible de charger les métriques de stockage.',
+      dashboardStorageForbidden:
+        'Impossible de charger les métriques de stockage (interdit). Il faut le staff Django ou être propriétaire de l’entreprise pour cette société.',
       dashboardNoSession:
         'En attente de la session shell… Ouvrez l’admin depuis ShellUI en étant connecté.',
       dashboardUiHint:
