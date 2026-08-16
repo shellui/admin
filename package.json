@@ -1,7 +1,6 @@
 {
   "name": "shellui-admin",
-  "version": "0.2.0-alpha.1",
-  "private": true,
+  "version": "0.2.0",
   "description": "ShellUI admin panel — React app embedded in the main shell",
   "type": "module",
   "scripts": {
@@ -30,7 +29,7 @@
     "@radix-ui/react-label": "^2.1.1",
     "@radix-ui/react-separator": "^1.1.1",
     "@radix-ui/react-slot": "^1.1.1",
-    "@shellui/sdk": "file:../shellui/packages/sdk",
+    "@shellui/sdk": "0.4.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "i18next": "^24.2.0",
