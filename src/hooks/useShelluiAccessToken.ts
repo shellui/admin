@@ -7,7 +7,7 @@ import type { Settings } from '@shellui/sdk';
  *
  * The parent shell copies the signed-in session token into settings for trusted iframes (see
  * `buildSettingsForPropagation`); sub-apps must send it as `Authorization: Bearer <token>`.
- * Value is updated when a new `SHELLUI_SETTINGS` message arrives (e.g. after token refresh).
+ * Value is updated when `SHELLUI_SETTINGS` / `SHELLUI_SETTINGS_UPDATED` arrives (e.g. refresh).
  */
 export function useShelluiAccessToken(): string | null {
   const [token, setToken] = useState<string | null>(
@@ -15,11 +15,16 @@ export function useShelluiAccessToken(): string | null {
   );
 
   useEffect(() => {
-    const off = addMessageListener('SHELLUI_SETTINGS', (message) => {
+    const apply = (message: { payload?: unknown }) => {
       const settings = (message.payload as { settings?: Settings } | undefined)?.settings;
       setToken(settings?.accessToken ?? null);
-    });
-    return off;
+    };
+    const offSettings = addMessageListener('SHELLUI_SETTINGS', apply);
+    const offUpdated = addMessageListener('SHELLUI_SETTINGS_UPDATED', apply);
+    return () => {
+      offSettings();
+      offUpdated();
+    };
   }, []);
 
   return token;

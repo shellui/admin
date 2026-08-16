@@ -1,14 +1,19 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LucideIcon } from 'lucide-react';
 import {
   Calendar,
   CalendarDays,
   CalendarRange,
+  ChevronDown,
   ExternalLink,
+  FileText,
+  Gauge,
+  HardDrive,
   Link2,
   Loader2,
   Shield,
+  Upload,
   UserCheck,
   Users,
 } from 'lucide-react';
@@ -23,6 +28,13 @@ import {
   type AuthMetricsSnapshot,
 } from '@/lib/authMetricsApi';
 import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
+import {
+  buildStoragePrometheusMetricsUrl,
+  fetchStorageMetricsSnapshot,
+  formatBytes,
+  type StorageMetricsSnapshot,
+} from '@/lib/storageMetricsApi';
+import { useStorageBaseUrl } from '@/lib/storageStatsApi';
 
 function StatBlock({
   label,
@@ -58,14 +70,25 @@ function formatInt(n: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.round(n));
 }
 
+type MetricsSourceId = 'identity' | 'storage';
+
 export function DashboardPage() {
   const { t } = useTranslation();
   const accessToken = useShelluiAccessToken();
+  const storageBaseUrl = useStorageBaseUrl();
+  const storageEnabled = Boolean(storageBaseUrl);
+
   const [snapshot, setSnapshot] = useState<AuthMetricsSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const [storageSnapshot, setStorageSnapshot] = useState<StorageMetricsSnapshot | null>(null);
+  const [storageLoading, setStorageLoading] = useState(false);
+  const [storageError, setStorageError] = useState<string | null>(null);
+
+  const [metricsSource, setMetricsSource] = useState<MetricsSourceId>('identity');
+
+  const loadIdentity = useCallback(async () => {
     if (!accessToken) {
       setLoading(false);
       setSnapshot(null);
@@ -89,15 +112,77 @@ export function DashboardPage() {
     }
   }, [accessToken, t]);
 
+  const loadStorage = useCallback(async () => {
+    if (!accessToken || !storageBaseUrl) {
+      setStorageLoading(false);
+      setStorageSnapshot(null);
+      setStorageError(null);
+      return;
+    }
+    setStorageLoading(true);
+    setStorageError(null);
+    try {
+      setStorageSnapshot(await fetchStorageMetricsSnapshot(storageBaseUrl, accessToken));
+    } catch (e) {
+      setStorageSnapshot(null);
+      const msg = e instanceof Error ? e.message : t('dashboardStorageError');
+      if (msg === 'Forbidden' || /403/.test(msg)) {
+        setStorageError(t('dashboardStorageForbidden'));
+      } else {
+        setStorageError(msg);
+      }
+    } finally {
+      setStorageLoading(false);
+    }
+  }, [accessToken, storageBaseUrl, t]);
+
   useEffect(() => {
-    void load();
-  }, [load]);
+    void loadIdentity();
+  }, [loadIdentity]);
+
+  useEffect(() => {
+    void loadStorage();
+  }, [loadStorage]);
 
   const inactive =
     snapshot != null ? Math.max(0, Math.round(snapshot.usersTotal - snapshot.usersActive)) : 0;
 
   const companyId = accessToken ? getCompanyIdFromJwt(accessToken) : null;
-  const metricsEndpointUrl = companyId != null ? buildStaffPrometheusMetricsUrl(companyId) : null;
+  const identityMetricsUrl = companyId != null ? buildStaffPrometheusMetricsUrl() : null;
+  const storageMetricsUrl =
+    storageEnabled && storageBaseUrl && companyId != null
+      ? buildStoragePrometheusMetricsUrl(storageBaseUrl)
+      : null;
+
+  const sources = useMemo(() => {
+    const list: { id: MetricsSourceId; label: string; url: string | null; rawText: string }[] = [];
+    if (snapshot) {
+      list.push({
+        id: 'identity',
+        label: t('dashboardExpositionSourceIdentity'),
+        url: identityMetricsUrl,
+        rawText: snapshot.rawText,
+      });
+    }
+    if (storageSnapshot) {
+      list.push({
+        id: 'storage',
+        label: t('dashboardExpositionSourceStorage'),
+        url: storageMetricsUrl,
+        rawText: storageSnapshot.rawText,
+      });
+    }
+    return list;
+  }, [identityMetricsUrl, snapshot, storageMetricsUrl, storageSnapshot, t]);
+
+  useEffect(() => {
+    if (sources.length === 0) return;
+    if (!sources.some((s) => s.id === metricsSource)) {
+      setMetricsSource(sources[0].id);
+    }
+  }, [metricsSource, sources]);
+
+  const selectedSource = sources.find((s) => s.id === metricsSource) ?? sources[0] ?? null;
 
   return (
     <div className="w-full space-y-8">
@@ -187,44 +272,142 @@ export function DashboardPage() {
               icon={CalendarDays}
             />
           </section>
-
-          <div className="grid gap-6">
-            <Card className="border-border/80">
-              <CardHeader>
-                <CardTitle className="font-heading text-lg">
-                  {t('dashboardExpositionTitle')}
-                </CardTitle>
-                <CardDescription className="font-mono text-xs">
-                  {t('dashboardExpositionDescription')}
-                </CardDescription>
-                {metricsEndpointUrl && (
-                  <div className="pt-2">
-                    <a
-                      href={metricsEndpointUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 font-mono text-xs text-primary underline-offset-4 hover:underline"
-                    >
-                      <ExternalLink
-                        className="size-3.5 shrink-0"
-                        aria-hidden
-                      />
-                      {t('dashboardMetricsEndpointLink')}
-                    </a>
-                    <Text className="mt-1.5 block font-mono text-[10px] text-muted-foreground">
-                      {t('dashboardMetricsEndpointHint')}
-                    </Text>
-                  </div>
-                )}
-              </CardHeader>
-              <CardContent>
-                <pre className="max-h-64 overflow-auto rounded-md border border-border bg-muted/30 p-3 font-mono text-[10px] leading-relaxed text-muted-foreground">
-                  {snapshot.rawText.trim()}
-                </pre>
-              </CardContent>
-            </Card>
-          </div>
         </>
+      )}
+
+      {accessToken && storageEnabled && (
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-baseline gap-3">
+            <h2 className="font-heading text-lg font-semibold tracking-tight">
+              {t('dashboardStorageSection')}
+            </h2>
+            <Badge
+              variant="secondary"
+              className="font-mono text-[10px] uppercase"
+            >
+              {t('dashboardStorageBadge')}
+            </Badge>
+          </div>
+          <Text className="max-w-3xl font-mono text-sm">{t('dashboardStorageDescription')}</Text>
+
+          {storageLoading && (
+            <div className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
+              <Loader2
+                className="size-4 animate-spin"
+                aria-hidden
+              />
+              {t('dashboardStorageLoading')}
+            </div>
+          )}
+
+          {storageError && (
+            <Text className="font-mono text-sm text-destructive">{storageError}</Text>
+          )}
+
+          {!storageLoading && !storageError && storageSnapshot && (
+            <div
+              className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+              aria-label={t('dashboardStorageSection')}
+            >
+              <StatBlock
+                label={t('dashboardStatStorageObjects')}
+                value={formatInt(storageSnapshot.objectsTotal)}
+                hint={t('dashboardStatStorageObjectsHint', {
+                  size: formatBytes(storageSnapshot.bytesTotal),
+                })}
+                icon={HardDrive}
+              />
+              <StatBlock
+                label={t('dashboardStatStorageDocuments')}
+                value={formatInt(storageSnapshot.documentsTotal)}
+                hint={t('dashboardStatStorageDocumentsHint', {
+                  size: formatBytes(storageSnapshot.documentBytes),
+                })}
+                icon={FileText}
+              />
+              <StatBlock
+                label={t('dashboardStatStorageQuota')}
+                value={formatBytes(storageSnapshot.quotaUsedBytes)}
+                hint={t('dashboardStatStorageQuotaHint', {
+                  used: formatBytes(storageSnapshot.quotaUsedBytes),
+                  max: formatBytes(storageSnapshot.quotaMaxBytes),
+                })}
+                icon={Gauge}
+              />
+              <StatBlock
+                label={t('dashboardStatStorageUploads')}
+                value={formatInt(storageSnapshot.uploads7d)}
+                hint={t('dashboardStatStorageUploadsHint', {
+                  today: formatInt(storageSnapshot.uploads24h),
+                  size: formatBytes(storageSnapshot.bytes7d),
+                })}
+                icon={Upload}
+              />
+            </div>
+          )}
+        </section>
+      )}
+
+      {selectedSource && (
+        <details className="group rounded-lg border border-border/80 bg-card text-card-foreground shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-6 [&::-webkit-details-marker]:hidden">
+            <div className="space-y-1.5">
+              <CardTitle className="font-heading text-lg">
+                {t('dashboardExpositionTitle')}
+              </CardTitle>
+              <CardDescription className="font-mono text-xs">
+                {t('dashboardExpositionDescription')}
+              </CardDescription>
+            </div>
+            <ChevronDown
+              className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+              aria-hidden
+            />
+          </summary>
+          <div className="space-y-3 px-6 pb-6">
+            {sources.length > 1 && (
+              <label className="flex flex-col gap-1.5 font-mono text-xs text-muted-foreground">
+                {t('dashboardExpositionSourceLabel')}
+                <select
+                  className="h-8 max-w-md rounded-md border border-input bg-background px-2 text-foreground"
+                  value={selectedSource.id}
+                  onChange={(e) => setMetricsSource(e.target.value as MetricsSourceId)}
+                >
+                  {sources.map((source) => (
+                    <option
+                      key={source.id}
+                      value={source.id}
+                    >
+                      {source.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {selectedSource.url && (
+              <div>
+                <a
+                  href={selectedSource.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 font-mono text-xs text-primary underline-offset-4 hover:underline"
+                >
+                  <ExternalLink
+                    className="size-3.5 shrink-0"
+                    aria-hidden
+                  />
+                  {t('dashboardMetricsEndpointLink')}
+                </a>
+                <Text className="mt-1.5 block font-mono text-[10px] text-muted-foreground">
+                  {t('dashboardMetricsEndpointHint')}
+                </Text>
+              </div>
+            )}
+            <pre className="max-h-64 overflow-auto rounded-md border border-border bg-muted/30 p-3 font-mono text-[10px] leading-relaxed text-muted-foreground">
+              {selectedSource.rawText.trim()}
+            </pre>
+          </div>
+        </details>
       )}
 
       <Separator className="bg-border" />

@@ -1,10 +1,14 @@
 import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
 
+export type CompanyAccessMode = 'public' | 'domain' | 'invite';
+
 export type CompanyDto = {
   id: number;
   name: string;
   slug: string;
   owners: number[];
+  access_mode: CompanyAccessMode;
+  allowed_email_domains: string[];
 };
 
 function parseErrorMessage(body: unknown): string | null {
@@ -50,7 +54,11 @@ export async function fetchMemberCompanies(accessToken: string): Promise<Company
 export async function patchCompany(
   accessToken: string,
   companyId: number,
-  payload: { name: string },
+  payload: {
+    name?: string;
+    access_mode?: CompanyAccessMode;
+    allowed_email_domains?: string[];
+  },
 ): Promise<CompanyDto> {
   const res = await companiesAuthFetch(`/api/v1/companies/${companyId}/`, accessToken, {
     method: 'PATCH',
