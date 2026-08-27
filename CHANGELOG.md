@@ -41,7 +41,7 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 - **Dashboard:** staff **auth metrics** KPIs for total, active, and staff users, linked social accounts, and **DAU** / **WAU** / **MAU** activity
 - **Metrics exposition:** preview **Prometheus** text and link to the staff metrics endpoint for the signed-in company
 - **Company:** **company owners** can view and rename the current company
-- **Users:** searchable, paginated directory with avatars, groups, owner and active flags, username, and last seen; **user detail** with profile fields, editable **group membership**, stored **ShellUI preferences**, and lazy-loaded per-user **login history**
+- **Users:** searchable, paginated directory with avatars, groups, owner and active flags, username, and last seen; **user detail** with profile fields, editable **group membership**, stored **Shellui preferences**, and lazy-loaded per-user **login history**
 - **Groups:** create, rename, and delete company groups
 - **OAuth apps:** **company-owner** management of social login providers with create, update, and delete flows, **callback URL** helper with copy, **Microsoft tenant** support, and unsaved-change confirmation through shell **dialogs**
 - **Login events:** filterable **audit log** by outcome, provider, location, timezone, staff flag, and language, plus paginated **event detail** with related events for the same user
