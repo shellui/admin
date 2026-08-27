@@ -17,7 +17,10 @@ export function useShelluiAccessToken(): string | null {
   useEffect(() => {
     const apply = (message: { payload?: unknown }) => {
       const settings = (message.payload as { settings?: Settings } | undefined)?.settings;
-      setToken(settings?.accessToken ?? null);
+      // Ignore payloads without settings (do not clear the session on unrelated messages).
+      if (!settings) return;
+      const next = settings.accessToken ?? null;
+      setToken((prev) => (prev === next ? prev : next));
     };
     const offSettings = addMessageListener('SHELLUI_SETTINGS', apply);
     const offUpdated = addMessageListener('SHELLUI_SETTINGS_UPDATED', apply);
