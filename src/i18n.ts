@@ -76,6 +76,10 @@ const resources = {
       navRedoc: 'ReDoc',
       navDjangoAdmin: 'Django admin',
       navOpensExternally: 'Opens in a new tab',
+      navMobileMenuTitle: 'Admin',
+      navMobileBack: 'Back to menu',
+      navSidebarCollapse: 'Collapse sidebar',
+      navSidebarExpand: 'Expand sidebar',
       customAppNotFoundTitle: 'Application not found',
       customAppNotFoundDescription:
         'This admin link is not in the host shell administration navigation. Check shellui.config.ts.',
@@ -563,6 +567,10 @@ const resources = {
       navRedoc: 'ReDoc',
       navDjangoAdmin: 'Admin Django',
       navOpensExternally: 'S’ouvre dans un nouvel onglet',
+      navMobileMenuTitle: 'Admin',
+      navMobileBack: 'Retour au menu',
+      navSidebarCollapse: 'Réduire la barre latérale',
+      navSidebarExpand: 'Développer la barre latérale',
       customAppNotFoundTitle: 'Application introuvable',
       customAppNotFoundDescription:
         'Ce lien admin n’est pas dans la navigation d’administration de l’hôte. Vérifiez shellui.config.ts.',

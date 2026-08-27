@@ -23,6 +23,10 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ## [0.3.0] - Unreleased
 
+### ✨ Feature
+
+- **Responsive chrome:** desktop sidebar collapses to an icon rail with shadcn tooltips for labels (persisted); on mobile the nav is a full-page menu and opening an item shows content with a back button (Settings-style)
+
 ### 🐛 Bug Fixes
 
 - **Nested ContentView settings:** admin chrome re-broadcasts `SHELLUI_SETTINGS` / `SHELLUI_SETTINGS_UPDATED` from the parent shell into ContentView iframes so theme (and other settings) update live without a refresh

@@ -1,10 +1,20 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  memo,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { ContentView } from '@shellui/core/ContentView';
 import type { NavigationItem } from '@shellui/core/types';
 import shellui, { type ShellUIMessage } from '@shellui/sdk';
 import { LoadingOverlay } from '@/components/LoadingOverlay';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { LOADING_OVERLAY_DURATION_MS } from '@/constants/loading';
 import {
   AppWindow,
@@ -12,6 +22,8 @@ import {
   BookOpen,
   Building2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ExternalLink,
   Fingerprint,
   FolderOpen,
@@ -19,10 +31,13 @@ import {
   KeyRound,
   LayoutDashboard,
   Lock,
+  PanelLeft,
+  PanelLeftClose,
   ScrollText,
   Tags,
   Users,
 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { useShelluiAdministration } from '@/hooks/useShelluiAdministration';
 import { useShelluiAuthBackendBaseUrl } from '@/hooks/useShelluiAuthBackendBaseUrl';
 import { useShelluiDeveloperMode } from '@/hooks/useShelluiDeveloperMode';
@@ -30,6 +45,11 @@ import { useShelluiIsStaff } from '@/hooks/useShelluiIsStaff';
 import { useShelluiStorage } from '@/hooks/useShelluiStorage';
 import { useAdminContentNavigation } from '@/hooks/useAdminContentNavigation';
 import type { AdminEmbedNavItem } from '@/hooks/useAdminContentNavigation';
+import {
+  getAdminHashPath,
+  readSidebarCollapsed,
+  writeSidebarCollapsed,
+} from '@/lib/adminChromeNav';
 import { resolveAdminAppUrl } from '@/lib/resolveAdminAppUrl';
 import { isAdminContentFrame } from '@/lib/embed';
 import { adminShellUiConfig } from '@/admin.shellui.config';
@@ -270,57 +290,168 @@ function NavSectionHeader({
   );
 }
 
-function AdminSidebarLink({ item }: { item: AdminNavItem }) {
+/** Wrap a sidebar control with a label tooltip when the rail is collapsed — does not alter the child. */
+function wrapCollapsedTooltip(label: string, node: ReactElement) {
+  return (
+    <Tooltip delayDuration={0}>
+      <TooltipTrigger asChild>
+        <span className="flex w-full min-w-0">{node}</span>
+      </TooltipTrigger>
+      <TooltipContent
+        side="right"
+        sideOffset={8}
+      >
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function AdminSidebarLink({
+  item,
+  collapsed = false,
+  onNavigate,
+}: {
+  item: AdminNavItem;
+  collapsed?: boolean;
+  onNavigate?: () => void;
+}) {
   const { t } = useTranslation();
   const Icon = item.icon;
   const text = item.label ?? t(item.key);
 
   if (item.openIn === 'external' && item.href) {
-    return (
+    const link = (
       <a
         href={item.href}
         target="_blank"
         rel="noopener noreferrer"
-        title={t('navOpensExternally')}
+        title={collapsed ? undefined : t('navOpensExternally')}
         aria-label={`${text} (${t('navOpensExternally')})`}
-        className={cn(adminNavLinkClassName(false), 'group')}
+        className={cn(adminNavLinkClassName(false), 'group', collapsed && 'justify-center px-2')}
       >
         <Icon
           className="size-4 shrink-0"
           aria-hidden
         />
-        <span className="min-w-0 flex-1 truncate">{text}</span>
-        <ExternalLink
-          className="size-3 shrink-0 opacity-40 transition-opacity duration-150 group-hover:opacity-70"
-          aria-hidden
-        />
+        {!collapsed ? (
+          <>
+            <span className="min-w-0 flex-1 truncate">{text}</span>
+            <ExternalLink
+              className="size-3 shrink-0 opacity-40 transition-opacity duration-150 group-hover:opacity-70"
+              aria-hidden
+            />
+          </>
+        ) : (
+          <span className="sr-only">{text}</span>
+        )}
       </a>
+    );
+    return collapsed ? wrapCollapsedTooltip(text, link) : link;
+  }
+
+  if (!item.to) return null;
+
+  const link = (
+    <NavLink
+      to={item.to}
+      end
+      onClick={() => onNavigate?.()}
+      className={({ isActive }) =>
+        cn(adminNavLinkClassName(isActive), collapsed && 'justify-center px-2')
+      }
+    >
+      <Icon
+        className="size-4 shrink-0"
+        aria-hidden
+      />
+      {collapsed ? <span className="sr-only">{text}</span> : text}
+    </NavLink>
+  );
+  return collapsed ? wrapCollapsedTooltip(text, link) : link;
+}
+
+function AdminMobileNavLink({
+  item,
+  onNavigate,
+  showDivider,
+}: {
+  item: AdminNavItem;
+  onNavigate?: () => void;
+  showDivider?: boolean;
+}) {
+  const { t } = useTranslation();
+  const Icon = item.icon;
+  const text = item.label ?? t(item.key);
+  const rowClass =
+    'relative flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm font-medium transition-colors hover:bg-sidebar-accent active:bg-sidebar-accent';
+
+  if (item.openIn === 'external' && item.href) {
+    return (
+      <div className="relative">
+        {showDivider ? <div className="absolute inset-x-0 bottom-0 h-px bg-border" /> : null}
+        <a
+          href={item.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`${text} (${t('navOpensExternally')})`}
+          className={cn(rowClass, 'text-foreground no-underline hover:no-underline')}
+        >
+          <Icon
+            className="size-5 shrink-0 text-muted-foreground"
+            aria-hidden
+          />
+          <span className="min-w-0 flex-1 truncate">{text}</span>
+          <ExternalLink
+            className="size-4 shrink-0 text-muted-foreground/50"
+            aria-hidden
+          />
+        </a>
+      </div>
     );
   }
 
   if (!item.to) return null;
 
   return (
-    <NavLink
-      to={item.to}
-      end
-      className={({ isActive }) => adminNavLinkClassName(isActive)}
-    >
-      <Icon
-        className="size-4 shrink-0"
-        aria-hidden
-      />
-      {text}
-    </NavLink>
+    <div className="relative">
+      {showDivider ? <div className="absolute inset-x-0 bottom-0 h-px bg-border" /> : null}
+      <NavLink
+        to={item.to}
+        end
+        onClick={() => onNavigate?.()}
+        className={({ isActive }) =>
+          cn(
+            rowClass,
+            'no-underline hover:no-underline',
+            isActive ? 'bg-primary/10 text-primary' : 'text-foreground',
+          )
+        }
+      >
+        <Icon
+          className="size-5 shrink-0 text-muted-foreground"
+          aria-hidden
+        />
+        <span className="min-w-0 flex-1 truncate">{text}</span>
+        <ChevronRight
+          className="size-4 shrink-0 text-muted-foreground/40"
+          aria-hidden
+        />
+      </NavLink>
+    </div>
   );
 }
 
 function CollapsibleNavGroup({
   section,
   storageKey,
+  collapsed = false,
+  onNavigate,
 }: {
   section: AdminNavGroupSection;
   storageKey: string;
+  collapsed?: boolean;
+  onNavigate?: () => void;
 }) {
   const [open, setOpen] = useState(() => readSectionOpen(storageKey));
 
@@ -329,6 +460,21 @@ function CollapsibleNavGroup({
   }, [open, storageKey]);
 
   if (section.items.length === 0) return null;
+
+  if (collapsed) {
+    return (
+      <div className="mt-3 flex flex-col gap-1 border-t border-sidebar-border pt-3">
+        {section.items.map((item) => (
+          <AdminSidebarLink
+            key={item.to ?? item.key}
+            item={item}
+            collapsed
+            onNavigate={onNavigate}
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="mt-4 border-t border-sidebar-border pt-3">
@@ -345,12 +491,157 @@ function CollapsibleNavGroup({
             <AdminSidebarLink
               key={item.to ?? item.key}
               item={item}
+              onNavigate={onNavigate}
             />
           ))}
         </div>
       ) : null}
     </div>
   );
+}
+
+function AdminNavBody({
+  topNavItems,
+  customNavItems,
+  customSectionTitle,
+  groupSections,
+  collapsed = false,
+  onNavigate,
+}: {
+  topNavItems: AdminNavItem[];
+  customNavItems: AdminNavItem[];
+  customSectionTitle: string;
+  groupSections: AdminNavGroupSection[];
+  collapsed?: boolean;
+  onNavigate?: () => void;
+}) {
+  return (
+    <>
+      {topNavItems.map((item) => (
+        <AdminSidebarLink
+          key={item.to ?? item.key}
+          item={item}
+          collapsed={collapsed}
+          onNavigate={onNavigate}
+        />
+      ))}
+      {customNavItems.length > 0 && (
+        <div className={cn(topNavItems.length > 0 && 'mt-4 border-t border-sidebar-border pt-3')}>
+          {!collapsed ? <NavSectionHeader title={customSectionTitle} /> : null}
+          <div className={cn('flex flex-col gap-1', collapsed && topNavItems.length > 0 && 'mt-0')}>
+            {customNavItems.map((item) => (
+              <AdminSidebarLink
+                key={item.key}
+                item={item}
+                collapsed={collapsed}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+      {groupSections.map((section) => (
+        <CollapsibleNavGroup
+          key={section.id}
+          section={section}
+          storageKey={section.id}
+          collapsed={collapsed}
+          onNavigate={onNavigate}
+        />
+      ))}
+    </>
+  );
+}
+
+function AdminMobileMenu({
+  topNavItems,
+  customNavItems,
+  customSectionTitle,
+  groupSections,
+  onNavigate,
+}: {
+  topNavItems: AdminNavItem[];
+  customNavItems: AdminNavItem[];
+  customSectionTitle: string;
+  groupSections: AdminNavGroupSection[];
+  onNavigate: () => void;
+}) {
+  const { t } = useTranslation();
+
+  const renderCard = (items: AdminNavItem[]) => (
+    <div className="overflow-hidden rounded-lg border border-border bg-card">
+      {items.map((item, index) => (
+        <AdminMobileNavLink
+          key={item.to ?? item.key}
+          item={item}
+          onNavigate={onNavigate}
+          showDivider={index < items.length - 1}
+        />
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-background">
+      <header className="flex h-14 shrink-0 items-center justify-center border-b border-border px-4">
+        <h1 className="text-lg font-semibold tracking-tight">{t('navMobileMenuTitle')}</h1>
+      </header>
+      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
+        {topNavItems.length > 0 ? renderCard(topNavItems) : null}
+        {customNavItems.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            <h2 className="px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {customSectionTitle}
+            </h2>
+            {renderCard(customNavItems)}
+          </div>
+        ) : null}
+        {groupSections.map((section) =>
+          section.items.length === 0 ? null : (
+            <div
+              key={section.id}
+              className="flex flex-col gap-2"
+            >
+              <div className="px-1">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {section.title}
+                </h2>
+                {section.subtitle ? (
+                  <p className="mt-0.5 truncate text-[11px] text-muted-foreground/80">
+                    {section.subtitle}
+                  </p>
+                ) : null}
+              </div>
+              {renderCard(section.items)}
+            </div>
+          ),
+        )}
+      </div>
+    </div>
+  );
+}
+
+function resolveActiveNavLabel(
+  pathname: string,
+  items: AdminNavItem[],
+  t: (key: string) => string,
+): string {
+  const normalized = pathname.replace(/\/+$/, '') || '/';
+  let best: AdminNavItem | undefined;
+  let bestLen = -1;
+  for (const item of items) {
+    if (!item.to) continue;
+    const to = item.to.replace(/\/+$/, '') || '/';
+    const matches =
+      to === '/' ? normalized === '/' : normalized === to || normalized.startsWith(`${to}/`);
+    if (!matches) continue;
+    if (to.length > bestLen) {
+      best = item;
+      bestLen = to.length;
+    }
+  }
+  if (!best) return t('navMobileMenuTitle');
+  return best.label ?? t(best.key);
 }
 
 function getHashFragment(url: string): string {
@@ -649,6 +940,8 @@ function AdminContentMain() {
 
 export function AdminShellLayout() {
   const { t, i18n } = useTranslation();
+  const location = useLocation();
+  const isMobile = useIsMobile();
   const isDeveloperMode = useShelluiDeveloperMode();
   const isStaff = useShelluiIsStaff();
   const administration = useShelluiAdministration();
@@ -673,6 +966,24 @@ export function AdminShellLayout() {
     ? resolveAdminAppUrl('/admin/', authBackendBaseUrl)
     : null;
   const storageDjangoAdminHref = storageUrl ? `${storageUrl}/admin/` : null;
+
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed());
+  const [mobilePane, setMobilePane] = useState<'menu' | 'content'>(() =>
+    getAdminHashPath() === '/' ? 'menu' : 'content',
+  );
+
+  useEffect(() => {
+    writeSidebarCollapsed(sidebarCollapsed);
+  }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setMobilePane('content');
+      return;
+    }
+    // Entering mobile: deep links open content; admin root opens the menu.
+    setMobilePane(getAdminHashPath() === '/' ? 'menu' : 'content');
+  }, [isMobile]);
 
   const groupSections = useMemo(() => {
     const sections = groups.map((group) => {
@@ -759,6 +1070,13 @@ export function AdminShellLayout() {
     t,
   ]);
 
+  const allNavItems = useMemo(
+    () => [...topNavItems, ...customNavItems, ...groupSections.flatMap((section) => section.items)],
+    [customNavItems, groupSections, topNavItems],
+  );
+
+  const mobileTitle = resolveActiveNavLabel(location.pathname, allNavItems, t);
+
   // Nested same-origin iframe: page content only (no sidebar).
   if (contentFrame) {
     return (
@@ -768,48 +1086,104 @@ export function AdminShellLayout() {
     );
   }
 
-  // Chrome: sidebar + ContentView for every menu.
+  const showMobileMenu = isMobile && mobilePane === 'menu';
+
+  // Chrome: collapsible desktop sidebar; mobile menu-first with back into content.
   return (
     <div className="flex h-screen min-h-0 w-full bg-background">
-      <aside className="flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-        <nav
-          className="flex flex-1 flex-col gap-1 overflow-auto p-3"
-          aria-label="Admin"
-        >
-          {topNavItems.map((item) => (
-            <AdminSidebarLink
-              key={item.to ?? item.key}
-              item={item}
-            />
-          ))}
-          {customNavItems.length > 0 && (
-            <div
-              className={cn(topNavItems.length > 0 && 'mt-4 border-t border-sidebar-border pt-3')}
-            >
-              <NavSectionHeader title={customSectionTitle} />
-              <div className="flex flex-col gap-1">
-                {customNavItems.map((item) => (
-                  <AdminSidebarLink
-                    key={item.key}
-                    item={item}
-                  />
-                ))}
-              </div>
-            </div>
+      <TooltipProvider delayDuration={0}>
+        <aside
+          data-collapsed={sidebarCollapsed ? 'true' : 'false'}
+          className={cn(
+            'hidden shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-linear md:flex',
+            sidebarCollapsed ? 'w-[3.25rem]' : 'w-64',
           )}
-          {groupSections.map((section) => (
-            <CollapsibleNavGroup
-              key={section.id}
-              section={section}
-              storageKey={section.id}
+        >
+          <div
+            className={cn(
+              'flex h-12 shrink-0 items-center border-b border-sidebar-border',
+              sidebarCollapsed ? 'justify-center px-1' : 'justify-between gap-2 px-3',
+            )}
+          >
+            {!sidebarCollapsed ? (
+              <span className="truncate text-sm font-semibold tracking-tight">
+                {t('navMobileMenuTitle')}
+              </span>
+            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-8 shrink-0"
+              aria-label={sidebarCollapsed ? t('navSidebarExpand') : t('navSidebarCollapse')}
+              title={sidebarCollapsed ? t('navSidebarExpand') : t('navSidebarCollapse')}
+              onClick={() => setSidebarCollapsed((prev) => !prev)}
+            >
+              {sidebarCollapsed ? (
+                <PanelLeft
+                  className="size-4"
+                  aria-hidden
+                />
+              ) : (
+                <PanelLeftClose
+                  className="size-4"
+                  aria-hidden
+                />
+              )}
+            </Button>
+          </div>
+          <nav
+            className={cn(
+              'flex flex-1 flex-col gap-1 overflow-auto py-3',
+              sidebarCollapsed ? 'px-1.5' : 'px-3',
+            )}
+            aria-label="Admin"
+          >
+            <AdminNavBody
+              topNavItems={topNavItems}
+              customNavItems={customNavItems}
+              customSectionTitle={customSectionTitle}
+              groupSections={groupSections}
+              collapsed={sidebarCollapsed}
             />
-          ))}
-        </nav>
-      </aside>
+          </nav>
+        </aside>
+      </TooltipProvider>
+
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <main className="h-full w-full min-w-0 flex-1 overflow-hidden p-0">
-          <AdminChromeMain />
-        </main>
+        {showMobileMenu ? (
+          <AdminMobileMenu
+            topNavItems={topNavItems}
+            customNavItems={customNavItems}
+            customSectionTitle={customSectionTitle}
+            groupSections={groupSections}
+            onNavigate={() => setMobilePane('content')}
+          />
+        ) : (
+          <>
+            <header className="flex h-12 shrink-0 items-center gap-1 border-b border-border px-2 md:hidden">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-9 shrink-0"
+                aria-label={t('navMobileBack')}
+                onClick={() => setMobilePane('menu')}
+              >
+                <ChevronLeft
+                  className="size-5"
+                  aria-hidden
+                />
+              </Button>
+              <h1 className="min-w-0 flex-1 truncate text-base font-semibold tracking-tight">
+                {mobileTitle}
+              </h1>
+            </header>
+            <main className="h-full min-h-0 w-full min-w-0 flex-1 overflow-hidden p-0">
+              <AdminChromeMain />
+            </main>
+          </>
+        )}
       </div>
     </div>
   );
