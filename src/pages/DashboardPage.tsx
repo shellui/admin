@@ -88,61 +88,71 @@ export function DashboardPage() {
 
   const [metricsSource, setMetricsSource] = useState<MetricsSourceId>('identity');
 
-  const loadIdentity = useCallback(async () => {
-    if (!accessToken) {
-      setLoading(false);
-      setSnapshot(null);
+  const loadIdentity = useCallback(
+    async (opts?: { showLoading?: boolean }) => {
+      if (!accessToken) {
+        setLoading(false);
+        setSnapshot(null);
+        setError(null);
+        return;
+      }
+      if (opts?.showLoading) setLoading(true);
       setError(null);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      setSnapshot(await fetchAuthMetricsSnapshot(accessToken));
-    } catch (e) {
-      setSnapshot(null);
-      const msg = e instanceof Error ? e.message : t('dashboardError');
-      if (msg === 'Forbidden' || /403/.test(msg)) {
-        setError(t('dashboardForbidden'));
-      } else {
-        setError(msg);
+      try {
+        setSnapshot(await fetchAuthMetricsSnapshot(accessToken));
+      } catch (e) {
+        setSnapshot(null);
+        const msg = e instanceof Error ? e.message : t('dashboardError');
+        if (msg === 'Forbidden' || /403/.test(msg)) {
+          setError(t('dashboardForbidden'));
+        } else {
+          setError(msg);
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  }, [accessToken, t]);
+    },
+    [accessToken, t],
+  );
 
-  const loadStorage = useCallback(async () => {
-    if (!accessToken || !storageBaseUrl) {
-      setStorageLoading(false);
-      setStorageSnapshot(null);
+  const loadStorage = useCallback(
+    async (opts?: { showLoading?: boolean }) => {
+      if (!accessToken || !storageBaseUrl) {
+        setStorageLoading(false);
+        setStorageSnapshot(null);
+        setStorageError(null);
+        return;
+      }
+      if (opts?.showLoading) setStorageLoading(true);
       setStorageError(null);
-      return;
-    }
-    setStorageLoading(true);
-    setStorageError(null);
-    try {
-      setStorageSnapshot(await fetchStorageMetricsSnapshot(storageBaseUrl, accessToken));
-    } catch (e) {
-      setStorageSnapshot(null);
-      const msg = e instanceof Error ? e.message : t('dashboardStorageError');
-      if (msg === 'Forbidden' || /403/.test(msg)) {
-        setStorageError(t('dashboardStorageForbidden'));
-      } else {
-        setStorageError(msg);
+      try {
+        setStorageSnapshot(await fetchStorageMetricsSnapshot(storageBaseUrl, accessToken));
+      } catch (e) {
+        setStorageSnapshot(null);
+        const msg = e instanceof Error ? e.message : t('dashboardStorageError');
+        if (msg === 'Forbidden' || /403/.test(msg)) {
+          setStorageError(t('dashboardStorageForbidden'));
+        } else {
+          setStorageError(msg);
+        }
+      } finally {
+        setStorageLoading(false);
       }
-    } finally {
-      setStorageLoading(false);
-    }
-  }, [accessToken, storageBaseUrl, t]);
+    },
+    [accessToken, storageBaseUrl, t],
+  );
+
+  // Refetch only when the session/storage endpoint changes — not on theme/settings pushes.
+  useEffect(() => {
+    void loadIdentity({ showLoading: true });
+    // intentionally omit loadIdentity: recreate on `t` must not blank KPIs
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- accessToken only
+  }, [accessToken]);
 
   useEffect(() => {
-    void loadIdentity();
-  }, [loadIdentity]);
-
-  useEffect(() => {
-    void loadStorage();
-  }, [loadStorage]);
+    void loadStorage({ showLoading: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- accessToken + storageBaseUrl only
+  }, [accessToken, storageBaseUrl]);
 
   const inactive =
     snapshot != null ? Math.max(0, Math.round(snapshot.usersTotal - snapshot.usersActive)) : 0;

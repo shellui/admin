@@ -18,7 +18,12 @@ export function useShelluiStorage(): SettingsStorage | null {
   useEffect(() => {
     const apply = (message: { payload?: unknown }) => {
       const settings = (message.payload as { settings?: Settings } | undefined)?.settings;
-      setStorage(readStorage(settings));
+      if (!settings) return;
+      const next = readStorage(settings);
+      setStorage((prev) => {
+        if (prev?.url === next?.url && prev?.filesUrl === next?.filesUrl) return prev;
+        return next;
+      });
     };
 
     const offSettings = addMessageListener('SHELLUI_SETTINGS', apply);
