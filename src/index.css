@@ -120,7 +120,7 @@ a:hover {
   min-height: 100vh;
 }
 
-/* Loading overlay top bar animation – grows from left to right (matches ShellUI core) */
+/* Loading overlay top bar animation – grows from left to right (matches Shellui core) */
 @keyframes loading-bar-slide {
   from {
     width: 0%;

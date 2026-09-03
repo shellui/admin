@@ -3,7 +3,7 @@ import shellui, { addMessageListener } from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
 
 /**
- * Returns the **JWT access token** from ShellUI `Settings.accessToken`.
+ * Returns the **JWT access token** from Shellui `Settings.accessToken`.
  *
  * The parent shell copies the signed-in session token into settings for trusted iframes (see
  * `buildSettingsForPropagation`); sub-apps must send it as `Authorization: Bearer <token>`.

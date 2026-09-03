@@ -17,9 +17,7 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@shellui/core/ContentView": ["../shellui/packages/core/src/components/ContentView.tsx"],
-      "@shellui/core/types": ["../shellui/packages/core/src/features/config/types.ts"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src"]

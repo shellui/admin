@@ -1,38 +1,41 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import shellui from '@shellui/sdk';
+import shellui, { type Settings, type ShellUIMessage } from '@shellui/sdk';
 import i18n from '@/i18n';
 
-const LangContext = createContext('en');
+type AppLang = 'en' | 'fr';
 
-export function getLangFromSettings(settings: import('@shellui/sdk').Settings | null | undefined) {
+const LangContext = createContext<AppLang>('en');
+
+export function getLangFromSettings(settings: Settings | null | undefined): AppLang {
   const code = settings?.language?.code;
-  return code === 'fr' || code === 'en' ? code : 'en';
+  return code === 'fr' ? 'fr' : 'en';
+}
+
+function settingsFromMessage(message: ShellUIMessage): Settings | undefined {
+  const payload = message.payload;
+  if (!payload || typeof payload !== 'object' || !('settings' in payload)) return undefined;
+  return (payload as { settings?: Settings }).settings;
 }
 
 export function LangProvider({ children }: { children: ReactNode }) {
-  const [lang, setLang] = useState(
-    () => getLangFromSettings(shellui.initialSettings) || i18n.language || 'en',
-  );
+  const [lang, setLang] = useState<AppLang>(() => getLangFromSettings(shellui.initialSettings));
 
   useEffect(() => {
-    const applyLang = (newLang: string) => {
+    const applyLang = (newLang: AppLang) => {
       if (newLang !== i18n.language) {
         void i18n.changeLanguage(newLang);
       }
       setLang(newLang);
     };
 
-    const handleSettings = (message: {
-      payload?: { settings?: import('@shellui/sdk').Settings };
-    }) => {
-      const settings = message.payload?.settings;
+    const handleSettings = (message: ShellUIMessage) => {
+      const settings = settingsFromMessage(message);
       if (settings) {
         applyLang(getLangFromSettings(settings));
       }
     };
 
-    const initial = getLangFromSettings(shellui.initialSettings) || i18n.language || 'en';
-    applyLang(initial);
+    applyLang(getLangFromSettings(shellui.initialSettings));
 
     const cleanupUpdated = shellui.addMessageListener('SHELLUI_SETTINGS_UPDATED', handleSettings);
     const cleanupSettings = shellui.addMessageListener('SHELLUI_SETTINGS', handleSettings);

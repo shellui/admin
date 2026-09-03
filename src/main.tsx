@@ -29,7 +29,7 @@ async function bootstrap() {
   await shellui.init();
   hydrateAuthBackendBaseUrlFromSdk();
   setupContentFrameMessagePropagation();
-  const initialLang = getLangFromSettings(shellui.initialSettings) || i18n.language || 'en';
+  const initialLang = getLangFromSettings(shellui.initialSettings);
   await i18n.changeLanguage(initialLang);
   const initialTheme = getAppearanceFromSettings(shellui.initialSettings);
   applyThemeToDocument(initialTheme);

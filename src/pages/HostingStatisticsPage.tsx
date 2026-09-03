@@ -16,7 +16,7 @@ function StatBlock({
 }: {
   label: string;
   value: string;
-  hint: string;
+  hint?: string;
   icon: LucideIcon;
 }) {
   return (
@@ -32,7 +32,7 @@ function StatBlock({
       </CardHeader>
       <CardContent>
         <p className="font-mono text-2xl font-semibold tabular-nums tracking-tight">{value}</p>
-        <Text className="mt-1 font-mono text-xs">{hint}</Text>
+        {hint ? <Text className="mt-1 font-mono text-xs">{hint}</Text> : null}
       </CardContent>
     </Card>
   );

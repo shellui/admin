@@ -4,11 +4,11 @@ import { initReactI18next } from 'react-i18next';
 const resources = {
   en: {
     translation: {
-      standaloneTitle: 'Open this app from ShellUI',
+      standaloneTitle: 'Open this app from Shellui',
       standaloneDescription:
         'The admin UI is loaded inside the main Shell application. You opened this URL directly in a browser tab.',
       standaloneStepRunShell:
-        '1. Start the main ShellUI app (for example port 4000) and this dev server with pnpm start in the admin repo (port 5174).',
+        '1. Start the main Shellui app (for example port 4000) and this dev server with pnpm start in the admin repo (port 5174).',
       standaloneStepConfigure:
         '2. In the main app’s shellui.config.ts, point the backend admin URL at this Vite server:',
       standaloneConfigSnippet: `backend: {
@@ -46,7 +46,7 @@ const resources = {
       hostingAppsLoading: 'Loading apps…',
       hostingAppsError: 'Could not load hosted apps.',
       hostingRefresh: 'Refresh',
-      hostingNoSession: 'Waiting for shell session… Open Admin from ShellUI while signed in.',
+      hostingNoSession: 'Waiting for shell session… Open Admin from Shellui while signed in.',
       hostingWaitlistTitle: 'Hosting access',
       hostingWaitlistDescription:
         'Hosting is gated per company. Request access to join the waitlist; staff can approve your company.',
@@ -126,7 +126,7 @@ const resources = {
       storageStatsDescription:
         'Uploads, documents, quotas, and recent files from storage-service for your company (or globally if you are staff).',
       storageStatsRefresh: 'Refresh',
-      storageStatsNoSession: 'Waiting for shell session… Open Admin from ShellUI while signed in.',
+      storageStatsNoSession: 'Waiting for shell session… Open Admin from Shellui while signed in.',
       storageStatsLoading: 'Loading statistics…',
       storageStatsError: 'Could not load storage statistics.',
       storageStatsMissingTitle: 'Storage URL not configured',
@@ -183,7 +183,7 @@ const resources = {
         'All login audit rows with a timestamp in the last rolling 24 hours (ignores filters below).',
       loginEventsStatTotalTitle: 'Matching events',
       loginEventsStatTotalHint: 'Total rows for the filters below (default: entire log).',
-      loginEventsNoSession: 'Waiting for shell session… Open Admin from ShellUI while signed in.',
+      loginEventsNoSession: 'Waiting for shell session… Open Admin from Shellui while signed in.',
       loginEventsFiltersTitle: 'Filters',
       loginEventsFiltersDescription:
         'Narrow by outcome, provider, coarse location (country / city from GeoIP when available), client timezone, staff at event, or saved user language preference.',
@@ -194,7 +194,7 @@ const resources = {
       loginEventsFieldStaff: 'Staff at event',
       loginEventsFieldLanguage: 'User language (preference)',
       loginEventsFieldLanguageHint:
-        'Matches ShellUI-stored locale for the user. Rows without a linked user are excluded when this filter is set.',
+        'Matches Shellui-stored locale for the user. Rows without a linked user are excluded when this filter is set.',
       loginEventsLanguageEn: 'English',
       loginEventsLanguageFr: 'French',
       loginEventsFieldProvider: 'Provider',
@@ -294,7 +294,7 @@ const resources = {
       dashboardStorageError: 'Could not load storage metrics.',
       dashboardStorageForbidden:
         'Could not load storage metrics (forbidden). You need staff or company-owner access for this company.',
-      dashboardNoSession: 'Waiting for shell session… Open Admin from ShellUI while signed in.',
+      dashboardNoSession: 'Waiting for shell session… Open Admin from Shellui while signed in.',
       dashboardUiHint:
         'Later you can let operators pick cards and queries; for now this page mirrors the guarded metrics route.',
       companyPageTitle: 'Organization',
@@ -357,7 +357,7 @@ const resources = {
       oauthClientsSectionLabel: 'Company OAuth clients',
       oauthClientsTitle: 'OAuth provider keys',
       oauthClientsDescription:
-        'Define provider credentials per company. ShellUI login settings only expose providers active here.',
+        'Define provider credentials per company. Shellui login settings only expose providers active here.',
       oauthClientsLoading: 'Loading OAuth clients…',
       oauthClientsLoadError: 'Could not load OAuth clients.',
       oauthClientsSaveError: 'Could not save OAuth client.',
@@ -466,7 +466,7 @@ const resources = {
       usersNextPage: 'Next',
       usersErrorUnknown: 'Something went wrong.',
       usersNoSession:
-        'Waiting for shell session… If this persists, open Admin from ShellUI while signed in.',
+        'Waiting for shell session… If this persists, open Admin from Shellui while signed in.',
       userDetailTitle: 'User profile',
       userDetailBack: 'Back',
       userDetailLoading: 'Loading profile…',
@@ -478,7 +478,7 @@ const resources = {
       userDetailLastSeen: 'Last seen (activity)',
       userDetailLastSeenTimezone: 'Last client timezone',
       userDetailGroups: 'Groups',
-      userDetailPreferencesTitle: 'ShellUI preferences',
+      userDetailPreferencesTitle: 'Shellui preferences',
       userDetailPreferencesHint: 'Persisted app preferences for this account (read-only).',
       userDetailPreferencesEmpty: 'No preference payload on this account.',
       userDetailPrefTheme: 'Theme',
@@ -512,7 +512,7 @@ const resources = {
       navAccessTokens: 'Access tokens',
       accessTokensPageTitle: 'Personal access tokens',
       accessTokensPageIntro:
-        'Create and revoke JWT tokens tied to your account (same shape as the ShellUI session token). Use them for scripts, APIs, or metrics. The value is shown only once. Choose read-only to allow only GET/HEAD/OPTIONS; otherwise the token acts as you in this organization.',
+        'Create and revoke JWT tokens tied to your account (same shape as the Shellui session token). Use them for scripts, APIs, or metrics. The value is shown only once. Choose read-only to allow only GET/HEAD/OPTIONS; otherwise the token acts as you in this organization.',
       accessTokensTitle: 'Personal access tokens',
       accessTokensHint:
         'Long-lived JWTs for automation. Read-only tokens cannot call POST, PUT, PATCH, or DELETE (including creating or revoking tokens via the API).',
@@ -521,7 +521,7 @@ const resources = {
       accessTokensCreate: 'Create token',
       accessTokensCreating: 'Creating…',
       accessTokensSessionUserError:
-        'Could not read your user id from the session token. Open Admin from ShellUI while signed in.',
+        'Could not read your user id from the session token. Open Admin from Shellui while signed in.',
       accessTokensNameLabel: 'Label (optional)',
       accessTokensNamePlaceholder: 'e.g. CI metrics',
       accessTokensReadOnlyLabel: 'Read-only token',
@@ -583,11 +583,11 @@ const resources = {
   },
   fr: {
     translation: {
-      standaloneTitle: 'Ouvrir cette application depuis ShellUI',
+      standaloneTitle: 'Ouvrir cette application depuis Shellui',
       standaloneDescription:
         'L’interface d’administration est chargée dans l’application Shell principale. Vous avez ouvert cette URL directement dans un onglet.',
       standaloneStepRunShell:
-        '1. Démarrez l’application ShellUI principale (par ex. port 4000) et ce serveur de dev avec pnpm start dans le dépôt admin (port 5174).',
+        '1. Démarrez l’application Shellui principale (par ex. port 4000) et ce serveur de dev avec pnpm start dans le dépôt admin (port 5174).',
       standaloneStepConfigure:
         '2. Dans shellui.config.ts de l’app principale, indiquez l’URL du serveur Vite pour l’admin :',
       standaloneConfigSnippet: `backend: {
@@ -626,7 +626,7 @@ const resources = {
       hostingAppsError: 'Impossible de charger les applications hébergées.',
       hostingRefresh: 'Actualiser',
       hostingNoSession:
-        'En attente de la session Shell… Ouvrez l’admin depuis ShellUI en étant connecté.',
+        'En attente de la session Shell… Ouvrez l’admin depuis Shellui en étant connecté.',
       hostingWaitlistTitle: 'Accès hébergement',
       hostingWaitlistDescription:
         'L’hébergement est limité par entreprise. Demandez l’accès pour rejoindre la liste d’attente ; le staff peut approuver votre entreprise.',
@@ -707,7 +707,7 @@ const resources = {
         'Téléversements, documents, quotas et fichiers récents depuis storage-service pour votre entreprise (ou globalement si vous êtes staff).',
       storageStatsRefresh: 'Actualiser',
       storageStatsNoSession:
-        'En attente de la session Shell… Ouvrez l’admin depuis ShellUI en étant connecté.',
+        'En attente de la session Shell… Ouvrez l’admin depuis Shellui en étant connecté.',
       storageStatsLoading: 'Chargement des statistiques…',
       storageStatsError: 'Impossible de charger les statistiques de stockage.',
       storageStatsMissingTitle: 'URL de stockage non configurée',
@@ -766,7 +766,7 @@ const resources = {
       loginEventsStatTotalHint:
         'Nombre de lignes pour les filtres ci-dessous (par défaut : journal complet).',
       loginEventsNoSession:
-        'En attente de la session shell… Ouvrez l’admin depuis ShellUI en étant connecté.',
+        'En attente de la session shell… Ouvrez l’admin depuis Shellui en étant connecté.',
       loginEventsFiltersTitle: 'Filtres',
       loginEventsFiltersDescription:
         'Par résultat, fournisseur, localisation approximative (pays / ville GeoIP si disponible), fuseau client, statut staff au moment de l’événement, ou langue enregistrée dans les préférences utilisateur.',
@@ -777,7 +777,7 @@ const resources = {
       loginEventsFieldStaff: 'Staff à l’événement',
       loginEventsFieldLanguage: 'Langue (préférence)',
       loginEventsFieldLanguageHint:
-        'Correspond à la locale ShellUI enregistrée pour l’utilisateur. Sans utilisateur lié, la ligne est exclue si ce filtre est actif.',
+        'Correspond à la locale Shellui enregistrée pour l’utilisateur. Sans utilisateur lié, la ligne est exclue si ce filtre est actif.',
       loginEventsLanguageEn: 'Anglais',
       loginEventsLanguageFr: 'Français',
       loginEventsFieldProvider: 'Fournisseur',
@@ -878,7 +878,7 @@ const resources = {
       dashboardStorageForbidden:
         'Impossible de charger les métriques de stockage (interdit). Il faut le staff Django ou être propriétaire de l’entreprise pour cette société.',
       dashboardNoSession:
-        'En attente de la session shell… Ouvrez l’admin depuis ShellUI en étant connecté.',
+        'En attente de la session shell… Ouvrez l’admin depuis Shellui en étant connecté.',
       dashboardUiHint:
         'Plus tard, les opérateurs pourront choisir cartes et requêtes ; pour l’instant cette page reflète la route métriques protégée.',
       companyPageTitle: 'Organisation',
@@ -941,7 +941,7 @@ const resources = {
       oauthClientsSectionLabel: 'Clients OAuth entreprise',
       oauthClientsTitle: 'Clés fournisseurs OAuth',
       oauthClientsDescription:
-        'Définissez les identifiants OAuth par entreprise. Les réglages de connexion ShellUI n’exposent que les fournisseurs actifs ici.',
+        'Définissez les identifiants OAuth par entreprise. Les réglages de connexion Shellui n’exposent que les fournisseurs actifs ici.',
       oauthClientsLoading: 'Chargement des clients OAuth…',
       oauthClientsLoadError: 'Impossible de charger les clients OAuth.',
       oauthClientsSaveError: 'Impossible d’enregistrer le client OAuth.',
@@ -1052,7 +1052,7 @@ const resources = {
       usersNextPage: 'Suivant',
       usersErrorUnknown: 'Une erreur est survenue.',
       usersNoSession:
-        'En attente de la session shell… Si cela continue, ouvrez l’admin depuis ShellUI en étant connecté.',
+        'En attente de la session shell… Si cela continue, ouvrez l’admin depuis Shellui en étant connecté.',
       userDetailTitle: 'Profil utilisateur',
       userDetailBack: 'Retour',
       userDetailLoading: 'Chargement du profil…',
@@ -1064,7 +1064,7 @@ const resources = {
       userDetailLastSeen: 'Dernière activité',
       userDetailLastSeenTimezone: 'Dernier fuseau client',
       userDetailGroups: 'Groupes',
-      userDetailPreferencesTitle: 'Préférences ShellUI',
+      userDetailPreferencesTitle: 'Préférences Shellui',
       userDetailPreferencesHint:
         'Préférences applicatives stockées pour ce compte (lecture seule).',
       userDetailPreferencesEmpty: 'Aucune donnée de préférences pour ce compte.',
@@ -1100,7 +1100,7 @@ const resources = {
       navAccessTokens: 'Jetons d’accès',
       accessTokensPageTitle: 'Jetons d’accès personnels',
       accessTokensPageIntro:
-        'Créez et révoquez des JWT liés à votre compte (même forme que le jeton de session ShellUI). Pour scripts, API ou métriques. La valeur n’est affichée qu’une fois. Choisissez lecture seule pour n’autoriser que GET/HEAD/OPTIONS ; sinon le jeton agit comme vous dans cette organisation.',
+        'Créez et révoquez des JWT liés à votre compte (même forme que le jeton de session Shellui). Pour scripts, API ou métriques. La valeur n’est affichée qu’une fois. Choisissez lecture seule pour n’autoriser que GET/HEAD/OPTIONS ; sinon le jeton agit comme vous dans cette organisation.',
       accessTokensTitle: 'Jetons d’accès personnels',
       accessTokensHint:
         'JWT longue durée pour l’automatisation. En lecture seule, pas de POST, PUT, PATCH ou DELETE (y compris créer ou révoquer des jetons via l’API).',
@@ -1109,7 +1109,7 @@ const resources = {
       accessTokensCreate: 'Créer un jeton',
       accessTokensCreating: 'Création…',
       accessTokensSessionUserError:
-        'Impossible de lire votre identifiant utilisateur depuis le jeton de session. Ouvrez l’admin depuis ShellUI en étant connecté.',
+        'Impossible de lire votre identifiant utilisateur depuis le jeton de session. Ouvrez l’admin depuis Shellui en étant connecté.',
       accessTokensNameLabel: 'Libellé (optionnel)',
       accessTokensNamePlaceholder: 'ex. CI métriques',
       accessTokensReadOnlyLabel: 'Jeton lecture seule',

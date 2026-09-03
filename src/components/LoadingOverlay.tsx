@@ -1,6 +1,6 @@
 import { LOADING_OVERLAY_DURATION_MS } from '@/constants/loading';
 
-/** Same visual as ShellUI core ContentView loading bar. */
+/** Same visual as Shellui core ContentView loading bar. */
 export function LoadingOverlay() {
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-20">
