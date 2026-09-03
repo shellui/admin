@@ -1,7 +1,7 @@
 {
   "name": "shellui-admin",
   "version": "0.3.0",
-  "description": "ShellUI admin panel — React app embedded in the main shell",
+  "description": "Shellui admin panel — React app embedded in the main shell",
   "type": "module",
   "scripts": {
     "start": "vite",
@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "serve:dist": "node tools/serve/serve.js",
     "test": "vitest run",
+    "typecheck": "tsc --noEmit",
     "build:sdk": "pnpm -C ../shellui run build:sdk",
     "format": "pnpm exec prettier --write .",
     "format:check": "pnpm exec prettier --check .",
@@ -17,7 +18,7 @@
   "lint-staged": {
     "*": "pnpm exec prettier --write --ignore-unknown"
   },
-  "author": "ShellUI",
+  "author": "Shellui",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -30,7 +31,7 @@
     "@radix-ui/react-separator": "^1.1.1",
     "@radix-ui/react-slot": "^1.1.1",
     "@radix-ui/react-tooltip": "^1.2.16",
-    "@shellui/sdk": "0.5.0-alpha.2",
+    "@shellui/sdk": "0.5.0-alpha.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "i18next": "^24.2.0",
@@ -39,8 +40,8 @@
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.54.2",
     "react-i18next": "^15.1.1",
-    "react-router": "^7.0.1",
-    "react-router-dom": "^7.0.1",
+    "react-router": "^7.18.3",
+    "react-router-dom": "^7.18.3",
     "tailwind-merge": "^2.6.0",
     "zod": "^3.24.1"
   },

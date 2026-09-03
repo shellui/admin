@@ -10,6 +10,9 @@ import { RouteErrorPage } from '@/pages/RouteErrorPage';
 import { AccessTokensPage } from '@/pages/AccessTokensPage';
 import { UserDetailPage } from '@/pages/UserDetailPage';
 import { UsersListPage } from '@/pages/UsersListPage';
+import { HostingAppDetailPage } from '@/pages/HostingAppDetailPage';
+import { HostingAppsPage } from '@/pages/HostingAppsPage';
+import { HostingStatisticsPage } from '@/pages/HostingStatisticsPage';
 import { StorageStatisticsPage } from '@/pages/StorageStatisticsPage';
 
 /**
@@ -48,6 +51,11 @@ export const router = createHashRouter([
       { path: 'storage/swagger', element: null },
       { path: 'storage/redoc', element: null },
       { path: 'storage', element: null },
+      { path: 'hosting/apps/:name', element: <HostingAppDetailPage /> },
+      { path: 'hosting/statistics', element: <HostingStatisticsPage /> },
+      { path: 'hosting/swagger', element: null },
+      { path: 'hosting/redoc', element: null },
+      { path: 'hosting', element: <HostingAppsPage /> },
       { path: 'app/:appPath', element: null },
       {
         path: '*',

@@ -5,7 +5,7 @@ export type AdminUserGroupRef = {
   name: string;
 };
 
-/** Persisted ShellUI preferences (also nested under `user_metadata.shelluiPreferences` for admin payloads). */
+/** Persisted Shellui preferences (also nested under `user_metadata.shelluiPreferences` for admin payloads). */
 export type ShellUIPreferencesPayload = {
   themeName: string | null;
   language: string | null;

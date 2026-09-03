@@ -24,6 +24,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Cloud,
   ExternalLink,
   Fingerprint,
   FolderOpen,
@@ -42,6 +43,7 @@ import { useShelluiAdministration } from '@/hooks/useShelluiAdministration';
 import { useShelluiAuthBackendBaseUrl } from '@/hooks/useShelluiAuthBackendBaseUrl';
 import { useShelluiDeveloperMode } from '@/hooks/useShelluiDeveloperMode';
 import { useShelluiIsStaff } from '@/hooks/useShelluiIsStaff';
+import { useShelluiHosting, isHostingAdminEnabled } from '@/hooks/useShelluiHosting';
 import { useShelluiStorage } from '@/hooks/useShelluiStorage';
 import { useAdminContentNavigation } from '@/hooks/useAdminContentNavigation';
 import type { AdminEmbedNavItem } from '@/hooks/useAdminContentNavigation';
@@ -114,6 +116,10 @@ const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
   'storage/statistics': BarChart3,
   'storage/swagger': BookOpen,
   'storage/redoc': BookOpen,
+  hosting: AppWindow,
+  'hosting/statistics': BarChart3,
+  'hosting/swagger': BookOpen,
+  'hosting/redoc': BookOpen,
 };
 
 function resolveLocalized(label: AdminLocalizedString, language: string): string {
@@ -140,6 +146,7 @@ const mapLabelToTranslationKey = (label: string): string => {
   if (normalized === 'redoc') return 'navRedoc';
   if (normalized === 'django admin' || normalized === 'admin django') return 'navDjangoAdmin';
   if (normalized === 'statistics' || normalized === 'statistiques') return 'navStorageStatistics';
+  if (normalized === 'apps') return 'navHostingApps';
   return label;
 };
 
@@ -923,6 +930,8 @@ function AdminContentMain() {
     location.pathname === '/storage' ||
     location.pathname === '/storage/swagger' ||
     location.pathname === '/storage/redoc' ||
+    location.pathname === '/hosting/swagger' ||
+    location.pathname === '/hosting/redoc' ||
     location.pathname === '/swagger' ||
     location.pathname === '/redoc';
 
@@ -946,6 +955,7 @@ export function AdminShellLayout() {
   const isStaff = useShelluiIsStaff();
   const administration = useShelluiAdministration();
   const storage = useShelluiStorage();
+  const hosting = useShelluiHosting();
   const authBackendBaseUrl = useShelluiAuthBackendBaseUrl();
   const contentFrame = isAdminContentFrame();
   const shellNavigation = adminShellUiConfig.navigation ?? [];
@@ -956,6 +966,9 @@ export function AdminShellLayout() {
   );
   const storageUrl = storage?.url?.trim().replace(/\/+$/, '') || null;
   const filesUrl = storage?.filesUrl?.trim() || null;
+  const hostingUrl = isHostingAdminEnabled(hosting)
+    ? hosting?.url?.trim().replace(/\/+$/, '') || null
+    : null;
   const customNavItems = buildCustomNavItems(
     administration?.navigation,
     isStaff,
@@ -966,6 +979,7 @@ export function AdminShellLayout() {
     ? resolveAdminAppUrl('/admin/', authBackendBaseUrl)
     : null;
   const storageDjangoAdminHref = storageUrl ? `${storageUrl}/admin/` : null;
+  const hostingDjangoAdminHref = hostingUrl ? `${hostingUrl}/admin/` : null;
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed());
   const [mobilePane, setMobilePane] = useState<'menu' | 'content'>(() =>
@@ -1057,12 +1071,64 @@ export function AdminShellLayout() {
       });
     }
 
+    if (hostingUrl) {
+      const hostingItems: AdminNavItem[] = [
+        {
+          key: 'navHostingApps',
+          icon: AppWindow,
+          label: t('navHostingApps'),
+          to: '/hosting',
+        },
+        {
+          key: 'navHostingStatistics',
+          icon: BarChart3,
+          label: t('navHostingStatistics'),
+          to: '/hosting/statistics',
+        },
+      ];
+      if (isDeveloperMode) {
+        hostingItems.push(
+          {
+            key: 'navHostingSwagger',
+            icon: BookOpen,
+            label: t('navSwagger'),
+            to: '/hosting/swagger',
+          },
+          {
+            key: 'navHostingRedoc',
+            icon: BookOpen,
+            label: t('navRedoc'),
+            to: '/hosting/redoc',
+          },
+        );
+      }
+      if (isStaff && hostingDjangoAdminHref) {
+        hostingItems.push({
+          key: 'navHostingDjangoAdmin',
+          icon: Cloud,
+          label: t('navHostingDjangoAdmin'),
+          openIn: 'external',
+          href: hostingDjangoAdminHref,
+        });
+      }
+      sections.push({
+        id: 'admin-hosting',
+        title: t('navHostingGroup'),
+        subtitle: hostingUrl,
+        items: hostingItems,
+      });
+    }
+
     return sections;
   }, [
     authBackendBaseUrl,
     djangoAdminHref,
     filesUrl,
     groups,
+    hostingDjangoAdminHref,
+    hosting?.showInAdmin,
+    hosting?.url,
+    hostingUrl,
     isDeveloperMode,
     isStaff,
     storageDjangoAdminHref,
@@ -1080,9 +1146,11 @@ export function AdminShellLayout() {
   // Nested same-origin iframe: page content only (no sidebar).
   if (contentFrame) {
     return (
-      <div className="flex h-screen min-h-0 w-full flex-col bg-background">
-        <AdminContentMain />
-      </div>
+      <TooltipProvider delayDuration={0}>
+        <div className="flex h-screen min-h-0 w-full flex-col bg-background">
+          <AdminContentMain />
+        </div>
+      </TooltipProvider>
     );
   }
 

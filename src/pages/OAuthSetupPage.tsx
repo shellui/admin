@@ -14,24 +14,14 @@ import {
   type OAuthSocialAppRow,
   updateOAuthSocialApp,
 } from '@/lib/adminOauthClientsApi';
+import {
+  createOAuthRedirect,
+  deleteOAuthRedirect,
+  fetchOAuthRedirects,
+  type OAuthRedirectRow,
+} from '@/lib/adminOauthRedirectsApi';
 import { getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
 import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
-
-const resolveShellUiOrigin = (): string => {
-  if (typeof window === 'undefined') return '';
-  if (
-    window.parent !== window &&
-    typeof document.referrer === 'string' &&
-    document.referrer.trim()
-  ) {
-    try {
-      return new URL(document.referrer).origin;
-    } catch {
-      // Fall through to current origin.
-    }
-  }
-  return window.location.origin;
-};
 
 export function OAuthSetupPage() {
   const { t } = useTranslation();
@@ -47,6 +37,31 @@ export function OAuthSetupPage() {
   const [formClientSecret, setFormClientSecret] = useState('');
   const [formTenant, setFormTenant] = useState('');
   const [copyState, setCopyState] = useState<'idle' | 'done' | 'error'>('idle');
+  const [redirectRows, setRedirectRows] = useState<OAuthRedirectRow[]>([]);
+  const [redirectsLoading, setRedirectsLoading] = useState(false);
+  const [redirectError, setRedirectError] = useState<string | null>(null);
+  const [newRedirectUrl, setNewRedirectUrl] = useState('');
+  const [newRedirectLabel, setNewRedirectLabel] = useState('');
+  const [redirectBusy, setRedirectBusy] = useState(false);
+
+  const loadRedirects = useCallback(async () => {
+    if (!accessToken || !isOwner) {
+      setRedirectRows([]);
+      setRedirectError(null);
+      setRedirectsLoading(false);
+      return;
+    }
+    setRedirectsLoading(true);
+    setRedirectError(null);
+    try {
+      setRedirectRows(await fetchOAuthRedirects(accessToken));
+    } catch (e) {
+      setRedirectRows([]);
+      setRedirectError(e instanceof Error ? e.message : t('loginRedirectsLoadError'));
+    } finally {
+      setRedirectsLoading(false);
+    }
+  }, [accessToken, isOwner, t]);
 
   const load = useCallback(async () => {
     if (!accessToken || !isOwner) {
@@ -79,6 +94,10 @@ export function OAuthSetupPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    void loadRedirects();
+  }, [loadRedirects]);
+
   const providerRows = useMemo(() => {
     const safeRows = Array.isArray(rows) ? rows : [];
     return providers.map((provider) => {
@@ -98,15 +117,9 @@ export function OAuthSetupPage() {
   const selectedLinked = selectedEntry?.linked ?? null;
   const isCreateMode = !selectedLinked;
   const callbackUrl = useMemo(() => {
-    if (!selectedProvider) return '';
-    const baseOrigin = resolveShellUiOrigin();
-    const callback = new URL('/login/callback', baseOrigin || getAuthBackendBaseUrl());
-    callback.searchParams.set('provider', selectedProvider);
-    if (selectedLinked?.mapping_id) {
-      callback.searchParams.set('company_oauth_client_id', String(selectedLinked.mapping_id));
-    }
-    return callback.toString();
-  }, [selectedLinked?.mapping_id, selectedProvider]);
+    const base = getAuthBackendBaseUrl().replace(/\/$/, '');
+    return `${base}/api/v1/oauth/callback`;
+  }, []);
 
   const initialFormSnapshot = useMemo(
     () => ({
@@ -258,6 +271,39 @@ export function OAuthSetupPage() {
     }
   }, [callbackUrl]);
 
+  async function onAddRedirect() {
+    if (!accessToken || !newRedirectUrl.trim()) return;
+    setRedirectBusy(true);
+    setRedirectError(null);
+    try {
+      await createOAuthRedirect(accessToken, {
+        base_url: newRedirectUrl.trim(),
+        label: newRedirectLabel.trim() || undefined,
+      });
+      setNewRedirectUrl('');
+      setNewRedirectLabel('');
+      await loadRedirects();
+    } catch (e) {
+      setRedirectError(e instanceof Error ? e.message : t('loginRedirectsSaveError'));
+    } finally {
+      setRedirectBusy(false);
+    }
+  }
+
+  async function onDeleteRedirect(row: OAuthRedirectRow) {
+    if (!accessToken) return;
+    setRedirectBusy(true);
+    setRedirectError(null);
+    try {
+      await deleteOAuthRedirect(accessToken, row.id);
+      await loadRedirects();
+    } catch (e) {
+      setRedirectError(e instanceof Error ? e.message : t('loginRedirectsSaveError'));
+    } finally {
+      setRedirectBusy(false);
+    }
+  }
+
   return (
     <div className="w-full space-y-8">
       <header className="space-y-1">
@@ -293,7 +339,37 @@ export function OAuthSetupPage() {
               {t('oauthSetupCatalogDescription')}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <div className="space-y-2 rounded-md border border-border/70 p-3">
+              <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                OAuth callback URL
+              </p>
+              <p className="font-mono text-xs text-muted-foreground">
+                Register this exact URL as the authorized redirect/callback URI in every OAuth
+                provider app (GitHub, Google, Microsoft). Identity owns the callback; shell origins
+                go in the allow list below.
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  value={callbackUrl}
+                  readOnly
+                  className="font-mono text-xs"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => void onCopyCallbackUrl()}
+                >
+                  {copyState === 'done' ? 'Copied' : 'Copy'}
+                </Button>
+              </div>
+              {copyState === 'error' ? (
+                <Text className="font-mono text-xs text-destructive">
+                  Could not copy automatically. Copy the URL manually.
+                </Text>
+              ) : null}
+            </div>
             {loading ? (
               <Text className="font-mono text-sm text-muted-foreground">
                 {t('oauthSetupLoading')}
@@ -333,35 +409,6 @@ export function OAuthSetupPage() {
                   </div>
                 </aside>
                 <section className="space-y-3">
-                  <div className="space-y-2 rounded-md border border-border/70 p-3">
-                    <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                      OAuth callback URL
-                    </p>
-                    <p className="font-mono text-xs text-muted-foreground">
-                      Configure this exact URL as an authorized redirect/callback URI in your OAuth
-                      provider app.
-                    </p>
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <Input
-                        value={callbackUrl}
-                        readOnly
-                        className="font-mono text-xs"
-                      />
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => void onCopyCallbackUrl()}
-                      >
-                        {copyState === 'done' ? 'Copied' : 'Copy'}
-                      </Button>
-                    </div>
-                    {copyState === 'error' ? (
-                      <Text className="font-mono text-xs text-destructive">
-                        Could not copy automatically. Copy the URL manually.
-                      </Text>
-                    ) : null}
-                  </div>
                   <p className="font-mono text-[10px] text-muted-foreground">
                     {isCreateMode ? t('oauthSetupCreateHint') : t('oauthSetupEditHint')}
                   </p>
@@ -452,6 +499,87 @@ export function OAuthSetupPage() {
                 </section>
               </div>
             ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {accessToken && isOwner ? (
+        <Card className="border-border/80 shadow-sm">
+          <CardHeader>
+            <CardTitle className="font-heading text-lg">{t('loginRedirectsTitle')}</CardTitle>
+            <CardDescription className="font-mono text-xs">
+              {t('loginRedirectsDescription')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {redirectError ? (
+              <Text className="font-mono text-sm text-destructive">{redirectError}</Text>
+            ) : null}
+            {redirectsLoading ? (
+              <Text className="font-mono text-sm text-muted-foreground">
+                {t('loginRedirectsLoading')}
+              </Text>
+            ) : null}
+            {!redirectsLoading && redirectRows.length === 0 ? (
+              <Text className="font-mono text-sm text-muted-foreground">
+                {t('loginRedirectsEmpty')}
+              </Text>
+            ) : null}
+            {!redirectsLoading && redirectRows.length > 0 ? (
+              <ul className="divide-y divide-border rounded-md border border-border">
+                {redirectRows.map((row) => (
+                  <li
+                    key={row.id}
+                    className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
+                  >
+                    <div className="min-w-0 space-y-0.5">
+                      <p className="truncate font-mono text-xs">{row.base_url}</p>
+                      {row.label ? (
+                        <p className="font-mono text-[10px] text-muted-foreground">{row.label}</p>
+                      ) : null}
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={redirectBusy}
+                      onClick={() => void onDeleteRedirect(row)}
+                    >
+                      {t('loginRedirectsDelete')}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <div className="space-y-2 rounded-md border border-border/70 p-3">
+              <p className="font-mono text-[10px] text-muted-foreground">
+                {t('loginRedirectsAddHint')}
+              </p>
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                <Input
+                  value={newRedirectUrl}
+                  onChange={(e) => setNewRedirectUrl(e.target.value)}
+                  placeholder="https://app.example.com"
+                  className="font-mono text-xs"
+                  aria-label={t('loginRedirectsBaseUrlLabel')}
+                />
+                <Input
+                  value={newRedirectLabel}
+                  onChange={(e) => setNewRedirectLabel(e.target.value)}
+                  placeholder={t('loginRedirectsLabelPlaceholder')}
+                  className="font-mono text-xs sm:col-span-1"
+                  aria-label={t('loginRedirectsLabelField')}
+                />
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                disabled={redirectBusy || !newRedirectUrl.trim()}
+                onClick={() => void onAddRedirect()}
+              >
+                {redirectBusy ? t('loginRedirectsAdding') : t('loginRedirectsAdd')}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : null}

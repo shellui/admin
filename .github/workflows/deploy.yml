@@ -25,8 +25,8 @@ jobs:
         with:
           path: admin
 
-      # Linked dependency: admin/package.json uses file:../shellui/packages/sdk
-      - name: Checkout ShellUI monorepo
+      # vite/tsconfig alias @shellui/core into the sibling monorepo (ContentView).
+      - name: Checkout shellui monorepo
         uses: actions/checkout@v4
         with:
           repository: shellui/shellui

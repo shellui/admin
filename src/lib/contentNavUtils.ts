@@ -1,4 +1,4 @@
-/** Minimal nav shape for ContentView URL sync (aligned with ShellUI core NavigationItem). */
+/** Minimal nav shape for ContentView URL sync (aligned with Shellui core NavigationItem). */
 export interface AdminContentNavItem {
   label: string;
   path: string;

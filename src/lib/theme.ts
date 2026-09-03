@@ -19,8 +19,13 @@ export function getAppearanceFromPayload(
     | undefined,
 ): import('@shellui/sdk').Appearance | null {
   if (!payload || typeof payload !== 'object') return null;
-  const settings = 'settings' in payload ? payload.settings : payload;
-  return settings?.appearance ?? null;
+  if ('settings' in payload && payload.settings) {
+    return payload.settings.appearance ?? null;
+  }
+  if ('appearance' in payload) {
+    return payload.appearance ?? null;
+  }
+  return null;
 }
 
 export function applyThemeToDocument(appearance: import('@shellui/sdk').Appearance | null) {

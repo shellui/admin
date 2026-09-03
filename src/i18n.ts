@@ -4,11 +4,11 @@ import { initReactI18next } from 'react-i18next';
 const resources = {
   en: {
     translation: {
-      standaloneTitle: 'Open this app from ShellUI',
+      standaloneTitle: 'Open this app from Shellui',
       standaloneDescription:
         'The admin UI is loaded inside the main Shell application. You opened this URL directly in a browser tab.',
       standaloneStepRunShell:
-        '1. Start the main ShellUI app (for example port 4000) and this dev server with pnpm start in the admin repo (port 5174).',
+        '1. Start the main Shellui app (for example port 4000) and this dev server with pnpm start in the admin repo (port 5174).',
       standaloneStepConfigure:
         '2. In the main app’s shellui.config.ts, point the backend admin URL at this Vite server:',
       standaloneConfigSnippet: `backend: {
@@ -29,6 +29,95 @@ const resources = {
       navStorageFiles: 'Files',
       navStorageStatistics: 'Statistics',
       navStorageDjangoAdmin: 'Django admin',
+      navHostingGroup: 'Hosting',
+      navHostingApps: 'Apps',
+      navHostingStatistics: 'Statistics',
+      navHostingDjangoAdmin: 'Django admin',
+      hostingMissingTitle: 'Hosting URL not configured',
+      hostingMissingDescription:
+        'Set hosting.url in shellui.config.json (for example http://localhost:8002). Hide Admin → Hosting with hosting.showInAdmin: false.',
+      hostingAppsTitle: 'Hosted apps',
+      hostingAppsBadge: 'hosting-service',
+      hostingAppsDescription:
+        'Microfrontend apps deployed for your company via hosting-service. Request access if your company is on the waitlist.',
+      hostingAppsListTitle: 'Company apps',
+      hostingAppsListDescription: 'Open an app to view deployment history.',
+      hostingAppsEmpty: 'No hosted apps yet.',
+      hostingAppsLoading: 'Loading apps…',
+      hostingAppsError: 'Could not load hosted apps.',
+      hostingRefresh: 'Refresh',
+      hostingNoSession: 'Waiting for shell session… Open Admin from Shellui while signed in.',
+      hostingWaitlistTitle: 'Hosting access',
+      hostingWaitlistDescription:
+        'Hosting is gated per company. Request access to join the waitlist; staff can approve your company.',
+      hostingWaitlistRequest: 'Request access',
+      hostingWaitlistRequestError: 'Could not submit access request.',
+      hostingWaitlistPendingHint: 'Your request is pending review.',
+      hostingAccessStatus_none: 'Not requested',
+      hostingAccessStatus_pending: 'Pending',
+      hostingAccessStatus_approved: 'Approved',
+      hostingAccessStatus_denied: 'Denied',
+      hostingColApp: 'App',
+      hostingColSlug: 'Site ID',
+      hostingColUpdated: 'Updated',
+      hostingColExpires: 'Expires',
+      hostingExpiresNever: 'Permanent',
+      hostingExpiresExpired: 'Expired',
+      hostingExpiresExpiredHint:
+        'Files are deleted at end of life. Deploy again to create a new preview site.',
+      hostingRenewExpiry: 'Renew',
+      hostingRenewExpiryHint: 'Extend preview lifetime before expiry.',
+      hostingRenewExpiryDisabledHint:
+        'Renewal is only available before expiry. Files are deleted when the preview ends.',
+      hostingRenewExpiryError: 'Could not renew expiry.',
+      hostingDelete: 'Delete',
+      hostingDeleteTitle: 'Delete hosted app',
+      hostingDeleteConfirm:
+        'Delete “{{name}}”? This removes the site, deployments, and stored files. This cannot be undone.',
+      hostingDeleteCancel: 'Cancel',
+      hostingDeleted: 'Hosted app deleted.',
+      hostingDeleteError: 'Could not delete hosted app.',
+      hostingAppDetailDescription: 'Deployment history for this preview site.',
+      hostingAppDetailLoading: 'Loading app…',
+      hostingAppDetailError: 'Could not load app details.',
+      hostingAppNotFound: 'App not found.',
+      hostingBackToApps: 'Back to apps',
+      hostingDeploymentsTitle: 'Deployment history',
+      hostingDeploymentsDescription: 'Past and current deployments for this app.',
+      hostingDeploymentsEmpty: 'No deployments yet.',
+      hostingColVersion: 'App version',
+      hostingColShellui: 'Shellui',
+      hostingColStatus: 'Status',
+      hostingColBrowse: 'Browse',
+      hostingColArtifact: 'Artifact',
+      hostingColFinalized: 'Finalized',
+      hostingColActions: 'Actions',
+      hostingColCount: 'Count',
+      hostingPinned: 'Pinned',
+      hostingCurrent: 'Current',
+      hostingRollback: 'Rollback',
+      hostingOpenVersion: 'Open',
+      hostingRollbackError: 'Rollback failed.',
+      hostingStatsTitle: 'Hosting statistics',
+      hostingStatsBadge: 'hosting-service',
+      hostingStatsDescription:
+        'Apps, deployments, access requests, and artifact usage from hosting-service for your company (or globally if you are staff).',
+      hostingStatsRefresh: 'Refresh',
+      hostingStatsLoading: 'Loading statistics…',
+      hostingStatsError: 'Could not load hosting statistics.',
+      hostingStatsMissingTitle: 'Hosting URL not configured',
+      hostingStatsMissingDescription:
+        'Set hosting.url in shellui.config.ts (for example http://localhost:8002).',
+      hostingStatsApps: 'Apps',
+      hostingStatsDeployments: 'Deployments',
+      hostingStatsArtifacts: 'Artifact storage',
+      hostingStatsActiveHint: '{{count}} active',
+      hostingStatsArtifactsHint: 'Total uploaded artifact bytes',
+      hostingStatsByStatusTitle: 'Deployments by status',
+      hostingStatsByStatusDescription: 'Breakdown of deployment lifecycle states',
+      hostingStatsAccessTitle: 'Access requests',
+      hostingStatsAccessDescription: 'Company waitlist status counts',
+      hostingStatsEmpty: 'No data yet.',
       storageFilesMissingTitle: 'Files explorer not configured',
       storageFilesMissingDescription:
         'Set storage.filesUrl in shellui.config.ts (for example http://localhost:5175/).',
@@ -37,7 +126,7 @@ const resources = {
       storageStatsDescription:
         'Uploads, documents, quotas, and recent files from storage-service for your company (or globally if you are staff).',
       storageStatsRefresh: 'Refresh',
-      storageStatsNoSession: 'Waiting for shell session… Open Admin from ShellUI while signed in.',
+      storageStatsNoSession: 'Waiting for shell session… Open Admin from Shellui while signed in.',
       storageStatsLoading: 'Loading statistics…',
       storageStatsError: 'Could not load storage statistics.',
       storageStatsMissingTitle: 'Storage URL not configured',
@@ -94,7 +183,7 @@ const resources = {
         'All login audit rows with a timestamp in the last rolling 24 hours (ignores filters below).',
       loginEventsStatTotalTitle: 'Matching events',
       loginEventsStatTotalHint: 'Total rows for the filters below (default: entire log).',
-      loginEventsNoSession: 'Waiting for shell session… Open Admin from ShellUI while signed in.',
+      loginEventsNoSession: 'Waiting for shell session… Open Admin from Shellui while signed in.',
       loginEventsFiltersTitle: 'Filters',
       loginEventsFiltersDescription:
         'Narrow by outcome, provider, coarse location (country / city from GeoIP when available), client timezone, staff at event, or saved user language preference.',
@@ -105,7 +194,7 @@ const resources = {
       loginEventsFieldStaff: 'Staff at event',
       loginEventsFieldLanguage: 'User language (preference)',
       loginEventsFieldLanguageHint:
-        'Matches ShellUI-stored locale for the user. Rows without a linked user are excluded when this filter is set.',
+        'Matches Shellui-stored locale for the user. Rows without a linked user are excluded when this filter is set.',
       loginEventsLanguageEn: 'English',
       loginEventsLanguageFr: 'French',
       loginEventsFieldProvider: 'Provider',
@@ -205,7 +294,7 @@ const resources = {
       dashboardStorageError: 'Could not load storage metrics.',
       dashboardStorageForbidden:
         'Could not load storage metrics (forbidden). You need staff or company-owner access for this company.',
-      dashboardNoSession: 'Waiting for shell session… Open Admin from ShellUI while signed in.',
+      dashboardNoSession: 'Waiting for shell session… Open Admin from Shellui while signed in.',
       dashboardUiHint:
         'Later you can let operators pick cards and queries; for now this page mirrors the guarded metrics route.',
       companyPageTitle: 'Organization',
@@ -247,19 +336,19 @@ const resources = {
       loginRedirectsSectionLabel: 'OAuth redirect allow list',
       loginRedirectsTitle: 'Login redirect URLs',
       loginRedirectsDescription:
-        'Browser OAuth may only return tokens to the default callback on this auth host or to absolute URL prefixes you list here (GET /api/v1/authorize … &redirect_to=).',
+        'After identity completes OAuth, it may only bounce tokens to origins listed here (or loopback). Empty list denies non-loopback shell URLs.',
       loginRedirectsLoading: 'Loading allow list…',
       loginRedirectsLoadError: 'Could not load redirect rules.',
       loginRedirectsSaveError: 'Could not save redirect rules.',
       loginRedirectsAddHint:
-        'Use an https URL prefix that covers your ShellUI login callback page.',
-      loginRedirectsBaseUrlLabel: 'Allowed base URL',
+        'Add each shell origin (scheme + host + optional port), e.g. https://app.example.com. Path is stripped.',
+      loginRedirectsBaseUrlLabel: 'Allowed origin',
       loginRedirectsLabelField: 'Label (optional)',
       loginRedirectsLabelPlaceholder: 'Production app',
-      loginRedirectsAdd: 'Add URL',
+      loginRedirectsAdd: 'Add origin',
       loginRedirectsAdding: 'Adding…',
       loginRedirectsEmpty:
-        'No extra redirect URLs yet. Only the default /login/callback on this auth server is allowed until you add one.',
+        'No shell origins yet. Loopback is always allowed for CLI; add each browser shell origin for login.',
       loginRedirectsColUrl: 'Base URL',
       loginRedirectsColLabel: 'Label',
       loginRedirectsColActive: 'Active',
@@ -268,7 +357,7 @@ const resources = {
       oauthClientsSectionLabel: 'Company OAuth clients',
       oauthClientsTitle: 'OAuth provider keys',
       oauthClientsDescription:
-        'Define provider credentials per company. ShellUI login settings only expose providers active here.',
+        'Define provider credentials per company. Shellui login settings only expose providers active here.',
       oauthClientsLoading: 'Loading OAuth clients…',
       oauthClientsLoadError: 'Could not load OAuth clients.',
       oauthClientsSaveError: 'Could not save OAuth client.',
@@ -377,7 +466,7 @@ const resources = {
       usersNextPage: 'Next',
       usersErrorUnknown: 'Something went wrong.',
       usersNoSession:
-        'Waiting for shell session… If this persists, open Admin from ShellUI while signed in.',
+        'Waiting for shell session… If this persists, open Admin from Shellui while signed in.',
       userDetailTitle: 'User profile',
       userDetailBack: 'Back',
       userDetailLoading: 'Loading profile…',
@@ -389,7 +478,7 @@ const resources = {
       userDetailLastSeen: 'Last seen (activity)',
       userDetailLastSeenTimezone: 'Last client timezone',
       userDetailGroups: 'Groups',
-      userDetailPreferencesTitle: 'ShellUI preferences',
+      userDetailPreferencesTitle: 'Shellui preferences',
       userDetailPreferencesHint: 'Persisted app preferences for this account (read-only).',
       userDetailPreferencesEmpty: 'No preference payload on this account.',
       userDetailPrefTheme: 'Theme',
@@ -423,7 +512,7 @@ const resources = {
       navAccessTokens: 'Access tokens',
       accessTokensPageTitle: 'Personal access tokens',
       accessTokensPageIntro:
-        'Create and revoke JWT tokens tied to your account (same shape as the ShellUI session token). Use them for scripts, APIs, or metrics. The value is shown only once. Choose read-only to allow only GET/HEAD/OPTIONS; otherwise the token acts as you in this organization.',
+        'Create and revoke JWT tokens tied to your account (same shape as the Shellui session token). Use them for scripts, APIs, or metrics. The value is shown only once. Choose read-only to allow only GET/HEAD/OPTIONS; otherwise the token acts as you in this organization.',
       accessTokensTitle: 'Personal access tokens',
       accessTokensHint:
         'Long-lived JWTs for automation. Read-only tokens cannot call POST, PUT, PATCH, or DELETE (including creating or revoking tokens via the API).',
@@ -432,7 +521,7 @@ const resources = {
       accessTokensCreate: 'Create token',
       accessTokensCreating: 'Creating…',
       accessTokensSessionUserError:
-        'Could not read your user id from the session token. Open Admin from ShellUI while signed in.',
+        'Could not read your user id from the session token. Open Admin from Shellui while signed in.',
       accessTokensNameLabel: 'Label (optional)',
       accessTokensNamePlaceholder: 'e.g. CI metrics',
       accessTokensReadOnlyLabel: 'Read-only token',
@@ -494,11 +583,11 @@ const resources = {
   },
   fr: {
     translation: {
-      standaloneTitle: 'Ouvrir cette application depuis ShellUI',
+      standaloneTitle: 'Ouvrir cette application depuis Shellui',
       standaloneDescription:
         'L’interface d’administration est chargée dans l’application Shell principale. Vous avez ouvert cette URL directement dans un onglet.',
       standaloneStepRunShell:
-        '1. Démarrez l’application ShellUI principale (par ex. port 4000) et ce serveur de dev avec pnpm start dans le dépôt admin (port 5174).',
+        '1. Démarrez l’application Shellui principale (par ex. port 4000) et ce serveur de dev avec pnpm start dans le dépôt admin (port 5174).',
       standaloneStepConfigure:
         '2. Dans shellui.config.ts de l’app principale, indiquez l’URL du serveur Vite pour l’admin :',
       standaloneConfigSnippet: `backend: {
@@ -519,6 +608,96 @@ const resources = {
       navStorageFiles: 'Fichiers',
       navStorageStatistics: 'Statistiques',
       navStorageDjangoAdmin: 'Admin Django',
+      navHostingGroup: 'Hébergement',
+      navHostingApps: 'Applications',
+      navHostingStatistics: 'Statistiques',
+      navHostingDjangoAdmin: 'Admin Django',
+      hostingMissingTitle: 'URL d’hébergement non configurée',
+      hostingMissingDescription:
+        'Définissez hosting.url dans shellui.config.json (par ex. http://localhost:8002). Masquez Admin → Hébergement avec hosting.showInAdmin: false.',
+      hostingAppsTitle: 'Applications hébergées',
+      hostingAppsBadge: 'hosting-service',
+      hostingAppsDescription:
+        'Microfrontends déployés pour votre entreprise via hosting-service. Demandez l’accès si votre entreprise est en liste d’attente.',
+      hostingAppsListTitle: 'Applications de l’entreprise',
+      hostingAppsListDescription: 'Ouvrez une application pour voir l’historique des déploiements.',
+      hostingAppsEmpty: 'Aucune application hébergée.',
+      hostingAppsLoading: 'Chargement des applications…',
+      hostingAppsError: 'Impossible de charger les applications hébergées.',
+      hostingRefresh: 'Actualiser',
+      hostingNoSession:
+        'En attente de la session Shell… Ouvrez l’admin depuis Shellui en étant connecté.',
+      hostingWaitlistTitle: 'Accès hébergement',
+      hostingWaitlistDescription:
+        'L’hébergement est limité par entreprise. Demandez l’accès pour rejoindre la liste d’attente ; le staff peut approuver votre entreprise.',
+      hostingWaitlistRequest: 'Demander l’accès',
+      hostingWaitlistRequestError: 'Impossible d’envoyer la demande d’accès.',
+      hostingWaitlistPendingHint: 'Votre demande est en cours d’examen.',
+      hostingAccessStatus_none: 'Non demandé',
+      hostingAccessStatus_pending: 'En attente',
+      hostingAccessStatus_approved: 'Approuvé',
+      hostingAccessStatus_denied: 'Refusé',
+      hostingColApp: 'Application',
+      hostingColSlug: 'Site ID',
+      hostingColUpdated: 'Mis à jour',
+      hostingColExpires: 'Expiration',
+      hostingExpiresNever: 'Permanent',
+      hostingExpiresExpired: 'Expiré',
+      hostingExpiresExpiredHint:
+        'Les fichiers sont supprimés à l’expiration. Redéployez pour créer un nouvel aperçu.',
+      hostingRenewExpiry: 'Renouveler',
+      hostingRenewExpiryHint: 'Prolonger la durée de vie de l’aperçu avant expiration.',
+      hostingRenewExpiryDisabledHint:
+        'Le renouvellement n’est possible qu’avant expiration. Les fichiers sont supprimés à la fin de vie.',
+      hostingRenewExpiryError: 'Impossible de renouveler l’expiration.',
+      hostingDelete: 'Supprimer',
+      hostingDeleteTitle: 'Supprimer l’application hébergée',
+      hostingDeleteConfirm:
+        'Supprimer « {{name}} » ? Cela efface le site, les déploiements et les fichiers stockés. Action irréversible.',
+      hostingDeleteCancel: 'Annuler',
+      hostingDeleted: 'Application hébergée supprimée.',
+      hostingDeleteError: 'Impossible de supprimer l’application hébergée.',
+      hostingAppDetailDescription: 'Historique des déploiements pour ce site d’aperçu.',
+      hostingAppDetailLoading: 'Chargement de l’application…',
+      hostingAppDetailError: 'Impossible de charger les détails de l’application.',
+      hostingAppNotFound: 'Application introuvable.',
+      hostingBackToApps: 'Retour aux applications',
+      hostingDeploymentsTitle: 'Historique des déploiements',
+      hostingDeploymentsDescription: 'Déploiements passés et actuels pour cette application.',
+      hostingDeploymentsEmpty: 'Aucun déploiement.',
+      hostingColVersion: 'Version app',
+      hostingColShellui: 'Shellui',
+      hostingColStatus: 'Statut',
+      hostingColBrowse: 'Ouvrir',
+      hostingColArtifact: 'Artefact',
+      hostingColFinalized: 'Finalisé',
+      hostingColActions: 'Actions',
+      hostingColCount: 'Nombre',
+      hostingPinned: 'Épinglé',
+      hostingCurrent: 'Actuel',
+      hostingRollback: 'Restaurer',
+      hostingOpenVersion: 'Ouvrir',
+      hostingRollbackError: 'Échec de la restauration.',
+      hostingStatsTitle: 'Statistiques d’hébergement',
+      hostingStatsBadge: 'hosting-service',
+      hostingStatsDescription:
+        'Applications, déploiements, demandes d’accès et usage des artefacts depuis hosting-service pour votre entreprise (ou globalement si vous êtes staff).',
+      hostingStatsRefresh: 'Actualiser',
+      hostingStatsLoading: 'Chargement des statistiques…',
+      hostingStatsError: 'Impossible de charger les statistiques d’hébergement.',
+      hostingStatsMissingTitle: 'URL d’hébergement non configurée',
+      hostingStatsMissingDescription:
+        'Définissez hosting.url dans shellui.config.ts (par ex. http://localhost:8002).',
+      hostingStatsApps: 'Applications',
+      hostingStatsDeployments: 'Déploiements',
+      hostingStatsArtifacts: 'Stockage artefacts',
+      hostingStatsActiveHint: '{{count}} actifs',
+      hostingStatsArtifactsHint: 'Octets totaux des artefacts téléversés',
+      hostingStatsByStatusTitle: 'Déploiements par statut',
+      hostingStatsByStatusDescription: 'Répartition des états du cycle de déploiement',
+      hostingStatsAccessTitle: 'Demandes d’accès',
+      hostingStatsAccessDescription: 'Comptes par statut de liste d’attente entreprise',
+      hostingStatsEmpty: 'Pas encore de données.',
       storageFilesMissingTitle: 'Explorateur de fichiers non configuré',
       storageFilesMissingDescription:
         'Définissez storage.filesUrl dans shellui.config.ts (par ex. http://localhost:5175/).',
@@ -528,7 +707,7 @@ const resources = {
         'Téléversements, documents, quotas et fichiers récents depuis storage-service pour votre entreprise (ou globalement si vous êtes staff).',
       storageStatsRefresh: 'Actualiser',
       storageStatsNoSession:
-        'En attente de la session Shell… Ouvrez l’admin depuis ShellUI en étant connecté.',
+        'En attente de la session Shell… Ouvrez l’admin depuis Shellui en étant connecté.',
       storageStatsLoading: 'Chargement des statistiques…',
       storageStatsError: 'Impossible de charger les statistiques de stockage.',
       storageStatsMissingTitle: 'URL de stockage non configurée',
@@ -587,7 +766,7 @@ const resources = {
       loginEventsStatTotalHint:
         'Nombre de lignes pour les filtres ci-dessous (par défaut : journal complet).',
       loginEventsNoSession:
-        'En attente de la session shell… Ouvrez l’admin depuis ShellUI en étant connecté.',
+        'En attente de la session shell… Ouvrez l’admin depuis Shellui en étant connecté.',
       loginEventsFiltersTitle: 'Filtres',
       loginEventsFiltersDescription:
         'Par résultat, fournisseur, localisation approximative (pays / ville GeoIP si disponible), fuseau client, statut staff au moment de l’événement, ou langue enregistrée dans les préférences utilisateur.',
@@ -598,7 +777,7 @@ const resources = {
       loginEventsFieldStaff: 'Staff à l’événement',
       loginEventsFieldLanguage: 'Langue (préférence)',
       loginEventsFieldLanguageHint:
-        'Correspond à la locale ShellUI enregistrée pour l’utilisateur. Sans utilisateur lié, la ligne est exclue si ce filtre est actif.',
+        'Correspond à la locale Shellui enregistrée pour l’utilisateur. Sans utilisateur lié, la ligne est exclue si ce filtre est actif.',
       loginEventsLanguageEn: 'Anglais',
       loginEventsLanguageFr: 'Français',
       loginEventsFieldProvider: 'Fournisseur',
@@ -699,7 +878,7 @@ const resources = {
       dashboardStorageForbidden:
         'Impossible de charger les métriques de stockage (interdit). Il faut le staff Django ou être propriétaire de l’entreprise pour cette société.',
       dashboardNoSession:
-        'En attente de la session shell… Ouvrez l’admin depuis ShellUI en étant connecté.',
+        'En attente de la session shell… Ouvrez l’admin depuis Shellui en étant connecté.',
       dashboardUiHint:
         'Plus tard, les opérateurs pourront choisir cartes et requêtes ; pour l’instant cette page reflète la route métriques protégée.',
       companyPageTitle: 'Organisation',
@@ -741,19 +920,19 @@ const resources = {
       loginRedirectsSectionLabel: 'Liste blanche des redirections OAuth',
       loginRedirectsTitle: 'URL de retour de connexion',
       loginRedirectsDescription:
-        'Le navigateur ne peut recevoir les jetons OAuth que sur le callback par défaut de cet hôte d’auth ou sur les préfixes d’URL absolus listés ici (GET /api/v1/authorize … &redirect_to=).',
+        'Après OAuth, identity ne peut renvoyer les jetons qu’aux origines listées ici (ou en loopback). Une liste vide refuse les URL shell hors loopback.',
       loginRedirectsLoading: 'Chargement de la liste…',
       loginRedirectsLoadError: 'Impossible de charger les règles de redirection.',
       loginRedirectsSaveError: 'Impossible d’enregistrer les règles de redirection.',
       loginRedirectsAddHint:
-        'Utilisez un préfixe https qui couvre la page de callback de connexion ShellUI.',
-      loginRedirectsBaseUrlLabel: 'URL de base autorisée',
+        'Ajoutez chaque origine shell (schéma + hôte + port optionnel), ex. https://app.example.com. Le chemin est retiré.',
+      loginRedirectsBaseUrlLabel: 'Origine autorisée',
       loginRedirectsLabelField: 'Libellé (optionnel)',
       loginRedirectsLabelPlaceholder: 'Application production',
-      loginRedirectsAdd: 'Ajouter l’URL',
+      loginRedirectsAdd: 'Ajouter l’origine',
       loginRedirectsAdding: 'Ajout…',
       loginRedirectsEmpty:
-        'Aucune URL supplémentaire. Seul le callback /login/callback sur ce serveur d’auth est autorisé tant que vous n’en ajoutez pas.',
+        'Aucune origine shell. Le loopback est toujours autorisé pour le CLI ; ajoutez chaque origine shell navigateur pour la connexion.',
       loginRedirectsColUrl: 'URL de base',
       loginRedirectsColLabel: 'Libellé',
       loginRedirectsColActive: 'Actif',
@@ -762,7 +941,7 @@ const resources = {
       oauthClientsSectionLabel: 'Clients OAuth entreprise',
       oauthClientsTitle: 'Clés fournisseurs OAuth',
       oauthClientsDescription:
-        'Définissez les identifiants OAuth par entreprise. Les réglages de connexion ShellUI n’exposent que les fournisseurs actifs ici.',
+        'Définissez les identifiants OAuth par entreprise. Les réglages de connexion Shellui n’exposent que les fournisseurs actifs ici.',
       oauthClientsLoading: 'Chargement des clients OAuth…',
       oauthClientsLoadError: 'Impossible de charger les clients OAuth.',
       oauthClientsSaveError: 'Impossible d’enregistrer le client OAuth.',
@@ -873,7 +1052,7 @@ const resources = {
       usersNextPage: 'Suivant',
       usersErrorUnknown: 'Une erreur est survenue.',
       usersNoSession:
-        'En attente de la session shell… Si cela continue, ouvrez l’admin depuis ShellUI en étant connecté.',
+        'En attente de la session shell… Si cela continue, ouvrez l’admin depuis Shellui en étant connecté.',
       userDetailTitle: 'Profil utilisateur',
       userDetailBack: 'Retour',
       userDetailLoading: 'Chargement du profil…',
@@ -885,7 +1064,7 @@ const resources = {
       userDetailLastSeen: 'Dernière activité',
       userDetailLastSeenTimezone: 'Dernier fuseau client',
       userDetailGroups: 'Groupes',
-      userDetailPreferencesTitle: 'Préférences ShellUI',
+      userDetailPreferencesTitle: 'Préférences Shellui',
       userDetailPreferencesHint:
         'Préférences applicatives stockées pour ce compte (lecture seule).',
       userDetailPreferencesEmpty: 'Aucune donnée de préférences pour ce compte.',
@@ -921,7 +1100,7 @@ const resources = {
       navAccessTokens: 'Jetons d’accès',
       accessTokensPageTitle: 'Jetons d’accès personnels',
       accessTokensPageIntro:
-        'Créez et révoquez des JWT liés à votre compte (même forme que le jeton de session ShellUI). Pour scripts, API ou métriques. La valeur n’est affichée qu’une fois. Choisissez lecture seule pour n’autoriser que GET/HEAD/OPTIONS ; sinon le jeton agit comme vous dans cette organisation.',
+        'Créez et révoquez des JWT liés à votre compte (même forme que le jeton de session Shellui). Pour scripts, API ou métriques. La valeur n’est affichée qu’une fois. Choisissez lecture seule pour n’autoriser que GET/HEAD/OPTIONS ; sinon le jeton agit comme vous dans cette organisation.',
       accessTokensTitle: 'Jetons d’accès personnels',
       accessTokensHint:
         'JWT longue durée pour l’automatisation. En lecture seule, pas de POST, PUT, PATCH ou DELETE (y compris créer ou révoquer des jetons via l’API).',
@@ -930,7 +1109,7 @@ const resources = {
       accessTokensCreate: 'Créer un jeton',
       accessTokensCreating: 'Création…',
       accessTokensSessionUserError:
-        'Impossible de lire votre identifiant utilisateur depuis le jeton de session. Ouvrez l’admin depuis ShellUI en étant connecté.',
+        'Impossible de lire votre identifiant utilisateur depuis le jeton de session. Ouvrez l’admin depuis Shellui en étant connecté.',
       accessTokensNameLabel: 'Libellé (optionnel)',
       accessTokensNamePlaceholder: 'ex. CI métriques',
       accessTokensReadOnlyLabel: 'Jeton lecture seule',

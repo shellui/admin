@@ -66,7 +66,11 @@ The host app can inject extra sidebar links via top-level `administration` in `s
 
 ```bash
 pnpm test
+pnpm typecheck
+pnpm format:check
 ```
+
+Pull requests (and pushes to `develop` / `main`) run the same checks plus production build, secret scan, dependency audit, and CodeQL. GitHub Pages deploy still runs only after merge to `main`. Require those CI jobs in branch protection before merging.
 
 ## Structure
 

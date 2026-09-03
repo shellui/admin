@@ -6,6 +6,7 @@ import { useShelluiAdministration } from '@/hooks/useShelluiAdministration';
 import { useShelluiAuthBackendBaseUrl } from '@/hooks/useShelluiAuthBackendBaseUrl';
 import { useShelluiDeveloperMode } from '@/hooks/useShelluiDeveloperMode';
 import { useShelluiIsStaff } from '@/hooks/useShelluiIsStaff';
+import { useShelluiHosting, isHostingAdminEnabled } from '@/hooks/useShelluiHosting';
 import { useShelluiStorage } from '@/hooks/useShelluiStorage';
 import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
 import { resolveAdminAppUrl } from '@/lib/resolveAdminAppUrl';
@@ -89,6 +90,7 @@ export function useAdminContentNavigation(): AdminContentFrame {
   const isStaff = useShelluiIsStaff();
   const administration = useShelluiAdministration();
   const storage = useShelluiStorage();
+  const hosting = useShelluiHosting();
   const authBackendBaseUrl = useShelluiAuthBackendBaseUrl();
 
   const embedItems = useMemo(() => {
@@ -180,10 +182,64 @@ export function useAdminContentNavigation(): AdminContentFrame {
       }
     }
 
+    const hostingUrl = isHostingAdminEnabled(hosting)
+      ? hosting?.url?.trim().replace(/\/+$/, '') || null
+      : null;
+    if (hostingUrl) {
+      const appsHash = buildAdminHashContentUrl(origin, 'hosting', '', '');
+      items.push({
+        label: 'Apps',
+        path: 'hosting',
+        url: appsHash,
+        embedUrl: appsHash,
+        useHashRouter: true,
+      });
+      const appDetailHash = buildAdminHashContentUrl(origin, 'hosting/apps', '', '');
+      items.push({
+        label: 'App detail',
+        path: 'hosting/apps',
+        url: appDetailHash,
+        embedUrl: appDetailHash,
+        useHashRouter: true,
+      });
+      const statsHash = buildAdminHashContentUrl(origin, 'hosting/statistics', '', '');
+      items.push({
+        label: 'Statistics',
+        path: 'hosting/statistics',
+        url: statsHash,
+        embedUrl: statsHash,
+        useHashRouter: true,
+      });
+      if (isDeveloperMode) {
+        const swaggerUrl = `${hostingUrl}/api/docs/`;
+        const redocUrl = `${hostingUrl}/api/docs/redoc/`;
+        items.push(
+          {
+            label: 'Swagger',
+            path: 'hosting/swagger',
+            url: swaggerUrl,
+            embedUrl: swaggerUrl,
+            ignoreMessages: true,
+            useHashRouter: false,
+          },
+          {
+            label: 'ReDoc',
+            path: 'hosting/redoc',
+            url: redocUrl,
+            embedUrl: redocUrl,
+            ignoreMessages: true,
+            useHashRouter: false,
+          },
+        );
+      }
+    }
+
     return items;
   }, [
     administration?.navigation,
     authBackendBaseUrl,
+    hosting?.showInAdmin,
+    hosting?.url,
     isDeveloperMode,
     isStaff,
     storage?.filesUrl,
