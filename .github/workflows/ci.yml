@@ -118,6 +118,7 @@ jobs:
           fi
 
           if git grep -nIE 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|BEGIN PRIVATE KEY' -- . \
+              ':(exclude).github/workflows/**' \
               ':(exclude).env.example' \
               ':(exclude)*.md'; then
             echo '::error::Private key material found in tracked files'
