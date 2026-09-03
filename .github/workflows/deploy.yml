@@ -39,7 +39,7 @@ jobs:
           package_json_file: admin/package.json
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version-file: 'admin/.nvmrc'
           cache: 'pnpm'
