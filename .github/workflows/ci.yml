@@ -21,13 +21,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout admin app
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: admin
 
       # vite/tsconfig alias @shellui/core into the sibling monorepo (ContentView).
       - name: Checkout shellui monorepo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: shellui/shellui
           path: shellui
@@ -72,7 +72,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -130,7 +130,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Link check (lychee)
         uses: lycheeverse/lychee-action@v2
@@ -151,7 +151,7 @@ jobs:
       security-events: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3

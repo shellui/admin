@@ -21,13 +21,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout admin app
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: admin
 
       # vite/tsconfig alias @shellui/core into the sibling monorepo (ContentView).
       - name: Checkout shellui monorepo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: shellui/shellui
           path: shellui
