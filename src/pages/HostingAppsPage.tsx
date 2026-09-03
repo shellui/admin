@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { AppWindow, Clock, Loader2, RefreshCw, RotateCcw } from 'lucide-react';
+import { AppWindow, Clock, Loader2, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/table';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import {
+  deleteHostingApp,
   fetchHostingAccess,
   fetchHostingApps,
   renewHostingAppExpiry,
@@ -25,6 +26,7 @@ import {
   type HostingAccess,
   type HostingApp,
 } from '@/lib/hostingApi';
+import shellui from '@shellui/sdk';
 
 function formatDate(value: string | null, locale: string): string {
   if (!value) return '—';
@@ -153,6 +155,7 @@ export function HostingAppsPage() {
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
   const [renewingId, setRenewingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -209,6 +212,41 @@ export function HostingAppsPage() {
       setError(e instanceof Error ? e.message : t('hostingRenewExpiryError'));
     } finally {
       setRenewingId(null);
+    }
+  }
+
+  async function confirmDeleteApp(app: HostingApp): Promise<boolean> {
+    const label = app.display_name || app.name;
+    if (typeof window === 'undefined' || window.parent === window) {
+      return window.confirm(t('hostingDeleteConfirm', { name: label }));
+    }
+    return await new Promise<boolean>((resolve) => {
+      shellui.dialog({
+        title: t('hostingDeleteTitle'),
+        description: t('hostingDeleteConfirm', { name: label }),
+        mode: 'confirm',
+        okLabel: t('hostingDelete'),
+        cancelLabel: t('hostingDeleteCancel'),
+        onOk: () => resolve(true),
+        onCancel: () => resolve(false),
+      });
+    });
+  }
+
+  async function handleDelete(app: HostingApp) {
+    if (!accessToken || !hostingBaseUrl || deletingId) return;
+    const confirmed = await confirmDeleteApp(app);
+    if (!confirmed) return;
+    setDeletingId(app.id);
+    setError(null);
+    try {
+      await deleteHostingApp(hostingBaseUrl, accessToken, app.name);
+      setApps((prev) => prev.filter((row) => row.id !== app.id));
+      shellui.toast({ title: t('hostingDeleted'), type: 'success' });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('hostingDeleteError'));
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -342,15 +380,29 @@ export function HostingAppsPage() {
                         {formatDate(app.updated_at, i18n.language)}
                       </TableCell>
                       <TableCell className="text-right">
-                        {isPreviewApp(app) ? (
-                          <PreviewRenewButton
-                            app={app}
-                            renewingId={renewingId}
-                            onRenew={() => void handleRenewExpiry(app)}
-                          />
-                        ) : (
-                          <Text className="text-xs text-muted-foreground">—</Text>
-                        )}
+                        <div className="inline-flex flex-wrap items-center justify-end gap-2">
+                          {isPreviewApp(app) ? (
+                            <PreviewRenewButton
+                              app={app}
+                              renewingId={renewingId}
+                              onRenew={() => void handleRenewExpiry(app)}
+                            />
+                          ) : null}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={deletingId != null || renewingId != null}
+                            onClick={() => void handleDelete(app)}
+                          >
+                            {deletingId === app.id ? (
+                              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="mr-1.5 size-3.5" />
+                            )}
+                            {t('hostingDelete')}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

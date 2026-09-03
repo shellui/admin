@@ -160,6 +160,25 @@ export async function renewHostingAppExpiry(
   );
 }
 
+export async function deleteHostingApp(
+  hostingBaseUrl: string,
+  accessToken: string,
+  appRef: string,
+): Promise<void> {
+  const base = hostingBaseUrl.replace(/\/+$/, '');
+  const url = `${base}/hosting/v1/apps/${encodeURIComponent(appRef)}`;
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+  if (response.status === 204) return;
+  const body = await response.json().catch(() => null);
+  throw new Error(parseErrorMessage(body, response.statusText || 'Request failed'));
+}
+
 export async function fetchHostingStats(
   hostingBaseUrl: string,
   accessToken: string,

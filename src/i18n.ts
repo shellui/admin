@@ -70,6 +70,13 @@ const resources = {
       hostingRenewExpiryDisabledHint:
         'Renewal is only available before expiry. Files are deleted when the preview ends.',
       hostingRenewExpiryError: 'Could not renew expiry.',
+      hostingDelete: 'Delete',
+      hostingDeleteTitle: 'Delete hosted app',
+      hostingDeleteConfirm:
+        'Delete “{{name}}”? This removes the site, deployments, and stored files. This cannot be undone.',
+      hostingDeleteCancel: 'Cancel',
+      hostingDeleted: 'Hosted app deleted.',
+      hostingDeleteError: 'Could not delete hosted app.',
       hostingAppDetailDescription: 'Deployment history for this preview site.',
       hostingAppDetailLoading: 'Loading app…',
       hostingAppDetailError: 'Could not load app details.',
@@ -643,6 +650,13 @@ const resources = {
       hostingRenewExpiryDisabledHint:
         'Le renouvellement n’est possible qu’avant expiration. Les fichiers sont supprimés à la fin de vie.',
       hostingRenewExpiryError: 'Impossible de renouveler l’expiration.',
+      hostingDelete: 'Supprimer',
+      hostingDeleteTitle: 'Supprimer l’application hébergée',
+      hostingDeleteConfirm:
+        'Supprimer « {{name}} » ? Cela efface le site, les déploiements et les fichiers stockés. Action irréversible.',
+      hostingDeleteCancel: 'Annuler',
+      hostingDeleted: 'Application hébergée supprimée.',
+      hostingDeleteError: 'Impossible de supprimer l’application hébergée.',
       hostingAppDetailDescription: 'Historique des déploiements pour ce site d’aperçu.',
       hostingAppDetailLoading: 'Chargement de l’application…',
       hostingAppDetailError: 'Impossible de charger les détails de l’application.',

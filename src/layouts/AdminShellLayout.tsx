@@ -1146,9 +1146,11 @@ export function AdminShellLayout() {
   // Nested same-origin iframe: page content only (no sidebar).
   if (contentFrame) {
     return (
-      <div className="flex h-screen min-h-0 w-full flex-col bg-background">
-        <AdminContentMain />
-      </div>
+      <TooltipProvider delayDuration={0}>
+        <div className="flex h-screen min-h-0 w-full flex-col bg-background">
+          <AdminContentMain />
+        </div>
+      </TooltipProvider>
     );
   }
 

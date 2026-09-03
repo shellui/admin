@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader2, RefreshCw, RotateCcw } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Loader2, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/table';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import {
+  deleteHostingApp,
   fetchHostingApp,
   fetchHostingDeployments,
   renewHostingAppExpiry,
@@ -25,6 +26,7 @@ import {
   type HostingApp,
   type HostingDeployment,
 } from '@/lib/hostingApi';
+import shellui from '@shellui/sdk';
 
 function formatDate(value: string | null, locale: string): string {
   if (!value) return '—';
@@ -73,6 +75,7 @@ function canRollback(deployment: HostingDeployment): boolean {
 
 export function HostingAppDetailPage() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const { name = '' } = useParams<{ name: string }>();
   const accessToken = useShelluiAccessToken();
   const hostingBaseUrl = useHostingBaseUrl();
@@ -81,6 +84,7 @@ export function HostingAppDetailPage() {
   const [loading, setLoading] = useState(true);
   const [rollingBackId, setRollingBackId] = useState<string | null>(null);
   const [renewingExpiry, setRenewingExpiry] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -145,6 +149,36 @@ export function HostingAppDetailPage() {
       setError(e instanceof Error ? e.message : t('hostingRenewExpiryError'));
     } finally {
       setRenewingExpiry(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!accessToken || !hostingBaseUrl || !name || deleting || !app) return;
+    const label = app.display_name || app.name;
+    const confirmed =
+      typeof window === 'undefined' || window.parent === window
+        ? window.confirm(t('hostingDeleteConfirm', { name: label }))
+        : await new Promise<boolean>((resolve) => {
+            shellui.dialog({
+              title: t('hostingDeleteTitle'),
+              description: t('hostingDeleteConfirm', { name: label }),
+              mode: 'confirm',
+              okLabel: t('hostingDelete'),
+              cancelLabel: t('hostingDeleteCancel'),
+              onOk: () => resolve(true),
+              onCancel: () => resolve(false),
+            });
+          });
+    if (!confirmed) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      await deleteHostingApp(hostingBaseUrl, accessToken, name);
+      shellui.toast({ title: t('hostingDeleted'), type: 'success' });
+      navigate('/hosting');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('hostingDeleteError'));
+      setDeleting(false);
     }
   }
 
@@ -262,15 +296,33 @@ export function HostingAppDetailPage() {
               </div>
             ) : null}
           </div>
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm hover:bg-muted"
-            disabled={loading}
-          >
-            <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
-            {t('hostingRefresh')}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {app ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={deleting || loading}
+                onClick={() => void handleDelete()}
+              >
+                {deleting ? (
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="mr-1.5 size-3.5" />
+                )}
+                {t('hostingDelete')}
+              </Button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => void load()}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm hover:bg-muted"
+              disabled={loading || deleting}
+            >
+              <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
+              {t('hostingRefresh')}
+            </button>
+          </div>
         </div>
       </header>
 
