@@ -33,7 +33,7 @@ jobs:
           path: shellui
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           package_json_file: admin/package.json
 
@@ -87,7 +87,7 @@ jobs:
           "${install_dir}/gitleaks" detect --source . --verbose --redact --exit-code 1
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
