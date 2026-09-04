@@ -81,6 +81,14 @@ const resources = {
       hostingAppDetailLoading: 'Loading app…',
       hostingAppDetailError: 'Could not load app details.',
       hostingAppNotFound: 'App not found.',
+      hostingRedirectMissingTitle: 'Login will not work for this site',
+      hostingRedirectMissingDescription:
+        'This origin is not on the identity OAuth redirect allow list: {{origin}}. Add it so the hosted shell can complete login.',
+      hostingRedirectAdd: 'Add login redirect',
+      hostingRedirectAdding: 'Adding…',
+      hostingRedirectAdded: 'Login redirect added.',
+      hostingRedirectAddError: 'Could not add login redirect.',
+      hostingRedirectCheckError: 'Could not verify login redirect allow list',
       hostingBackToApps: 'Back to apps',
       hostingDeploymentsTitle: 'Deployment history',
       hostingDeploymentsDescription: 'Past and current deployments for this app.',
@@ -349,6 +357,11 @@ const resources = {
       loginRedirectsAdding: 'Adding…',
       loginRedirectsEmpty:
         'No shell origins yet. Loopback is always allowed for CLI; add each browser shell origin for login.',
+      loginRedirectsHostingTitle: 'Hosting preview redirect URLs',
+      loginRedirectsHostingDescription:
+        'Origins added automatically when you deploy with shellui deploy. Removed when the hosting project is deleted. Managed by hosting-service — usually no action needed.',
+      loginRedirectsHostingEmpty:
+        'No hosted preview origins yet. Deploy with shellui deploy and the site URL appears here for login.',
       loginRedirectsColUrl: 'Base URL',
       loginRedirectsColLabel: 'Label',
       loginRedirectsColActive: 'Active',
@@ -661,6 +674,14 @@ const resources = {
       hostingAppDetailLoading: 'Chargement de l’application…',
       hostingAppDetailError: 'Impossible de charger les détails de l’application.',
       hostingAppNotFound: 'Application introuvable.',
+      hostingRedirectMissingTitle: 'La connexion ne fonctionnera pas pour ce site',
+      hostingRedirectMissingDescription:
+        'Cette origine n’est pas dans la liste blanche des redirections OAuth identity : {{origin}}. Ajoutez-la pour que le shell hébergé puisse se connecter.',
+      hostingRedirectAdd: 'Ajouter la redirection de connexion',
+      hostingRedirectAdding: 'Ajout…',
+      hostingRedirectAdded: 'Redirection de connexion ajoutée.',
+      hostingRedirectAddError: 'Impossible d’ajouter la redirection de connexion.',
+      hostingRedirectCheckError: 'Impossible de vérifier la liste blanche des redirections',
       hostingBackToApps: 'Retour aux applications',
       hostingDeploymentsTitle: 'Historique des déploiements',
       hostingDeploymentsDescription: 'Déploiements passés et actuels pour cette application.',
@@ -933,6 +954,11 @@ const resources = {
       loginRedirectsAdding: 'Ajout…',
       loginRedirectsEmpty:
         'Aucune origine shell. Le loopback est toujours autorisé pour le CLI ; ajoutez chaque origine shell navigateur pour la connexion.',
+      loginRedirectsHostingTitle: 'URL de retour des previews hébergées',
+      loginRedirectsHostingDescription:
+        'Origines ajoutées automatiquement lors d’un shellui deploy. Retirées à la suppression du projet hosting. Gérées par hosting-service — aucune action requise en général.',
+      loginRedirectsHostingEmpty:
+        'Aucune origine preview hébergée. Déployez avec shellui deploy et l’URL du site apparaît ici pour la connexion.',
       loginRedirectsColUrl: 'URL de base',
       loginRedirectsColLabel: 'Libellé',
       loginRedirectsColActive: 'Actif',

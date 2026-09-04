@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader2, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Loader2, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,12 @@ import {
 } from '@/components/ui/table';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import {
+  createOAuthRedirect,
+  fetchOAuthRedirects,
+  oauthRedirectCoversOrigin,
+  originFromUrl,
+} from '@/lib/adminOauthRedirectsApi';
+import {
   deleteHostingApp,
   fetchHostingApp,
   fetchHostingDeployments,
@@ -26,6 +32,7 @@ import {
   type HostingApp,
   type HostingDeployment,
 } from '@/lib/hostingApi';
+import { getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
 import shellui from '@shellui/sdk';
 
 function formatDate(value: string | null, locale: string): string {
@@ -79,6 +86,7 @@ export function HostingAppDetailPage() {
   const { name = '' } = useParams<{ name: string }>();
   const accessToken = useShelluiAccessToken();
   const hostingBaseUrl = useHostingBaseUrl();
+  const isOwner = Boolean(accessToken && getIsCompanyOwnerFromJwt(accessToken));
   const [app, setApp] = useState<HostingApp | null>(null);
   const [deployments, setDeployments] = useState<HostingDeployment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +94,39 @@ export function HostingAppDetailPage() {
   const [renewingExpiry, setRenewingExpiry] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [redirectStatus, setRedirectStatus] = useState<
+    'idle' | 'loading' | 'ok' | 'missing' | 'forbidden' | 'error'
+  >('idle');
+  const [addingRedirect, setAddingRedirect] = useState(false);
+  const [redirectActionError, setRedirectActionError] = useState<string | null>(null);
+
+  const appBrowseUrl = app?.urls?.url?.trim() || '';
+  const appOrigin = useMemo(() => originFromUrl(appBrowseUrl), [appBrowseUrl]);
+
+  const checkRedirectAllowlist = useCallback(
+    async (browseUrl: string) => {
+      if (!accessToken || !isOwner || !browseUrl) {
+        setRedirectStatus('idle');
+        setRedirectActionError(null);
+        return;
+      }
+      setRedirectStatus('loading');
+      setRedirectActionError(null);
+      try {
+        const rows = await fetchOAuthRedirects(accessToken);
+        setRedirectStatus(oauthRedirectCoversOrigin(rows, browseUrl) ? 'ok' : 'missing');
+      } catch (e) {
+        const message = e instanceof Error ? e.message : '';
+        if (/403|forbidden|owner/i.test(message)) {
+          setRedirectStatus('forbidden');
+        } else {
+          setRedirectStatus('error');
+          setRedirectActionError(message || t('hostingRedirectCheckError'));
+        }
+      }
+    },
+    [accessToken, isOwner, t],
+  );
 
   const load = useCallback(async () => {
     if (!accessToken || !hostingBaseUrl || !name) {
@@ -93,6 +134,7 @@ export function HostingAppDetailPage() {
       setApp(null);
       setDeployments([]);
       setError(null);
+      setRedirectStatus('idle');
       return;
     }
     setLoading(true);
@@ -104,18 +146,44 @@ export function HostingAppDetailPage() {
       ]);
       setApp(appResult);
       setDeployments(deploymentsResult);
+      const browseUrl = appResult.urls?.url?.trim() || '';
+      if (browseUrl) {
+        void checkRedirectAllowlist(browseUrl);
+      } else {
+        setRedirectStatus('idle');
+      }
     } catch (e) {
       setApp(null);
       setDeployments([]);
+      setRedirectStatus('idle');
       setError(e instanceof Error ? e.message : t('hostingAppDetailError'));
     } finally {
       setLoading(false);
     }
-  }, [accessToken, hostingBaseUrl, name, t]);
+  }, [accessToken, checkRedirectAllowlist, hostingBaseUrl, name, t]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  async function handleAddLoginRedirect() {
+    if (!accessToken || !appOrigin || addingRedirect || redirectStatus !== 'missing') return;
+    setAddingRedirect(true);
+    setRedirectActionError(null);
+    try {
+      await createOAuthRedirect(accessToken, {
+        base_url: appOrigin,
+        label: app?.display_name || app?.slug || name,
+        source: 'hosting',
+      });
+      setRedirectStatus('ok');
+      shellui.toast({ title: t('hostingRedirectAdded'), type: 'success' });
+    } catch (e) {
+      setRedirectActionError(e instanceof Error ? e.message : t('hostingRedirectAddError'));
+    } finally {
+      setAddingRedirect(false);
+    }
+  }
 
   async function handleRollback(deploymentId: string) {
     if (!accessToken || !hostingBaseUrl || !name || rollingBackId) return;
@@ -338,6 +406,42 @@ export function HostingAppDetailPage() {
       )}
 
       {error && <Text className="font-mono text-sm text-destructive">{error}</Text>}
+
+      {accessToken && !loading && app && appBrowseUrl && redirectStatus === 'missing' ? (
+        <div className="flex flex-col gap-3 rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-2">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
+            <div className="min-w-0 space-y-1">
+              <Text className="text-sm font-medium text-destructive">
+                {t('hostingRedirectMissingTitle')}
+              </Text>
+              <Text className="font-mono text-xs text-destructive/90">
+                {t('hostingRedirectMissingDescription', { origin: appOrigin || appBrowseUrl })}
+              </Text>
+              {redirectActionError ? (
+                <Text className="font-mono text-xs text-destructive">{redirectActionError}</Text>
+              ) : null}
+            </div>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="destructive"
+            className="shrink-0"
+            disabled={addingRedirect || !appOrigin}
+            onClick={() => void handleAddLoginRedirect()}
+          >
+            {addingRedirect ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : null}
+            {addingRedirect ? t('hostingRedirectAdding') : t('hostingRedirectAdd')}
+          </Button>
+        </div>
+      ) : null}
+
+      {accessToken && !loading && app && redirectStatus === 'error' && redirectActionError ? (
+        <Text className="font-mono text-sm text-muted-foreground">
+          {t('hostingRedirectCheckError')}: {redirectActionError}
+        </Text>
+      ) : null}
 
       {accessToken && !loading && app && (
         <Card className="border-border/80 shadow-sm">
