@@ -33,7 +33,7 @@ jobs:
           path: shellui
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           # Repo is checked out under `admin/`; action default package.json is workspace root
           package_json_file: admin/package.json
