@@ -253,7 +253,7 @@ const resources = {
       dashboardTitle: 'Operations overview',
       dashboardEnvBadge: 'shellui-auth',
       dashboardDescription:
-        'Identity figures come from shellui-auth (`GET /api/v1/metrics`). When storage is configured, storage figures come from storage-service (`GET /storage/v1/metrics`). Both require staff or company-owner access.',
+        'Identity figures come from shellui-auth (`GET /api/v1/metrics`). When storage is configured, storage figures come from storage-service (`GET /storage/v1/metrics`). When hosting is configured, hosting figures come from hosting-service (`GET /hosting/v1/metrics`). All require staff or company-owner access.',
       dashboardKpiSection: 'Identity database',
       dashboardStatUsersTotal: 'Users',
       dashboardStatUsersTotalHint: 'Rows in Django auth user table.',
@@ -279,6 +279,7 @@ const resources = {
       dashboardExpositionSourceLabel: 'Endpoint',
       dashboardExpositionSourceIdentity: 'Identity — GET /api/v1/metrics',
       dashboardExpositionSourceStorage: 'Storage — GET /storage/v1/metrics',
+      dashboardExpositionSourceHosting: 'Hosting — GET /hosting/v1/metrics',
       dashboardMetricsEndpointLink: 'Open metrics endpoint',
       dashboardMetricsEndpointHint:
         'This URL expects an Authorization: Bearer header. A new tab may show 401 — copy the link for curl, Prometheus, or Grafana.',
@@ -302,6 +303,22 @@ const resources = {
       dashboardStorageError: 'Could not load storage metrics.',
       dashboardStorageForbidden:
         'Could not load storage metrics (forbidden). You need staff or company-owner access for this company.',
+      dashboardHostingSection: 'Hosting',
+      dashboardHostingBadge: 'hosting-service',
+      dashboardHostingDescription:
+        'Company-scoped apps, deployments, and artifact usage from `GET /hosting/v1/metrics`.',
+      dashboardStatHostingApps: 'Apps',
+      dashboardStatHostingAppsHint: '{{expired}} expired previews.',
+      dashboardStatHostingDeployments: 'Deployments',
+      dashboardStatHostingDeploymentsHint: '{{active}} currently active.',
+      dashboardStatHostingArtifacts: 'Artifacts',
+      dashboardStatHostingArtifactsHint: 'Total uploaded artifact bytes.',
+      dashboardStatHostingDeploys: 'Deploys (7d)',
+      dashboardStatHostingDeploysHint: '{{today}} in the last 24 hours.',
+      dashboardHostingLoading: 'Loading hosting metrics…',
+      dashboardHostingError: 'Could not load hosting metrics.',
+      dashboardHostingForbidden:
+        'Could not load hosting metrics (forbidden). You need staff or company-owner access for this company.',
       dashboardNoSession: 'Waiting for shell session… Open Admin from Shellui while signed in.',
       dashboardUiHint:
         'Later you can let operators pick cards and queries; for now this page mirrors the guarded metrics route.',
@@ -849,7 +866,7 @@ const resources = {
       dashboardTitle: 'Vue opérations',
       dashboardEnvBadge: 'shellui-auth',
       dashboardDescription:
-        'Les chiffres d’identité viennent de shellui-auth (`GET /api/v1/metrics`). Si le stockage est configuré, les chiffres de stockage viennent de storage-service (`GET /storage/v1/metrics`). Les deux exigent le staff ou un propriétaire d’entreprise.',
+        'Les chiffres d’identité viennent de shellui-auth (`GET /api/v1/metrics`). Si le stockage est configuré, les chiffres de stockage viennent de storage-service (`GET /storage/v1/metrics`). Si l’hébergement est configuré, les chiffres d’hébergement viennent de hosting-service (`GET /hosting/v1/metrics`). Tous exigent le staff ou un propriétaire d’entreprise.',
       dashboardKpiSection: 'Base identités',
       dashboardStatUsersTotal: 'Utilisateurs',
       dashboardStatUsersTotalHint: 'Lignes dans la table utilisateurs Django.',
@@ -875,6 +892,7 @@ const resources = {
       dashboardExpositionSourceLabel: 'Point d’accès',
       dashboardExpositionSourceIdentity: 'Identité — GET /api/v1/metrics',
       dashboardExpositionSourceStorage: 'Stockage — GET /storage/v1/metrics',
+      dashboardExpositionSourceHosting: 'Hébergement — GET /hosting/v1/metrics',
       dashboardMetricsEndpointLink: 'Ouvrir le point métriques',
       dashboardMetricsEndpointHint:
         'Cette URL attend un en-tête Authorization: Bearer. Un nouvel onglet peut afficher 401 — copiez le lien pour curl, Prometheus ou Grafana.',
@@ -898,6 +916,22 @@ const resources = {
       dashboardStorageError: 'Impossible de charger les métriques de stockage.',
       dashboardStorageForbidden:
         'Impossible de charger les métriques de stockage (interdit). Il faut le staff Django ou être propriétaire de l’entreprise pour cette société.',
+      dashboardHostingSection: 'Hébergement',
+      dashboardHostingBadge: 'hosting-service',
+      dashboardHostingDescription:
+        'Applications, déploiements et artefacts de l’entreprise via `GET /hosting/v1/metrics`.',
+      dashboardStatHostingApps: 'Applications',
+      dashboardStatHostingAppsHint: '{{expired}} aperçus expirés.',
+      dashboardStatHostingDeployments: 'Déploiements',
+      dashboardStatHostingDeploymentsHint: '{{active}} actuellement actifs.',
+      dashboardStatHostingArtifacts: 'Artefacts',
+      dashboardStatHostingArtifactsHint: 'Total des octets d’artefacts téléversés.',
+      dashboardStatHostingDeploys: 'Déploiements (7j)',
+      dashboardStatHostingDeploysHint: '{{today}} sur 24 h.',
+      dashboardHostingLoading: 'Chargement des métriques d’hébergement…',
+      dashboardHostingError: 'Impossible de charger les métriques d’hébergement.',
+      dashboardHostingForbidden:
+        'Impossible de charger les métriques d’hébergement (interdit). Il faut le staff Django ou être propriétaire de l’entreprise pour cette société.',
       dashboardNoSession:
         'En attente de la session shell… Ouvrez l’admin depuis Shellui en étant connecté.',
       dashboardUiHint:

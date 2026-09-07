@@ -12,10 +12,13 @@ import {
   HardDrive,
   Link2,
   Loader2,
+  Package,
+  Rocket,
   Shield,
   Upload,
   UserCheck,
   Users,
+  AppWindow,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -28,6 +31,12 @@ import {
   type AuthMetricsSnapshot,
 } from '@/lib/authMetricsApi';
 import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
+import {
+  buildHostingPrometheusMetricsUrl,
+  fetchHostingMetricsSnapshot,
+  type HostingMetricsSnapshot,
+} from '@/lib/hostingMetricsApi';
+import { useHostingBaseUrl } from '@/lib/hostingApi';
 import {
   buildStoragePrometheusMetricsUrl,
   fetchStorageMetricsSnapshot,
@@ -70,13 +79,15 @@ function formatInt(n: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.round(n));
 }
 
-type MetricsSourceId = 'identity' | 'storage';
+type MetricsSourceId = 'identity' | 'storage' | 'hosting';
 
 export function DashboardPage() {
   const { t } = useTranslation();
   const accessToken = useShelluiAccessToken();
   const storageBaseUrl = useStorageBaseUrl();
   const storageEnabled = Boolean(storageBaseUrl);
+  const hostingBaseUrl = useHostingBaseUrl();
+  const hostingEnabled = Boolean(hostingBaseUrl);
 
   const [snapshot, setSnapshot] = useState<AuthMetricsSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,6 +96,10 @@ export function DashboardPage() {
   const [storageSnapshot, setStorageSnapshot] = useState<StorageMetricsSnapshot | null>(null);
   const [storageLoading, setStorageLoading] = useState(false);
   const [storageError, setStorageError] = useState<string | null>(null);
+
+  const [hostingSnapshot, setHostingSnapshot] = useState<HostingMetricsSnapshot | null>(null);
+  const [hostingLoading, setHostingLoading] = useState(false);
+  const [hostingError, setHostingError] = useState<string | null>(null);
 
   const [metricsSource, setMetricsSource] = useState<MetricsSourceId>('identity');
 
@@ -142,6 +157,33 @@ export function DashboardPage() {
     [accessToken, storageBaseUrl, t],
   );
 
+  const loadHosting = useCallback(
+    async (opts?: { showLoading?: boolean }) => {
+      if (!accessToken || !hostingBaseUrl) {
+        setHostingLoading(false);
+        setHostingSnapshot(null);
+        setHostingError(null);
+        return;
+      }
+      if (opts?.showLoading) setHostingLoading(true);
+      setHostingError(null);
+      try {
+        setHostingSnapshot(await fetchHostingMetricsSnapshot(hostingBaseUrl, accessToken));
+      } catch (e) {
+        setHostingSnapshot(null);
+        const msg = e instanceof Error ? e.message : t('dashboardHostingError');
+        if (msg === 'Forbidden' || /403/.test(msg)) {
+          setHostingError(t('dashboardHostingForbidden'));
+        } else {
+          setHostingError(msg);
+        }
+      } finally {
+        setHostingLoading(false);
+      }
+    },
+    [accessToken, hostingBaseUrl, t],
+  );
+
   // Refetch only when the session/storage endpoint changes — not on theme/settings pushes.
   useEffect(() => {
     void loadIdentity({ showLoading: true });
@@ -154,6 +196,11 @@ export function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- accessToken + storageBaseUrl only
   }, [accessToken, storageBaseUrl]);
 
+  useEffect(() => {
+    void loadHosting({ showLoading: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- accessToken + hostingBaseUrl only
+  }, [accessToken, hostingBaseUrl]);
+
   const inactive =
     snapshot != null ? Math.max(0, Math.round(snapshot.usersTotal - snapshot.usersActive)) : 0;
 
@@ -162,6 +209,10 @@ export function DashboardPage() {
   const storageMetricsUrl =
     storageEnabled && storageBaseUrl && companyId != null
       ? buildStoragePrometheusMetricsUrl(storageBaseUrl)
+      : null;
+  const hostingMetricsUrl =
+    hostingEnabled && hostingBaseUrl && companyId != null
+      ? buildHostingPrometheusMetricsUrl(hostingBaseUrl)
       : null;
 
   const sources = useMemo(() => {
@@ -182,8 +233,24 @@ export function DashboardPage() {
         rawText: storageSnapshot.rawText,
       });
     }
+    if (hostingSnapshot) {
+      list.push({
+        id: 'hosting',
+        label: t('dashboardExpositionSourceHosting'),
+        url: hostingMetricsUrl,
+        rawText: hostingSnapshot.rawText,
+      });
+    }
     return list;
-  }, [identityMetricsUrl, snapshot, storageMetricsUrl, storageSnapshot, t]);
+  }, [
+    hostingMetricsUrl,
+    hostingSnapshot,
+    identityMetricsUrl,
+    snapshot,
+    storageMetricsUrl,
+    storageSnapshot,
+    t,
+  ]);
 
   useEffect(() => {
     if (sources.length === 0) return;
@@ -350,6 +417,75 @@ export function DashboardPage() {
                 hint={t('dashboardStatStorageUploadsHint', {
                   today: formatInt(storageSnapshot.uploads24h),
                   size: formatBytes(storageSnapshot.bytes7d),
+                })}
+                icon={Upload}
+              />
+            </div>
+          )}
+        </section>
+      )}
+
+      {accessToken && hostingEnabled && (
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-baseline gap-3">
+            <h2 className="font-heading text-lg font-semibold tracking-tight">
+              {t('dashboardHostingSection')}
+            </h2>
+            <Badge
+              variant="secondary"
+              className="font-mono text-[10px] uppercase"
+            >
+              {t('dashboardHostingBadge')}
+            </Badge>
+          </div>
+          <Text className="max-w-3xl font-mono text-sm">{t('dashboardHostingDescription')}</Text>
+
+          {hostingLoading && (
+            <div className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
+              <Loader2
+                className="size-4 animate-spin"
+                aria-hidden
+              />
+              {t('dashboardHostingLoading')}
+            </div>
+          )}
+
+          {hostingError && (
+            <Text className="font-mono text-sm text-destructive">{hostingError}</Text>
+          )}
+
+          {!hostingLoading && !hostingError && hostingSnapshot && (
+            <div
+              className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+              aria-label={t('dashboardHostingSection')}
+            >
+              <StatBlock
+                label={t('dashboardStatHostingApps')}
+                value={formatInt(hostingSnapshot.appsTotal)}
+                hint={t('dashboardStatHostingAppsHint', {
+                  expired: formatInt(hostingSnapshot.appsExpired),
+                })}
+                icon={AppWindow}
+              />
+              <StatBlock
+                label={t('dashboardStatHostingDeployments')}
+                value={formatInt(hostingSnapshot.deploymentsTotal)}
+                hint={t('dashboardStatHostingDeploymentsHint', {
+                  active: formatInt(hostingSnapshot.activeDeployments),
+                })}
+                icon={Rocket}
+              />
+              <StatBlock
+                label={t('dashboardStatHostingArtifacts')}
+                value={formatBytes(hostingSnapshot.artifactBytes)}
+                hint={t('dashboardStatHostingArtifactsHint')}
+                icon={Package}
+              />
+              <StatBlock
+                label={t('dashboardStatHostingDeploys')}
+                value={formatInt(hostingSnapshot.deployments7d)}
+                hint={t('dashboardStatHostingDeploysHint', {
+                  today: formatInt(hostingSnapshot.deployments24h),
                 })}
                 icon={Upload}
               />
