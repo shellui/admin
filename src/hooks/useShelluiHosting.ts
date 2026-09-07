@@ -19,7 +19,7 @@ export function isHostingAdminEnabled(hosting: SettingsHosting | null | undefine
 }
 
 /**
- * Hosting config from the host shell (`hosting` in shellui.config.ts),
+ * Hosting config from the host shell (`hosting` in shellui.config.json),
  * delivered via `SHELLUI_SETTINGS` / `SHELLUI_SETTINGS_UPDATED`.
  */
 export function useShelluiHosting(): SettingsHosting | null {

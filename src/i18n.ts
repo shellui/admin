@@ -10,7 +10,7 @@ const resources = {
       standaloneStepRunShell:
         '1. Start the main Shellui app (for example port 4000) and this dev server with pnpm start in the admin repo (port 5174).',
       standaloneStepConfigure:
-        '2. In the main app’s shellui.config.ts, point the backend admin URL at this Vite server:',
+        '2. In the main app’s shellui.config.json (or .ts), point the backend admin URL at this Vite server:',
       standaloneConfigSnippet: `backend: {
   type: 'shellui',
   url: 'http://localhost:8000',
@@ -35,7 +35,7 @@ const resources = {
       navHostingDjangoAdmin: 'Django admin',
       hostingMissingTitle: 'Hosting URL not configured',
       hostingMissingDescription:
-        'Set hosting.url in shellui.config.json (for example http://localhost:8002). Hide Admin → Hosting with hosting.showInAdmin: false.',
+        'Set hosting.url in shellui.config.json (or .ts) (for example http://localhost:8002). Hide Admin → Hosting with hosting.showInAdmin: false.',
       hostingAppsTitle: 'Hosted apps',
       hostingAppsBadge: 'hosting-service',
       hostingAppsDescription:
@@ -81,6 +81,14 @@ const resources = {
       hostingAppDetailLoading: 'Loading app…',
       hostingAppDetailError: 'Could not load app details.',
       hostingAppNotFound: 'App not found.',
+      hostingRedirectMissingTitle: 'Login will not work for this site',
+      hostingRedirectMissingDescription:
+        'This origin is not on the identity OAuth redirect allow list: {{origin}}. Add it so the hosted shell can complete login.',
+      hostingRedirectAdd: 'Add login redirect',
+      hostingRedirectAdding: 'Adding…',
+      hostingRedirectAdded: 'Login redirect added.',
+      hostingRedirectAddError: 'Could not add login redirect.',
+      hostingRedirectCheckError: 'Could not verify login redirect allow list',
       hostingBackToApps: 'Back to apps',
       hostingDeploymentsTitle: 'Deployment history',
       hostingDeploymentsDescription: 'Past and current deployments for this app.',
@@ -107,7 +115,7 @@ const resources = {
       hostingStatsError: 'Could not load hosting statistics.',
       hostingStatsMissingTitle: 'Hosting URL not configured',
       hostingStatsMissingDescription:
-        'Set hosting.url in shellui.config.ts (for example http://localhost:8002).',
+        'Set hosting.url in shellui.config.json (or .ts) (for example http://localhost:8002).',
       hostingStatsApps: 'Apps',
       hostingStatsDeployments: 'Deployments',
       hostingStatsArtifacts: 'Artifact storage',
@@ -120,7 +128,7 @@ const resources = {
       hostingStatsEmpty: 'No data yet.',
       storageFilesMissingTitle: 'Files explorer not configured',
       storageFilesMissingDescription:
-        'Set storage.filesUrl in shellui.config.ts (for example http://localhost:5175/).',
+        'Set storage.filesUrl in shellui.config.json (or .ts) (for example http://localhost:5175/).',
       storageStatsTitle: 'Storage statistics',
       storageStatsBadge: 'storage-service',
       storageStatsDescription:
@@ -131,7 +139,7 @@ const resources = {
       storageStatsError: 'Could not load storage statistics.',
       storageStatsMissingTitle: 'Storage URL not configured',
       storageStatsMissingDescription:
-        'Set storage.url in shellui.config.ts (for example http://localhost:8001).',
+        'Set storage.url in shellui.config.json (or .ts) (for example http://localhost:8001).',
       storageStatsObjects: 'Objects',
       storageStatsDocuments: 'Documents',
       storageStatsBuckets: 'Buckets',
@@ -171,7 +179,7 @@ const resources = {
       navSidebarExpand: 'Expand sidebar',
       customAppNotFoundTitle: 'Application not found',
       customAppNotFoundDescription:
-        'This admin link is not in the host shell administration navigation. Check shellui.config.ts.',
+        'This admin link is not in the host shell administration navigation. Check shellui.config.json (or .ts).',
       authDocsSwaggerTitle: 'Swagger API docs',
       authDocsRedocTitle: 'ReDoc API docs',
       loginEventsTitle: 'Login audit log',
@@ -245,7 +253,7 @@ const resources = {
       dashboardTitle: 'Operations overview',
       dashboardEnvBadge: 'shellui-auth',
       dashboardDescription:
-        'Identity figures come from shellui-auth (`GET /api/v1/metrics`). When storage is configured, storage figures come from storage-service (`GET /storage/v1/metrics`). Both require staff or company-owner access.',
+        'Identity figures come from shellui-auth (`GET /api/v1/metrics`). When storage is configured, storage figures come from storage-service (`GET /storage/v1/metrics`). When hosting is configured, hosting figures come from hosting-service (`GET /hosting/v1/metrics`). All require staff or company-owner access.',
       dashboardKpiSection: 'Identity database',
       dashboardStatUsersTotal: 'Users',
       dashboardStatUsersTotalHint: 'Rows in Django auth user table.',
@@ -271,6 +279,7 @@ const resources = {
       dashboardExpositionSourceLabel: 'Endpoint',
       dashboardExpositionSourceIdentity: 'Identity — GET /api/v1/metrics',
       dashboardExpositionSourceStorage: 'Storage — GET /storage/v1/metrics',
+      dashboardExpositionSourceHosting: 'Hosting — GET /hosting/v1/metrics',
       dashboardMetricsEndpointLink: 'Open metrics endpoint',
       dashboardMetricsEndpointHint:
         'This URL expects an Authorization: Bearer header. A new tab may show 401 — copy the link for curl, Prometheus, or Grafana.',
@@ -294,6 +303,22 @@ const resources = {
       dashboardStorageError: 'Could not load storage metrics.',
       dashboardStorageForbidden:
         'Could not load storage metrics (forbidden). You need staff or company-owner access for this company.',
+      dashboardHostingSection: 'Hosting',
+      dashboardHostingBadge: 'hosting-service',
+      dashboardHostingDescription:
+        'Company-scoped apps, deployments, and artifact usage from `GET /hosting/v1/metrics`.',
+      dashboardStatHostingApps: 'Apps',
+      dashboardStatHostingAppsHint: '{{expired}} expired previews.',
+      dashboardStatHostingDeployments: 'Deployments',
+      dashboardStatHostingDeploymentsHint: '{{active}} currently active.',
+      dashboardStatHostingArtifacts: 'Artifacts',
+      dashboardStatHostingArtifactsHint: 'Total uploaded artifact bytes.',
+      dashboardStatHostingDeploys: 'Deploys (7d)',
+      dashboardStatHostingDeploysHint: '{{today}} in the last 24 hours.',
+      dashboardHostingLoading: 'Loading hosting metrics…',
+      dashboardHostingError: 'Could not load hosting metrics.',
+      dashboardHostingForbidden:
+        'Could not load hosting metrics (forbidden). You need staff or company-owner access for this company.',
       dashboardNoSession: 'Waiting for shell session… Open Admin from Shellui while signed in.',
       dashboardUiHint:
         'Later you can let operators pick cards and queries; for now this page mirrors the guarded metrics route.',
@@ -349,6 +374,11 @@ const resources = {
       loginRedirectsAdding: 'Adding…',
       loginRedirectsEmpty:
         'No shell origins yet. Loopback is always allowed for CLI; add each browser shell origin for login.',
+      loginRedirectsHostingTitle: 'Hosting preview redirect URLs',
+      loginRedirectsHostingDescription:
+        'Origins added automatically when you deploy with shellui deploy. Removed when the hosting project is deleted. Managed by hosting-service — usually no action needed.',
+      loginRedirectsHostingEmpty:
+        'No hosted preview origins yet. Deploy with shellui deploy and the site URL appears here for login.',
       loginRedirectsColUrl: 'Base URL',
       loginRedirectsColLabel: 'Label',
       loginRedirectsColActive: 'Active',
@@ -589,7 +619,7 @@ const resources = {
       standaloneStepRunShell:
         '1. Démarrez l’application Shellui principale (par ex. port 4000) et ce serveur de dev avec pnpm start dans le dépôt admin (port 5174).',
       standaloneStepConfigure:
-        '2. Dans shellui.config.ts de l’app principale, indiquez l’URL du serveur Vite pour l’admin :',
+        '2. Dans shellui.config.json (ou .ts) de l’app principale, indiquez l’URL du serveur Vite pour l’admin :',
       standaloneConfigSnippet: `backend: {
   type: 'shellui',
   url: 'http://localhost:8000',
@@ -614,7 +644,7 @@ const resources = {
       navHostingDjangoAdmin: 'Admin Django',
       hostingMissingTitle: 'URL d’hébergement non configurée',
       hostingMissingDescription:
-        'Définissez hosting.url dans shellui.config.json (par ex. http://localhost:8002). Masquez Admin → Hébergement avec hosting.showInAdmin: false.',
+        'Définissez hosting.url dans shellui.config.json (ou .ts) (par ex. http://localhost:8002). Masquez Admin → Hébergement avec hosting.showInAdmin: false.',
       hostingAppsTitle: 'Applications hébergées',
       hostingAppsBadge: 'hosting-service',
       hostingAppsDescription:
@@ -661,6 +691,14 @@ const resources = {
       hostingAppDetailLoading: 'Chargement de l’application…',
       hostingAppDetailError: 'Impossible de charger les détails de l’application.',
       hostingAppNotFound: 'Application introuvable.',
+      hostingRedirectMissingTitle: 'La connexion ne fonctionnera pas pour ce site',
+      hostingRedirectMissingDescription:
+        'Cette origine n’est pas dans la liste blanche des redirections OAuth identity : {{origin}}. Ajoutez-la pour que le shell hébergé puisse se connecter.',
+      hostingRedirectAdd: 'Ajouter la redirection de connexion',
+      hostingRedirectAdding: 'Ajout…',
+      hostingRedirectAdded: 'Redirection de connexion ajoutée.',
+      hostingRedirectAddError: 'Impossible d’ajouter la redirection de connexion.',
+      hostingRedirectCheckError: 'Impossible de vérifier la liste blanche des redirections',
       hostingBackToApps: 'Retour aux applications',
       hostingDeploymentsTitle: 'Historique des déploiements',
       hostingDeploymentsDescription: 'Déploiements passés et actuels pour cette application.',
@@ -687,7 +725,7 @@ const resources = {
       hostingStatsError: 'Impossible de charger les statistiques d’hébergement.',
       hostingStatsMissingTitle: 'URL d’hébergement non configurée',
       hostingStatsMissingDescription:
-        'Définissez hosting.url dans shellui.config.ts (par ex. http://localhost:8002).',
+        'Définissez hosting.url dans shellui.config.json (ou .ts) (par ex. http://localhost:8002).',
       hostingStatsApps: 'Applications',
       hostingStatsDeployments: 'Déploiements',
       hostingStatsArtifacts: 'Stockage artefacts',
@@ -700,7 +738,7 @@ const resources = {
       hostingStatsEmpty: 'Pas encore de données.',
       storageFilesMissingTitle: 'Explorateur de fichiers non configuré',
       storageFilesMissingDescription:
-        'Définissez storage.filesUrl dans shellui.config.ts (par ex. http://localhost:5175/).',
+        'Définissez storage.filesUrl dans shellui.config.json (ou .ts) (par ex. http://localhost:5175/).',
       storageStatsTitle: 'Statistiques de stockage',
       storageStatsBadge: 'storage-service',
       storageStatsDescription:
@@ -712,7 +750,7 @@ const resources = {
       storageStatsError: 'Impossible de charger les statistiques de stockage.',
       storageStatsMissingTitle: 'URL de stockage non configurée',
       storageStatsMissingDescription:
-        'Définissez storage.url dans shellui.config.ts (par ex. http://localhost:8001).',
+        'Définissez storage.url dans shellui.config.json (ou .ts) (par ex. http://localhost:8001).',
       storageStatsObjects: 'Objets',
       storageStatsDocuments: 'Documents',
       storageStatsBuckets: 'Buckets',
@@ -752,7 +790,7 @@ const resources = {
       navSidebarExpand: 'Développer la barre latérale',
       customAppNotFoundTitle: 'Application introuvable',
       customAppNotFoundDescription:
-        'Ce lien admin n’est pas dans la navigation d’administration de l’hôte. Vérifiez shellui.config.ts.',
+        'Ce lien admin n’est pas dans la navigation d’administration de l’hôte. Vérifiez shellui.config.json (ou .ts).',
       authDocsSwaggerTitle: 'Documentation API Swagger',
       authDocsRedocTitle: 'Documentation API ReDoc',
       loginEventsTitle: 'Journal des connexions',
@@ -828,7 +866,7 @@ const resources = {
       dashboardTitle: 'Vue opérations',
       dashboardEnvBadge: 'shellui-auth',
       dashboardDescription:
-        'Les chiffres d’identité viennent de shellui-auth (`GET /api/v1/metrics`). Si le stockage est configuré, les chiffres de stockage viennent de storage-service (`GET /storage/v1/metrics`). Les deux exigent le staff ou un propriétaire d’entreprise.',
+        'Les chiffres d’identité viennent de shellui-auth (`GET /api/v1/metrics`). Si le stockage est configuré, les chiffres de stockage viennent de storage-service (`GET /storage/v1/metrics`). Si l’hébergement est configuré, les chiffres d’hébergement viennent de hosting-service (`GET /hosting/v1/metrics`). Tous exigent le staff ou un propriétaire d’entreprise.',
       dashboardKpiSection: 'Base identités',
       dashboardStatUsersTotal: 'Utilisateurs',
       dashboardStatUsersTotalHint: 'Lignes dans la table utilisateurs Django.',
@@ -854,6 +892,7 @@ const resources = {
       dashboardExpositionSourceLabel: 'Point d’accès',
       dashboardExpositionSourceIdentity: 'Identité — GET /api/v1/metrics',
       dashboardExpositionSourceStorage: 'Stockage — GET /storage/v1/metrics',
+      dashboardExpositionSourceHosting: 'Hébergement — GET /hosting/v1/metrics',
       dashboardMetricsEndpointLink: 'Ouvrir le point métriques',
       dashboardMetricsEndpointHint:
         'Cette URL attend un en-tête Authorization: Bearer. Un nouvel onglet peut afficher 401 — copiez le lien pour curl, Prometheus ou Grafana.',
@@ -877,6 +916,22 @@ const resources = {
       dashboardStorageError: 'Impossible de charger les métriques de stockage.',
       dashboardStorageForbidden:
         'Impossible de charger les métriques de stockage (interdit). Il faut le staff Django ou être propriétaire de l’entreprise pour cette société.',
+      dashboardHostingSection: 'Hébergement',
+      dashboardHostingBadge: 'hosting-service',
+      dashboardHostingDescription:
+        'Applications, déploiements et artefacts de l’entreprise via `GET /hosting/v1/metrics`.',
+      dashboardStatHostingApps: 'Applications',
+      dashboardStatHostingAppsHint: '{{expired}} aperçus expirés.',
+      dashboardStatHostingDeployments: 'Déploiements',
+      dashboardStatHostingDeploymentsHint: '{{active}} actuellement actifs.',
+      dashboardStatHostingArtifacts: 'Artefacts',
+      dashboardStatHostingArtifactsHint: 'Total des octets d’artefacts téléversés.',
+      dashboardStatHostingDeploys: 'Déploiements (7j)',
+      dashboardStatHostingDeploysHint: '{{today}} sur 24 h.',
+      dashboardHostingLoading: 'Chargement des métriques d’hébergement…',
+      dashboardHostingError: 'Impossible de charger les métriques d’hébergement.',
+      dashboardHostingForbidden:
+        'Impossible de charger les métriques d’hébergement (interdit). Il faut le staff Django ou être propriétaire de l’entreprise pour cette société.',
       dashboardNoSession:
         'En attente de la session shell… Ouvrez l’admin depuis Shellui en étant connecté.',
       dashboardUiHint:
@@ -933,6 +988,11 @@ const resources = {
       loginRedirectsAdding: 'Ajout…',
       loginRedirectsEmpty:
         'Aucune origine shell. Le loopback est toujours autorisé pour le CLI ; ajoutez chaque origine shell navigateur pour la connexion.',
+      loginRedirectsHostingTitle: 'URL de retour des previews hébergées',
+      loginRedirectsHostingDescription:
+        'Origines ajoutées automatiquement lors d’un shellui deploy. Retirées à la suppression du projet hosting. Gérées par hosting-service — aucune action requise en général.',
+      loginRedirectsHostingEmpty:
+        'Aucune origine preview hébergée. Déployez avec shellui deploy et l’URL du site apparaît ici pour la connexion.',
       loginRedirectsColUrl: 'URL de base',
       loginRedirectsColLabel: 'Libellé',
       loginRedirectsColActive: 'Actif',

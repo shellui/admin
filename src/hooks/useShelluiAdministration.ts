@@ -7,7 +7,7 @@ function readAdministration(settings: Settings | null | undefined): SettingsAdmi
 }
 
 /**
- * Custom admin navigation from the host shell (`administration` in shellui.config.ts),
+ * Custom admin navigation from the host shell (`administration` in shellui.config.json),
  * delivered via `SHELLUI_SETTINGS` / `SHELLUI_SETTINGS_UPDATED`.
  */
 export function useShelluiAdministration(): SettingsAdministration | null {

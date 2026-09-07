@@ -21,11 +21,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
-## [0.4.0] - Work in progress
+## [0.4.0] - 2026-09-07
 
 ### ✨ Feature
 
+- **Hosting metrics on dashboard:** when hosting is enabled (`hosting.url` / `showInAdmin`), the operations overview loads company-scoped KPIs from `GET /hosting/v1/metrics` (same staff / company-owner gate as identity and storage).
 - **OAuth redirect allowlist:** OAuth setup shows the identity-service callback URL to register on each provider app, plus per-company allowed shell origins (`/api/v1/oauth-redirects`) so token bounces are restricted to approved hosts (loopback always allowed for CLI).
+- **Hosting preview redirects:** OAuth setup shows hosting-managed origins in a separate list (auto-synced on `shellui deploy` / hosting project delete). Hosting app detail warns when the site origin is missing from the allow list and offers a one-click add for company owners.
 
 ### 🔒 Security
 
@@ -35,6 +37,11 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 ### 🚨 Changed
 
 - Provider callback URL helper now points at identity-service (`{identity}/api/v1/oauth/callback`) instead of the shell `/login/callback` route.
+
+### 📚 Documentation
+
+- README covers hosting / storage gating, dashboard metrics sources, OAuth redirect allowlist, and the 0.4.0 release pointer.
+- In-app and code comments prefer `shellui.config.json` (with optional `.ts`) for host config references.
 
 ## [0.3.0] - 2026-08-31
 

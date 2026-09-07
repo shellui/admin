@@ -4,9 +4,37 @@ export type OAuthRedirectRow = {
   id: number;
   base_url: string;
   label: string;
+  source: 'manual' | 'hosting' | string;
   is_active: boolean;
   created_at: string | null;
 };
+
+/** Canonical origin (scheme://host[:port]) for allowlist matching. */
+export function originFromUrl(raw: string): string | null {
+  const s = (raw || '').trim();
+  if (!s) return null;
+  try {
+    const url = new URL(s.includes('://') ? s : `https://${s}`);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    return `${url.protocol}//${url.host}`.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+export function oauthRedirectCoversOrigin(
+  rows: OAuthRedirectRow[],
+  appUrl: string,
+): OAuthRedirectRow | null {
+  const origin = originFromUrl(appUrl);
+  if (!origin) return null;
+  for (const row of rows) {
+    if (!row.is_active) continue;
+    const allowed = originFromUrl(row.base_url);
+    if (allowed && allowed === origin) return row;
+  }
+  return null;
+}
 
 function parseErrorMessage(body: unknown): string | null {
   if (!body || typeof body !== 'object') return null;
@@ -50,7 +78,12 @@ export async function fetchOAuthRedirects(accessToken: string): Promise<OAuthRed
 
 export async function createOAuthRedirect(
   accessToken: string,
-  payload: { base_url: string; label?: string; is_active?: boolean },
+  payload: {
+    base_url: string;
+    label?: string;
+    is_active?: boolean;
+    source?: 'manual' | 'hosting';
+  },
 ): Promise<OAuthRedirectRow> {
   const res = await authFetch('/api/v1/oauth-redirects', accessToken, {
     method: 'POST',
