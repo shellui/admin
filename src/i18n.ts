@@ -10,7 +10,7 @@ const resources = {
       standaloneStepRunShell:
         '1. Start the main Shellui app (for example port 4000) and this dev server with pnpm start in the admin repo (port 5174).',
       standaloneStepConfigure:
-        '2. In the main app’s shellui.config.ts, point the backend admin URL at this Vite server:',
+        '2. In the main app’s shellui.config.json (or .ts), point the backend admin URL at this Vite server:',
       standaloneConfigSnippet: `backend: {
   type: 'shellui',
   url: 'http://localhost:8000',
@@ -35,7 +35,7 @@ const resources = {
       navHostingDjangoAdmin: 'Django admin',
       hostingMissingTitle: 'Hosting URL not configured',
       hostingMissingDescription:
-        'Set hosting.url in shellui.config.json (for example http://localhost:8002). Hide Admin → Hosting with hosting.showInAdmin: false.',
+        'Set hosting.url in shellui.config.json (or .ts) (for example http://localhost:8002). Hide Admin → Hosting with hosting.showInAdmin: false.',
       hostingAppsTitle: 'Hosted apps',
       hostingAppsBadge: 'hosting-service',
       hostingAppsDescription:
@@ -115,7 +115,7 @@ const resources = {
       hostingStatsError: 'Could not load hosting statistics.',
       hostingStatsMissingTitle: 'Hosting URL not configured',
       hostingStatsMissingDescription:
-        'Set hosting.url in shellui.config.ts (for example http://localhost:8002).',
+        'Set hosting.url in shellui.config.json (or .ts) (for example http://localhost:8002).',
       hostingStatsApps: 'Apps',
       hostingStatsDeployments: 'Deployments',
       hostingStatsArtifacts: 'Artifact storage',
@@ -128,7 +128,7 @@ const resources = {
       hostingStatsEmpty: 'No data yet.',
       storageFilesMissingTitle: 'Files explorer not configured',
       storageFilesMissingDescription:
-        'Set storage.filesUrl in shellui.config.ts (for example http://localhost:5175/).',
+        'Set storage.filesUrl in shellui.config.json (or .ts) (for example http://localhost:5175/).',
       storageStatsTitle: 'Storage statistics',
       storageStatsBadge: 'storage-service',
       storageStatsDescription:
@@ -139,7 +139,7 @@ const resources = {
       storageStatsError: 'Could not load storage statistics.',
       storageStatsMissingTitle: 'Storage URL not configured',
       storageStatsMissingDescription:
-        'Set storage.url in shellui.config.ts (for example http://localhost:8001).',
+        'Set storage.url in shellui.config.json (or .ts) (for example http://localhost:8001).',
       storageStatsObjects: 'Objects',
       storageStatsDocuments: 'Documents',
       storageStatsBuckets: 'Buckets',
@@ -179,7 +179,7 @@ const resources = {
       navSidebarExpand: 'Expand sidebar',
       customAppNotFoundTitle: 'Application not found',
       customAppNotFoundDescription:
-        'This admin link is not in the host shell administration navigation. Check shellui.config.ts.',
+        'This admin link is not in the host shell administration navigation. Check shellui.config.json (or .ts).',
       authDocsSwaggerTitle: 'Swagger API docs',
       authDocsRedocTitle: 'ReDoc API docs',
       loginEventsTitle: 'Login audit log',
@@ -619,7 +619,7 @@ const resources = {
       standaloneStepRunShell:
         '1. Démarrez l’application Shellui principale (par ex. port 4000) et ce serveur de dev avec pnpm start dans le dépôt admin (port 5174).',
       standaloneStepConfigure:
-        '2. Dans shellui.config.ts de l’app principale, indiquez l’URL du serveur Vite pour l’admin :',
+        '2. Dans shellui.config.json (ou .ts) de l’app principale, indiquez l’URL du serveur Vite pour l’admin :',
       standaloneConfigSnippet: `backend: {
   type: 'shellui',
   url: 'http://localhost:8000',
@@ -644,7 +644,7 @@ const resources = {
       navHostingDjangoAdmin: 'Admin Django',
       hostingMissingTitle: 'URL d’hébergement non configurée',
       hostingMissingDescription:
-        'Définissez hosting.url dans shellui.config.json (par ex. http://localhost:8002). Masquez Admin → Hébergement avec hosting.showInAdmin: false.',
+        'Définissez hosting.url dans shellui.config.json (ou .ts) (par ex. http://localhost:8002). Masquez Admin → Hébergement avec hosting.showInAdmin: false.',
       hostingAppsTitle: 'Applications hébergées',
       hostingAppsBadge: 'hosting-service',
       hostingAppsDescription:
@@ -725,7 +725,7 @@ const resources = {
       hostingStatsError: 'Impossible de charger les statistiques d’hébergement.',
       hostingStatsMissingTitle: 'URL d’hébergement non configurée',
       hostingStatsMissingDescription:
-        'Définissez hosting.url dans shellui.config.ts (par ex. http://localhost:8002).',
+        'Définissez hosting.url dans shellui.config.json (ou .ts) (par ex. http://localhost:8002).',
       hostingStatsApps: 'Applications',
       hostingStatsDeployments: 'Déploiements',
       hostingStatsArtifacts: 'Stockage artefacts',
@@ -738,7 +738,7 @@ const resources = {
       hostingStatsEmpty: 'Pas encore de données.',
       storageFilesMissingTitle: 'Explorateur de fichiers non configuré',
       storageFilesMissingDescription:
-        'Définissez storage.filesUrl dans shellui.config.ts (par ex. http://localhost:5175/).',
+        'Définissez storage.filesUrl dans shellui.config.json (ou .ts) (par ex. http://localhost:5175/).',
       storageStatsTitle: 'Statistiques de stockage',
       storageStatsBadge: 'storage-service',
       storageStatsDescription:
@@ -750,7 +750,7 @@ const resources = {
       storageStatsError: 'Impossible de charger les statistiques de stockage.',
       storageStatsMissingTitle: 'URL de stockage non configurée',
       storageStatsMissingDescription:
-        'Définissez storage.url dans shellui.config.ts (par ex. http://localhost:8001).',
+        'Définissez storage.url dans shellui.config.json (ou .ts) (par ex. http://localhost:8001).',
       storageStatsObjects: 'Objets',
       storageStatsDocuments: 'Documents',
       storageStatsBuckets: 'Buckets',
@@ -790,7 +790,7 @@ const resources = {
       navSidebarExpand: 'Développer la barre latérale',
       customAppNotFoundTitle: 'Application introuvable',
       customAppNotFoundDescription:
-        'Ce lien admin n’est pas dans la navigation d’administration de l’hôte. Vérifiez shellui.config.ts.',
+        'Ce lien admin n’est pas dans la navigation d’administration de l’hôte. Vérifiez shellui.config.json (ou .ts).',
       authDocsSwaggerTitle: 'Documentation API Swagger',
       authDocsRedocTitle: 'Documentation API ReDoc',
       loginEventsTitle: 'Journal des connexions',

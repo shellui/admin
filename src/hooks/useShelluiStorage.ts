@@ -7,7 +7,7 @@ function readStorage(settings: Settings | null | undefined): SettingsStorage | n
 }
 
 /**
- * Storage config from the host shell (`storage` in shellui.config.ts),
+ * Storage config from the host shell (`storage` in shellui.config.json),
  * delivered via `SHELLUI_SETTINGS` / `SHELLUI_SETTINGS_UPDATED`.
  */
 export function useShelluiStorage(): SettingsStorage | null {

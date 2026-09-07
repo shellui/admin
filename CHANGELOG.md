@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
-## [0.4.0] - Work in progress
+## [0.4.0] - 2026-09-07
 
 ### ✨ Feature
 
@@ -37,6 +37,11 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 ### 🚨 Changed
 
 - Provider callback URL helper now points at identity-service (`{identity}/api/v1/oauth/callback`) instead of the shell `/login/callback` route.
+
+### 📚 Documentation
+
+- README covers hosting / storage gating, dashboard metrics sources, OAuth redirect allowlist, and the 0.4.0 release pointer.
+- In-app and code comments prefer `shellui.config.json` (with optional `.ts`) for host config references.
 
 ## [0.3.0] - 2026-08-31
 
