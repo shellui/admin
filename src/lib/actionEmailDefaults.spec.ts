@@ -62,9 +62,9 @@ describe('actionEmailDefaults', () => {
     const document = { type: 'doc', content: [{ type: 'paragraph' }] };
     expect(
       normalizeEmailTemplate(
-        { subject: 'S', html: '<p>x</p>', document, theme_id: 'shellui-light' },
+        { subject: 'S', html: '<p>x</p>', document, theme_id: 'shellui' },
         'en',
       ),
-    ).toMatchObject({ theme_id: 'shellui-light', document });
+    ).toMatchObject({ theme_id: 'shellui', document });
   });
 });
