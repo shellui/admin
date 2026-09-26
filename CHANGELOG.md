@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased] - 2026-09-26
+
+### ✨ Feature
+
+- **SCIM admin:** company owners configure SCIM base URL, create bearer tokens (secret shown once), and revoke active tokens (`#/scim`).
+- **Magic link toggle:** company owners enable or disable magic link sign-in on `#/company`, with read-only global kill switch and effective status from `GET/PATCH /api/v1/auth-methods`.
+- **Actions module:** reusable `src/features/actions/` UI with rules list/editor (email + webhook), delivery logs + detail/requeue, and TipTap WYSIWYG email templates (en/fr) with iframe preview (`#/actions/rules`, `#/actions/deliveries`).
+
+### 🛠 Improvements
+
+- Action rule create (email): selecting an event auto-loads EN/FR default templates from identity (`/api/v1/actions/events/<event_type>/email-template`, with query-param fallback).
+- Email editor placeholder chips parse `payload_fields`, email context fields, and envelope vars from the events catalog (including URL vars like `data.magic_link_url` with one-click link/button insert).
+- TipTap email editor adds a shared style strip (brand color, button styling, preview width/layout) with inline styles baked into saved HTML for Django send.
+- Action email editor adds **Reset to default** to reload EN/FR templates from event filesystem defaults via the by-event API.
+
+### 🐛 Bug Fixes
+
+- Identity admin API clients accept documented `{ results: [...] }` list envelopes and field names (`event_type`, `action_kind`, SCIM token `name`/UUID `id`, delivery UUIDs).
+
+### 🔒 Security
+
+- Email HTML preview/export sanitizes TipTap output with DOMPurify (allowlisted tags/attributes and safe URL schemes) instead of regex filtering.
+
+### 📚 Documentation
+
+- TipTap chosen over React Email / Unlayer for admin WYSIWYG: exports standalone inline HTML without external assets; React Email remains code-first JSX.
+
 <!---
 ## [Unreleased] - yyyy-mm-dd
 
