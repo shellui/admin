@@ -45,6 +45,19 @@ export function resolveEmailEditorContent(
   return defaultWelcomeEmailHtml(lang);
 }
 
+export function parseEmailDocumentJson(text: string): ActionEmailDocument {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text) as unknown;
+  } catch {
+    throw new Error('Invalid JSON');
+  }
+  if (!isJsonContent(parsed)) {
+    throw new Error('Document must be a TipTap doc with type "doc" and a content array');
+  }
+  return parsed;
+}
+
 export function normalizeEmailTemplate(
   raw: Partial<ActionEmailTemplate> | undefined,
   _lang: ActionEmailLang,
@@ -56,12 +69,13 @@ export function normalizeEmailTemplate(
       : '';
   const html = typeof raw?.html === 'string' ? raw.html : legacyBodyHtml;
   const document = raw && isJsonContent(raw.document) ? raw.document : undefined;
+  const theme_id = typeof raw?.theme_id === 'string' ? raw.theme_id : undefined;
+  const base = { subject, html, ...(theme_id ? { theme_id } : {}) };
   if (hasDocumentContent(document) || html.trim()) {
-    return { subject, html, document };
+    return { ...base, document };
   }
   return {
-    subject,
-    html: '',
+    ...base,
     document: undefined,
   };
 }

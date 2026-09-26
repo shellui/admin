@@ -3,6 +3,7 @@ import {
   defaultWelcomeEmailHtml,
   hasDocumentContent,
   normalizeEmailTemplate,
+  parseEmailDocumentJson,
   resolveEmailEditorContent,
 } from '@/lib/actionEmailDefaults';
 
@@ -46,5 +47,24 @@ describe('actionEmailDefaults', () => {
 
   it('defaultWelcomeEmailHtml includes placeholders', () => {
     expect(defaultWelcomeEmailHtml('fr')).toContain('{{ data.email }}');
+  });
+
+  it('parseEmailDocumentJson validates doc root', () => {
+    const doc = {
+      type: 'doc',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hi' }] }],
+    };
+    expect(parseEmailDocumentJson(JSON.stringify(doc))).toEqual(doc);
+    expect(() => parseEmailDocumentJson('{"type":"paragraph"}')).toThrow();
+  });
+
+  it('normalizeEmailTemplate keeps theme_id and document', () => {
+    const document = { type: 'doc', content: [{ type: 'paragraph' }] };
+    expect(
+      normalizeEmailTemplate(
+        { subject: 'S', html: '<p>x</p>', document, theme_id: 'shellui-light' },
+        'en',
+      ),
+    ).toMatchObject({ theme_id: 'shellui-light', document });
   });
 });

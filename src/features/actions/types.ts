@@ -22,6 +22,8 @@ export type ActionEmailTemplate = {
   subject: string;
   html: string;
   document?: ActionEmailDocument;
+  /** Maps to Shellui appearance light/dark email styling (`shellui-light` | `shellui-dark`). */
+  theme_id?: string;
 };
 
 export type ActionRuleEmailConfig = {

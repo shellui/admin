@@ -114,8 +114,8 @@ export function ActionsRuleEditorPage() {
             setRecipientsText((cfg.recipients ?? []).join(', '));
             setIncludePayloadEmail(cfg.include_payload_email === true);
             const templates = cfg.email_templates ?? {};
-            setTemplateEn(normalizeEmailTemplate(templates.en, 'en'));
-            setTemplateFr(normalizeEmailTemplate(templates.fr, 'fr'));
+            let nextEn = normalizeEmailTemplate(templates.en, 'en');
+            let nextFr = normalizeEmailTemplate(templates.fr, 'fr');
             try {
               const [defEn, defFr] = await Promise.all([
                 api.fetchEmailTemplate(rule.id, 'en'),
@@ -123,14 +123,19 @@ export function ActionsRuleEditorPage() {
               ]);
               if (!cancelled) {
                 if (!templates.en?.html && !templates.en?.document) {
-                  setTemplateEn(normalizeEmailTemplate(defEn, 'en'));
+                  nextEn = normalizeEmailTemplate(defEn, 'en');
                 }
                 if (!templates.fr?.html && !templates.fr?.document) {
-                  setTemplateFr(normalizeEmailTemplate(defFr, 'fr'));
+                  nextFr = normalizeEmailTemplate(defFr, 'fr');
                 }
               }
             } catch {
               /* defaults optional */
+            }
+            if (!cancelled) {
+              setTemplateEn(nextEn);
+              setTemplateFr(nextFr);
+              setTemplateContentRevision((r) => r + 1);
             }
           } else {
             const cfg = rule.config as ActionRuleWebhookConfig;
@@ -249,6 +254,14 @@ export function ActionsRuleEditorPage() {
           enabled,
           config,
         });
+        if (kind === 'email') {
+          const refreshed = await api.fetchRule(numericId);
+          const cfg = refreshed.config as ActionRuleEmailConfig;
+          const templates = cfg.email_templates ?? {};
+          setTemplateEn(normalizeEmailTemplate(templates.en, 'en'));
+          setTemplateFr(normalizeEmailTemplate(templates.fr, 'fr'));
+          setTemplateContentRevision((r) => r + 1);
+        }
       }
     } catch (e) {
       setError(e);

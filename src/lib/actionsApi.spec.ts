@@ -128,6 +128,28 @@ describe('actionsApi parsers', () => {
     expect(parsed.results[0].attempts_count).toBe(2);
   });
 
+  it('toIdentityRuleWriteBody includes document and theme_id', () => {
+    const document = { type: 'doc', content: [{ type: 'paragraph' }] };
+    const body = toIdentityRuleWriteBody({
+      name: 'Ops',
+      event: 'identity.user.created',
+      kind: 'email',
+      config: {
+        recipients: ['ops@example.com'],
+        email_templates: {
+          en: { subject: 'Hi', html: '<p>x</p>', document, theme_id: 'shellui-light' },
+        },
+      },
+    });
+    const templates = body.email_templates as Record<string, unknown>;
+    expect(templates.en).toEqual({
+      subject: 'Hi',
+      html: '<p>x</p>',
+      document,
+      theme_id: 'shellui-light',
+    });
+  });
+
   it('toIdentityRuleWriteBody flattens email rule for POST', () => {
     const body = toIdentityRuleWriteBody({
       name: 'Ops',
