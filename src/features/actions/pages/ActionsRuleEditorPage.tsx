@@ -10,7 +10,11 @@ import { Text } from '@/components/ui/text';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
 import { ActionsSubNav } from '@/features/actions/components/ActionsSubNav';
-import { EmailTemplateEditor } from '@/features/actions/components/EmailTemplateEditor';
+import {
+  ReactEmailActionEditor,
+  type ReactEmailActionEditorHandle,
+} from '@/features/actions/components/ReactEmailActionEditor';
+import { emptyActionEmailTemplate, normalizeEmailTemplate } from '@/lib/actionEmailDefaults';
 import {
   ApiUnavailableNotice,
   isApiUnavailableError,
@@ -24,7 +28,7 @@ import type {
   ActionRuleWebhookConfig,
 } from '@/features/actions/types';
 
-const emptyTemplate = (): ActionEmailTemplate => ({ subject: '', body_html: '<p></p>' });
+const emptyTemplate = emptyActionEmailTemplate;
 
 function parseRecipients(text: string): string[] {
   return text
@@ -64,6 +68,8 @@ export function ActionsRuleEditorPage() {
   const [resetTemplatesLoading, setResetTemplatesLoading] = useState(false);
   const [templateFetchError, setTemplateFetchError] = useState<string | null>(null);
   const initialEventRef = useRef<string | null>(null);
+  const emailEditorRef = useRef<ReactEmailActionEditorHandle | null>(null);
+  const [templateContentRevision, setTemplateContentRevision] = useState(0);
 
   const selectedEvent = useMemo(
     () => events.find((e) => e.key === eventKey) ?? null,
@@ -108,16 +114,20 @@ export function ActionsRuleEditorPage() {
             setRecipientsText((cfg.recipients ?? []).join(', '));
             setIncludePayloadEmail(cfg.include_payload_email === true);
             const templates = cfg.email_templates ?? {};
-            setTemplateEn(templates.en ?? emptyTemplate());
-            setTemplateFr(templates.fr ?? emptyTemplate());
+            setTemplateEn(normalizeEmailTemplate(templates.en, 'en'));
+            setTemplateFr(normalizeEmailTemplate(templates.fr, 'fr'));
             try {
               const [defEn, defFr] = await Promise.all([
                 api.fetchEmailTemplate(rule.id, 'en'),
                 api.fetchEmailTemplate(rule.id, 'fr'),
               ]);
               if (!cancelled) {
-                if (!templates.en?.body_html) setTemplateEn(defEn);
-                if (!templates.fr?.body_html) setTemplateFr(defFr);
+                if (!templates.en?.html && !templates.en?.document) {
+                  setTemplateEn(normalizeEmailTemplate(defEn, 'en'));
+                }
+                if (!templates.fr?.html && !templates.fr?.document) {
+                  setTemplateFr(normalizeEmailTemplate(defFr, 'fr'));
+                }
               }
             } catch {
               /* defaults optional */
@@ -156,8 +166,9 @@ export function ActionsRuleEditorPage() {
           api.fetchDefaultEmailTemplate(eventKey, 'fr'),
         ]);
         if (cancelled) return;
-        setTemplateEn(defEn);
-        setTemplateFr(defFr);
+        setTemplateEn(normalizeEmailTemplate(defEn, 'en'));
+        setTemplateFr(normalizeEmailTemplate(defFr, 'fr'));
+        setTemplateContentRevision((r) => r + 1);
       } catch (e) {
         if (!cancelled) {
           setTemplateFetchError(
@@ -184,8 +195,9 @@ export function ActionsRuleEditorPage() {
         api.fetchDefaultEmailTemplate(eventKey, 'en'),
         api.fetchDefaultEmailTemplate(eventKey, 'fr'),
       ]);
-      setTemplateEn(defEn);
-      setTemplateFr(defFr);
+      setTemplateEn(normalizeEmailTemplate(defEn, 'en'));
+      setTemplateFr(normalizeEmailTemplate(defFr, 'fr'));
+      setTemplateContentRevision((r) => r + 1);
     } catch (e) {
       setTemplateFetchError(e instanceof Error ? e.message : t('actionsEmailTemplateLoadError'));
     } finally {
@@ -198,12 +210,16 @@ export function ActionsRuleEditorPage() {
     setSaving(true);
     setError(null);
     try {
+      let emailTemplates = { en: templateEn, fr: templateFr };
+      if (kind === 'email' && emailEditorRef.current) {
+        emailTemplates = await emailEditorRef.current.compileAll();
+      }
       const config =
         kind === 'email'
           ? ({
               recipients: parseRecipients(recipientsText),
               include_payload_email: includePayloadEmail,
-              email_templates: { en: templateEn, fr: templateFr },
+              email_templates: emailTemplates,
             } satisfies ActionRuleEmailConfig)
           : ({
               url: webhookUrl.trim(),
@@ -413,12 +429,14 @@ export function ActionsRuleEditorPage() {
                     {templateFetchError}
                   </Text>
                 ) : null}
-                <EmailTemplateEditor
+                <ReactEmailActionEditor
+                  ref={emailEditorRef}
                   templateVariables={selectedEvent?.template_variables}
                   valueEn={templateEn}
                   valueFr={templateFr}
                   onChangeEn={setTemplateEn}
                   onChangeFr={setTemplateFr}
+                  contentRevision={templateContentRevision}
                   disabled={templatesLoading || resetTemplatesLoading || saving}
                   showResetToDefault={Boolean(eventKey.trim())}
                   resetLoading={resetTemplatesLoading}

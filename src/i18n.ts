@@ -683,22 +683,22 @@ const resources = {
       actionsEmailIncludePayloadHelp:
         'When the event includes an email address (usually the user), send a copy there as well as any fixed recipients. Has no effect if this event has no email field.',
       actionsEmailSubjectLabel: 'Subject ({{lang}})',
-      actionsEmailStyleTitle: 'Email style',
-      actionsEmailStyleBrandColor: 'Brand color',
-      actionsEmailStyleButtonText: 'Button text color',
-      actionsEmailStyleRadius: 'Button corner radius (px)',
-      actionsEmailStyleWidth: 'Content width (px)',
-      actionsEmailStylePageBg: 'Preview page background',
-      actionsEmailStyleLayout: 'Preview layout',
-      actionsEmailStyleLayoutFlat: 'Flat',
-      actionsEmailStyleLayoutCard: 'Card',
-      actionsEmailStyleLinkBrand: 'Use brand color for new text links',
-      actionsEmailStyleApplyButtons: 'Apply brand to existing buttons',
-      actionsEmailStyleHint:
-        'Button colors are saved inside the HTML. Preview background and card layout affect preview only unless you add similar wrappers in the body.',
+      actionsEmailDocumentLabel: 'Email body',
+      actionsEmailThemeLabel: 'Email theme',
+      actionsEmailThemeBasic: 'Basic',
+      actionsEmailThemeMinimal: 'Minimal',
+      actionsEmailThemeShellui: 'Shellui brand',
+      actionsEmailThemeHelp:
+        'Themes style headings, links, and buttons in the compiled HTML. Shellui uses your workspace accent sparingly.',
+      actionsEmailRebakeNotice:
+        'Changing theme or resetting to the default re-bakes HTML. Messages already sent keep the previous HTML.',
+      actionsEmailSaveThemeHint: 'Save to apply theme to this action’s email.',
       actionsEmailPreview: 'HTML preview',
-      actionsEmailPreviewHint: 'Preview uses inline styles only. No external CSS or JavaScript.',
-      actionsEmailPlaceholders: 'Insert template variables',
+      actionsEmailPreviewHint:
+        'Live preview of compiled email HTML from React Email. No scripts run in this frame.',
+      actionsEmailPlaceholders: 'Template variables',
+      actionsEmailPlaceholdersHelp:
+        'Inserts literal placeholders (for example {{ magic_link_url }}) at the cursor.',
       actionsEmailLinkPrompt: 'Link URL',
       actionsEmailButtonUrlPrompt: 'Button link URL',
       actionsEmailButtonLabelPrompt: 'Button label',
@@ -722,7 +722,7 @@ const resources = {
       actionsEmailInsertLinkShort: 'Link',
       actionsEmailInsertButtonShort: 'Btn',
       actionsEmailEditorNote:
-        'TipTap exports email-safe HTML for identity to send. React Email is code-first and not a WYSIWYG surface for admins.',
+        'Identity stores JSON and compiled HTML. Django sends the saved HTML; edit here when copy or layout changes.',
       actionsWebhookConfigTitle: 'Webhook delivery',
       actionsWebhookConfigDescription: 'Identity POSTs signed payloads to your HTTPS endpoint.',
       actionsWebhookSecret: 'Signing secret',
@@ -1472,23 +1472,22 @@ const resources = {
       actionsEmailIncludePayloadHelp:
         'Si l’événement contient une adresse e-mail (souvent celle de l’utilisateur), envoie une copie à cette adresse en plus des destinataires fixes. Sans effet si cet événement n’a pas de champ e-mail.',
       actionsEmailSubjectLabel: 'Objet ({{lang}})',
-      actionsEmailStyleTitle: 'Style e-mail',
-      actionsEmailStyleBrandColor: 'Couleur de marque',
-      actionsEmailStyleButtonText: 'Couleur du texte du bouton',
-      actionsEmailStyleRadius: 'Rayon des coins du bouton (px)',
-      actionsEmailStyleWidth: 'Largeur du contenu (px)',
-      actionsEmailStylePageBg: 'Fond de page (aperçu)',
-      actionsEmailStyleLayout: 'Mise en page (aperçu)',
-      actionsEmailStyleLayoutFlat: 'Plat',
-      actionsEmailStyleLayoutCard: 'Carte',
-      actionsEmailStyleLinkBrand: 'Couleur de marque pour les nouveaux liens texte',
-      actionsEmailStyleApplyButtons: 'Appliquer la marque aux boutons existants',
-      actionsEmailStyleHint:
-        'Les couleurs des boutons sont enregistrées dans le HTML. Le fond et la carte n’affectent que l’aperçu, sauf si vous ajoutez des wrappers similaires dans le corps.',
+      actionsEmailDocumentLabel: 'Corps du message',
+      actionsEmailThemeLabel: 'Thème e-mail',
+      actionsEmailThemeBasic: 'Basique',
+      actionsEmailThemeMinimal: 'Minimal',
+      actionsEmailThemeShellui: 'Marque Shellui',
+      actionsEmailThemeHelp:
+        'Les thèmes stylent titres, liens et boutons dans le HTML compilé. Shellui reprend l’accent du workspace avec parcimonie.',
+      actionsEmailRebakeNotice:
+        'Changer de thème ou réinitialiser au modèle par défaut recompile le HTML. Les envois déjà faits conservent l’ancien HTML.',
+      actionsEmailSaveThemeHint: 'Enregistrez pour appliquer le thème à l’e-mail de cette action.',
       actionsEmailPreview: 'Aperçu HTML',
       actionsEmailPreviewHint:
-        'L’aperçu n’utilise que des styles inline. Pas de CSS ou JS externe.',
-      actionsEmailPlaceholders: 'Insérer des variables de modèle',
+        'Aperçu en direct du HTML compilé par React Email. Aucun script dans ce cadre.',
+      actionsEmailPlaceholders: 'Variables de modèle',
+      actionsEmailPlaceholdersHelp:
+        'Insère des placeholders littéraux (par ex. {{ magic_link_url }}) à la position du curseur.',
       actionsEmailLinkPrompt: 'URL du lien',
       actionsEmailButtonUrlPrompt: 'URL du bouton',
       actionsEmailButtonLabelPrompt: 'Libellé du bouton',
@@ -1513,7 +1512,7 @@ const resources = {
       actionsEmailInsertLinkShort: 'Lien',
       actionsEmailInsertButtonShort: 'Btn',
       actionsEmailEditorNote:
-        'TipTap exporte du HTML compatible e-mail pour identity. React Email est orienté code, pas WYSIWYG pour les admins.',
+        'Identity enregistre le JSON et le HTML compilé. Django envoie le HTML enregistré ; modifiez ici pour le texte ou la mise en page.',
       actionsWebhookConfigTitle: 'Livraison webhook',
       actionsWebhookConfigDescription:
         'Identity envoie des payloads signés vers votre endpoint HTTPS.',

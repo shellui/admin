@@ -27,14 +27,23 @@ describe('actionsApi parsers', () => {
   it('parseEmailTemplate maps identity html field', () => {
     expect(parseEmailTemplate({ subject: 'Hi', html: '<p>a</p>' })).toEqual({
       subject: 'Hi',
-      body_html: '<p>a</p>',
+      html: '<p>a</p>',
     });
   });
 
   it('parseEmailTemplate still accepts body_html', () => {
     expect(parseEmailTemplate({ subject: 'Hi', body_html: '<p>a</p>' })).toEqual({
       subject: 'Hi',
-      body_html: '<p>a</p>',
+      html: '<p>a</p>',
+    });
+  });
+
+  it('parseEmailTemplate maps document json', () => {
+    const document = { type: 'doc', content: [{ type: 'paragraph' }] };
+    expect(parseEmailTemplate({ subject: 'Hi', html: '<p>a</p>', document })).toEqual({
+      subject: 'Hi',
+      html: '<p>a</p>',
+      document,
     });
   });
 
@@ -128,7 +137,7 @@ describe('actionsApi parsers', () => {
         recipients: ['ops@example.com'],
         include_payload_email: true,
         email_templates: {
-          en: { subject: 'Hi', body_html: '<p>x</p>' },
+          en: { subject: 'Hi', html: '<p>x</p>' },
         },
       },
     });
