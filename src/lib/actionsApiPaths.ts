@@ -15,3 +15,21 @@ export function eventDefaultEmailTemplateRequest(
     },
   ];
 }
+
+/** Batch default templates: `languages` query is comma-separated (e.g. `en,fr`). */
+export function eventDefaultEmailTemplatesBatchRequest(
+  eventType: string,
+  languagesCsv: string,
+): { path: string; query: Record<string, string> }[] {
+  const encoded = encodeURIComponent(eventType);
+  return [
+    {
+      path: `/api/v1/actions/events/${encoded}/email-template`,
+      query: { languages: languagesCsv },
+    },
+    {
+      path: '/api/v1/actions/email-template',
+      query: { event_type: eventType, languages: languagesCsv },
+    },
+  ];
+}

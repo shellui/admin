@@ -166,13 +166,10 @@ export function ActionsRuleEditorPage() {
     setTemplateFetchError(null);
     void (async () => {
       try {
-        const [defEn, defFr] = await Promise.all([
-          api.fetchDefaultEmailTemplate(eventKey, 'en'),
-          api.fetchDefaultEmailTemplate(eventKey, 'fr'),
-        ]);
+        const defaults = await api.fetchDefaultEmailTemplates(eventKey, ['en', 'fr']);
         if (cancelled) return;
-        setTemplateEn(normalizeEmailTemplate(defEn, 'en'));
-        setTemplateFr(normalizeEmailTemplate(defFr, 'fr'));
+        setTemplateEn(normalizeEmailTemplate(defaults.en, 'en'));
+        setTemplateFr(normalizeEmailTemplate(defaults.fr, 'fr'));
         setTemplateContentRevision((r) => r + 1);
       } catch (e) {
         if (!cancelled) {
@@ -196,12 +193,9 @@ export function ActionsRuleEditorPage() {
     setResetTemplatesLoading(true);
     setTemplateFetchError(null);
     try {
-      const [defEn, defFr] = await Promise.all([
-        api.fetchDefaultEmailTemplate(eventKey, 'en'),
-        api.fetchDefaultEmailTemplate(eventKey, 'fr'),
-      ]);
-      setTemplateEn(normalizeEmailTemplate(defEn, 'en'));
-      setTemplateFr(normalizeEmailTemplate(defFr, 'fr'));
+      const defaults = await api.fetchDefaultEmailTemplates(eventKey, ['en', 'fr']);
+      setTemplateEn(normalizeEmailTemplate(defaults.en, 'en'));
+      setTemplateFr(normalizeEmailTemplate(defaults.fr, 'fr'));
       setTemplateContentRevision((r) => r + 1);
     } catch (e) {
       setTemplateFetchError(e instanceof Error ? e.message : t('actionsEmailTemplateLoadError'));

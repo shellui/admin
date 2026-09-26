@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { eventDefaultEmailTemplateRequest } from '@/lib/actionsApiPaths';
+import {
+  eventDefaultEmailTemplateRequest,
+  eventDefaultEmailTemplatesBatchRequest,
+} from '@/lib/actionsApiPaths';
 import {
   buildEventTemplateVariables,
   isUrlLikeTemplateField,
+  parseDefaultEmailTemplatesBatch,
   parseDeliveriesList,
   parseEmailTemplate,
   parseEventsList,
@@ -23,7 +27,33 @@ describe('eventDefaultEmailTemplateRequest', () => {
   });
 });
 
+describe('eventDefaultEmailTemplatesBatchRequest', () => {
+  it('uses languages query on event and fallback paths', () => {
+    const attempts = eventDefaultEmailTemplatesBatchRequest('identity.user.created', 'en,fr');
+    expect(attempts[0].query).toEqual({ languages: 'en,fr' });
+    expect(attempts[1]).toEqual({
+      path: '/api/v1/actions/email-template',
+      query: { event_type: 'identity.user.created', languages: 'en,fr' },
+    });
+  });
+});
+
 describe('actionsApi parsers', () => {
+  it('parseDefaultEmailTemplatesBatch maps templates by language', () => {
+    const document = { type: 'doc', content: [{ type: 'paragraph' }] };
+    const parsed = parseDefaultEmailTemplatesBatch(
+      {
+        templates: {
+          en: { subject: 'Hi', html: '<p>en</p>', document },
+          fr: { subject: 'Salut', html: '<p>fr</p>' },
+        },
+      },
+      ['en', 'fr'],
+    );
+    expect(parsed.en).toEqual({ subject: 'Hi', html: '<p>en</p>', document });
+    expect(parsed.fr).toEqual({ subject: 'Salut', html: '<p>fr</p>' });
+  });
+
   it('parseEmailTemplate maps identity html field', () => {
     expect(parseEmailTemplate({ subject: 'Hi', html: '<p>a</p>' })).toEqual({
       subject: 'Hi',

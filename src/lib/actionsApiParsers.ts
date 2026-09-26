@@ -239,6 +239,33 @@ function parseEventEntry(raw: unknown): ActionEventCatalogEntry {
   };
 }
 
+export type ActionEmailTemplateLang = 'en' | 'fr';
+
+export type ActionEmailTemplatesMap = Partial<Record<ActionEmailTemplateLang, ActionEmailTemplate>>;
+
+export function parseDefaultEmailTemplatesBatch(
+  body: unknown,
+  languages: readonly ActionEmailTemplateLang[],
+): ActionEmailTemplatesMap {
+  if (!body || typeof body !== 'object') {
+    throw new Error('Unexpected batch email template response.');
+  }
+  const root = body as Record<string, unknown>;
+  const templatesRaw = root.templates;
+  if (!templatesRaw || typeof templatesRaw !== 'object') {
+    throw new Error('Unexpected batch email template response.');
+  }
+  const map = templatesRaw as Record<string, unknown>;
+  const out: ActionEmailTemplatesMap = {};
+  for (const lang of languages) {
+    const entry = map[lang];
+    if (entry && typeof entry === 'object') {
+      out[lang] = parseEmailTemplate(entry);
+    }
+  }
+  return out;
+}
+
 export function parseEmailTemplate(body: unknown): ActionEmailTemplate {
   if (!body || typeof body !== 'object') {
     throw new Error('Unexpected email template response.');
