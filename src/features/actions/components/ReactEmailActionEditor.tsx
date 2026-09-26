@@ -15,13 +15,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { useTheme } from '@/contexts/ThemeContext';
-import { resolveEmailEditorContent, type ActionEmailLang } from '@/lib/actionEmailDefaults';
-import { actionEmailThemeInput, type ActionEmailThemeChoice } from '@/lib/actionEmailTheme';
+import {
+  parseEmailDocumentJson,
+  resolveEmailEditorContent,
+  type ActionEmailLang,
+} from '@/lib/actionEmailDefaults';
+import {
+  actionEmailThemeInput,
+  resolveStoredThemeId,
+  themeIdFromAppearance,
+  type ActionEmailThemeId,
+} from '@/lib/actionEmailTheme';
 import type { ActionEmailDocument } from '@/features/actions/emailDocument';
 import type { ActionEmailTemplate, ActionTemplateVariable } from '@/features/actions/types';
 import { cn } from '@/lib/utils';
 
 type LangTab = ActionEmailLang;
+type EditorSurfaceMode = 'visual' | 'raw';
 
 export type ReactEmailActionEditorHandle = {
   compileAll: () => Promise<{ en: ActionEmailTemplate; fr: ActionEmailTemplate }>;
@@ -43,38 +53,52 @@ type Props = {
 async function compileTemplate(
   ref: EmailEditorRef | null,
   subject: string,
+  theme_id: ActionEmailThemeId,
 ): Promise<ActionEmailTemplate> {
-  if (!ref) return { subject, html: '' };
+  if (!ref) return { subject, html: '', theme_id };
   const document = ref.getJSON() as ActionEmailDocument;
   const html = await ref.getEmailHTML();
-  return { subject, document, html };
+  return { subject, document, html, theme_id };
 }
 
-function EmailEditorPane({
+function LangEditorSurface({
   lang,
-  subject,
   template,
-  onSubjectChange,
   onTemplateChange,
-  templateVariables,
   themeInput,
+  themeId,
   editorKey,
   disabled,
   editorRef,
+  surfaceMode,
+  rawDraft,
+  onRawDraftChange,
+  rawError,
+  onRawError,
 }: {
   lang: LangTab;
-  subject: string;
   template: ActionEmailTemplate;
-  onSubjectChange: (subject: string) => void;
   onTemplateChange: (next: ActionEmailTemplate) => void;
-  templateVariables?: ActionTemplateVariable[];
   themeInput: ReturnType<typeof actionEmailThemeInput>;
+  themeId: ActionEmailThemeId;
   editorKey: string;
   disabled?: boolean;
   editorRef: React.MutableRefObject<EmailEditorRef | null>;
+  surfaceMode: EditorSurfaceMode;
+  rawDraft: string;
+  onRawDraftChange: (value: string) => void;
+  rawError: string | null;
+  onRawError: (message: string | null) => void;
 }) {
   const { t } = useTranslation();
   const [previewHtml, setPreviewHtml] = useState('');
+  const syncGenerationRef = useRef(editorKey);
+
+  useEffect(() => {
+    syncGenerationRef.current = editorKey;
+    editorRef.current = null;
+  }, [editorKey, editorRef]);
+
   const content = useMemo(() => resolveEmailEditorContent(template, lang), [lang, template]);
 
   const refreshPreview = useCallback(async (ref: EmailEditorRef | null) => {
@@ -90,107 +114,113 @@ function EmailEditorPane({
   }, []);
 
   const syncTemplate = useCallback(
-    async (ref: EmailEditorRef) => {
-      const next = await compileTemplate(ref, subject);
-      onTemplateChange(next);
+    async (ref: EmailEditorRef, generation: string) => {
+      if (generation !== syncGenerationRef.current) return;
+      const next = await compileTemplate(ref, template.subject, themeId);
+      if (generation !== syncGenerationRef.current) return;
+      onTemplateChange({ ...next, theme_id: themeId });
       await refreshPreview(ref);
     },
-    [onTemplateChange, refreshPreview, subject],
+    [onTemplateChange, refreshPreview, template.subject, themeId],
   );
 
   useEffect(() => {
     void refreshPreview(editorRef.current);
-  }, [editorKey, editorRef, refreshPreview, themeInput]);
+  }, [editorKey, editorRef, refreshPreview, themeInput, surfaceMode]);
 
-  const insertVariable = useCallback(
-    (token: string) => {
+  const applyRawDocument = useCallback(() => {
+    onRawError(null);
+    try {
+      const document = parseEmailDocumentJson(rawDraft);
       const editor = editorRef.current?.editor;
-      if (!editor) return;
-      editor.chain().focus().insertContent(`{{ ${token} }}`).run();
-    },
-    [editorRef],
-  );
+      if (!editor) {
+        onRawError(t('actionsEmailRawEditorNotReady'));
+        return;
+      }
+      editor.commands.setContent(document, { emitUpdate: true });
+      void (async () => {
+        const ref = editorRef.current;
+        if (!ref) return;
+        await syncTemplate(ref, syncGenerationRef.current);
+      })();
+    } catch (e) {
+      onRawError(e instanceof Error ? e.message : t('actionsEmailRawInvalid'));
+    }
+  }, [editorRef, onRawError, rawDraft, syncTemplate, t]);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <div className="space-y-3">
-        <label className="block space-y-1">
-          <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-            {t('actionsEmailSubjectLabel', { lang })}
-          </span>
-          <Input
-            value={subject}
-            disabled={disabled}
-            className="font-mono text-sm"
-            onChange={(e) => onSubjectChange(e.target.value)}
+    <div className="grid min-h-[28rem] gap-4 lg:grid-cols-2 lg:items-start">
+      <div className="flex min-h-[28rem] flex-col space-y-2">
+        <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+          {surfaceMode === 'visual' ? t('actionsEmailDocumentLabel') : t('actionsEmailRawLabel')}
+        </p>
+        <div
+          className={cn(
+            'min-h-[26rem] flex-1 overflow-hidden rounded-md border border-border/80 bg-background',
+            surfaceMode !== 'visual' && 'sr-only',
+            disabled && 'pointer-events-none opacity-60',
+          )}
+          aria-hidden={surfaceMode !== 'visual'}
+        >
+          <EmailEditor
+            key={editorKey}
+            ref={editorRef}
+            content={content}
+            theme={themeInput}
+            editable={!disabled && surfaceMode === 'visual'}
+            className="min-h-[26rem]"
+            onReady={(ref) => {
+              if (editorKey !== syncGenerationRef.current) return;
+              editorRef.current = ref;
+              void syncTemplate(ref, editorKey);
+            }}
+            onUpdate={(ref) => {
+              if (editorKey !== syncGenerationRef.current) return;
+              editorRef.current = ref;
+              void syncTemplate(ref, editorKey);
+            }}
           />
-        </label>
-
-        {templateVariables?.length ? (
-          <div className="space-y-2 rounded-md border border-border/80 bg-muted/20 p-3">
-            <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              {t('actionsEmailPlaceholders')}
-            </p>
-            <p className="font-mono text-[10px] text-muted-foreground">
-              {t('actionsEmailPlaceholdersHelp')}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {templateVariables.map((v) => (
-                <Button
-                  key={v.token}
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-7 font-mono text-[10px]"
-                  disabled={disabled}
-                  title={v.description ?? v.token}
-                  onClick={() => insertVariable(v.token)}
-                >
-                  {`{{ ${v.token} }}`}
-                </Button>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        <div className="space-y-1">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-            {t('actionsEmailDocumentLabel')}
-          </p>
-          <div
-            className={cn(
-              'min-h-[20rem] overflow-hidden rounded-md border border-border/80 bg-background',
-              disabled && 'pointer-events-none opacity-60',
-            )}
-          >
-            <EmailEditor
-              key={editorKey}
-              ref={editorRef}
-              content={content}
-              theme={themeInput}
-              editable={!disabled}
-              className="min-h-[20rem]"
-              onReady={(ref) => {
-                editorRef.current = ref;
-                void syncTemplate(ref);
-              }}
-              onUpdate={(ref) => {
-                editorRef.current = ref;
-                void syncTemplate(ref);
+        </div>
+        {surfaceMode === 'raw' ? (
+          <div className="flex min-h-[26rem] flex-1 flex-col gap-2">
+            <textarea
+              value={rawDraft}
+              disabled={disabled}
+              spellCheck={false}
+              className="min-h-[22rem] flex-1 rounded-md border border-input bg-muted/10 p-3 font-mono text-xs leading-relaxed"
+              aria-label={t('actionsEmailRawLabel')}
+              onChange={(e) => {
+                onRawDraftChange(e.target.value);
+                onRawError(null);
               }}
             />
+            {rawError ? (
+              <Text className="font-mono text-xs text-destructive">{rawError}</Text>
+            ) : null}
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={disabled}
+              onClick={applyRawDocument}
+            >
+              {t('actionsEmailRawApply')}
+            </Button>
+            <Text className="font-mono text-[10px] text-muted-foreground">
+              {t('actionsEmailRawHelp')}
+            </Text>
           </div>
-        </div>
+        ) : null}
       </div>
 
-      <div className="space-y-2">
+      <div className="flex min-h-[28rem] flex-col space-y-2">
         <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
           {t('actionsEmailPreview')}
         </p>
-        <div className="overflow-hidden rounded-md border border-border/80 bg-muted/20">
+        <div className="min-h-[26rem] flex-1 overflow-hidden rounded-md border border-border/80 bg-muted/20">
           <iframe
             title={t('actionsEmailPreview')}
-            className="h-[28rem] w-full bg-white"
+            className="h-full min-h-[26rem] w-full bg-white"
             sandbox=""
             srcDoc={previewHtml || '<p></p>'}
           />
@@ -222,31 +252,85 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
     const { t } = useTranslation();
     const appearance = useTheme();
     const [tab, setTab] = useState<LangTab>('en');
-    const [themeChoice, setThemeChoice] = useState<ActionEmailThemeChoice>('minimal');
+    const [surfaceMode, setSurfaceMode] = useState<EditorSurfaceMode>('visual');
+    const [themeId, setThemeId] = useState<ActionEmailThemeId>(() =>
+      themeIdFromAppearance(appearance),
+    );
+    const [rawDraftEn, setRawDraftEn] = useState('');
+    const [rawDraftFr, setRawDraftFr] = useState('');
+    const [rawError, setRawError] = useState<string | null>(null);
     const enRef = useRef<EmailEditorRef | null>(null);
     const frRef = useRef<EmailEditorRef | null>(null);
 
+    const activeTemplate = tab === 'en' ? valueEn : valueFr;
+    const setActiveTemplate = tab === 'en' ? onChangeEn : onChangeFr;
+
+    useEffect(() => {
+      const fromEn = resolveStoredThemeId(valueEn.theme_id, appearance);
+      const fromFr = resolveStoredThemeId(valueFr.theme_id, appearance);
+      setThemeId(tab === 'en' ? fromEn : fromFr);
+    }, [appearance, contentRevision, tab, valueEn.theme_id, valueFr.theme_id]);
+
     const themeInput = useMemo(
-      () => actionEmailThemeInput(themeChoice, appearance),
-      [appearance, themeChoice],
+      () => actionEmailThemeInput(themeId, appearance),
+      [appearance, themeId],
+    );
+
+    const patchThemeOnTemplates = useCallback(
+      (nextThemeId: ActionEmailThemeId) => {
+        setThemeId(nextThemeId);
+        onChangeEn({ ...valueEn, theme_id: nextThemeId });
+        onChangeFr({ ...valueFr, theme_id: nextThemeId });
+      },
+      [onChangeEn, onChangeFr, valueEn, valueFr],
     );
 
     useImperativeHandle(
       ref,
       () => ({
         compileAll: async () => {
-          const en = await compileTemplate(enRef.current, valueEn.subject);
-          const fr = await compileTemplate(frRef.current, valueFr.subject);
-          onChangeEn(en);
-          onChangeFr(fr);
-          return { en, fr };
+          const en = await compileTemplate(enRef.current, valueEn.subject, themeId);
+          const fr = await compileTemplate(frRef.current, valueFr.subject, themeId);
+          const compiled = {
+            en: { ...en, theme_id: themeId },
+            fr: { ...fr, theme_id: themeId },
+          };
+          onChangeEn(compiled.en);
+          onChangeFr(compiled.fr);
+          return compiled;
         },
       }),
-      [onChangeEn, onChangeFr, valueEn.subject, valueFr.subject],
+      [onChangeEn, onChangeFr, themeId, valueEn.subject, valueFr.subject],
     );
 
     const editorKeyEn = `en-${contentRevision}`;
     const editorKeyFr = `fr-${contentRevision}`;
+
+    const insertVariable = useCallback(
+      (token: string) => {
+        if (surfaceMode === 'raw') {
+          const draft = tab === 'en' ? rawDraftEn : rawDraftFr;
+          const insert = `{{ ${token} }}`;
+          const next = draft + (draft.endsWith('\n') || draft.length === 0 ? '' : ' ') + insert;
+          if (tab === 'en') setRawDraftEn(next);
+          else setRawDraftFr(next);
+          return;
+        }
+        const editorRef = tab === 'en' ? enRef : frRef;
+        editorRef.current?.editor?.chain().focus().insertContent(`{{ ${token} }}`).run();
+      },
+      [rawDraftEn, rawDraftFr, surfaceMode, tab],
+    );
+
+    const switchToRaw = useCallback(() => {
+      const editorRef = tab === 'en' ? enRef : frRef;
+      const json = editorRef.current?.getJSON();
+      const text = JSON.stringify(json ?? { type: 'doc', content: [] }, null, 2);
+      if (tab === 'en') setRawDraftEn(text);
+      else setRawDraftFr(text);
+      setRawError(null);
+      setSurfaceMode('raw');
+    }, [tab]);
 
     return (
       <div className="space-y-4">
@@ -259,81 +343,143 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
           </p>
         </div>
 
-        <div className="flex flex-wrap items-end gap-4">
-          <label className="space-y-1">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-              {t('actionsEmailThemeLabel')}
-            </span>
-            <select
-              className="flex h-9 min-w-[12rem] rounded-md border border-input bg-transparent px-3 py-1 font-mono text-sm"
-              value={themeChoice}
-              disabled={disabled}
-              onChange={(e) => setThemeChoice(e.target.value as ActionEmailThemeChoice)}
-            >
-              <option value="minimal">{t('actionsEmailThemeMinimal')}</option>
-              <option value="basic">{t('actionsEmailThemeBasic')}</option>
-              <option value="shellui">{t('actionsEmailThemeShellui')}</option>
-            </select>
-            <p className="max-w-md font-mono text-[10px] text-muted-foreground">
-              {t('actionsEmailThemeHelp')}
-            </p>
-          </label>
-        </div>
-
         <div className="flex flex-wrap items-center justify-between gap-2">
           <LangTabs
             tab={tab}
             onTab={setTab}
           />
-          {showResetToDefault && onResetToDefault ? (
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               size="sm"
-              variant="outline"
-              disabled={disabled || resetLoading}
-              onClick={onResetToDefault}
+              variant={surfaceMode === 'visual' ? 'secondary' : 'outline'}
+              disabled={disabled}
+              onClick={() => setSurfaceMode('visual')}
             >
-              {resetLoading ? (
-                <>
-                  <Loader2
-                    className="mr-2 size-3.5 animate-spin"
-                    aria-hidden
-                  />
-                  {t('actionsEmailResetLoading')}
-                </>
-              ) : (
-                t('actionsEmailResetToDefault')
-              )}
+              {t('actionsEmailModeVisual')}
             </Button>
-          ) : null}
+            <Button
+              type="button"
+              size="sm"
+              variant={surfaceMode === 'raw' ? 'secondary' : 'outline'}
+              disabled={disabled}
+              onClick={() => switchToRaw()}
+            >
+              {t('actionsEmailModeRaw')}
+            </Button>
+            {showResetToDefault && onResetToDefault ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={disabled || resetLoading}
+                onClick={onResetToDefault}
+              >
+                {resetLoading ? (
+                  <>
+                    <Loader2
+                      className="mr-2 size-3.5 animate-spin"
+                      aria-hidden
+                    />
+                    {t('actionsEmailResetLoading')}
+                  </>
+                ) : (
+                  t('actionsEmailResetToDefault')
+                )}
+              </Button>
+            ) : null}
+          </div>
         </div>
 
+        <label className="block space-y-1">
+          <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+            {t('actionsEmailSubjectLabel', { lang: tab })}
+          </span>
+          <Input
+            value={activeTemplate.subject}
+            disabled={disabled}
+            className="font-mono text-sm"
+            onChange={(e) => setActiveTemplate({ ...activeTemplate, subject: e.target.value })}
+          />
+        </label>
+
+        {templateVariables?.length ? (
+          <div className="space-y-2 rounded-md border border-border/80 bg-muted/20 p-3">
+            <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              {t('actionsEmailPlaceholders')}
+            </p>
+            <p className="font-mono text-[10px] text-muted-foreground">
+              {t('actionsEmailPlaceholdersHelp')}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {templateVariables.map((v) => (
+                <Button
+                  key={v.token}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 font-mono text-[10px]"
+                  disabled={disabled}
+                  title={v.description ?? v.token}
+                  onClick={() => insertVariable(v.token)}
+                >
+                  {`{{ ${v.token} }}`}
+                </Button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <label className="block max-w-md space-y-1">
+          <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+            {t('actionsEmailThemeLabel')}
+          </span>
+          <select
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 font-mono text-sm"
+            value={themeId}
+            disabled={disabled}
+            onChange={(e) => patchThemeOnTemplates(e.target.value as ActionEmailThemeId)}
+          >
+            <option value="shellui-light">{t('actionsEmailThemeShelluiLight')}</option>
+            <option value="shellui-dark">{t('actionsEmailThemeShelluiDark')}</option>
+          </select>
+          <p className="font-mono text-[10px] text-muted-foreground">
+            {t('actionsEmailThemeHelp')}
+          </p>
+        </label>
+
         <div className={tab === 'en' ? undefined : 'hidden'}>
-          <EmailEditorPane
+          <LangEditorSurface
             lang="en"
-            subject={valueEn.subject}
             template={valueEn}
-            onSubjectChange={(subject) => onChangeEn({ ...valueEn, subject })}
             onTemplateChange={onChangeEn}
-            templateVariables={templateVariables}
             themeInput={themeInput}
+            themeId={themeId}
             editorKey={editorKeyEn}
             disabled={disabled}
             editorRef={enRef}
+            surfaceMode={surfaceMode}
+            rawDraft={rawDraftEn}
+            onRawDraftChange={setRawDraftEn}
+            rawError={rawError}
+            onRawError={setRawError}
           />
         </div>
         <div className={tab === 'fr' ? undefined : 'hidden'}>
-          <EmailEditorPane
+          <LangEditorSurface
             lang="fr"
-            subject={valueFr.subject}
             template={valueFr}
-            onSubjectChange={(subject) => onChangeFr({ ...valueFr, subject })}
             onTemplateChange={onChangeFr}
-            templateVariables={templateVariables}
             themeInput={themeInput}
+            themeId={themeId}
             editorKey={editorKeyFr}
             disabled={disabled}
             editorRef={frRef}
+            surfaceMode={surfaceMode}
+            rawDraft={rawDraftFr}
+            onRawDraftChange={setRawDraftFr}
+            rawError={rawError}
+            onRawError={setRawError}
           />
         </div>
 

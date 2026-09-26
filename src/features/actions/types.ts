@@ -22,6 +22,8 @@ export type ActionEmailTemplate = {
   subject: string;
   html: string;
   document?: ActionEmailDocument;
+  /** Maps to Shellui appearance light/dark email styling (`shellui-light` | `shellui-dark`). */
+  theme_id?: string;
 };
 
 export type ActionRuleEmailConfig = {
@@ -115,6 +117,10 @@ export interface ActionsApiClient {
   deleteRule(id: ActionRuleId): Promise<void>;
   fetchEmailTemplate(ruleId: ActionRuleId, language: string): Promise<ActionEmailTemplate>;
   fetchDefaultEmailTemplate(eventType: string, language: string): Promise<ActionEmailTemplate>;
+  fetchDefaultEmailTemplates(
+    eventType: string,
+    languages: readonly ('en' | 'fr')[],
+  ): Promise<Partial<Record<'en' | 'fr', ActionEmailTemplate>>>;
   fetchDeliveries(filters: ActionDeliveryListFilters): Promise<ActionDeliveriesListResponse>;
   fetchDelivery(id: string): Promise<ActionDeliveryDetail>;
   requeueDelivery(id: string): Promise<void>;

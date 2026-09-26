@@ -126,10 +126,12 @@ function mapEmailTemplatesFromIdentity(raw: unknown): ActionRuleEmailConfig['ema
     const html =
       typeof e.html === 'string' ? e.html : typeof e.body_html === 'string' ? e.body_html : '';
     const document = isJsonContent(e.document) ? e.document : undefined;
+    const theme_id = typeof e.theme_id === 'string' ? e.theme_id : undefined;
     out[lang] = {
       subject: typeof e.subject === 'string' ? e.subject : '',
       html,
       ...(document ? { document } : {}),
+      ...(theme_id ? { theme_id } : {}),
     };
   }
   return Object.keys(out).length ? out : undefined;
@@ -137,9 +139,14 @@ function mapEmailTemplatesFromIdentity(raw: unknown): ActionRuleEmailConfig['ema
 
 function mapEmailTemplatesToIdentity(
   templates: ActionRuleEmailConfig['email_templates'],
-): Record<string, { subject: string; html: string; document?: unknown }> | undefined {
+):
+  | Record<string, { subject: string; html: string; document?: unknown; theme_id?: string }>
+  | undefined {
   if (!templates) return undefined;
-  const out: Record<string, { subject: string; html: string; document?: unknown }> = {};
+  const out: Record<
+    string,
+    { subject: string; html: string; document?: unknown; theme_id?: string }
+  > = {};
   for (const lang of ['en', 'fr'] as const) {
     const t = templates[lang];
     if (!t) continue;
@@ -147,6 +154,7 @@ function mapEmailTemplatesToIdentity(
       subject: t.subject,
       html: t.html,
       ...(t.document ? { document: t.document } : {}),
+      ...(t.theme_id ? { theme_id: t.theme_id } : {}),
     };
   }
   return Object.keys(out).length ? out : undefined;
@@ -231,6 +239,33 @@ function parseEventEntry(raw: unknown): ActionEventCatalogEntry {
   };
 }
 
+export type ActionEmailTemplateLang = 'en' | 'fr';
+
+export type ActionEmailTemplatesMap = Partial<Record<ActionEmailTemplateLang, ActionEmailTemplate>>;
+
+export function parseDefaultEmailTemplatesBatch(
+  body: unknown,
+  languages: readonly ActionEmailTemplateLang[],
+): ActionEmailTemplatesMap {
+  if (!body || typeof body !== 'object') {
+    throw new Error('Unexpected batch email template response.');
+  }
+  const root = body as Record<string, unknown>;
+  const templatesRaw = root.templates;
+  if (!templatesRaw || typeof templatesRaw !== 'object') {
+    throw new Error('Unexpected batch email template response.');
+  }
+  const map = templatesRaw as Record<string, unknown>;
+  const out: ActionEmailTemplatesMap = {};
+  for (const lang of languages) {
+    const entry = map[lang];
+    if (entry && typeof entry === 'object') {
+      out[lang] = parseEmailTemplate(entry);
+    }
+  }
+  return out;
+}
+
 export function parseEmailTemplate(body: unknown): ActionEmailTemplate {
   if (!body || typeof body !== 'object') {
     throw new Error('Unexpected email template response.');
@@ -239,10 +274,12 @@ export function parseEmailTemplate(body: unknown): ActionEmailTemplate {
   const html =
     typeof o.html === 'string' ? o.html : typeof o.body_html === 'string' ? o.body_html : '';
   const document = isJsonContent(o.document) ? o.document : undefined;
+  const theme_id = typeof o.theme_id === 'string' ? o.theme_id : undefined;
   return {
     subject: typeof o.subject === 'string' ? o.subject : '',
     html,
     ...(document ? { document } : {}),
+    ...(theme_id ? { theme_id } : {}),
   };
 }
 

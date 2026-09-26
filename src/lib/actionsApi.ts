@@ -12,6 +12,7 @@ import type {
   ActionsApiClient,
 } from '@/features/actions/types';
 import {
+  parseDefaultEmailTemplatesBatch,
   parseDeliveriesList,
   parseDeliveryDetail,
   parseEmailTemplate,
@@ -19,8 +20,12 @@ import {
   parseIdentityRule,
   parseRulesList,
   toIdentityRuleWriteBody,
+  type ActionEmailTemplateLang,
 } from '@/lib/actionsApiParsers';
-import { eventDefaultEmailTemplateRequest } from '@/lib/actionsApiPaths';
+import {
+  eventDefaultEmailTemplateRequest,
+  eventDefaultEmailTemplatesBatchRequest,
+} from '@/lib/actionsApiPaths';
 
 export const ACTIONS_API_UNAVAILABLE =
   'Actions API is not available on this identity version. Update identity-service or run a build that includes company actions endpoints.';
@@ -32,11 +37,50 @@ function rulePath(id: ActionRuleId): string {
   return `/api/v1/actions/rules/${encodeURIComponent(String(id))}`;
 }
 
+function normalizeDefaultTemplateLanguages(
+  languages: readonly string[],
+): ActionEmailTemplateLang[] {
+  const out: ActionEmailTemplateLang[] = [];
+  for (const lang of languages) {
+    if (lang === 'en' || lang === 'fr') {
+      if (!out.includes(lang)) out.push(lang);
+    }
+  }
+  return out;
+}
+
 export function createIdentityActionsApiClient(
   accessToken: string,
   companyId: number,
 ): ActionsApiClient {
   const company = { companyId };
+
+  async function fetchDefaultEmailTemplateSingle(
+    eventType: string,
+    language: string,
+  ): Promise<ActionEmailTemplate> {
+    const attempts = eventDefaultEmailTemplateRequest(eventType, language);
+    let lastRes: Response | null = null;
+    for (const attempt of attempts) {
+      const res = await identityAuthFetch(
+        attempt.path,
+        accessToken,
+        {},
+        {
+          ...company,
+          query: attempt.query,
+        },
+      );
+      lastRes = res;
+      if (res.status === 404) continue;
+      const body = await readJsonOrThrow(res, DEFAULT_EMAIL_TEMPLATE_UNAVAILABLE);
+      return parseEmailTemplate(body);
+    }
+    if (lastRes) {
+      await readJsonOrThrow(lastRes, DEFAULT_EMAIL_TEMPLATE_UNAVAILABLE);
+    }
+    throw new Error(DEFAULT_EMAIL_TEMPLATE_UNAVAILABLE);
+  }
 
   return {
     async fetchEvents(): Promise<ActionEventCatalogEntry[]> {
@@ -112,13 +156,19 @@ export function createIdentityActionsApiClient(
       return parseEmailTemplate(body);
     },
 
-    async fetchDefaultEmailTemplate(
+    fetchDefaultEmailTemplate: fetchDefaultEmailTemplateSingle,
+
+    async fetchDefaultEmailTemplates(
       eventType: string,
-      language: string,
-    ): Promise<ActionEmailTemplate> {
-      const attempts = eventDefaultEmailTemplateRequest(eventType, language);
-      let lastRes: Response | null = null;
-      for (const attempt of attempts) {
+      languages: readonly ('en' | 'fr')[],
+    ): Promise<Partial<Record<'en' | 'fr', ActionEmailTemplate>>> {
+      const langs = normalizeDefaultTemplateLanguages(languages);
+      if (!langs.length) return {};
+
+      const languagesCsv = langs.join(',');
+      const batchAttempts = eventDefaultEmailTemplatesBatchRequest(eventType, languagesCsv);
+
+      for (const attempt of batchAttempts) {
         const res = await identityAuthFetch(
           attempt.path,
           accessToken,
@@ -128,15 +178,24 @@ export function createIdentityActionsApiClient(
             query: attempt.query,
           },
         );
-        lastRes = res;
         if (res.status === 404) continue;
         const body = await readJsonOrThrow(res, DEFAULT_EMAIL_TEMPLATE_UNAVAILABLE);
-        return parseEmailTemplate(body);
+        const parsed = parseDefaultEmailTemplatesBatch(body, langs);
+        for (const lang of langs) {
+          if (!parsed[lang]) {
+            parsed[lang] = await fetchDefaultEmailTemplateSingle(eventType, lang);
+          }
+        }
+        return parsed;
       }
-      if (lastRes) {
-        await readJsonOrThrow(lastRes, DEFAULT_EMAIL_TEMPLATE_UNAVAILABLE);
-      }
-      throw new Error(DEFAULT_EMAIL_TEMPLATE_UNAVAILABLE);
+
+      const out: Partial<Record<'en' | 'fr', ActionEmailTemplate>> = {};
+      await Promise.all(
+        langs.map(async (lang) => {
+          out[lang] = await fetchDefaultEmailTemplateSingle(eventType, lang);
+        }),
+      );
+      return out;
     },
 
     async fetchDeliveries(

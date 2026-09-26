@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { eventDefaultEmailTemplateRequest } from '@/lib/actionsApiPaths';
+import {
+  eventDefaultEmailTemplateRequest,
+  eventDefaultEmailTemplatesBatchRequest,
+} from '@/lib/actionsApiPaths';
 import {
   buildEventTemplateVariables,
   isUrlLikeTemplateField,
+  parseDefaultEmailTemplatesBatch,
   parseDeliveriesList,
   parseEmailTemplate,
   parseEventsList,
@@ -23,7 +27,33 @@ describe('eventDefaultEmailTemplateRequest', () => {
   });
 });
 
+describe('eventDefaultEmailTemplatesBatchRequest', () => {
+  it('uses languages query on event and fallback paths', () => {
+    const attempts = eventDefaultEmailTemplatesBatchRequest('identity.user.created', 'en,fr');
+    expect(attempts[0].query).toEqual({ languages: 'en,fr' });
+    expect(attempts[1]).toEqual({
+      path: '/api/v1/actions/email-template',
+      query: { event_type: 'identity.user.created', languages: 'en,fr' },
+    });
+  });
+});
+
 describe('actionsApi parsers', () => {
+  it('parseDefaultEmailTemplatesBatch maps templates by language', () => {
+    const document = { type: 'doc', content: [{ type: 'paragraph' }] };
+    const parsed = parseDefaultEmailTemplatesBatch(
+      {
+        templates: {
+          en: { subject: 'Hi', html: '<p>en</p>', document },
+          fr: { subject: 'Salut', html: '<p>fr</p>' },
+        },
+      },
+      ['en', 'fr'],
+    );
+    expect(parsed.en).toEqual({ subject: 'Hi', html: '<p>en</p>', document });
+    expect(parsed.fr).toEqual({ subject: 'Salut', html: '<p>fr</p>' });
+  });
+
   it('parseEmailTemplate maps identity html field', () => {
     expect(parseEmailTemplate({ subject: 'Hi', html: '<p>a</p>' })).toEqual({
       subject: 'Hi',
@@ -126,6 +156,28 @@ describe('actionsApi parsers', () => {
     expect(parsed.results[0].event).toBe('identity.user.created');
     expect(parsed.results[0].rule_id).toBe(3);
     expect(parsed.results[0].attempts_count).toBe(2);
+  });
+
+  it('toIdentityRuleWriteBody includes document and theme_id', () => {
+    const document = { type: 'doc', content: [{ type: 'paragraph' }] };
+    const body = toIdentityRuleWriteBody({
+      name: 'Ops',
+      event: 'identity.user.created',
+      kind: 'email',
+      config: {
+        recipients: ['ops@example.com'],
+        email_templates: {
+          en: { subject: 'Hi', html: '<p>x</p>', document, theme_id: 'shellui-light' },
+        },
+      },
+    });
+    const templates = body.email_templates as Record<string, unknown>;
+    expect(templates.en).toEqual({
+      subject: 'Hi',
+      html: '<p>x</p>',
+      document,
+      theme_id: 'shellui-light',
+    });
   });
 
   it('toIdentityRuleWriteBody flattens email rule for POST', () => {
