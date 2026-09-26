@@ -689,8 +689,14 @@ const resources = {
         'No themes in Shellui settings yet. Open Shellui settings to load the theme list, then return here.',
       actionsEmailThemeHelp:
         'Uses the {{mode}} palette from the selected Shellui theme. Changing theme re-bakes HTML when you save.',
-      actionsEmailModeVisual: 'Visual editor',
-      actionsEmailModeRaw: 'Document JSON',
+      actionsEmailModeVisual: 'Visual',
+      actionsEmailModeJson: 'JSON',
+      actionsEmailModeReact: 'React',
+      actionsEmailPreviewTogglePreview: 'Preview',
+      actionsEmailPreviewToggleRaw: 'Raw',
+      actionsEmailReactViewHelp:
+        'Read-only pseudo-TSX from document JSON. Copy for debugging. Edit JSON to change stored content.',
+      actionsEmailCopySource: 'Copy',
       actionsEmailRawLabel: 'React Email document JSON',
       actionsEmailRawApply: 'Apply JSON to editor',
       actionsEmailRawHelp:
@@ -1485,8 +1491,14 @@ const resources = {
         'Aucun thème dans les paramètres Shellui. Ouvrez les paramètres Shellui pour charger la liste, puis revenez ici.',
       actionsEmailThemeHelp:
         'Utilise la palette {{mode}} du thème Shellui choisi. Changer de thème recompile le HTML à l’enregistrement.',
-      actionsEmailModeVisual: 'Éditeur visuel',
-      actionsEmailModeRaw: 'JSON document',
+      actionsEmailModeVisual: 'Visuel',
+      actionsEmailModeJson: 'JSON',
+      actionsEmailModeReact: 'React',
+      actionsEmailPreviewTogglePreview: 'Aperçu',
+      actionsEmailPreviewToggleRaw: 'Brut',
+      actionsEmailReactViewHelp:
+        'Pseudo-TSX lecture seule depuis le JSON document. Copiez pour déboguer. Modifiez le JSON pour le contenu enregistré.',
+      actionsEmailCopySource: 'Copier',
       actionsEmailRawLabel: 'JSON document React Email',
       actionsEmailRawApply: 'Appliquer le JSON à l’éditeur',
       actionsEmailRawHelp:
