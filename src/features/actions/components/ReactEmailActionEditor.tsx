@@ -23,6 +23,7 @@ import {
 import { formatDocumentAsReactDebugSource } from '@/lib/actionEmailDocumentDebug';
 import {
   actionEmailThemeInput,
+  availableThemeNamesKey,
   getAppearanceAvailableThemes,
   resolveEmailThemeName,
 } from '@/lib/actionEmailTheme';
@@ -142,8 +143,7 @@ function LangEditorSurface({
 
   useEffect(() => {
     syncGenerationRef.current = mountKey;
-    editorRef.current = null;
-  }, [editorRef, mountKey]);
+  }, [mountKey]);
 
   const content = useMemo(() => resolveEmailEditorContent(template, lang), [lang, template]);
 
@@ -169,22 +169,6 @@ function LangEditorSurface({
     },
     [onTemplateChange, refreshPreview, template.subject, themeName],
   );
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => resolve());
-      });
-      if (cancelled) return;
-      const ref = editorRef.current;
-      if (!ref) return;
-      await refreshPreview(ref);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [bodyMode, editorRef, mountKey, previewMode, refreshPreview, themeInput, themeRenderKey]);
 
   const reactDebugSource = useMemo(() => {
     const json =
@@ -404,10 +388,20 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
     const [tab, setTab] = useState<LangTab>('en');
     const [bodyMode, setBodyMode] = useState<BodySourceMode>('visual');
     const [previewMode, setPreviewMode] = useState<PreviewDisplayMode>('preview');
-    const availableThemes = useMemo(() => getAppearanceAvailableThemes(appearance), [appearance]);
-    const [selectedThemeName, setSelectedThemeName] = useState<string | null>(() =>
-      resolveEmailThemeName(undefined, appearance),
+    const availableThemes = useMemo(
+      () => getAppearanceAvailableThemes(appearance),
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- stable when theme names unchanged
+      [availableThemeNamesKey(getAppearanceAvailableThemes(appearance))],
     );
+    const catalogKey = useMemo(() => availableThemeNamesKey(availableThemes), [availableThemes]);
+    const appearanceMode = appearance?.mode ?? 'light';
+    const appearanceActiveName = appearance?.name ?? '';
+
+    const [selectedThemeName, setSelectedThemeName] = useState<string | null>(() =>
+      resolveEmailThemeName(undefined, appearance, availableThemes),
+    );
+    const hydratedRevisionRef = useRef<number | null>(null);
+    const prevTabRef = useRef(tab);
     const [jsonDraftEn, setJsonDraftEn] = useState('');
     const [jsonDraftFr, setJsonDraftFr] = useState('');
     const [jsonError, setJsonError] = useState<string | null>(null);
@@ -418,24 +412,63 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
     const setActiveTemplate = tab === 'en' ? onChangeEn : onChangeFr;
 
     useEffect(() => {
-      const stored = tab === 'en' ? valueEn.theme_id : valueFr.theme_id;
-      setSelectedThemeName(resolveEmailThemeName(stored, appearance));
-    }, [appearance, contentRevision, tab, valueEn.theme_id, valueFr.theme_id]);
+      if (hydratedRevisionRef.current === contentRevision) return;
+      hydratedRevisionRef.current = contentRevision;
+      const stored = valueEn.theme_id ?? valueFr.theme_id;
+      setSelectedThemeName((prev) => {
+        const resolved = resolveEmailThemeName(
+          stored ?? prev ?? undefined,
+          appearance,
+          availableThemes,
+        );
+        return resolved ?? prev;
+      });
+      // Hydrate from stored theme_id only when contentRevision changes (load, reset, post-save).
+    }, [
+      contentRevision,
+      valueEn.theme_id,
+      valueFr.theme_id,
+      catalogKey,
+      appearanceMode,
+      appearanceActiveName,
+      appearance,
+      availableThemes,
+    ]);
 
     useEffect(() => {
-      if (selectedThemeName && !availableThemes.some((theme) => theme.name === selectedThemeName)) {
-        setSelectedThemeName(resolveEmailThemeName(undefined, appearance));
-      }
-    }, [appearance, availableThemes, selectedThemeName]);
+      if (prevTabRef.current === tab) return;
+      prevTabRef.current = tab;
+      const stored = tab === 'en' ? valueEn.theme_id : valueFr.theme_id;
+      if (!stored) return;
+      setSelectedThemeName((prev) => (prev === stored ? prev : stored));
+    }, [tab, valueEn.theme_id, valueFr.theme_id]);
+
+    useEffect(() => {
+      if (!catalogKey) return;
+      setSelectedThemeName((prev) => {
+        if (prev && availableThemes.some((theme) => theme.name === prev)) return prev;
+        const stored = valueEn.theme_id ?? valueFr.theme_id ?? prev ?? undefined;
+        const resolved = resolveEmailThemeName(stored, appearance, availableThemes);
+        return resolved ?? prev;
+      });
+    }, [
+      appearance,
+      appearanceActiveName,
+      appearanceMode,
+      availableThemes,
+      catalogKey,
+      valueEn.theme_id,
+      valueFr.theme_id,
+    ]);
 
     const themeInput = useMemo(
-      () => actionEmailThemeInput(selectedThemeName, appearance),
-      [appearance, selectedThemeName],
+      () => actionEmailThemeInput(selectedThemeName, appearance, availableThemes),
+      [appearance, appearanceMode, availableThemes, selectedThemeName],
     );
 
     const themeRenderKey = useMemo(
-      () => `${selectedThemeName ?? 'none'}|${appearance?.mode ?? 'light'}`,
-      [appearance?.mode, selectedThemeName],
+      () => `${selectedThemeName ?? 'none'}|${appearanceMode}`,
+      [appearanceMode, selectedThemeName],
     );
 
     const patchThemeOnTemplates = useCallback(
