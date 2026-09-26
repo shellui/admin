@@ -1,3 +1,4 @@
+import { isJsonContent } from '@/lib/actionEmailDefaults';
 import { unwrapResultsArray } from '@/lib/listResults';
 import type {
   ActionDeliveriesListResponse,
@@ -124,9 +125,11 @@ function mapEmailTemplatesFromIdentity(raw: unknown): ActionRuleEmailConfig['ema
     const e = entry as Record<string, unknown>;
     const html =
       typeof e.html === 'string' ? e.html : typeof e.body_html === 'string' ? e.body_html : '';
+    const document = isJsonContent(e.document) ? e.document : undefined;
     out[lang] = {
       subject: typeof e.subject === 'string' ? e.subject : '',
-      body_html: html,
+      html,
+      ...(document ? { document } : {}),
     };
   }
   return Object.keys(out).length ? out : undefined;
@@ -134,13 +137,17 @@ function mapEmailTemplatesFromIdentity(raw: unknown): ActionRuleEmailConfig['ema
 
 function mapEmailTemplatesToIdentity(
   templates: ActionRuleEmailConfig['email_templates'],
-): Record<string, { subject: string; html: string }> | undefined {
+): Record<string, { subject: string; html: string; document?: unknown }> | undefined {
   if (!templates) return undefined;
-  const out: Record<string, { subject: string; html: string }> = {};
+  const out: Record<string, { subject: string; html: string; document?: unknown }> = {};
   for (const lang of ['en', 'fr'] as const) {
     const t = templates[lang];
     if (!t) continue;
-    out[lang] = { subject: t.subject, html: t.body_html };
+    out[lang] = {
+      subject: t.subject,
+      html: t.html,
+      ...(t.document ? { document: t.document } : {}),
+    };
   }
   return Object.keys(out).length ? out : undefined;
 }
@@ -231,9 +238,11 @@ export function parseEmailTemplate(body: unknown): ActionEmailTemplate {
   const o = body as Record<string, unknown>;
   const html =
     typeof o.html === 'string' ? o.html : typeof o.body_html === 'string' ? o.body_html : '';
+  const document = isJsonContent(o.document) ? o.document : undefined;
   return {
     subject: typeof o.subject === 'string' ? o.subject : '',
-    body_html: html,
+    html,
+    ...(document ? { document } : {}),
   };
 }
 

@@ -1,3 +1,5 @@
+import type { ActionEmailDocument } from '@/features/actions/emailDocument';
+
 export type ActionRuleKind = 'email' | 'webhook';
 
 export type ActionRuleId = string | number;
@@ -18,7 +20,8 @@ export type ActionEventCatalogEntry = {
 
 export type ActionEmailTemplate = {
   subject: string;
-  body_html: string;
+  html: string;
+  document?: ActionEmailDocument;
 };
 
 export type ActionRuleEmailConfig = {
