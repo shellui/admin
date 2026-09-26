@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import shellui from '@shellui/sdk';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -189,13 +190,34 @@ export function ActionsRuleEditorPage() {
 
   const resetEmailTemplatesToDefault = useCallback(async () => {
     if (!api || kind !== 'email' || !eventKey.trim()) return;
-    if (!window.confirm(t('actionsEmailResetConfirm'))) return;
+    // window.confirm is unreliable in the shell iframe; use SDK dialog when embedded.
+    const confirmed =
+      typeof window === 'undefined' || window.parent === window
+        ? window.confirm(t('actionsEmailResetConfirm'))
+        : await new Promise<boolean>((resolve) => {
+            shellui.dialog({
+              title: t('actionsEmailResetToDefault'),
+              description: t('actionsEmailResetConfirm'),
+              mode: 'confirm',
+              okLabel: t('actionsEmailResetToDefault'),
+              cancelLabel: t('actionsCancel'),
+              onOk: () => resolve(true),
+              onCancel: () => resolve(false),
+            });
+          });
+    if (!confirmed) return;
     setResetTemplatesLoading(true);
     setTemplateFetchError(null);
     try {
       const defaults = await api.fetchDefaultEmailTemplates(eventKey, ['en', 'fr']);
-      setTemplateEn(normalizeEmailTemplate(defaults.en, 'en'));
-      setTemplateFr(normalizeEmailTemplate(defaults.fr, 'fr'));
+      // Drop theme_id so the editor resolves the Shellui catalog default (active
+      // appearance / shellui / first) instead of keeping a user-picked theme.
+      const en = normalizeEmailTemplate(defaults.en, 'en');
+      const fr = normalizeEmailTemplate(defaults.fr, 'fr');
+      const { theme_id: _enTheme, ...enRest } = en;
+      const { theme_id: _frTheme, ...frRest } = fr;
+      setTemplateEn(enRest);
+      setTemplateFr(frRest);
       setTemplateContentRevision((r) => r + 1);
     } catch (e) {
       setTemplateFetchError(e instanceof Error ? e.message : t('actionsEmailTemplateLoadError'));

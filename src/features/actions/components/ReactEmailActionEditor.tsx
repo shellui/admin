@@ -18,6 +18,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import {
   parseEmailDocumentJson,
   resolveEmailEditorContent,
+  stripEmbeddedEmailThemeStyles,
   type ActionEmailLang,
 } from '@/lib/actionEmailDefaults';
 import { formatDocumentAsReactDebugSource } from '@/lib/actionEmailDocumentDebug';
@@ -27,6 +28,7 @@ import {
   getAppearanceAvailableThemes,
   resolveEmailThemeName,
 } from '@/lib/actionEmailTheme';
+import { applyThemeInputToEditor } from '@/lib/actionEmailThemeApply';
 import type { ActionEmailDocument } from '@/features/actions/emailDocument';
 import type { ActionEmailTemplate, ActionTemplateVariable } from '@/features/actions/types';
 import { cn } from '@/lib/utils';
@@ -139,13 +141,23 @@ function LangEditorSurface({
   const { t } = useTranslation();
   const [previewHtml, setPreviewHtml] = useState('');
   const mountKey = `${editorKey}|${themeRenderKey}`;
+  // Keep generation in sync during render so onReady after remount (reset/load) is not
+  // skipped while a useEffect would still hold the previous mountKey.
   const syncGenerationRef = useRef(mountKey);
+  if (syncGenerationRef.current !== mountKey) {
+    syncGenerationRef.current = mountKey;
+  }
 
   useEffect(() => {
-    syncGenerationRef.current = mountKey;
+    setPreviewHtml('');
   }, [mountKey]);
 
-  const content = useMemo(() => resolveEmailEditorContent(template, lang), [lang, template]);
+  const content = useMemo(
+    () => stripEmbeddedEmailThemeStyles(resolveEmailEditorContent(template, lang)),
+    // themeRenderKey: remount with stripped globalContent so a new theme can seed
+    // (embedded styles from the previous theme would otherwise win).
+    [lang, template, themeRenderKey],
+  );
 
   const refreshPreview = useCallback(async (ref: EmailEditorRef | null) => {
     if (!ref) {
@@ -255,6 +267,7 @@ function LangEditorSurface({
             onReady={(ref) => {
               if (mountKey !== syncGenerationRef.current) return;
               editorRef.current = ref;
+              applyThemeInputToEditor(ref.editor, themeInput);
               void syncTemplate(ref, mountKey);
             }}
             onUpdate={(ref) => {
@@ -415,14 +428,17 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
       if (hydratedRevisionRef.current === contentRevision) return;
       hydratedRevisionRef.current = contentRevision;
       const stored = valueEn.theme_id ?? valueFr.theme_id;
+      // On load/reset, use stored theme_id when present; otherwise resolve the Shellui
+      // catalog default. Do not keep the previous picker value — that blocked "Reset to
+      // default" from restoring the theme after the user had changed it.
       setSelectedThemeName((prev) => {
-        const resolved = resolveEmailThemeName(
-          stored ?? prev ?? undefined,
-          appearance,
-          availableThemes,
-        );
+        const resolved = resolveEmailThemeName(stored, appearance, availableThemes);
         return resolved ?? prev;
       });
+      // Clear JSON drafts so raw mode reflects reloaded/reset templates.
+      setJsonDraftEn('');
+      setJsonDraftFr('');
+      setJsonError(null);
       // Hydrate from stored theme_id only when contentRevision changes (load, reset, post-save).
     }, [
       contentRevision,

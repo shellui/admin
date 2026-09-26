@@ -16,6 +16,51 @@ export function hasDocumentContent(document: ActionEmailDocument | undefined): b
   return Boolean(document?.content && document.content.length > 0);
 }
 
+/**
+ * React Email persists panel styles into a `globalContent` node. Those embedded
+ * styles win over a new `theme` prop on remount (seed only runs when styles are
+ * absent). Strip them so Shellui theme_id / theme prop can re-seed cleanly when
+ * the user changes the theme picker.
+ */
+export function stripEmbeddedEmailThemeStyles(
+  content: string | ActionEmailDocument,
+): string | ActionEmailDocument {
+  if (typeof content === 'string') return content;
+  return stripEmbeddedThemeFromNode(content) as ActionEmailDocument;
+}
+
+function stripEmbeddedThemeFromNode(node: ActionEmailDocument): ActionEmailDocument {
+  let next: ActionEmailDocument = node;
+
+  if (node.type === 'globalContent' && isRecord(node.attrs)) {
+    const data = node.attrs.data;
+    if (isRecord(data) && ('styles' in data || 'theme' in data || 'css' in data)) {
+      const { styles: _styles, theme: _theme, css: _css, ...rest } = data;
+      next = {
+        ...node,
+        attrs: {
+          ...node.attrs,
+          data: rest,
+        },
+      };
+    }
+  }
+
+  if (!Array.isArray(node.content) || node.content.length === 0) {
+    return next;
+  }
+
+  let childChanged = false;
+  const content = node.content.map((child) => {
+    const stripped = stripEmbeddedThemeFromNode(child);
+    if (stripped !== child) childChanged = true;
+    return stripped;
+  });
+
+  if (!childChanged && next === node) return node;
+  return { ...next, content };
+}
+
 export function defaultWelcomeEmailHtml(lang: ActionEmailLang): string {
   if (lang === 'fr') {
     return `

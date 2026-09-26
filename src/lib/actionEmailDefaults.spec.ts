@@ -5,6 +5,7 @@ import {
   normalizeEmailTemplate,
   parseEmailDocumentJson,
   resolveEmailEditorContent,
+  stripEmbeddedEmailThemeStyles,
 } from '@/lib/actionEmailDefaults';
 
 describe('actionEmailDefaults', () => {
@@ -66,5 +67,38 @@ describe('actionEmailDefaults', () => {
         'en',
       ),
     ).toMatchObject({ theme_id: 'shellui', document });
+  });
+
+  it('stripEmbeddedEmailThemeStyles clears globalContent theme keys', () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        {
+          type: 'globalContent',
+          attrs: {
+            data: {
+              theme: 'minimal',
+              styles: [{ id: 'body', inputs: [] }],
+              css: 'body{}',
+              other: true,
+            },
+          },
+        },
+        { type: 'paragraph', content: [{ type: 'text', text: 'Hi' }] },
+      ],
+    };
+    expect(stripEmbeddedEmailThemeStyles(doc)).toEqual({
+      type: 'doc',
+      content: [
+        {
+          type: 'globalContent',
+          attrs: {
+            data: { other: true },
+          },
+        },
+        { type: 'paragraph', content: [{ type: 'text', text: 'Hi' }] },
+      ],
+    });
+    expect(stripEmbeddedEmailThemeStyles('<p>x</p>')).toBe('<p>x</p>');
   });
 });
