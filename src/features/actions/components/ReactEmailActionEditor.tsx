@@ -66,6 +66,7 @@ function LangEditorSurface({
   onTemplateChange,
   themeInput,
   themeName,
+  themeRenderKey,
   editorKey,
   disabled,
   editorRef,
@@ -80,6 +81,8 @@ function LangEditorSurface({
   onTemplateChange: (next: ActionEmailTemplate) => void;
   themeInput: ReturnType<typeof actionEmailThemeInput>;
   themeName: string | null;
+  /** Bumps when selected catalog theme or Shellui light/dark mode changes (live preview). */
+  themeRenderKey: string;
   editorKey: string;
   disabled?: boolean;
   editorRef: React.MutableRefObject<EmailEditorRef | null>;
@@ -91,12 +94,13 @@ function LangEditorSurface({
 }) {
   const { t } = useTranslation();
   const [previewHtml, setPreviewHtml] = useState('');
-  const syncGenerationRef = useRef(editorKey);
+  const mountKey = `${editorKey}|${themeRenderKey}`;
+  const syncGenerationRef = useRef(mountKey);
 
   useEffect(() => {
-    syncGenerationRef.current = editorKey;
+    syncGenerationRef.current = mountKey;
     editorRef.current = null;
-  }, [editorKey, editorRef]);
+  }, [editorRef, mountKey]);
 
   const content = useMemo(() => resolveEmailEditorContent(template, lang), [lang, template]);
 
@@ -124,8 +128,20 @@ function LangEditorSurface({
   );
 
   useEffect(() => {
-    void refreshPreview(editorRef.current);
-  }, [editorKey, editorRef, refreshPreview, themeInput, surfaceMode]);
+    let cancelled = false;
+    void (async () => {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      });
+      if (cancelled) return;
+      const ref = editorRef.current;
+      if (!ref) return;
+      await refreshPreview(ref);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [editorRef, mountKey, refreshPreview, surfaceMode, themeInput, themeRenderKey]);
 
   const applyRawDocument = useCallback(() => {
     onRawError(null);
@@ -162,21 +178,21 @@ function LangEditorSurface({
           aria-hidden={surfaceMode !== 'visual'}
         >
           <EmailEditor
-            key={editorKey}
+            key={mountKey}
             ref={editorRef}
             content={content}
             theme={themeInput}
             editable={!disabled && surfaceMode === 'visual'}
             className="min-h-[26rem]"
             onReady={(ref) => {
-              if (editorKey !== syncGenerationRef.current) return;
+              if (mountKey !== syncGenerationRef.current) return;
               editorRef.current = ref;
-              void syncTemplate(ref, editorKey);
+              void syncTemplate(ref, mountKey);
             }}
             onUpdate={(ref) => {
-              if (editorKey !== syncGenerationRef.current) return;
+              if (mountKey !== syncGenerationRef.current) return;
               editorRef.current = ref;
-              void syncTemplate(ref, editorKey);
+              void syncTemplate(ref, mountKey);
             }}
           />
         </div>
@@ -279,6 +295,11 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
     const themeInput = useMemo(
       () => actionEmailThemeInput(selectedThemeName, appearance),
       [appearance, selectedThemeName],
+    );
+
+    const themeRenderKey = useMemo(
+      () => `${selectedThemeName ?? 'none'}|${appearance?.mode ?? 'light'}`,
+      [appearance?.mode, selectedThemeName],
     );
 
     const patchThemeOnTemplates = useCallback(
@@ -473,6 +494,7 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
             onTemplateChange={onChangeEn}
             themeInput={themeInput}
             themeName={selectedThemeName}
+            themeRenderKey={themeRenderKey}
             editorKey={editorKeyEn}
             disabled={disabled}
             editorRef={enRef}
@@ -490,6 +512,7 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
             onTemplateChange={onChangeFr}
             themeInput={themeInput}
             themeName={selectedThemeName}
+            themeRenderKey={themeRenderKey}
             editorKey={editorKeyFr}
             disabled={disabled}
             editorRef={frRef}
