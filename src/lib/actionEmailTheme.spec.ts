@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  actionEmailThemeInput,
   buildEmailThemeConfigFromPalette,
   getAppearanceAvailableThemes,
+  palettePrimaryForThemeName,
   resolveEmailThemeName,
 } from '@/lib/actionEmailTheme';
 
@@ -49,6 +51,29 @@ describe('actionEmailTheme', () => {
   it('resolveEmailThemeName falls back to active app theme', () => {
     const appearance = { name: 'claude', mode: 'light', availableThemes: catalog } as never;
     expect(resolveEmailThemeName(undefined, appearance)).toBe('claude');
+  });
+
+  it('resolveEmailThemeName keeps stored name when catalog is empty', () => {
+    expect(resolveEmailThemeName('claude', null, [])).toBe('claude');
+  });
+
+  it('palettePrimaryForThemeName differs by theme entry', () => {
+    const appearance = { mode: 'light', availableThemes: catalog } as never;
+    expect(palettePrimaryForThemeName('shellui', appearance, catalog)).toBe('#111');
+    expect(palettePrimaryForThemeName('claude', appearance, catalog)).toBe('#c00');
+  });
+
+  it('actionEmailThemeInput uses catalog palette per theme name', () => {
+    const appearance = { mode: 'light', availableThemes: catalog } as never;
+    const shellui = actionEmailThemeInput('shellui', appearance, catalog);
+    const claude = actionEmailThemeInput('claude', appearance, catalog);
+    expect(typeof shellui).not.toBe('string');
+    expect(typeof claude).not.toBe('string');
+    if (typeof shellui === 'string' || typeof claude === 'string') return;
+    expect(shellui.styles?.button?.backgroundColor).toBe('#111');
+    expect(claude.styles?.button?.backgroundColor).toBe('#c00');
+    expect(shellui.styles?.body?.backgroundColor).toBe('#eee');
+    expect(claude.styles?.body?.backgroundColor).toBe('#fdd');
   });
 
   it('buildEmailThemeConfigFromPalette sets button from primary', () => {

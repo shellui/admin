@@ -14,23 +14,26 @@ export function getAppearanceAvailableThemes(
   );
 }
 
-function themeNameInList(name: string, appearance: Appearance | null): boolean {
-  return getAppearanceAvailableThemes(appearance).some((t) => t.name === name);
+export function availableThemeNamesKey(themes: SettingsAvailableTheme[]): string {
+  return themes.map((t) => t.name).join('\u0001');
 }
 
 /** Pick stored theme name if valid, else active app theme, else `shellui`, else first listed. */
 export function resolveEmailThemeName(
   stored: string | undefined,
   appearance: Appearance | null,
+  catalog?: SettingsAvailableTheme[],
 ): string | null {
-  const themes = getAppearanceAvailableThemes(appearance);
-  if (!themes.length) return null;
+  const themes = catalog ?? getAppearanceAvailableThemes(appearance);
+  if (!themes.length) return stored?.trim() ? stored : null;
+
+  const themeNameInCatalog = (name: string) => themes.some((t) => t.name === name);
 
   const normalizeStored = (raw: string | undefined): string | undefined => {
     if (!raw) return undefined;
-    if (themeNameInList(raw, appearance)) return raw;
+    if (themeNameInCatalog(raw)) return raw;
     if (raw === 'shellui-light' || raw === 'shellui-dark') {
-      if (themeNameInList('shellui', appearance)) return 'shellui';
+      if (themeNameInCatalog('shellui')) return 'shellui';
     }
     return undefined;
   };
@@ -39,9 +42,21 @@ export function resolveEmailThemeName(
   if (fromStored) return fromStored;
 
   const activeName = appearance?.name;
-  if (activeName && themeNameInList(activeName, appearance)) return activeName;
-  if (themeNameInList('shellui', appearance)) return 'shellui';
+  if (activeName && themeNameInCatalog(activeName)) return activeName;
+  if (themeNameInCatalog('shellui')) return 'shellui';
   return themes[0]?.name ?? null;
+}
+
+export function palettePrimaryForThemeName(
+  themeName: string | null,
+  appearance: Appearance | null,
+  catalog?: SettingsAvailableTheme[],
+): string | null {
+  if (!themeName) return null;
+  const themes = catalog ?? getAppearanceAvailableThemes(appearance);
+  const mode = appearance?.mode === 'dark' ? 'dark' : 'light';
+  const entry = themes.find((t) => t.name === themeName);
+  return entry?.colors?.[mode]?.primary ?? null;
 }
 
 function readCssColor(variable: string, fallback: string): string {
@@ -53,11 +68,13 @@ function readCssColor(variable: string, fallback: string): string {
 function paletteFromAppearance(
   appearance: Appearance | null,
   themeName: string | null,
+  catalog?: SettingsAvailableTheme[],
 ): ThemeColorsMode | null {
   if (!appearance) return null;
   const mode = appearance.mode === 'dark' ? 'dark' : 'light';
   if (themeName) {
-    const entry = getAppearanceAvailableThemes(appearance).find((t) => t.name === themeName);
+    const themes = catalog ?? getAppearanceAvailableThemes(appearance);
+    const entry = themes.find((t) => t.name === themeName);
     const fromCatalog = entry?.colors?.[mode];
     if (fromCatalog) return fromCatalog;
   }
@@ -92,8 +109,9 @@ export function buildEmailThemeConfigFromPalette(palette: ThemeColorsMode): Them
 export function actionEmailThemeInput(
   themeName: string | null,
   appearance: Appearance | null,
+  catalog?: SettingsAvailableTheme[],
 ): EditorThemeInput {
-  const palette = paletteFromAppearance(appearance, themeName);
+  const palette = paletteFromAppearance(appearance, themeName, catalog);
   if (palette) return buildEmailThemeConfigFromPalette(palette);
 
   return buildEmailThemeConfigFromPalette({
