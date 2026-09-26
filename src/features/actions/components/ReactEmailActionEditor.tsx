@@ -22,9 +22,8 @@ import {
 } from '@/lib/actionEmailDefaults';
 import {
   actionEmailThemeInput,
-  resolveStoredThemeId,
-  themeIdFromAppearance,
-  type ActionEmailThemeId,
+  getAppearanceAvailableThemes,
+  resolveEmailThemeName,
 } from '@/lib/actionEmailTheme';
 import type { ActionEmailDocument } from '@/features/actions/emailDocument';
 import type { ActionEmailTemplate, ActionTemplateVariable } from '@/features/actions/types';
@@ -53,12 +52,12 @@ type Props = {
 async function compileTemplate(
   ref: EmailEditorRef | null,
   subject: string,
-  theme_id: ActionEmailThemeId,
+  theme_id: string | null,
 ): Promise<ActionEmailTemplate> {
-  if (!ref) return { subject, html: '', theme_id };
+  if (!ref) return { subject, html: '', ...(theme_id ? { theme_id } : {}) };
   const document = ref.getJSON() as ActionEmailDocument;
   const html = await ref.getEmailHTML();
-  return { subject, document, html, theme_id };
+  return { subject, document, html, ...(theme_id ? { theme_id } : {}) };
 }
 
 function LangEditorSurface({
@@ -66,7 +65,7 @@ function LangEditorSurface({
   template,
   onTemplateChange,
   themeInput,
-  themeId,
+  themeName,
   editorKey,
   disabled,
   editorRef,
@@ -80,7 +79,7 @@ function LangEditorSurface({
   template: ActionEmailTemplate;
   onTemplateChange: (next: ActionEmailTemplate) => void;
   themeInput: ReturnType<typeof actionEmailThemeInput>;
-  themeId: ActionEmailThemeId;
+  themeName: string | null;
   editorKey: string;
   disabled?: boolean;
   editorRef: React.MutableRefObject<EmailEditorRef | null>;
@@ -116,12 +115,12 @@ function LangEditorSurface({
   const syncTemplate = useCallback(
     async (ref: EmailEditorRef, generation: string) => {
       if (generation !== syncGenerationRef.current) return;
-      const next = await compileTemplate(ref, template.subject, themeId);
+      const next = await compileTemplate(ref, template.subject, themeName);
       if (generation !== syncGenerationRef.current) return;
-      onTemplateChange({ ...next, theme_id: themeId });
+      onTemplateChange({ ...next, ...(themeName ? { theme_id: themeName } : {}) });
       await refreshPreview(ref);
     },
-    [onTemplateChange, refreshPreview, template.subject, themeId],
+    [onTemplateChange, refreshPreview, template.subject, themeName],
   );
 
   useEffect(() => {
@@ -253,8 +252,9 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
     const appearance = useTheme();
     const [tab, setTab] = useState<LangTab>('en');
     const [surfaceMode, setSurfaceMode] = useState<EditorSurfaceMode>('visual');
-    const [themeId, setThemeId] = useState<ActionEmailThemeId>(() =>
-      themeIdFromAppearance(appearance),
+    const availableThemes = useMemo(() => getAppearanceAvailableThemes(appearance), [appearance]);
+    const [selectedThemeName, setSelectedThemeName] = useState<string | null>(() =>
+      resolveEmailThemeName(undefined, appearance),
     );
     const [rawDraftEn, setRawDraftEn] = useState('');
     const [rawDraftFr, setRawDraftFr] = useState('');
@@ -266,21 +266,26 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
     const setActiveTemplate = tab === 'en' ? onChangeEn : onChangeFr;
 
     useEffect(() => {
-      const fromEn = resolveStoredThemeId(valueEn.theme_id, appearance);
-      const fromFr = resolveStoredThemeId(valueFr.theme_id, appearance);
-      setThemeId(tab === 'en' ? fromEn : fromFr);
+      const stored = tab === 'en' ? valueEn.theme_id : valueFr.theme_id;
+      setSelectedThemeName(resolveEmailThemeName(stored, appearance));
     }, [appearance, contentRevision, tab, valueEn.theme_id, valueFr.theme_id]);
 
+    useEffect(() => {
+      if (selectedThemeName && !availableThemes.some((t) => t.name === selectedThemeName)) {
+        setSelectedThemeName(resolveEmailThemeName(undefined, appearance));
+      }
+    }, [appearance, availableThemes, selectedThemeName]);
+
     const themeInput = useMemo(
-      () => actionEmailThemeInput(themeId, appearance),
-      [appearance, themeId],
+      () => actionEmailThemeInput(selectedThemeName, appearance),
+      [appearance, selectedThemeName],
     );
 
     const patchThemeOnTemplates = useCallback(
-      (nextThemeId: ActionEmailThemeId) => {
-        setThemeId(nextThemeId);
-        onChangeEn({ ...valueEn, theme_id: nextThemeId });
-        onChangeFr({ ...valueFr, theme_id: nextThemeId });
+      (nextThemeName: string) => {
+        setSelectedThemeName(nextThemeName);
+        onChangeEn({ ...valueEn, theme_id: nextThemeName });
+        onChangeFr({ ...valueFr, theme_id: nextThemeName });
       },
       [onChangeEn, onChangeFr, valueEn, valueFr],
     );
@@ -289,18 +294,19 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
       ref,
       () => ({
         compileAll: async () => {
-          const en = await compileTemplate(enRef.current, valueEn.subject, themeId);
-          const fr = await compileTemplate(frRef.current, valueFr.subject, themeId);
+          const en = await compileTemplate(enRef.current, valueEn.subject, selectedThemeName);
+          const fr = await compileTemplate(frRef.current, valueFr.subject, selectedThemeName);
+          const theme_id = selectedThemeName ?? undefined;
           const compiled = {
-            en: { ...en, theme_id: themeId },
-            fr: { ...fr, theme_id: themeId },
+            en: { ...en, ...(theme_id ? { theme_id } : {}) },
+            fr: { ...fr, ...(theme_id ? { theme_id } : {}) },
           };
           onChangeEn(compiled.en);
           onChangeFr(compiled.fr);
           return compiled;
         },
       }),
-      [onChangeEn, onChangeFr, themeId, valueEn.subject, valueFr.subject],
+      [onChangeEn, onChangeFr, selectedThemeName, valueEn.subject, valueFr.subject],
     );
 
     const editorKeyEn = `en-${contentRevision}`;
@@ -434,17 +440,29 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
           <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
             {t('actionsEmailThemeLabel')}
           </span>
-          <select
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 font-mono text-sm"
-            value={themeId}
-            disabled={disabled}
-            onChange={(e) => patchThemeOnTemplates(e.target.value as ActionEmailThemeId)}
-          >
-            <option value="shellui-light">{t('actionsEmailThemeShelluiLight')}</option>
-            <option value="shellui-dark">{t('actionsEmailThemeShelluiDark')}</option>
-          </select>
+          {availableThemes.length === 0 ? (
+            <p className="rounded-md border border-dashed border-border/80 px-3 py-2 font-mono text-xs text-muted-foreground">
+              {t('actionsEmailThemeEmpty')}
+            </p>
+          ) : (
+            <select
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 font-mono text-sm"
+              value={selectedThemeName ?? ''}
+              disabled={disabled || !selectedThemeName}
+              onChange={(e) => patchThemeOnTemplates(e.target.value)}
+            >
+              {availableThemes.map((theme) => (
+                <option
+                  key={theme.name}
+                  value={theme.name}
+                >
+                  {theme.displayName}
+                </option>
+              ))}
+            </select>
+          )}
           <p className="font-mono text-[10px] text-muted-foreground">
-            {t('actionsEmailThemeHelp')}
+            {t('actionsEmailThemeHelp', { mode: appearance?.mode ?? 'light' })}
           </p>
         </label>
 
@@ -454,7 +472,7 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
             template={valueEn}
             onTemplateChange={onChangeEn}
             themeInput={themeInput}
-            themeId={themeId}
+            themeName={selectedThemeName}
             editorKey={editorKeyEn}
             disabled={disabled}
             editorRef={enRef}
@@ -471,7 +489,7 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
             template={valueFr}
             onTemplateChange={onChangeFr}
             themeInput={themeInput}
-            themeId={themeId}
+            themeName={selectedThemeName}
             editorKey={editorKeyFr}
             disabled={disabled}
             editorRef={frRef}

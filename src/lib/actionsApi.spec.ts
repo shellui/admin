@@ -167,7 +167,7 @@ describe('actionsApi parsers', () => {
       config: {
         recipients: ['ops@example.com'],
         email_templates: {
-          en: { subject: 'Hi', html: '<p>x</p>', document, theme_id: 'shellui-light' },
+          en: { subject: 'Hi', html: '<p>x</p>', document, theme_id: 'shellui' },
         },
       },
     });
@@ -176,7 +176,7 @@ describe('actionsApi parsers', () => {
       subject: 'Hi',
       html: '<p>x</p>',
       document,
-      theme_id: 'shellui-light',
+      theme_id: 'shellui',
     });
   });
 

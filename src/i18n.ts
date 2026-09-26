@@ -685,10 +685,10 @@ const resources = {
       actionsEmailSubjectLabel: 'Subject ({{lang}})',
       actionsEmailDocumentLabel: 'Email body',
       actionsEmailThemeLabel: 'Email theme',
-      actionsEmailThemeShelluiLight: 'Shellui light (workspace colors)',
-      actionsEmailThemeShelluiDark: 'Shellui dark (workspace colors)',
+      actionsEmailThemeEmpty:
+        'No themes in Shellui settings yet. Open Shellui settings to load the theme list, then return here.',
       actionsEmailThemeHelp:
-        'Uses colors from Shellui appearance settings. Changing theme re-bakes HTML when you save.',
+        'Uses the {{mode}} palette from the selected Shellui theme. Changing theme re-bakes HTML when you save.',
       actionsEmailModeVisual: 'Visual editor',
       actionsEmailModeRaw: 'Document JSON',
       actionsEmailRawLabel: 'React Email document JSON',
@@ -1481,10 +1481,10 @@ const resources = {
       actionsEmailSubjectLabel: 'Objet ({{lang}})',
       actionsEmailDocumentLabel: 'Corps du message',
       actionsEmailThemeLabel: 'Thème e-mail',
-      actionsEmailThemeShelluiLight: 'Shellui clair (couleurs du workspace)',
-      actionsEmailThemeShelluiDark: 'Shellui sombre (couleurs du workspace)',
+      actionsEmailThemeEmpty:
+        'Aucun thème dans les paramètres Shellui. Ouvrez les paramètres Shellui pour charger la liste, puis revenez ici.',
       actionsEmailThemeHelp:
-        'Reprend les couleurs des paramètres d’apparence Shellui. Changer de thème recompile le HTML à l’enregistrement.',
+        'Utilise la palette {{mode}} du thème Shellui choisi. Changer de thème recompile le HTML à l’enregistrement.',
       actionsEmailModeVisual: 'Éditeur visuel',
       actionsEmailModeRaw: 'JSON document',
       actionsEmailRawLabel: 'JSON document React Email',
