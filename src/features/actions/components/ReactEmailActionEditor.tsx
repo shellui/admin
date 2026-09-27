@@ -1,4 +1,5 @@
 import '@react-email/editor/themes/default.css';
+import '../reactEmailEditor.css';
 import { EmailEditor, type EmailEditorRef } from '@react-email/editor';
 import { Loader2 } from 'lucide-react';
 import {
@@ -13,6 +14,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Text } from '@/components/ui/text';
 import { useTheme } from '@/contexts/ThemeContext';
 import {
@@ -30,19 +32,30 @@ import {
 } from '@/lib/actionEmailTheme';
 import { applyThemeInputToEditor } from '@/lib/actionEmailThemeApply';
 import type { ActionEmailDocument } from '@/features/actions/emailDocument';
-import type { ActionEmailTemplate, ActionTemplateVariable } from '@/features/actions/types';
+import type {
+  ActionEmailPreviewContext,
+  ActionEmailTemplate,
+  ActionTemplateVariable,
+} from '@/features/actions/types';
 import { cn } from '@/lib/utils';
+import { substituteActionEmailTemplate } from '@/lib/actionEmailPreviewSubstitute';
+import { formatActionEmailPlaceholder } from '@/lib/actionEmailUrl';
+import { useAllowTemplateUrlsInEmailEditor } from '@/lib/useAllowTemplateUrlsInEmailEditor';
 
 type LangTab = ActionEmailLang;
 type BodySourceMode = 'visual' | 'json' | 'react';
 type PreviewDisplayMode = 'preview' | 'raw';
+type PreviewDataMode = 'sample' | 'placeholders';
 
 export type ReactEmailActionEditorHandle = {
   compileAll: () => Promise<{ en: ActionEmailTemplate; fr: ActionEmailTemplate }>;
+  getActiveLang: () => 'en' | 'fr';
 };
 
 type Props = {
   templateVariables?: ActionTemplateVariable[];
+  /** Identity `sample_context` (or built from field examples) for live preview. */
+  previewContext?: ActionEmailPreviewContext | null;
   valueEn: ActionEmailTemplate;
   valueFr: ActionEmailTemplate;
   onChangeEn: (next: ActionEmailTemplate) => void;
@@ -52,6 +65,10 @@ type Props = {
   showResetToDefault?: boolean;
   resetLoading?: boolean;
   onResetToDefault?: () => void;
+  showSendTest?: boolean;
+  sendTestLoading?: boolean;
+  sendTestDisabledReason?: string | null;
+  onSendTestToMyself?: () => void;
 };
 
 async function compileTemplate(
@@ -65,7 +82,7 @@ async function compileTemplate(
   return { subject, document, html, ...(theme_id ? { theme_id } : {}) };
 }
 
-function ColumnToggleGroup<T extends string>({
+function SegmentedTabs<T extends string>({
   value,
   options,
   onChange,
@@ -73,31 +90,33 @@ function ColumnToggleGroup<T extends string>({
   ariaLabel,
 }: {
   value: T;
-  options: { value: T; label: string }[];
+  options: { value: T; label: string; disabled?: boolean }[];
   onChange: (next: T) => void;
   disabled?: boolean;
   ariaLabel: string;
 }) {
   return (
-    <div
-      className="flex flex-wrap gap-1"
-      role="group"
-      aria-label={ariaLabel}
+    <Tabs
+      value={value}
+      onValueChange={(next) => onChange(next as T)}
+      className="w-fit"
     >
-      {options.map((opt) => (
-        <Button
-          key={opt.value}
-          type="button"
-          size="sm"
-          variant={value === opt.value ? 'secondary' : 'outline'}
-          className="h-7 font-mono text-[10px] uppercase tracking-wide"
-          disabled={disabled}
-          onClick={() => onChange(opt.value)}
-        >
-          {opt.label}
-        </Button>
-      ))}
-    </div>
+      <TabsList
+        aria-label={ariaLabel}
+        className="h-8"
+      >
+        {options.map((opt) => (
+          <TabsTrigger
+            key={opt.value}
+            value={opt.value}
+            disabled={disabled || opt.disabled}
+            className="h-6 px-2.5 font-mono text-[10px] uppercase tracking-wide"
+          >
+            {opt.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   );
 }
 
@@ -115,10 +134,15 @@ function LangEditorSurface({
   onBodyModeChange,
   previewMode,
   onPreviewModeChange,
+  previewDataMode,
+  onPreviewDataModeChange,
+  previewContext,
   jsonDraft,
   onJsonDraftChange,
   jsonError,
   onJsonError,
+  jsonTextareaRef,
+  onEditorSelectionChange,
 }: {
   lang: LangTab;
   template: ActionEmailTemplate;
@@ -133,13 +157,20 @@ function LangEditorSurface({
   onBodyModeChange: (mode: BodySourceMode) => void;
   previewMode: PreviewDisplayMode;
   onPreviewModeChange: (mode: PreviewDisplayMode) => void;
+  previewDataMode: PreviewDataMode;
+  onPreviewDataModeChange: (mode: PreviewDataMode) => void;
+  previewContext: ActionEmailPreviewContext | null;
   jsonDraft: string;
   onJsonDraftChange: (value: string) => void;
   jsonError: string | null;
   onJsonError: (message: string | null) => void;
+  jsonTextareaRef?: React.MutableRefObject<HTMLTextAreaElement | null>;
+  onEditorSelectionChange?: (selection: { from: number; to: number }) => void;
 }) {
   const { t } = useTranslation();
   const [previewHtml, setPreviewHtml] = useState('');
+  const [editorEpoch, setEditorEpoch] = useState(0);
+  const editorShellRef = useRef<HTMLDivElement | null>(null);
   const mountKey = `${editorKey}|${themeRenderKey}`;
   // Keep generation in sync during render so onReady after remount (reset/load) is not
   // skipped while a useEffect would still hold the previous mountKey.
@@ -148,9 +179,30 @@ function LangEditorSurface({
     syncGenerationRef.current = mountKey;
   }
 
+  const getEditor = useCallback(() => editorRef.current?.editor ?? null, [editorRef]);
+  useAllowTemplateUrlsInEmailEditor(editorShellRef, getEditor);
+
   useEffect(() => {
     setPreviewHtml('');
   }, [mountKey]);
+
+  // Keep last caret range so variable chips can insert after the editor blurs.
+  useEffect(() => {
+    if (!onEditorSelectionChange) return;
+    const editor = editorRef.current?.editor;
+    if (!editor) return;
+    const notify = () => {
+      const { from, to } = editor.state.selection;
+      onEditorSelectionChange({ from, to });
+    };
+    notify();
+    editor.on('selectionUpdate', notify);
+    editor.on('blur', notify);
+    return () => {
+      editor.off('selectionUpdate', notify);
+      editor.off('blur', notify);
+    };
+  }, [editorEpoch, editorRef, mountKey, onEditorSelectionChange]);
 
   const content = useMemo(
     () => stripEmbeddedEmailThemeStyles(resolveEmailEditorContent(template, lang)),
@@ -211,7 +263,11 @@ function LangEditorSurface({
         onJsonError(t('actionsEmailRawEditorNotReady'));
         return;
       }
-      editor.commands.setContent(document, { emitUpdate: true });
+      const applied = editor.commands.setContent(document, { emitUpdate: true });
+      if (!applied) {
+        onJsonError(t('actionsEmailRawApplyFailed'));
+        return;
+      }
       void (async () => {
         const ref = editorRef.current;
         if (!ref) return;
@@ -226,16 +282,57 @@ function LangEditorSurface({
     void navigator.clipboard.writeText(reactDebugSource);
   }, [reactDebugSource]);
 
-  const panelClass = 'min-h-[26rem] flex-1 overflow-auto rounded-md border border-border/80';
+  const panelClass =
+    'min-h-[26rem] min-w-0 flex-1 overflow-auto rounded-md border border-border/80';
+
+  const displayHtml = useMemo(() => {
+    const raw = previewHtml?.trim() || '';
+    if (!raw) return '';
+    if (previewDataMode === 'sample' && previewContext) {
+      return substituteActionEmailTemplate(raw, previewContext, 'html');
+    }
+    return raw;
+  }, [previewContext, previewDataMode, previewHtml]);
+
+  const previewSubject = useMemo(() => {
+    const subject = template.subject?.trim() || '';
+    if (!subject) return '';
+    if (previewDataMode === 'sample' && previewContext) {
+      return substituteActionEmailTemplate(subject, previewContext, 'plain');
+    }
+    return subject;
+  }, [previewContext, previewDataMode, template.subject]);
+
+  const previewSrcDoc = useMemo(() => {
+    const raw = displayHtml || '<p></p>';
+    const wrapStyles =
+      'html,body{max-width:100%;overflow-x:auto;word-break:break-word;overflow-wrap:anywhere;}' +
+      'img,table{max-width:100%!important;}' +
+      'a{overflow-wrap:anywhere;word-break:break-all;}';
+    // getEmailHTML() usually returns a full document; inject styles instead of nesting html.
+    if (/<html[\s>]/i.test(raw)) {
+      if (/<\/head>/i.test(raw)) {
+        return raw.replace(
+          /<\/head>/i,
+          `<style data-shellui-preview-wrap>${wrapStyles}</style></head>`,
+        );
+      }
+      return raw.replace(
+        /<html([^>]*)>/i,
+        `<html$1><head><style data-shellui-preview-wrap>${wrapStyles}</style></head>`,
+      );
+    }
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style data-shellui-preview-wrap>${wrapStyles}</style></head><body>${raw}</body></html>`;
+  }, [displayHtml]);
 
   return (
-    <div className="grid min-h-[28rem] gap-4 lg:grid-cols-2 lg:items-start">
-      <div className="flex min-h-[28rem] flex-col gap-2">
+    <div className="grid min-h-[28rem] min-w-0 gap-4 lg:grid-cols-2 lg:items-start">
+      <div className="flex min-h-[28rem] min-w-0 flex-col gap-2">
         <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
           <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
             {t('actionsEmailDocumentLabel')}
           </p>
-          <ColumnToggleGroup
+          <SegmentedTabs
             ariaLabel={t('actionsEmailDocumentLabel')}
             value={bodyMode}
             disabled={disabled}
@@ -249,9 +346,10 @@ function LangEditorSurface({
         </div>
 
         <div
+          ref={editorShellRef}
           className={cn(
             panelClass,
-            'overflow-hidden bg-background',
+            'shellui-action-email-editor overflow-x-auto overflow-y-auto bg-background',
             bodyMode !== 'visual' && 'hidden',
             disabled && bodyMode === 'visual' && 'pointer-events-none opacity-60',
           )}
@@ -263,11 +361,12 @@ function LangEditorSurface({
             content={content}
             theme={themeInput}
             editable={!disabled && bodyMode === 'visual'}
-            className="min-h-[26rem]"
+            className="min-h-[26rem] w-full min-w-0 max-w-full"
             onReady={(ref) => {
               if (mountKey !== syncGenerationRef.current) return;
               editorRef.current = ref;
               applyThemeInputToEditor(ref.editor, themeInput);
+              setEditorEpoch((n) => n + 1);
               void syncTemplate(ref, mountKey);
             }}
             onUpdate={(ref) => {
@@ -281,6 +380,7 @@ function LangEditorSurface({
         {bodyMode === 'json' ? (
           <div className={cn('flex flex-col gap-2', panelClass, 'bg-muted/10 p-0')}>
             <textarea
+              ref={jsonTextareaRef}
               value={jsonDraft}
               disabled={disabled}
               spellCheck={false}
@@ -337,43 +437,75 @@ function LangEditorSurface({
         ) : null}
       </div>
 
-      <div className="flex min-h-[28rem] flex-col gap-2">
+      <div className="flex min-h-[28rem] min-w-0 flex-col gap-2">
         <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
           <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
             {t('actionsEmailPreview')}
           </p>
-          <ColumnToggleGroup
-            ariaLabel={t('actionsEmailPreview')}
-            value={previewMode}
-            disabled={disabled}
-            options={[
-              { value: 'preview', label: t('actionsEmailPreviewTogglePreview') },
-              { value: 'raw', label: t('actionsEmailPreviewToggleRaw') },
-            ]}
-            onChange={onPreviewModeChange}
-          />
+          <div className="flex flex-wrap items-center gap-3">
+            <SegmentedTabs
+              ariaLabel={t('actionsEmailPreviewDataMode')}
+              value={previewDataMode}
+              disabled={disabled}
+              options={[
+                {
+                  value: 'sample',
+                  label: t('actionsEmailPreviewSample'),
+                  disabled: !previewContext,
+                },
+                { value: 'placeholders', label: t('actionsEmailPreviewPlaceholders') },
+              ]}
+              onChange={onPreviewDataModeChange}
+            />
+            <SegmentedTabs
+              ariaLabel={t('actionsEmailPreview')}
+              value={previewMode}
+              disabled={disabled}
+              options={[
+                { value: 'preview', label: t('actionsEmailPreviewTogglePreview') },
+                { value: 'raw', label: t('actionsEmailPreviewToggleRaw') },
+              ]}
+              onChange={onPreviewModeChange}
+            />
+          </div>
         </div>
 
+        {previewSubject ? (
+          <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2">
+            <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              {t('actionsEmailPreviewSubject')}
+            </p>
+            <p className="mt-0.5 font-mono text-xs text-foreground">{previewSubject}</p>
+          </div>
+        ) : null}
+
         {previewMode === 'preview' ? (
-          <div className={cn(panelClass, 'overflow-hidden bg-muted/20 p-0')}>
+          <div
+            className={cn(
+              panelClass,
+              'shellui-action-email-preview overflow-hidden bg-muted/20 p-0',
+            )}
+          >
             <iframe
               title={t('actionsEmailPreview')}
-              className="h-full min-h-[26rem] w-full bg-white"
+              className="h-full min-h-[26rem] w-full max-w-full bg-white"
               sandbox=""
-              srcDoc={previewHtml || '<p></p>'}
+              srcDoc={previewSrcDoc}
             />
           </div>
         ) : (
           <textarea
             readOnly
-            value={previewHtml || ''}
+            value={displayHtml || ''}
             spellCheck={false}
             className={cn(panelClass, 'bg-muted/10 p-3 font-mono text-xs leading-relaxed')}
             aria-label={t('actionsEmailPreviewToggleRaw')}
           />
         )}
         <Text className="font-mono text-[10px] text-muted-foreground">
-          {t('actionsEmailPreviewHint')}
+          {previewDataMode === 'sample' && previewContext
+            ? t('actionsEmailPreviewHintSample')
+            : t('actionsEmailPreviewHint')}
         </Text>
       </div>
     </div>
@@ -384,6 +516,7 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
   function ReactEmailActionEditor(
     {
       templateVariables,
+      previewContext = null,
       valueEn,
       valueFr,
       onChangeEn,
@@ -393,6 +526,10 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
       showResetToDefault,
       resetLoading,
       onResetToDefault,
+      showSendTest,
+      sendTestLoading,
+      sendTestDisabledReason,
+      onSendTestToMyself,
     },
     ref,
   ) {
@@ -401,6 +538,11 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
     const [tab, setTab] = useState<LangTab>('en');
     const [bodyMode, setBodyMode] = useState<BodySourceMode>('visual');
     const [previewMode, setPreviewMode] = useState<PreviewDisplayMode>('preview');
+    const [previewDataMode, setPreviewDataMode] = useState<PreviewDataMode>('sample');
+
+    useEffect(() => {
+      setPreviewDataMode(previewContext ? 'sample' : 'placeholders');
+    }, [previewContext]);
     const availableThemes = useMemo(
       () => getAppearanceAvailableThemes(appearance),
       // eslint-disable-next-line react-hooks/exhaustive-deps -- stable when theme names unchanged
@@ -420,9 +562,41 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
     const [jsonError, setJsonError] = useState<string | null>(null);
     const enRef = useRef<EmailEditorRef | null>(null);
     const frRef = useRef<EmailEditorRef | null>(null);
+    const subjectInputRef = useRef<HTMLInputElement | null>(null);
+    const jsonTextareaEnRef = useRef<HTMLTextAreaElement | null>(null);
+    const jsonTextareaFrRef = useRef<HTMLTextAreaElement | null>(null);
+    const editorSelectionEnRef = useRef<{ from: number; to: number } | null>(null);
+    const editorSelectionFrRef = useRef<{ from: number; to: number } | null>(null);
 
     const activeTemplate = tab === 'en' ? valueEn : valueFr;
     const setActiveTemplate = tab === 'en' ? onChangeEn : onChangeFr;
+
+    const insertAtTextCaret = useCallback(
+      (
+        el: HTMLInputElement | HTMLTextAreaElement,
+        value: string,
+        apply: (next: string) => void,
+        token: string,
+      ) => {
+        const start = el.selectionStart ?? value.length;
+        const end = el.selectionEnd ?? start;
+        const next = value.slice(0, start) + token + value.slice(end);
+        apply(next);
+        const caret = start + token.length;
+        requestAnimationFrame(() => {
+          el.focus();
+          el.setSelectionRange(caret, caret);
+        });
+      },
+      [],
+    );
+
+    const onEditorSelectionEn = useCallback((selection: { from: number; to: number }) => {
+      editorSelectionEnRef.current = selection;
+    }, []);
+    const onEditorSelectionFr = useCallback((selection: { from: number; to: number }) => {
+      editorSelectionFrRef.current = selection;
+    }, []);
 
     useEffect(() => {
       if (hydratedRevisionRef.current === contentRevision) return;
@@ -511,32 +685,130 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
           onChangeFr(compiled.fr);
           return compiled;
         },
+        getActiveLang: () => tab,
       }),
-      [onChangeEn, onChangeFr, selectedThemeName, valueEn.subject, valueFr.subject],
+      [onChangeEn, onChangeFr, selectedThemeName, tab, valueEn.subject, valueFr.subject],
     );
 
     const editorKeyEn = `en-${contentRevision}`;
     const editorKeyFr = `fr-${contentRevision}`;
 
     const insertVariable = useCallback(
-      (token: string) => {
+      (variable: ActionTemplateVariable, as: 'text' | 'href' | 'button' = 'text') => {
+        const insert = formatActionEmailPlaceholder(variable.token);
+
         if (bodyMode === 'json') {
           const draft = tab === 'en' ? jsonDraftEn : jsonDraftFr;
-          const insert = `{{ ${token} }}`;
+          const textarea = tab === 'en' ? jsonTextareaEnRef.current : jsonTextareaFrRef.current;
+          if (textarea) {
+            insertAtTextCaret(
+              textarea,
+              draft,
+              (next) => {
+                if (tab === 'en') setJsonDraftEn(next);
+                else setJsonDraftFr(next);
+              },
+              insert,
+            );
+            return;
+          }
           const next = draft + (draft.endsWith('\n') || draft.length === 0 ? '' : ' ') + insert;
           if (tab === 'en') setJsonDraftEn(next);
           else setJsonDraftFr(next);
           return;
         }
+
         if (bodyMode === 'react') return;
-        const editorRef = tab === 'en' ? enRef : frRef;
-        editorRef.current?.editor?.chain().focus().insertContent(`{{ ${token} }}`).run();
+
+        const subjectEl = subjectInputRef.current;
+        if (as === 'text' && subjectEl && document.activeElement === subjectEl) {
+          insertAtTextCaret(
+            subjectEl,
+            activeTemplate.subject,
+            (next) => setActiveTemplate({ ...activeTemplate, subject: next }),
+            insert,
+          );
+          return;
+        }
+
+        const activeEditorRef = tab === 'en' ? enRef : frRef;
+        const editor = activeEditorRef.current?.editor;
+        if (!editor) return;
+
+        const saved = tab === 'en' ? editorSelectionEnRef.current : editorSelectionFrRef.current;
+        const docSize = editor.state.doc.content.size;
+        const selection =
+          saved && saved.from <= docSize && saved.to <= docSize
+            ? saved
+            : { from: editor.state.selection.from, to: editor.state.selection.to };
+
+        const chainWithCaret = () =>
+          editor.chain().focus().setTextSelection({ from: selection.from, to: selection.to });
+
+        if (as === 'button' || (as === 'href' && editor.isActive('button'))) {
+          if (editor.isActive('button')) {
+            chainWithCaret().updateAttributes('button', { href: insert }).run();
+            return;
+          }
+          chainWithCaret()
+            .insertContent({
+              type: 'button',
+              attrs: { href: insert, class: 'button', alignment: 'center' },
+              content: [
+                {
+                  type: 'text',
+                  text: t('actionsEmailButtonDefaultLabel'),
+                },
+              ],
+            })
+            .run();
+          return;
+        }
+
+        if (as === 'href') {
+          if (editor.isActive('link')) {
+            chainWithCaret().extendMarkRange('link').setMark('link', { href: insert }).run();
+            return;
+          }
+          if (selection.from !== selection.to) {
+            chainWithCaret().setMark('link', { href: insert }).run();
+            return;
+          }
+          chainWithCaret()
+            .insertContent({
+              type: 'text',
+              text: insert,
+              marks: [{ type: 'link', attrs: { href: insert, target: '_blank' } }],
+            })
+            .run();
+          return;
+        }
+
+        if (variable.isUrl && editor.isActive('button')) {
+          chainWithCaret().updateAttributes('button', { href: insert }).run();
+          return;
+        }
+        if (variable.isUrl && editor.isActive('link')) {
+          chainWithCaret().extendMarkRange('link').setMark('link', { href: insert }).run();
+          return;
+        }
+
+        chainWithCaret().insertContent(insert).run();
       },
-      [bodyMode, jsonDraftEn, jsonDraftFr, tab],
+      [
+        activeTemplate,
+        bodyMode,
+        insertAtTextCaret,
+        jsonDraftEn,
+        jsonDraftFr,
+        setActiveTemplate,
+        t,
+        tab,
+      ],
     );
 
     return (
-      <div className="space-y-4">
+      <div className="min-w-0 space-y-4">
         <div className="rounded-md border border-amber-200/80 bg-amber-50/80 p-3 dark:border-amber-900/50 dark:bg-amber-950/30">
           <p className="font-mono text-xs text-amber-950 dark:text-amber-100">
             {t('actionsEmailRebakeNotice')}
@@ -551,27 +823,51 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
             tab={tab}
             onTab={setTab}
           />
-          {showResetToDefault && onResetToDefault ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={disabled || resetLoading}
-              onClick={onResetToDefault}
-            >
-              {resetLoading ? (
-                <>
-                  <Loader2
-                    className="mr-2 size-3.5 animate-spin"
-                    aria-hidden
-                  />
-                  {t('actionsEmailResetLoading')}
-                </>
-              ) : (
-                t('actionsEmailResetToDefault')
-              )}
-            </Button>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {showSendTest && onSendTestToMyself ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={disabled || sendTestLoading || Boolean(sendTestDisabledReason)}
+                title={sendTestDisabledReason ?? undefined}
+                onClick={onSendTestToMyself}
+              >
+                {sendTestLoading ? (
+                  <>
+                    <Loader2
+                      className="mr-2 size-3.5 animate-spin"
+                      aria-hidden
+                    />
+                    {t('actionsEmailSendTestLoading')}
+                  </>
+                ) : (
+                  t('actionsEmailSendTest')
+                )}
+              </Button>
+            ) : null}
+            {showResetToDefault && onResetToDefault ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={disabled || resetLoading}
+                onClick={onResetToDefault}
+              >
+                {resetLoading ? (
+                  <>
+                    <Loader2
+                      className="mr-2 size-3.5 animate-spin"
+                      aria-hidden
+                    />
+                    {t('actionsEmailResetLoading')}
+                  </>
+                ) : (
+                  t('actionsEmailResetToDefault')
+                )}
+              </Button>
+            ) : null}
+          </div>
         </div>
 
         <label className="block space-y-1">
@@ -579,6 +875,7 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
             {t('actionsEmailSubjectLabel', { lang: tab })}
           </span>
           <Input
+            ref={subjectInputRef}
             value={activeTemplate.subject}
             disabled={disabled}
             className="font-mono text-sm"
@@ -596,18 +893,51 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
             </p>
             <div className="flex flex-wrap gap-2">
               {templateVariables.map((v) => (
-                <Button
+                <div
                   key={v.token}
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-7 font-mono text-[10px]"
-                  disabled={disabled}
-                  title={v.description ?? v.token}
-                  onClick={() => insertVariable(v.token)}
+                  className="flex flex-wrap items-center gap-1"
                 >
-                  {`{{ ${v.token} }}`}
-                </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 font-mono text-[10px]"
+                    disabled={disabled}
+                    title={v.description ?? v.token}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => insertVariable(v, 'text')}
+                  >
+                    {formatActionEmailPlaceholder(v.token)}
+                  </Button>
+                  {v.isUrl ? (
+                    <>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="h-7 font-mono text-[10px]"
+                        disabled={disabled || bodyMode === 'react'}
+                        title={t('actionsEmailInsertVarAsLink', { var: v.token })}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => insertVariable(v, 'href')}
+                      >
+                        {t('actionsEmailInsertLinkShort')}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="h-7 font-mono text-[10px]"
+                        disabled={disabled || bodyMode === 'react'}
+                        title={t('actionsEmailInsertVarAsButton', { var: v.token })}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => insertVariable(v, 'button')}
+                      >
+                        {t('actionsEmailInsertButtonShort')}
+                      </Button>
+                    </>
+                  ) : null}
+                </div>
               ))}
             </div>
           </div>
@@ -658,10 +988,15 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
             onBodyModeChange={setBodyMode}
             previewMode={previewMode}
             onPreviewModeChange={setPreviewMode}
+            previewDataMode={previewDataMode}
+            onPreviewDataModeChange={setPreviewDataMode}
+            previewContext={previewContext}
             jsonDraft={jsonDraftEn}
             onJsonDraftChange={setJsonDraftEn}
             jsonError={jsonError}
             onJsonError={setJsonError}
+            jsonTextareaRef={jsonTextareaEnRef}
+            onEditorSelectionChange={onEditorSelectionEn}
           />
         </div>
         <div className={tab === 'fr' ? undefined : 'hidden'}>
@@ -679,10 +1014,15 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
             onBodyModeChange={setBodyMode}
             previewMode={previewMode}
             onPreviewModeChange={setPreviewMode}
+            previewDataMode={previewDataMode}
+            onPreviewDataModeChange={setPreviewDataMode}
+            previewContext={previewContext}
             jsonDraft={jsonDraftFr}
             onJsonDraftChange={setJsonDraftFr}
             jsonError={jsonError}
             onJsonError={setJsonError}
+            jsonTextareaRef={jsonTextareaFrRef}
+            onEditorSelectionChange={onEditorSelectionFr}
           />
         </div>
 
@@ -696,20 +1036,14 @@ export const ReactEmailActionEditor = forwardRef<ReactEmailActionEditorHandle, P
 
 function LangTabs({ tab, onTab }: { tab: LangTab; onTab: (tab: LangTab) => void }) {
   return (
-    <div className="flex gap-2">
-      {(['en', 'fr'] as const).map((lang) => (
-        <button
-          key={lang}
-          type="button"
-          className={cn(
-            'rounded-md px-3 py-1 font-mono text-xs uppercase',
-            tab === lang ? 'bg-muted font-semibold' : 'text-muted-foreground hover:bg-muted/50',
-          )}
-          onClick={() => onTab(lang)}
-        >
-          {lang}
-        </button>
-      ))}
-    </div>
+    <SegmentedTabs
+      ariaLabel="Language"
+      value={tab}
+      options={[
+        { value: 'en', label: 'en' },
+        { value: 'fr', label: 'fr' },
+      ]}
+      onChange={onTab}
+    />
   );
 }

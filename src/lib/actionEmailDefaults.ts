@@ -64,19 +64,33 @@ function stripEmbeddedThemeFromNode(node: ActionEmailDocument): ActionEmailDocum
 export function defaultWelcomeEmailHtml(lang: ActionEmailLang): string {
   if (lang === 'fr') {
     return `
-<h1>Bienvenue chez {{ envelope.company.name }}</h1>
-<p>Bonjour {{ data.email }},</p>
-<p>Merci de votre confiance. Voici un lien pour continuer.</p>
-<p><a href="{{ magic_link_url }}">Continuer</a></p>
-<p>À bientôt,<br/>L'équipe</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f4f4f5;border-collapse:collapse;">
+  <tr><td align="center" style="padding:32px 16px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="640" style="max-width:640px;width:100%;background-color:#ffffff;border-radius:8px;border-collapse:separate;">
+      <tr><td style="padding:40px 40px 64px;text-align:center;">
+        <h1 style="margin:0 0 24px;font-size:28px;font-weight:600;color:#18181b;">Bienvenue chez {{ envelope.company.name }}</h1>
+        <p style="margin:0 0 24px;font-size:16px;color:#52525b;">Bonjour {{ data.email }},</p>
+        <p style="margin:0 0 24px;font-size:16px;color:#52525b;">Merci de votre confiance. Voici un lien pour continuer.</p>
+        <a href="{{ magic_link_url }}" style="display:inline-block;background-color:#18181b;color:#ffffff;text-decoration:none;padding:16px 28px;border-radius:8px;font-weight:500;font-size:16px;">Continuer</a>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
 `.trim();
   }
   return `
-<h1>Welcome to {{ envelope.company.name }}</h1>
-<p>Hi {{ data.email }},</p>
-<p>Thanks for joining us. Use the button below to get started.</p>
-<p><a href="{{ magic_link_url }}">Get started</a></p>
-<p>Thanks,<br/>The team</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f4f4f5;border-collapse:collapse;">
+  <tr><td align="center" style="padding:32px 16px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="640" style="max-width:640px;width:100%;background-color:#ffffff;border-radius:8px;border-collapse:separate;">
+      <tr><td style="padding:40px 40px 64px;text-align:center;">
+        <h1 style="margin:0 0 24px;font-size:28px;font-weight:600;color:#18181b;">Welcome to {{ envelope.company.name }}</h1>
+        <p style="margin:0 0 24px;font-size:16px;color:#52525b;">Hi {{ data.email }},</p>
+        <p style="margin:0 0 24px;font-size:16px;color:#52525b;">Thanks for joining us. Use the button below to get started.</p>
+        <a href="{{ magic_link_url }}" style="display:inline-block;background-color:#18181b;color:#ffffff;text-decoration:none;padding:16px 28px;border-radius:8px;font-weight:500;font-size:16px;">Get started</a>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
 `.trim();
 }
 

@@ -76,7 +76,7 @@ describe('actionEmailTheme', () => {
     expect(claude.styles?.body?.backgroundColor).toBe('#fdd');
   });
 
-  it('buildEmailThemeConfigFromPalette sets button from primary', () => {
+  it('buildEmailThemeConfigFromPalette sets button from primary with padding', () => {
     const config = buildEmailThemeConfigFromPalette({
       primary: '#2563eb',
       primaryForeground: '#fff',
@@ -86,7 +86,10 @@ describe('actionEmailTheme', () => {
       mutedForeground: '#666',
       radius: '6px',
     } as never);
-    expect(config.extends).toBe('minimal');
+    expect(config.extends).toBe('basic');
     expect(config.styles?.button?.backgroundColor).toBe('#2563eb');
+    expect(config.styles?.button?.paddingTop).toBe('16px');
+    expect(config.styles?.button?.paddingLeft).toBe('28px');
+    expect(config.styles?.container?.paddingTop).toBe('40px');
   });
 });

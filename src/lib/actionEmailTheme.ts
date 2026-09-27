@@ -89,19 +89,47 @@ export function buildEmailThemeConfigFromPalette(palette: ThemeColorsMode): Them
       ? radiusRaw.includes('px') || radiusRaw.includes('rem')
         ? radiusRaw
         : `${radiusRaw}px`
-      : '6px';
+      : '8px';
 
-  return extendTheme('minimal', {
-    body: { backgroundColor: palette.muted, color: palette.foreground },
-    container: { backgroundColor: palette.background },
+  // Extend `basic` (not `minimal`): minimal's RESET omits button padding, so CTAs
+  // render as flat colored strips. Basic ships padded buttons; we still override
+  // colors and bump padding toward react.email barebones (px-7 / py-4).
+  return extendTheme('basic', {
+    body: {
+      backgroundColor: palette.muted,
+      color: palette.foreground,
+      paddingTop: '32px',
+      paddingRight: '16px',
+      paddingBottom: '32px',
+      paddingLeft: '16px',
+    },
+    container: {
+      backgroundColor: palette.background,
+      borderRadius: '8px',
+      paddingTop: '40px',
+      paddingRight: '40px',
+      paddingBottom: '40px',
+      paddingLeft: '40px',
+    },
     h1: { color: palette.foreground },
     h2: { color: palette.foreground },
-    paragraph: { color: palette.mutedForeground || palette.foreground },
+    paragraph: {
+      color: palette.mutedForeground || palette.foreground,
+      fontSize: '16px',
+    },
     link: { color: palette.primary },
     button: {
       backgroundColor: palette.primary,
       color: buttonText,
       borderRadius,
+      paddingTop: '16px',
+      paddingRight: '28px',
+      paddingBottom: '16px',
+      paddingLeft: '28px',
+      fontSize: '16px',
+      fontWeight: 500,
+      textDecoration: 'none',
+      textAlign: 'center',
     },
   });
 }

@@ -118,18 +118,46 @@ describe('actionsApi parsers', () => {
   it('buildEventTemplateVariables includes magic link URL with isUrl', () => {
     const vars = buildEventTemplateVariables({
       type: 'identity.auth.magic_link.requested',
-      payload_fields: [{ name: 'email', description: 'Recipient email' }],
-      email_template_fields: [
+      payload_fields: [{ name: 'email', description: 'Recipient email', example: 'ada@acme.com' }],
+      email_context_fields: [
         {
           name: 'magic_link_url',
           description: 'Sign-in URL injected when the email is sent',
+          example: 'https://identity.example.com/verify?token=abc',
         },
       ],
     });
     const magic = vars.find((v) => v.token === 'data.magic_link_url');
     expect(magic).toBeDefined();
     expect(magic?.isUrl).toBe(true);
+    expect(magic?.example).toContain('https://');
     expect(isUrlLikeTemplateField('magic_link_url', magic?.description)).toBe(true);
+    const email = vars.find((v) => v.token === 'data.email');
+    expect(email?.example).toBe('ada@acme.com');
+  });
+
+  it('parseEventsList keeps sample_context from identity', () => {
+    const events = parseEventsList({
+      results: [
+        {
+          type: 'identity.auth.magic_link.requested',
+          sample_context: {
+            envelope: { company: { name: 'Actions Co' }, data: { email: 'a@b.com' } },
+            data: {
+              email: 'a@b.com',
+              magic_link_url: 'https://id.example.com/ml',
+            },
+          },
+        },
+      ],
+      email_envelope_fields: [
+        { name: 'envelope.company.name', description: 'Company', example: 'Acme' },
+      ],
+    });
+    expect(events[0].sample_context?.data?.magic_link_url).toBe('https://id.example.com/ml');
+    expect(
+      events[0].template_variables?.find((v) => v.token === 'envelope.company.name')?.example,
+    ).toBe('Acme');
   });
 
   it('parseDeliveriesList maps identity delivery fields', () => {

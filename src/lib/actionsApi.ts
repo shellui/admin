@@ -198,6 +198,38 @@ export function createIdentityActionsApiClient(
       return out;
     },
 
+    async sendTestEmailTemplate(
+      eventType: string,
+      payload: { language: 'en' | 'fr'; subject: string; html: string },
+    ): Promise<{ sent_to: string; language: string; subject: string }> {
+      const encoded = encodeURIComponent(eventType);
+      const res = await identityAuthFetch(
+        `/api/v1/actions/events/${encoded}/email-template/send-test`,
+        accessToken,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            language: payload.language,
+            subject: payload.subject,
+            html: payload.html,
+          }),
+        },
+        company,
+      );
+      const body = await readJsonOrThrow(res, ACTIONS_API_UNAVAILABLE);
+      if (!body || typeof body !== 'object') {
+        throw new Error(ACTIONS_API_UNAVAILABLE);
+      }
+      const o = body as Record<string, unknown>;
+      const sent_to = typeof o.sent_to === 'string' ? o.sent_to : '';
+      const language = typeof o.language === 'string' ? o.language : payload.language;
+      const subject = typeof o.subject === 'string' ? o.subject : payload.subject;
+      if (!sent_to) {
+        throw new Error(ACTIONS_API_UNAVAILABLE);
+      }
+      return { sent_to, language, subject };
+    },
+
     async fetchDeliveries(
       filters: ActionDeliveryListFilters,
     ): Promise<ActionDeliveriesListResponse> {

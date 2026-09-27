@@ -7,7 +7,14 @@ export type ActionRuleId = string | number;
 export type ActionTemplateVariable = {
   token: string;
   description?: string;
+  /** Catalog example from identity — used for HTML preview substitution. */
+  example?: unknown;
   isUrl?: boolean;
+};
+
+export type ActionEmailPreviewContext = {
+  envelope?: Record<string, unknown>;
+  data?: Record<string, unknown>;
 };
 
 export type ActionEventCatalogEntry = {
@@ -15,6 +22,8 @@ export type ActionEventCatalogEntry = {
   label?: string;
   description?: string;
   template_variables?: ActionTemplateVariable[];
+  /** Ready-made `{ envelope, data }` from identity (preferred for preview). */
+  sample_context?: ActionEmailPreviewContext | null;
   payload_email_field?: string | null;
 };
 
@@ -121,6 +130,11 @@ export interface ActionsApiClient {
     eventType: string,
     languages: readonly ('en' | 'fr')[],
   ): Promise<Partial<Record<'en' | 'fr', ActionEmailTemplate>>>;
+  /** Staff/owner: send substituted sample to the authenticated user's email. */
+  sendTestEmailTemplate(
+    eventType: string,
+    payload: { language: 'en' | 'fr'; subject: string; html: string },
+  ): Promise<{ sent_to: string; language: string; subject: string }>;
   fetchDeliveries(filters: ActionDeliveryListFilters): Promise<ActionDeliveriesListResponse>;
   fetchDelivery(id: string): Promise<ActionDeliveryDetail>;
   requeueDelivery(id: string): Promise<void>;

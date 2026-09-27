@@ -1,10 +1,15 @@
 import { isJsonContent } from '@/lib/actionEmailDefaults';
+import {
+  buildEmailPreviewContextFromVariables,
+  normalizeEmailPreviewContext,
+} from '@/lib/actionEmailPreviewSubstitute';
 import { unwrapResultsArray } from '@/lib/listResults';
 import type {
   ActionDeliveriesListResponse,
   ActionDelivery,
   ActionDeliveryAttempt,
   ActionDeliveryDetail,
+  ActionEmailPreviewContext,
   ActionEmailTemplate,
   ActionEventCatalogEntry,
   ActionRule,
@@ -17,15 +22,33 @@ import type {
 } from '@/features/actions/types';
 
 const DEFAULT_ENVELOPE_TEMPLATE_VARIABLES: ActionTemplateVariable[] = [
-  { token: 'envelope.id', description: 'Unique delivery envelope id' },
-  { token: 'envelope.type', description: 'Event type id' },
-  { token: 'envelope.time', description: 'Event timestamp (ISO 8601)' },
-  { token: 'envelope.company.id', description: 'Company id' },
-  { token: 'envelope.company.slug', description: 'Company slug' },
-  { token: 'envelope.company.name', description: 'Company display name' },
+  {
+    token: 'envelope.id',
+    description: 'Unique delivery envelope id',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  },
+  {
+    token: 'envelope.type',
+    description: 'Event type id',
+    example: 'identity.user.created',
+  },
+  {
+    token: 'envelope.time',
+    description: 'Event timestamp (ISO 8601)',
+    example: '2026-09-24T13:30:00+00:00',
+  },
+  { token: 'envelope.company.id', description: 'Company id', example: 1 },
+  { token: 'envelope.company.slug', description: 'Company slug', example: 'acme' },
+  {
+    token: 'envelope.company.name',
+    description: 'Company display name',
+    example: 'Acme',
+  },
 ];
 
-function parseFieldDocArray(raw: unknown): Array<{ name: string; description?: string }> {
+function parseFieldDocArray(
+  raw: unknown,
+): Array<{ name: string; description?: string; example?: unknown }> {
   if (!Array.isArray(raw)) return [];
   return raw.flatMap((item) => {
     if (!item || typeof item !== 'object') return [];
@@ -36,6 +59,7 @@ function parseFieldDocArray(raw: unknown): Array<{ name: string; description?: s
       {
         name,
         description: typeof o.description === 'string' ? o.description : undefined,
+        example: 'example' in o ? o.example : undefined,
       },
     ];
   });
@@ -59,10 +83,15 @@ export function isUrlLikeTemplateField(name: string, description?: string): bool
 /** Build deduplicated Django template paths for TipTap placeholder chips. */
 export function buildEventTemplateVariables(
   raw: Record<string, unknown>,
+  sharedEnvelopeFields?: unknown,
 ): ActionTemplateVariable[] {
   const byToken = new Map<string, ActionTemplateVariable>();
 
-  const add = (token: string, description?: string, opts?: { isUrl?: boolean }) => {
+  const add = (
+    token: string,
+    description?: string,
+    opts?: { isUrl?: boolean; example?: unknown },
+  ) => {
     const normalized = token.trim();
     if (!normalized) return;
     const isUrl = opts?.isUrl ?? isUrlLikeTemplateField(normalized, description);
@@ -70,12 +99,16 @@ export function buildEventTemplateVariables(
     if (prev) {
       if (description && !prev.description) prev.description = description;
       if (isUrl) prev.isUrl = true;
+      if (prev.example === undefined && opts?.example !== undefined) {
+        prev.example = opts.example;
+      }
       return;
     }
     byToken.set(normalized, {
       token: normalized,
       description,
       ...(isUrl ? { isUrl: true } : {}),
+      ...(opts?.example !== undefined ? { example: opts.example } : {}),
     });
   };
 
@@ -84,15 +117,16 @@ export function buildEventTemplateVariables(
     raw.email_template_fields,
     raw.email_context_fields,
     raw.envelope_fields,
+    sharedEnvelopeFields,
   ];
   for (const group of fieldGroups) {
     for (const field of parseFieldDocArray(group)) {
       if (field.name.startsWith('envelope.')) {
-        add(field.name, field.description);
+        add(field.name, field.description, { example: field.example });
       } else if (field.name.startsWith('data.')) {
-        add(field.name, field.description);
+        add(field.name, field.description, { example: field.example });
       } else {
-        add(dataToken(field.name), field.description);
+        add(dataToken(field.name), field.description, { example: field.example });
       }
     }
   }
@@ -104,7 +138,7 @@ export function buildEventTemplateVariables(
   }
 
   for (const env of DEFAULT_ENVELOPE_TEMPLATE_VARIABLES) {
-    add(env.token, env.description);
+    add(env.token, env.description, { example: env.example });
   }
 
   return [...byToken.values()].sort((a, b) => a.token.localeCompare(b.token));
@@ -209,34 +243,48 @@ export function parseRulesList(body: unknown): ActionRule[] {
 }
 
 export function parseEventsList(body: unknown): ActionEventCatalogEntry[] {
-  const rows = unwrapResultsArray(body);
-  if (rows == null) {
-    if (body && typeof body === 'object') {
-      const events = (body as Record<string, unknown>).events;
-      if (Array.isArray(events)) {
-        return events.map(parseEventEntry);
-      }
+  let rows: unknown[] | null = unwrapResultsArray(body);
+  let sharedEnvelopeFields: unknown;
+  if (body && typeof body === 'object') {
+    const root = body as Record<string, unknown>;
+    sharedEnvelopeFields = root.email_envelope_fields;
+    if (rows == null && Array.isArray(root.events)) {
+      rows = root.events;
     }
+  }
+  if (rows == null) {
     throw new Error('Unexpected actions events response.');
   }
-  return rows.map(parseEventEntry);
+  return rows.map((row) => parseEventEntry(row, sharedEnvelopeFields));
 }
 
-function parseEventEntry(raw: unknown): ActionEventCatalogEntry {
+function parseEventEntry(raw: unknown, sharedEnvelopeFields?: unknown): ActionEventCatalogEntry {
   if (!raw || typeof raw !== 'object') {
     return { key: '' };
   }
   const o = raw as Record<string, unknown>;
   const key = typeof o.type === 'string' ? o.type : typeof o.key === 'string' ? o.key : '';
   const payloadField = typeof o.payload_email_field === 'string' ? o.payload_email_field : null;
-  const template_variables = buildEventTemplateVariables(o);
+  const template_variables = buildEventTemplateVariables(o, sharedEnvelopeFields);
+  const sample_context = normalizeEmailPreviewContext(o.sample_context);
   return {
     key,
     label: typeof o.label === 'string' ? o.label : undefined,
     description: typeof o.description === 'string' ? o.description : undefined,
     payload_email_field: payloadField,
     template_variables: template_variables.length ? template_variables : undefined,
+    ...(sample_context ? { sample_context } : {}),
   };
+}
+
+export function resolveEventPreviewContext(
+  event: ActionEventCatalogEntry | null | undefined,
+): ActionEmailPreviewContext | null {
+  if (!event) return null;
+  if (event.sample_context) return event.sample_context;
+  const vars = event.template_variables ?? [];
+  if (!vars.some((v) => v.example !== undefined)) return null;
+  return buildEmailPreviewContextFromVariables(vars);
 }
 
 export type ActionEmailTemplateLang = 'en' | 'fr';

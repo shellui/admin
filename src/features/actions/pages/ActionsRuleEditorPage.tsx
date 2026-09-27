@@ -9,13 +9,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
-import { getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
+import { getEmailFromJwt, getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
 import { ActionsSubNav } from '@/features/actions/components/ActionsSubNav';
 import {
   ReactEmailActionEditor,
   type ReactEmailActionEditorHandle,
 } from '@/features/actions/components/ReactEmailActionEditor';
 import { emptyActionEmailTemplate, normalizeEmailTemplate } from '@/lib/actionEmailDefaults';
+import { resolveEventPreviewContext } from '@/lib/actionsApiParsers';
 import {
   ApiUnavailableNotice,
   isApiUnavailableError,
@@ -46,6 +47,7 @@ export function ActionsRuleEditorPage() {
   const navigate = useNavigate();
   const accessToken = useShelluiAccessToken();
   const isOwner = Boolean(accessToken && getIsCompanyOwnerFromJwt(accessToken));
+  const viewerEmail = accessToken ? getEmailFromJwt(accessToken) : null;
   const { api } = useActionsApi(accessToken);
 
   const [events, setEvents] = useState<ActionEventCatalogEntry[]>([]);
@@ -67,6 +69,7 @@ export function ActionsRuleEditorPage() {
   const [templateFr, setTemplateFr] = useState<ActionEmailTemplate>(emptyTemplate());
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [resetTemplatesLoading, setResetTemplatesLoading] = useState(false);
+  const [sendTestLoading, setSendTestLoading] = useState(false);
   const [templateFetchError, setTemplateFetchError] = useState<string | null>(null);
   const initialEventRef = useRef<string | null>(null);
   const emailEditorRef = useRef<ReactEmailActionEditorHandle | null>(null);
@@ -75,6 +78,10 @@ export function ActionsRuleEditorPage() {
   const selectedEvent = useMemo(
     () => events.find((e) => e.key === eventKey) ?? null,
     [events, eventKey],
+  );
+  const selectedEventPreviewContext = useMemo(
+    () => resolveEventPreviewContext(selectedEvent),
+    [selectedEvent],
   );
 
   const loadCatalog = useCallback(async () => {
@@ -225,6 +232,45 @@ export function ActionsRuleEditorPage() {
       setResetTemplatesLoading(false);
     }
   }, [api, eventKey, kind, t]);
+
+  const sendTestEmailDisabledReason = useMemo(() => {
+    if (!eventKey.trim()) return t('actionsEmailSendTestNeedEvent');
+    if (!viewerEmail) return t('actionsEmailSendTestNeedEmail');
+    return null;
+  }, [eventKey, t, viewerEmail]);
+
+  const sendTestEmailToMyself = useCallback(async () => {
+    if (!api || kind !== 'email' || !eventKey.trim() || !viewerEmail) return;
+    setSendTestLoading(true);
+    setTemplateFetchError(null);
+    try {
+      let templates = { en: templateEn, fr: templateFr };
+      if (emailEditorRef.current) {
+        templates = await emailEditorRef.current.compileAll();
+      }
+      const lang = emailEditorRef.current?.getActiveLang() ?? 'en';
+      const active = templates[lang];
+      const result = await api.sendTestEmailTemplate(eventKey, {
+        language: lang,
+        subject: active.subject ?? '',
+        html: active.html ?? '',
+      });
+      shellui.toast({
+        title: t('actionsEmailSendTestSuccess', { email: result.sent_to }),
+        type: 'success',
+      });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : t('actionsEmailSendTestError');
+      setTemplateFetchError(message);
+      shellui.toast({
+        title: t('actionsEmailSendTestError'),
+        description: message,
+        type: 'error',
+      });
+    } finally {
+      setSendTestLoading(false);
+    }
+  }, [api, eventKey, kind, t, templateEn, templateFr, viewerEmail]);
 
   async function onSave() {
     if (!api || !name.trim() || !eventKey) return;
@@ -442,15 +488,17 @@ export function ActionsRuleEditorPage() {
                     {t('actionsEmailIncludePayloadHelp')}
                   </p>
                 </div>
-                {templatesLoading || resetTemplatesLoading ? (
+                {templatesLoading || resetTemplatesLoading || sendTestLoading ? (
                   <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
                     <Loader2
                       className="size-4 animate-spin"
                       aria-hidden
                     />
-                    {resetTemplatesLoading
-                      ? t('actionsEmailResetLoading')
-                      : t('actionsEmailTemplateLoading')}
+                    {sendTestLoading
+                      ? t('actionsEmailSendTestLoading')
+                      : resetTemplatesLoading
+                        ? t('actionsEmailResetLoading')
+                        : t('actionsEmailTemplateLoading')}
                   </div>
                 ) : null}
                 {templateFetchError ? (
@@ -461,15 +509,20 @@ export function ActionsRuleEditorPage() {
                 <ReactEmailActionEditor
                   ref={emailEditorRef}
                   templateVariables={selectedEvent?.template_variables}
+                  previewContext={selectedEventPreviewContext}
                   valueEn={templateEn}
                   valueFr={templateFr}
                   onChangeEn={setTemplateEn}
                   onChangeFr={setTemplateFr}
                   contentRevision={templateContentRevision}
-                  disabled={templatesLoading || resetTemplatesLoading || saving}
+                  disabled={templatesLoading || resetTemplatesLoading || sendTestLoading || saving}
                   showResetToDefault={Boolean(eventKey.trim())}
                   resetLoading={resetTemplatesLoading}
                   onResetToDefault={() => void resetEmailTemplatesToDefault()}
+                  showSendTest={Boolean(eventKey.trim())}
+                  sendTestLoading={sendTestLoading}
+                  sendTestDisabledReason={sendTestEmailDisabledReason}
+                  onSendTestToMyself={() => void sendTestEmailToMyself()}
                 />
               </CardContent>
             </Card>

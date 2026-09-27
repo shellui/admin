@@ -694,6 +694,10 @@ const resources = {
       actionsEmailModeReact: 'React',
       actionsEmailPreviewTogglePreview: 'Preview',
       actionsEmailPreviewToggleRaw: 'Raw',
+      actionsEmailPreviewSample: 'Sample data',
+      actionsEmailPreviewPlaceholders: 'Placeholders',
+      actionsEmailPreviewDataMode: 'Preview data',
+      actionsEmailPreviewSubject: 'Subject',
       actionsEmailReactViewHelp:
         'Read-only pseudo-TSX from document JSON. Copy for debugging. Edit JSON to change stored content.',
       actionsEmailCopySource: 'Copy',
@@ -702,16 +706,20 @@ const resources = {
       actionsEmailRawHelp:
         'Official TipTap JSON for React Email (type doc). Apply updates the visual editor and HTML preview.',
       actionsEmailRawInvalid: 'Could not apply JSON. Check the document shape.',
+      actionsEmailRawApplyFailed:
+        'JSON parsed but TipTap rejected it (unknown node/mark type, or invalid nesting). Fix the document and try again.',
       actionsEmailRawEditorNotReady: 'Editor is still loading. Try again in a moment.',
       actionsEmailRebakeNotice:
         'Changing theme or resetting to the default re-bakes HTML. Messages already sent keep the previous HTML.',
       actionsEmailSaveThemeHint: 'Save to apply theme to this action’s email.',
       actionsEmailPreview: 'HTML preview',
       actionsEmailPreviewHint:
-        'Live preview of compiled email HTML from React Email. No scripts run in this frame.',
+        'Compiled React Email HTML with literal {{ placeholders }}. No scripts run in this frame.',
+      actionsEmailPreviewHintSample:
+        'Preview with sample values from identity (your company name + catalog examples). Toggle Placeholders to see raw tokens. Saved templates keep {{ variables }}.',
       actionsEmailPlaceholders: 'Template variables',
       actionsEmailPlaceholdersHelp:
-        'Inserts literal placeholders (for example {{ magic_link_url }}) at the cursor.',
+        'Click in the subject or body first, then a token — it inserts at the caret. For URL fields, use Link / Btn (or select a button, then the token to set its href).',
       actionsEmailLinkPrompt: 'Link URL',
       actionsEmailButtonUrlPrompt: 'Button link URL',
       actionsEmailButtonLabelPrompt: 'Button label',
@@ -730,6 +738,12 @@ const resources = {
       actionsEmailResetConfirm:
         'Replace the English and French email content with the default template for this event? Your current edits will be lost.',
       actionsEmailResetLoading: 'Resetting email templates…',
+      actionsEmailSendTest: 'Send test to myself',
+      actionsEmailSendTestLoading: 'Sending test email…',
+      actionsEmailSendTestSuccess: 'Test email sent to {{email}}',
+      actionsEmailSendTestError: 'Could not send the test email.',
+      actionsEmailSendTestNeedEvent: 'Select an event before sending a test email.',
+      actionsEmailSendTestNeedEmail: 'Your account has no email address.',
       actionsEmailInsertVarAsLink: 'Insert {{ var }} as a hyperlink',
       actionsEmailInsertVarAsButton: 'Insert a button linking to {{ var }}',
       actionsEmailInsertLinkShort: 'Link',
@@ -1496,6 +1510,10 @@ const resources = {
       actionsEmailModeReact: 'React',
       actionsEmailPreviewTogglePreview: 'Aperçu',
       actionsEmailPreviewToggleRaw: 'Brut',
+      actionsEmailPreviewSample: 'Données exemple',
+      actionsEmailPreviewPlaceholders: 'Emplacements',
+      actionsEmailPreviewDataMode: 'Données d’aperçu',
+      actionsEmailPreviewSubject: 'Objet',
       actionsEmailReactViewHelp:
         'Pseudo-TSX lecture seule depuis le JSON document. Copiez pour déboguer. Modifiez le JSON pour le contenu enregistré.',
       actionsEmailCopySource: 'Copier',
@@ -1504,16 +1522,20 @@ const resources = {
       actionsEmailRawHelp:
         'JSON TipTap officiel pour React Email (type doc). L’application met à jour l’éditeur visuel et l’aperçu HTML.',
       actionsEmailRawInvalid: 'JSON non appliqué. Vérifiez la structure du document.',
+      actionsEmailRawApplyFailed:
+        'JSON parsé mais TipTap l’a refusé (type de nœud/marque inconnu, ou imbrication invalide). Corrigez le document et réessayez.',
       actionsEmailRawEditorNotReady: 'L’éditeur charge encore. Réessayez dans un instant.',
       actionsEmailRebakeNotice:
         'Changer de thème ou réinitialiser au modèle par défaut recompile le HTML. Les envois déjà faits conservent l’ancien HTML.',
       actionsEmailSaveThemeHint: 'Enregistrez pour appliquer le thème à l’e-mail de cette action.',
       actionsEmailPreview: 'Aperçu HTML',
       actionsEmailPreviewHint:
-        'Aperçu en direct du HTML compilé par React Email. Aucun script dans ce cadre.',
+        'HTML React Email compilé avec les {{ emplacements }} littéraux. Aucun script dans ce cadre.',
+      actionsEmailPreviewHintSample:
+        'Aperçu avec des valeurs exemple d’identity (nom de votre société + exemples du catalogue). Basculez sur Emplacements pour voir les jetons bruts. Les modèles enregistrés gardent les {{ variables }}.',
       actionsEmailPlaceholders: 'Variables de modèle',
       actionsEmailPlaceholdersHelp:
-        'Insère des placeholders littéraux (par ex. {{ magic_link_url }}) à la position du curseur.',
+        'Cliquez d’abord dans le sujet ou le corps, puis un jeton — il s’insère à la position du curseur. Pour les URL, utilisez Lien / Btn (ou sélectionnez un bouton puis le jeton pour son href).',
       actionsEmailLinkPrompt: 'URL du lien',
       actionsEmailButtonUrlPrompt: 'URL du bouton',
       actionsEmailButtonLabelPrompt: 'Libellé du bouton',
@@ -1533,6 +1555,12 @@ const resources = {
       actionsEmailResetConfirm:
         'Remplacer le contenu e-mail en anglais et en français par le modèle par défaut pour cet événement ? Vos modifications actuelles seront perdues.',
       actionsEmailResetLoading: 'Réinitialisation des modèles e-mail…',
+      actionsEmailSendTest: 'M’envoyer un test',
+      actionsEmailSendTestLoading: 'Envoi du test…',
+      actionsEmailSendTestSuccess: 'E-mail de test envoyé à {{email}}',
+      actionsEmailSendTestError: 'Impossible d’envoyer l’e-mail de test.',
+      actionsEmailSendTestNeedEvent: 'Sélectionnez un événement avant d’envoyer un test.',
+      actionsEmailSendTestNeedEmail: 'Votre compte n’a pas d’adresse e-mail.',
       actionsEmailInsertVarAsLink: 'Insérer {{ var }} comme lien hypertexte',
       actionsEmailInsertVarAsButton: 'Insérer un bouton vers {{ var }}',
       actionsEmailInsertLinkShort: 'Lien',
