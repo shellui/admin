@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import type { OAuthSocialAppRow } from '@/lib/adminOauthClientsApi';
 import type { OAuthCatalogProvider } from '@/lib/oauthProviderCatalogTypes';
 import { visibleCatalogProviders } from '@/lib/oauthCatalogDisplay';
 import {
   GENERIC_PROVIDER_ORDER,
   configuredProviderSlugs,
+  isMultiInstanceCatalogProvider,
   isProviderConfigured,
+  linkedSocialAppsByDocsSlug,
   oauthWizardStepFromParam,
   partitionProvidersForPicker,
   pickerHasAnyProvider,
@@ -96,12 +99,27 @@ describe('oauthSetupView', () => {
 
   it('tracks configured provider slugs from linked social apps', () => {
     const slugs = configuredProviderSlugs([
-      { provider: 'github', is_linked: true },
-      { provider: 'Google', is_linked: true },
-      { provider: 'box', is_linked: false },
-    ]);
+      { provider: 'github', is_linked: true, id: 1, name: 'GitHub', client_id: 'a', mapping_id: null, mapping_is_active: false },
+      { provider: 'Google', is_linked: true, id: 2, name: 'Google', client_id: 'b', mapping_id: null, mapping_is_active: false },
+      { provider: 'box', is_linked: false, id: 3, name: 'Box', client_id: 'c', mapping_id: null, mapping_is_active: false },
+    ] as OAuthSocialAppRow[]);
     expect(isProviderConfigured(provider({ docs_slug: 'github' }), slugs)).toBe(true);
     expect(isProviderConfigured(provider({ docs_slug: 'box' }), slugs)).toBe(false);
+  });
+
+  it('groups linked apps by docs slug and treats generic providers as multi instance', () => {
+    const map = linkedSocialAppsByDocsSlug([
+      { provider: 'openid_connect', is_linked: true, id: 10, name: 'OIDC', client_id: 'a', mapping_id: null, mapping_is_active: false },
+      { provider: 'openid_connect', is_linked: true, id: 11, name: 'OIDC', client_id: 'b', mapping_id: null, mapping_is_active: false },
+      { provider: 'github', is_linked: true, id: 12, name: 'GitHub', client_id: 'c', mapping_id: null, mapping_is_active: false },
+    ] as OAuthSocialAppRow[]);
+    expect(map.get('openid_connect')?.map((a) => a.id)).toEqual([10, 11]);
+    expect(
+      isMultiInstanceCatalogProvider(provider({ docs_slug: 'openid_connect', tier: 'generic' })),
+    ).toBe(true);
+    expect(isMultiInstanceCatalogProvider(provider({ docs_slug: 'github', tier: 'popular' }))).toBe(
+      false,
+    );
   });
 
   it('maps wizard step query params', () => {

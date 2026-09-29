@@ -33,7 +33,12 @@ import {
   type OAuthSocialAppRow,
 } from '@/lib/adminOauthClientsApi';
 import type { OAuthCatalogProvider } from '@/lib/oauthProviderCatalogTypes';
-import { oauthWizardStepFromParam } from '@/lib/oauthSetupView';
+import { translateOAuthDuplicateError } from '@/lib/oauthDuplicateError';
+import {
+  isMultiInstanceCatalogProvider,
+  linkedSocialAppsByDocsSlug,
+  oauthWizardStepFromParam,
+} from '@/lib/oauthSetupView';
 import { getCompanyIdFromJwt, getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
 
 function emptyCredentials(): OAuthCredentialsFormValues {
@@ -85,6 +90,7 @@ export function OAuthWizardRoute() {
   const [busy, setBusy] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [formErrorExistingAppId, setFormErrorExistingAppId] = useState<number | null>(null);
   const [credentials, setCredentials] = useState<OAuthCredentialsFormValues>(emptyCredentials());
   const [savedSummary, setSavedSummary] = useState<OAuthSocialAppRow | null>(null);
 
@@ -134,6 +140,17 @@ export function OAuthWizardRoute() {
     setCredentials(credentialsFromApp(selectedProvider, editingApp));
   }, [editingApp, isEdit, selectedProvider]);
 
+  useEffect(() => {
+    if (loading || isEdit || !selectedProvider || step === 'pick' || step === 'summary') return;
+    if (isMultiInstanceCatalogProvider(selectedProvider)) return;
+    const linked = linkedSocialAppsByDocsSlug(socialApps).get(
+      selectedProvider.docs_slug.toLowerCase(),
+    );
+    if (linked?.length) {
+      navigate(`/oauth/apps/${linked[0].id}/edit`, { replace: true });
+    }
+  }, [loading, isEdit, navigate, selectedProvider, socialApps, step]);
+
   if (!accessToken) {
     return (
       <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
@@ -169,6 +186,7 @@ export function OAuthWizardRoute() {
     if (!accessToken || companyId == null || !selectedProvider) return;
     setBusy(true);
     setFormError(null);
+    setFormErrorExistingAppId(null);
     setFieldErrors({});
     const extraPayload: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(credentials.extra_settings)) {
@@ -216,10 +234,17 @@ export function OAuthWizardRoute() {
       }
     } catch (e) {
       if (e instanceof OAuthApiRequestError) {
-        setFormError(e.message);
+        if (e.isDuplicate) {
+          setFormError(translateOAuthDuplicateError(t, e.errorCode));
+          setFormErrorExistingAppId(e.existingSocialAppId);
+        } else {
+          setFormError(e.message);
+          setFormErrorExistingAppId(null);
+        }
         setFieldErrors(e.fieldErrors);
       } else {
         setFormError(e instanceof Error ? e.message : t('oauthSetupSaveError'));
+        setFormErrorExistingAppId(null);
       }
     } finally {
       setBusy(false);
@@ -299,8 +324,11 @@ export function OAuthWizardRoute() {
             providers={catalogProviders}
             socialApps={socialApps}
             colorScheme={colorScheme}
-            onSelect={(provider) => {
+            onAdd={(provider) => {
               navigate(`/oauth/new/${provider.docs_slug}?step=console`);
+            }}
+            onOpenApp={(appId) => {
+              navigate(`/oauth/apps/${appId}/edit`);
             }}
           />
         ) : null}
@@ -323,6 +351,7 @@ export function OAuthWizardRoute() {
             onChange={setCredentials}
             fieldErrors={fieldErrors}
             formError={formError}
+            formErrorExistingAppId={formErrorExistingAppId}
             busy={busy}
             callbackUrl={effectiveCallback}
             colorScheme={colorScheme}

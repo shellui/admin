@@ -44,11 +44,28 @@ export type OAuthSocialAppsCatalog = {
 
 export class OAuthApiRequestError extends Error {
   readonly fieldErrors: OAuthFieldErrors;
+  readonly httpStatus: number;
+  readonly errorCode: string | null;
+  readonly existingSocialAppId: number | null;
+  readonly isDuplicate: boolean;
 
-  constructor(message: string, fieldErrors: OAuthFieldErrors = {}) {
+  constructor(
+    message: string,
+    options: {
+      fieldErrors?: OAuthFieldErrors;
+      httpStatus?: number;
+      errorCode?: string | null;
+      existingSocialAppId?: number | null;
+      isDuplicate?: boolean;
+    } = {},
+  ) {
     super(message);
     this.name = 'OAuthApiRequestError';
-    this.fieldErrors = fieldErrors;
+    this.fieldErrors = options.fieldErrors ?? {};
+    this.httpStatus = options.httpStatus ?? 0;
+    this.errorCode = options.errorCode ?? null;
+    this.existingSocialAppId = options.existingSocialAppId ?? null;
+    this.isDuplicate = options.isDuplicate ?? false;
   }
 }
 
@@ -229,7 +246,13 @@ export async function createOAuthSocialApp(
   );
   if (!res.ok) {
     const err = await readOAuthApiError(res);
-    throw new OAuthApiRequestError(err.message, err.fieldErrors);
+    throw new OAuthApiRequestError(err.message, {
+      fieldErrors: err.fieldErrors,
+      httpStatus: err.httpStatus,
+      errorCode: err.errorCode,
+      existingSocialAppId: err.existingSocialAppId,
+      isDuplicate: err.isDuplicate,
+    });
   }
   const body = await res.json().catch(() => null);
   if (body && typeof body === 'object' && 'social_app' in body) {
@@ -254,7 +277,13 @@ export async function deleteOAuthSocialApp(
   );
   if (res.status === 204) return;
   const err = await readOAuthApiError(res);
-  throw new OAuthApiRequestError(err.message, err.fieldErrors);
+  throw new OAuthApiRequestError(err.message, {
+    fieldErrors: err.fieldErrors,
+    httpStatus: err.httpStatus,
+    errorCode: err.errorCode,
+    existingSocialAppId: err.existingSocialAppId,
+    isDuplicate: err.isDuplicate,
+  });
 }
 
 export async function updateOAuthSocialApp(
@@ -279,7 +308,13 @@ export async function updateOAuthSocialApp(
   );
   if (!res.ok) {
     const err = await readOAuthApiError(res);
-    throw new OAuthApiRequestError(err.message, err.fieldErrors);
+    throw new OAuthApiRequestError(err.message, {
+      fieldErrors: err.fieldErrors,
+      httpStatus: err.httpStatus,
+      errorCode: err.errorCode,
+      existingSocialAppId: err.existingSocialAppId,
+      isDuplicate: err.isDuplicate,
+    });
   }
   const body = await res.json().catch(() => null);
   const row = parseSocialAppRow(body);

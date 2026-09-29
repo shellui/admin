@@ -26,6 +26,7 @@ type Props = {
   onChange: (next: OAuthCredentialsFormValues) => void;
   fieldErrors?: OAuthFieldErrors;
   formError?: string | null;
+  formErrorExistingAppId?: number | null;
   busy?: boolean;
   onBack?: () => void;
   onSubmit: () => void;
@@ -46,6 +47,7 @@ export function OAuthCredentialsForm({
   onChange,
   fieldErrors = {},
   formError,
+  formErrorExistingAppId,
   busy,
   onBack,
   onSubmit,
@@ -101,7 +103,19 @@ export function OAuthCredentialsForm({
         </div>
       </div>
 
-      {formError ? <Text className="font-mono text-sm text-destructive">{formError}</Text> : null}
+      {formError ? (
+        <div className="space-y-1">
+          <Text className="font-mono text-sm text-destructive">{formError}</Text>
+          {formErrorExistingAppId != null ? (
+            <Link
+              to={`/oauth/apps/${formErrorExistingAppId}/edit`}
+              className="font-mono text-xs text-primary underline-offset-2 hover:underline"
+            >
+              {t('oauthErrorDuplicateOpenExisting')}
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
 
       {callbackUrl ? (
         <OAuthCallbackUrlCopy

@@ -472,6 +472,16 @@ const resources = {
       oauthWizardShowLegacy: 'Show legacy providers',
       oauthWizardReplacedBy: 'Use {{slug}} instead',
       oauthWizardConfiguredBadge: 'Configured',
+      oauthWizardConfiguredCount: 'Configured ({{count}})',
+      oauthWizardConfiguredOpensSettings:
+        '{{provider}} is already set up. Opens settings for this provider.',
+      oauthWizardAddProviderTile: 'Add {{provider}}',
+      oauthWizardMultiConfiguredTile:
+        '{{provider}}. {{count}} already set up. Activate to add another, or open an existing app below.',
+      oauthWizardAddAnotherInstance: 'Add another',
+      oauthWizardOpenExistingApp: 'Open {{name}}',
+      oauthErrorDuplicateProvider: 'This sign-in provider is already set up for your company.',
+      oauthErrorDuplicateOpenExisting: 'Open existing provider settings',
       oauthWizardConsoleIntro:
         'Create an OAuth app on {{provider}}. When it asks for a redirect or callback URL, paste the URL below.',
       oauthWizardConsoleEmpty:
@@ -1332,6 +1342,17 @@ const resources = {
       oauthWizardShowLegacy: 'Afficher les fournisseurs legacy',
       oauthWizardReplacedBy: 'Utilisez {{slug}} à la place',
       oauthWizardConfiguredBadge: 'Configuré',
+      oauthWizardConfiguredCount: 'Configuré ({{count}})',
+      oauthWizardConfiguredOpensSettings:
+        '{{provider}} est déjà configuré. Ouvre les paramètres de ce fournisseur.',
+      oauthWizardAddProviderTile: 'Ajouter {{provider}}',
+      oauthWizardMultiConfiguredTile:
+        '{{provider}}. {{count}} déjà configuré(s). Activez pour en ajouter un autre, ou ouvrez une application existante ci-dessous.',
+      oauthWizardAddAnotherInstance: 'Ajouter un autre',
+      oauthWizardOpenExistingApp: 'Ouvrir {{name}}',
+      oauthErrorDuplicateProvider:
+        'Ce fournisseur de connexion est déjà configuré pour votre entreprise.',
+      oauthErrorDuplicateOpenExisting: 'Ouvrir les paramètres du fournisseur existant',
       oauthWizardConsoleIntro:
         'Créez une application OAuth sur {{provider}}. Lorsqu’on vous demande une URL de redirection ou de callback, collez l’URL ci-dessous.',
       oauthWizardConsoleEmpty:

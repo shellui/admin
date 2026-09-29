@@ -146,7 +146,8 @@ describe('OAuth wizard UI', () => {
           <OAuthProviderPicker
             providers={others}
             socialApps={[]}
-            onSelect={() => {}}
+            onAdd={() => {}}
+            onOpenApp={() => {}}
           />
         </MemoryRouter>
       </I18nextProvider>,
@@ -161,7 +162,8 @@ describe('OAuth wizard UI', () => {
           <OAuthProviderPicker
             providers={[github, { ...github, docs_slug: 'google', name: 'Google' }]}
             socialApps={[]}
-            onSelect={() => {}}
+            onAdd={() => {}}
+            onOpenApp={() => {}}
           />
         </MemoryRouter>
       </I18nextProvider>,
@@ -171,14 +173,15 @@ describe('OAuth wizard UI', () => {
   });
 
   it('filters picker tiles with global search', () => {
-    const onSelect = vi.fn();
+    const onAdd = vi.fn();
     render(
       <I18nextProvider i18n={i18n}>
         <MemoryRouter>
           <OAuthProviderPicker
             providers={[github, { ...github, docs_slug: 'google', name: 'Google' }]}
             socialApps={[]}
-            onSelect={onSelect}
+            onAdd={onAdd}
+            onOpenApp={() => {}}
           />
         </MemoryRouter>
       </I18nextProvider>,
@@ -187,7 +190,86 @@ describe('OAuth wizard UI', () => {
     fireEvent.change(screen.getByRole('textbox', { name: /search providers/i }), {
       target: { value: 'git' },
     });
-    expect(screen.getByRole('button', { name: /github/i })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /^google$/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /add github/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /add google/i })).toBeNull();
+  });
+
+  it('opens settings for a configured named provider instead of adding again', () => {
+    const onOpenApp = vi.fn();
+    render(
+      <I18nextProvider i18n={i18n}>
+        <MemoryRouter>
+          <OAuthProviderPicker
+            providers={[github]}
+            socialApps={[
+              {
+                id: 99,
+                provider: 'github',
+                name: 'GitHub',
+                client_id: 'cid',
+                is_linked: true,
+                mapping_id: null,
+                mapping_is_active: false,
+              },
+            ]}
+            onAdd={vi.fn()}
+            onOpenApp={onOpenApp}
+          />
+        </MemoryRouter>
+      </I18nextProvider>,
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /github is already set up/i,
+      }),
+    );
+    expect(onOpenApp).toHaveBeenCalledWith(99);
+  });
+
+  it('shows a count for configured generic providers and still allows add', () => {
+    const onAdd = vi.fn();
+    const oidc = {
+      ...github,
+      docs_slug: 'openid_connect',
+      name: 'OpenID Connect',
+      tier: 'generic' as const,
+      protocol: 'OIDC',
+    };
+    render(
+      <I18nextProvider i18n={i18n}>
+        <MemoryRouter>
+          <OAuthProviderPicker
+            providers={[oidc]}
+            socialApps={[
+              {
+                id: 1,
+                provider: 'openid_connect',
+                name: 'OIDC 1',
+                client_id: 'a',
+                is_linked: true,
+                mapping_id: null,
+                mapping_is_active: false,
+              },
+              {
+                id: 2,
+                provider: 'openid_connect',
+                name: 'OIDC 2',
+                client_id: 'b',
+                is_linked: true,
+                mapping_id: null,
+                mapping_is_active: false,
+              },
+            ]}
+            onAdd={onAdd}
+            onOpenApp={() => {}}
+          />
+        </MemoryRouter>
+      </I18nextProvider>,
+    );
+
+    expect(screen.getByText(/configured \(2\)/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /^add another$/i }));
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ docs_slug: 'openid_connect' }));
   });
 });

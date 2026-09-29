@@ -2,6 +2,7 @@ import type { TFunction } from 'i18next';
 import type { OAuthCatalogProvider } from '@/lib/oauthProviderCatalogTypes';
 import { visibleCatalogProviders } from '@/lib/oauthCatalogDisplay';
 import { resolveSocialAppDocsSlug } from '@/lib/oauthProviderResolve';
+import type { OAuthSocialAppRow } from '@/lib/adminOauthClientsApi';
 
 /** Display order for generic protocol providers (after popular tiles). */
 export const GENERIC_PROVIDER_ORDER = ['openid_connect', 'saml', 'openid', 'oauth2'] as const;
@@ -68,12 +69,38 @@ export function configuredProviderSlugs(
   >,
 ): Set<string> {
   const slugs = new Set<string>();
+  for (const slug of linkedSocialAppsByDocsSlug(socialApps).keys()) {
+    slugs.add(slug);
+  }
+  return slugs;
+}
+
+/** Linked social apps grouped by catalog docs_slug (lowercase). */
+export function linkedSocialAppsByDocsSlug(
+  socialApps: ReadonlyArray<
+    Parameters<typeof resolveSocialAppDocsSlug>[0] & { is_linked?: boolean }
+  >,
+): Map<string, OAuthSocialAppRow[]> {
+  const map = new Map<string, OAuthSocialAppRow[]>();
   for (const row of socialApps) {
     if (row.is_linked === false) continue;
     const slug = resolveSocialAppDocsSlug(row);
-    if (slug) slugs.add(slug);
+    if (!slug) continue;
+    const key = slug.toLowerCase();
+    const list = map.get(key) ?? [];
+    list.push(row as OAuthSocialAppRow);
+    map.set(key, list);
   }
-  return slugs;
+  for (const list of map.values()) {
+    list.sort((a, b) => a.id - b.id);
+  }
+  return map;
+}
+
+/** Standard protocols and generic OAuth2 allow multiple social apps per company. */
+export function isMultiInstanceCatalogProvider(provider: OAuthCatalogProvider): boolean {
+  if (provider.tier === 'generic') return true;
+  return (GENERIC_PROVIDER_ORDER as readonly string[]).includes(provider.docs_slug);
 }
 
 /** Show "(N)" in picker section titles when a section has more than this many visible tiles. */
