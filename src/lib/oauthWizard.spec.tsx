@@ -133,6 +133,43 @@ describe('OAuth wizard UI', () => {
     expect(filtered.map((p) => p.docs_slug)).toEqual(['github']);
   });
 
+  it('shows section count in picker when more than five tiles in a section', () => {
+    const others = Array.from({ length: 6 }, (_, i) => ({
+      ...github,
+      docs_slug: `provider-${i}`,
+      name: `Provider ${i}`,
+      tier: 'other' as const,
+    }));
+    render(
+      <I18nextProvider i18n={i18n}>
+        <MemoryRouter>
+          <OAuthProviderPicker
+            providers={others}
+            socialApps={[]}
+            onSelect={() => {}}
+          />
+        </MemoryRouter>
+      </I18nextProvider>,
+    );
+    expect(screen.getByRole('heading', { name: /more providers \(6\)/i })).toBeTruthy();
+  });
+
+  it('hides section count in picker when five or fewer tiles', () => {
+    render(
+      <I18nextProvider i18n={i18n}>
+        <MemoryRouter>
+          <OAuthProviderPicker
+            providers={[github, { ...github, docs_slug: 'google', name: 'Google' }]}
+            socialApps={[]}
+            onSelect={() => {}}
+          />
+        </MemoryRouter>
+      </I18nextProvider>,
+    );
+    expect(screen.getByRole('heading', { name: /^popular providers$/i })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: /popular providers \(\d+\)/i })).toBeNull();
+  });
+
   it('filters picker tiles with global search', () => {
     const onSelect = vi.fn();
     render(

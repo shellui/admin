@@ -1,5 +1,7 @@
+import type { TFunction } from 'i18next';
 import type { OAuthCatalogProvider } from '@/lib/oauthProviderCatalogTypes';
 import { visibleCatalogProviders } from '@/lib/oauthCatalogDisplay';
+import { resolveSocialAppDocsSlug } from '@/lib/oauthProviderResolve';
 
 /** Display order for generic protocol providers (after popular tiles). */
 export const GENERIC_PROVIDER_ORDER = ['openid_connect', 'saml', 'openid', 'oauth2'] as const;
@@ -61,17 +63,50 @@ export function pickerHasAnyProvider(sections: OAuthPickerSections): boolean {
 }
 
 export function configuredProviderSlugs(
-  socialApps: ReadonlyArray<{ provider: string; is_linked?: boolean }>,
+  socialApps: ReadonlyArray<
+    Parameters<typeof resolveSocialAppDocsSlug>[0] & { is_linked?: boolean }
+  >,
 ): Set<string> {
   const slugs = new Set<string>();
   for (const row of socialApps) {
     if (row.is_linked === false) continue;
-    const slug = String(row.provider || '')
-      .trim()
-      .toLowerCase();
+    const slug = resolveSocialAppDocsSlug(row);
     if (slug) slugs.add(slug);
   }
   return slugs;
+}
+
+/** Show "(N)" in picker section titles when a section has more than this many visible tiles. */
+export const PICKER_SECTION_COUNT_THRESHOLD = 5;
+
+const PICKER_SECTION_HEADING: Record<
+  'popular' | 'generic' | 'other',
+  { base: string; withCount: string }
+> = {
+  popular: {
+    base: 'oauthWizardPopularHeading',
+    withCount: 'oauthWizardPopularHeadingWithCount',
+  },
+  generic: {
+    base: 'oauthWizardGenericHeading',
+    withCount: 'oauthWizardGenericHeadingWithCount',
+  },
+  other: {
+    base: 'oauthWizardOtherHeading',
+    withCount: 'oauthWizardOtherHeadingWithCount',
+  },
+};
+
+export function pickerSectionHeading(
+  t: TFunction,
+  section: 'popular' | 'generic' | 'other',
+  visibleCount: number,
+): string {
+  const keys = PICKER_SECTION_HEADING[section];
+  if (visibleCount > PICKER_SECTION_COUNT_THRESHOLD) {
+    return t(keys.withCount, { count: visibleCount });
+  }
+  return t(keys.base);
 }
 
 export function isProviderConfigured(

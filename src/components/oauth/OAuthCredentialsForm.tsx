@@ -9,7 +9,7 @@ import type { OAuthCatalogProvider } from '@/lib/oauthProviderCatalogTypes';
 import type { OAuthFieldErrors } from '@/lib/oauthApiErrors';
 import { extraSettingHelp, extraSettingLabel } from '@/lib/oauthExtraSettingCopy';
 import { OAuthCallbackUrlCopy } from '@/components/oauth/OAuthCallbackUrlCopy';
-import { OAuthProviderIconView } from '@/components/oauth/OAuthProviderIcon';
+import { OAuthProviderIconFromCatalog } from '@/components/oauth/OAuthProviderIcon';
 import { OAuthWizardStepActions } from '@/components/oauth/OAuthWizardStepActions';
 
 export type OAuthCredentialsFormValues = {
@@ -88,7 +88,7 @@ export function OAuthCredentialsForm({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
-        <OAuthProviderIconView
+        <OAuthProviderIconFromCatalog
           provider={provider}
           size="lg"
           colorScheme={colorScheme}

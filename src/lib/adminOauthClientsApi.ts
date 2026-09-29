@@ -18,11 +18,16 @@ export type OAuthClientRow = {
   updated_at: string;
 };
 
+export type OAuthSocialAppSettings = {
+  catalog_slug?: string;
+};
+
 export type OAuthSocialAppRow = {
   id: number;
   provider: string;
   allauth_provider?: string;
   provider_id?: string;
+  settings?: OAuthSocialAppSettings;
   name: string;
   client_id: string;
   tenant?: string;
@@ -150,11 +155,21 @@ function parseSocialAppRow(raw: unknown): OAuthSocialAppRow | null {
     o.extra_settings && typeof o.extra_settings === 'object'
       ? (o.extra_settings as Record<string, unknown>)
       : undefined;
+  let settings: OAuthSocialAppSettings | undefined;
+  if (o.settings && typeof o.settings === 'object') {
+    const s = o.settings as Record<string, unknown>;
+    const catalogSlug =
+      typeof s.catalog_slug === 'string' && s.catalog_slug.trim()
+        ? s.catalog_slug.trim()
+        : undefined;
+    if (catalogSlug) settings = { catalog_slug: catalogSlug };
+  }
   return {
     id,
     provider,
     allauth_provider: typeof o.allauth_provider === 'string' ? o.allauth_provider : undefined,
     provider_id: typeof o.provider_id === 'string' ? o.provider_id : undefined,
+    settings,
     name: typeof o.name === 'string' ? o.name : provider,
     client_id: typeof o.client_id === 'string' ? o.client_id : '',
     tenant: typeof o.tenant === 'string' ? o.tenant : undefined,

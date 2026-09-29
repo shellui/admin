@@ -6,7 +6,7 @@ import { Text } from '@/components/ui/text';
 import type { OAuthCatalogProvider } from '@/lib/oauthProviderCatalogTypes';
 import { OAuthCallbackUrlCopy } from '@/components/oauth/OAuthCallbackUrlCopy';
 import { OAuthConsoleUrlList } from '@/components/oauth/OAuthConsoleUrlList';
-import { OAuthProviderIconView } from '@/components/oauth/OAuthProviderIcon';
+import { OAuthProviderIconFromCatalog } from '@/components/oauth/OAuthProviderIcon';
 import { OAuthWizardStepActions } from '@/components/oauth/OAuthWizardStepActions';
 
 type Props = {
@@ -41,7 +41,7 @@ export function OAuthProviderConsoleStep({
       </Link>
 
       <div className="flex flex-wrap items-center gap-3">
-        <OAuthProviderIconView
+        <OAuthProviderIconFromCatalog
           provider={provider}
           size="lg"
           colorScheme={colorScheme}

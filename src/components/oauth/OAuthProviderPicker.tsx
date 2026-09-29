@@ -9,9 +9,10 @@ import {
   isProviderConfigured,
   partitionProvidersForPicker,
   pickerHasAnyProvider,
+  pickerSectionHeading,
 } from '@/lib/oauthSetupView';
 import type { OAuthSocialAppRow } from '@/lib/adminOauthClientsApi';
-import { OAuthProviderIconView } from '@/components/oauth/OAuthProviderIcon';
+import { OAuthProviderIconFromCatalog } from '@/components/oauth/OAuthProviderIcon';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -50,7 +51,7 @@ export function OAuthProviderPicker({
         )}
         onClick={() => onSelect(provider)}
       >
-        <OAuthProviderIconView
+        <OAuthProviderIconFromCatalog
           provider={provider}
           size={large ? 'lg' : 'md'}
           colorScheme={colorScheme}
@@ -89,7 +90,7 @@ export function OAuthProviderPicker({
       {sections.popular.length > 0 ? (
         <section className="space-y-2">
           <h2 className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            {t('oauthWizardPopularHeading')}
+            {pickerSectionHeading(t, 'popular', sections.popular.length)}
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {sections.popular.map((p) => renderTile(p, true))}
@@ -100,7 +101,7 @@ export function OAuthProviderPicker({
       {sections.generic.length > 0 ? (
         <section className="space-y-2">
           <h2 className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            {t('oauthWizardGenericHeading')}
+            {pickerSectionHeading(t, 'generic', sections.generic.length)}
           </h2>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {sections.generic.map((p) => renderTile(p, true))}
@@ -111,7 +112,7 @@ export function OAuthProviderPicker({
       {sections.other.length > 0 ? (
         <section className="space-y-2">
           <h2 className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            {t('oauthWizardOtherHeading')}
+            {pickerSectionHeading(t, 'other', sections.other.length)}
           </h2>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {sections.other.map((p) => renderTile(p, false))}

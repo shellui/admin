@@ -8,8 +8,10 @@ import {
   oauthWizardStepFromParam,
   partitionProvidersForPicker,
   pickerHasAnyProvider,
+  pickerSectionHeading,
   providerMatchesSearch,
 } from '@/lib/oauthSetupView';
+import i18n from '@/i18n';
 
 function provider(
   partial: Partial<OAuthCatalogProvider> & Pick<OAuthCatalogProvider, 'docs_slug'>,
@@ -106,5 +108,17 @@ describe('oauthSetupView', () => {
     expect(oauthWizardStepFromParam('credentials')).toBe('credentials');
     expect(oauthWizardStepFromParam('3')).toBe('credentials');
     expect(oauthWizardStepFromParam('done')).toBe('summary');
+  });
+
+  it('omits section counts when five or fewer visible providers', () => {
+    const t = i18n.getFixedT('en');
+    expect(pickerSectionHeading(t, 'other', 5)).toBe('More providers');
+    expect(pickerSectionHeading(t, 'other', 3)).toBe('More providers');
+  });
+
+  it('shows section counts when more than five visible providers', () => {
+    const t = i18n.getFixedT('en');
+    expect(pickerSectionHeading(t, 'popular', 13)).toBe('Popular providers (13)');
+    expect(pickerSectionHeading(t, 'other', 14)).toBe('More providers (14)');
   });
 });

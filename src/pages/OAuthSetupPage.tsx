@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, Route, Routes } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
@@ -59,12 +59,6 @@ function OAuthAppsListPanel() {
     void load();
   }, [load]);
 
-  const catalogBySlug = useMemo(() => {
-    const map = new Map<string, OAuthCatalogProvider>();
-    for (const p of catalogProviders) map.set(p.docs_slug, p);
-    return map;
-  }, [catalogProviders]);
-
   if (!accessToken) {
     return (
       <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
@@ -107,7 +101,7 @@ function OAuthAppsListPanel() {
           ) : (
             <OAuthAppsTable
               rows={rows}
-              catalogBySlug={catalogBySlug}
+              catalogProviders={catalogProviders}
               colorScheme={colorScheme}
             />
           )}

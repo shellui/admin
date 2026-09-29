@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -13,17 +14,23 @@ import {
 import { Text } from '@/components/ui/text';
 import type { OAuthSocialAppRow } from '@/lib/adminOauthClientsApi';
 import type { OAuthCatalogProvider } from '@/lib/oauthProviderCatalogTypes';
-import { OAuthProviderIconView } from '@/components/oauth/OAuthProviderIcon';
+import { OAuthProviderIcon } from '@/components/oauth/OAuthProviderIcon';
+import {
+  buildOAuthCatalogIndex,
+  catalogProviderForSocialApp,
+  resolveSocialAppDocsSlug,
+} from '@/lib/oauthProviderResolve';
 
 type Props = {
   rows: OAuthSocialAppRow[];
-  catalogBySlug: Map<string, OAuthCatalogProvider>;
+  catalogProviders: OAuthCatalogProvider[];
   colorScheme?: 'light' | 'dark';
 };
 
-export function OAuthAppsTable({ rows, catalogBySlug, colorScheme = 'light' }: Props) {
+export function OAuthAppsTable({ rows, catalogProviders, colorScheme = 'light' }: Props) {
   const { t } = useTranslation();
   const linked = rows.filter((r) => r.is_linked);
+  const catalogIndex = useMemo(() => buildOAuthCatalogIndex(catalogProviders), [catalogProviders]);
 
   if (linked.length === 0) {
     return (
@@ -43,14 +50,17 @@ export function OAuthAppsTable({ rows, catalogBySlug, colorScheme = 'light' }: P
       </TableHeader>
       <TableBody>
         {linked.map((row) => {
-          const catalog = catalogBySlug.get(row.provider.toLowerCase());
+          const catalog = catalogProviderForSocialApp(row, catalogIndex);
+          const docsSlug = resolveSocialAppDocsSlug(row);
           return (
             <TableRow key={row.id}>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  {catalog ? (
-                    <OAuthProviderIconView
-                      provider={catalog}
+                  {docsSlug ? (
+                    <OAuthProviderIcon
+                      docsSlug={docsSlug}
+                      protocol={catalog?.protocol}
+                      title={catalog?.name ?? row.name}
                       size="sm"
                       colorScheme={colorScheme}
                     />

@@ -12,7 +12,12 @@ import {
 } from '@/components/oauth/OAuthCredentialsForm';
 import { OAuthProviderConsoleStep } from '@/components/oauth/OAuthProviderConsoleStep';
 import { OAuthProviderPicker } from '@/components/oauth/OAuthProviderPicker';
-import { OAuthProviderIconView } from '@/components/oauth/OAuthProviderIcon';
+import { OAuthProviderIconFromCatalog } from '@/components/oauth/OAuthProviderIcon';
+import {
+  buildOAuthCatalogIndex,
+  catalogProviderForSocialApp,
+  resolveSocialAppDocsSlug,
+} from '@/lib/oauthProviderResolve';
 import { OAuthWizardStepActions } from '@/components/oauth/OAuthWizardStepActions';
 import { useDocumentColorScheme } from '@/hooks/useDocumentColorScheme';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
@@ -109,11 +114,7 @@ export function OAuthWizardRoute() {
     void load();
   }, [load]);
 
-  const catalogBySlug = useMemo(() => {
-    const map = new Map<string, OAuthCatalogProvider>();
-    for (const p of catalogProviders) map.set(p.docs_slug, p);
-    return map;
-  }, [catalogProviders]);
+  const catalogIndex = useMemo(() => buildOAuthCatalogIndex(catalogProviders), [catalogProviders]);
 
   const editingApp = useMemo(() => {
     if (!isEdit || !editAppId) return null;
@@ -121,8 +122,12 @@ export function OAuthWizardRoute() {
   }, [editAppId, isEdit, socialApps]);
 
   const effectiveDocsSlug =
-    routeDocsSlug ?? (editingApp ? editingApp.provider.trim().toLowerCase() : null);
-  const selectedProvider = effectiveDocsSlug ? catalogBySlug.get(effectiveDocsSlug) : undefined;
+    routeDocsSlug ?? (editingApp ? resolveSocialAppDocsSlug(editingApp) : null);
+  const selectedProvider = editingApp
+    ? catalogProviderForSocialApp(editingApp, catalogIndex)
+    : effectiveDocsSlug
+      ? catalogIndex.byDocsSlug.get(effectiveDocsSlug)
+      : undefined;
 
   useEffect(() => {
     if (!isEdit || !editingApp || !selectedProvider) return;
@@ -330,7 +335,7 @@ export function OAuthWizardRoute() {
         {!loading && step === 'summary' && savedSummary && selectedProvider && !isEdit ? (
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <OAuthProviderIconView
+              <OAuthProviderIconFromCatalog
                 provider={selectedProvider}
                 size="lg"
                 colorScheme={colorScheme}
