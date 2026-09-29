@@ -587,24 +587,27 @@ const resources = {
       brandSubtitle: 'Administration',
       scimPageTitle: 'SCIM provisioning',
       scimPageDescription:
-        'Configure SCIM base URL and bearer tokens for directory sync. Company owners only.',
+        'Turn directory sync on for this company with a bearer token. Company owners only.',
       scimPageForbidden: 'You need company-owner access to manage SCIM for this company.',
+      scimDeploymentUnavailable:
+        'SCIM is turned off for this deployment. Contact your administrator.',
       scimLoadError: 'Could not load SCIM settings.',
       scimLoading: 'Loading SCIM…',
-      scimConfigTitle: 'SCIM endpoint',
-      scimConfigDescription:
-        'Share the base URL with your IdP. Tokens authenticate provisioning calls.',
       scimBaseUrlLabel: 'SCIM base URL',
-      scimStatusEnabled: 'Enabled',
-      scimStatusDisabled: 'Disabled',
-      scimStatusConfigured: 'Configured',
-      scimStatusNotConfigured: 'Not configured',
+      scimEndpointHint: 'Paste this URL and the bearer token into your identity provider SCIM app.',
+      scimNoTokenYet:
+        'SCIM is off for this company until you create a token. Generate one to turn provisioning on.',
       scimTokensTitle: 'Bearer tokens',
-      scimTokensDescription:
-        'Active tokens can provision users and groups. Revoke tokens you no longer trust.',
-      scimTokensEmpty: 'No active SCIM tokens.',
+      scimTokensDescriptionNoToken: 'Create a token to turn SCIM on. The secret is shown once.',
+      scimTokensDescriptionActive:
+        'Active tokens provision users and groups. Revoke tokens you no longer trust.',
+      scimTokensDescriptionRevoked:
+        'All tokens are revoked. SCIM is off until you create a new token.',
+      scimRevokedSectionTitle: 'Revoked tokens',
+      scimRevokedBadge: 'Revoked',
+      scimRevokedAt: 'Revoked {{date}}',
       scimTokenUnlabeled: 'Unlabeled token',
-      scimCreateHint: 'Create a token for a new IdP integration. The secret is shown once.',
+      scimCreateHint: 'Optional label helps you tell integrations apart. The secret is shown once.',
       scimCreateLabelPlaceholder: 'Optional label (for example Okta prod)',
       scimCreateAction: 'Create token',
       scimCreateLoading: 'Creating…',
@@ -1350,26 +1353,31 @@ const resources = {
       brandSubtitle: 'Administration',
       scimPageTitle: 'Provisionnement SCIM',
       scimPageDescription:
-        'Configurez l’URL SCIM et les jetons bearer pour la synchronisation annuaire. Réservé aux propriétaires de l’entreprise.',
+        'Activez la synchro annuaire pour cette entreprise avec un jeton bearer. Réservé aux propriétaires.',
       scimPageForbidden:
         'Il faut être propriétaire de l’entreprise pour gérer SCIM pour cette société.',
+      scimDeploymentUnavailable:
+        'SCIM est désactivé sur ce déploiement. Contactez votre administrateur.',
       scimLoadError: 'Impossible de charger les paramètres SCIM.',
       scimLoading: 'Chargement SCIM…',
-      scimConfigTitle: 'Point de terminaison SCIM',
-      scimConfigDescription:
-        'Partagez l’URL de base avec votre IdP. Les jetons authentifient les appels de provisionnement.',
       scimBaseUrlLabel: 'URL de base SCIM',
-      scimStatusEnabled: 'Activé',
-      scimStatusDisabled: 'Désactivé',
-      scimStatusConfigured: 'Configuré',
-      scimStatusNotConfigured: 'Non configuré',
+      scimEndpointHint:
+        'Collez cette URL et le jeton bearer dans l’application SCIM de votre fournisseur d’identité.',
+      scimNoTokenYet:
+        'SCIM est désactivé pour cette entreprise tant qu’aucun jeton n’existe. Créez-en un pour activer le provisionnement.',
       scimTokensTitle: 'Jetons bearer',
-      scimTokensDescription:
-        'Les jetons actifs peuvent provisionner utilisateurs et groupes. Révoquez ceux que vous n’utilisez plus.',
-      scimTokensEmpty: 'Aucun jeton SCIM actif.',
+      scimTokensDescriptionNoToken:
+        'Créez un jeton pour activer SCIM. Le secret n’est affiché qu’une fois.',
+      scimTokensDescriptionActive:
+        'Les jetons actifs provisionnent utilisateurs et groupes. Révoquez ceux que vous n’utilisez plus.',
+      scimTokensDescriptionRevoked:
+        'Tous les jetons sont révoqués. SCIM reste désactivé tant que vous n’en créez pas un nouveau.',
+      scimRevokedSectionTitle: 'Jetons révoqués',
+      scimRevokedBadge: 'Révoqué',
+      scimRevokedAt: 'Révoqué le {{date}}',
       scimTokenUnlabeled: 'Jeton sans libellé',
       scimCreateHint:
-        'Créez un jeton pour une nouvelle intégration IdP. Le secret n’est affiché qu’une fois.',
+        'Un libellé optionnel aide à distinguer les intégrations. Le secret n’est affiché qu’une fois.',
       scimCreateLabelPlaceholder: 'Libellé optionnel (par ex. Okta prod)',
       scimCreateAction: 'Créer un jeton',
       scimCreateLoading: 'Création…',

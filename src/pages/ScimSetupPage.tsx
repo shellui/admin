@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,10 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
-import {
-  ApiUnavailableNotice,
-  isApiUnavailableError,
-} from '@/features/actions/components/ApiUnavailableNotice';
+import { isApiUnavailableError } from '@/features/actions/components/ApiUnavailableNotice';
 import {
   createScimToken,
   fetchScimConfig,
@@ -19,6 +16,11 @@ import {
   type ScimTokenCreateResponse,
   type ScimTokenRow,
 } from '@/lib/scimApi';
+import {
+  isScimDeploymentAvailable,
+  partitionScimTokens,
+  scimSetupPhase,
+} from '@/lib/scimSetupView';
 import { getCompanyIdFromJwt, getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
 
 export function ScimSetupPage() {
@@ -28,7 +30,7 @@ export function ScimSetupPage() {
   const companyId = accessToken ? getCompanyIdFromJwt(accessToken) : null;
 
   const [config, setConfig] = useState<ScimConfig | null>(null);
-  const [tokens, setTokens] = useState<ScimTokenRow[]>([]);
+  const [allTokens, setAllTokens] = useState<ScimTokenRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
@@ -36,11 +38,26 @@ export function ScimSetupPage() {
   const [createdSecret, setCreatedSecret] = useState<ScimTokenCreateResponse | null>(null);
   const [copyState, setCopyState] = useState<'idle' | 'done' | 'error'>('idle');
 
+  const { active: activeTokens, revoked: revokedTokens } = useMemo(
+    () => partitionScimTokens(allTokens),
+    [allTokens],
+  );
+
+  const deploymentAvailable = isScimDeploymentAvailable(config);
+  const apiUnavailable = Boolean(error && isApiUnavailableError(error));
+  const showDeploymentOff = apiUnavailable || (!loading && config != null && !deploymentAvailable);
+  const phase = scimSetupPhase({
+    loading,
+    deploymentAvailable: deploymentAvailable && !apiUnavailable,
+    activeCount: activeTokens.length,
+    revokedCount: revokedTokens.length,
+  });
+
   const load = useCallback(async () => {
     if (!accessToken || !isOwner || companyId == null) {
       setLoading(false);
       setConfig(null);
-      setTokens([]);
+      setAllTokens([]);
       setError(null);
       return;
     }
@@ -52,10 +69,10 @@ export function ScimSetupPage() {
         fetchScimTokens(accessToken, companyId),
       ]);
       setConfig(cfg);
-      setTokens(rows.filter((row) => row.is_active));
+      setAllTokens(rows);
     } catch (e) {
       setConfig(null);
-      setTokens([]);
+      setAllTokens([]);
       setError(e);
     } finally {
       setLoading(false);
@@ -110,6 +127,8 @@ export function ScimSetupPage() {
     }
   }
 
+  const showOwnerSetup = accessToken && isOwner && companyId != null && !showDeploymentOff;
+
   return (
     <div className="w-full space-y-8">
       <header className="space-y-1">
@@ -134,65 +153,51 @@ export function ScimSetupPage() {
         <Text className="font-mono text-sm text-muted-foreground">{t('scimPageForbidden')}</Text>
       )}
 
-      {error && isApiUnavailableError(error) ? (
-        <ApiUnavailableNotice
-          error={error}
-          t={t}
-        />
+      {showDeploymentOff ? (
+        <Text className="font-mono text-sm text-muted-foreground">
+          {t('scimDeploymentUnavailable')}
+        </Text>
       ) : null}
+
       {error && !isApiUnavailableError(error) ? (
         <Text className="font-mono text-sm text-destructive">
           {error instanceof Error ? error.message : t('scimLoadError')}
         </Text>
       ) : null}
 
-      {accessToken && isOwner && companyId != null ? (
+      {showOwnerSetup ? (
         <Card className="border-border/80 shadow-sm">
           <CardHeader>
-            <CardTitle className="font-heading text-lg">{t('scimConfigTitle')}</CardTitle>
+            <CardTitle className="font-heading text-lg">{t('scimTokensTitle')}</CardTitle>
             <CardDescription className="font-mono text-xs">
-              {t('scimConfigDescription')}
+              {phase === 'no_token'
+                ? t('scimTokensDescriptionNoToken')
+                : phase === 'revoked_only'
+                  ? t('scimTokensDescriptionRevoked')
+                  : t('scimTokensDescriptionActive')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {loading ? (
               <Text className="font-mono text-sm text-muted-foreground">{t('scimLoading')}</Text>
             ) : null}
-            {!loading && config ? (
-              <>
-                <div className="space-y-2">
-                  <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                    {t('scimBaseUrlLabel')}
-                  </p>
-                  <Input
-                    value={config.base_url}
-                    readOnly
-                    className="font-mono text-xs"
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant={config.enabled ? 'default' : 'outline'}>
-                    {config.enabled ? t('scimStatusEnabled') : t('scimStatusDisabled')}
-                  </Badge>
-                  <Badge variant={config.configured ? 'secondary' : 'outline'}>
-                    {config.configured ? t('scimStatusConfigured') : t('scimStatusNotConfigured')}
-                  </Badge>
-                </div>
-              </>
-            ) : null}
-          </CardContent>
-        </Card>
-      ) : null}
 
-      {accessToken && isOwner && companyId != null && !isApiUnavailableError(error) ? (
-        <Card className="border-border/80 shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-heading text-lg">{t('scimTokensTitle')}</CardTitle>
-            <CardDescription className="font-mono text-xs">
-              {t('scimTokensDescription')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            {!loading && phase === 'active' && config?.base_url ? (
+              <div className="space-y-2 rounded-md border border-border/70 bg-muted/30 p-3">
+                <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {t('scimBaseUrlLabel')}
+                </p>
+                <Input
+                  value={config.base_url}
+                  readOnly
+                  className="font-mono text-xs"
+                />
+                <Text className="font-mono text-xs text-muted-foreground">
+                  {t('scimEndpointHint')}
+                </Text>
+              </div>
+            ) : null}
+
             {createdSecret?.token ? (
               <div className="space-y-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3">
                 <p className="font-mono text-xs font-semibold text-amber-950 dark:text-amber-100">
@@ -219,15 +224,13 @@ export function ScimSetupPage() {
               </div>
             ) : null}
 
-            {tokens.length === 0 && !loading ? (
-              <Text className="font-mono text-sm text-muted-foreground">
-                {t('scimTokensEmpty')}
-              </Text>
+            {!loading && phase === 'no_token' ? (
+              <Text className="font-mono text-sm text-muted-foreground">{t('scimNoTokenYet')}</Text>
             ) : null}
 
-            {tokens.length > 0 ? (
+            {activeTokens.length > 0 ? (
               <ul className="divide-y divide-border rounded-md border border-border">
-                {tokens.map((row) => (
+                {activeTokens.map((row) => (
                   <li
                     key={row.id}
                     className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
@@ -250,6 +253,33 @@ export function ScimSetupPage() {
                   </li>
                 ))}
               </ul>
+            ) : null}
+
+            {!loading && revokedTokens.length > 0 ? (
+              <div className="space-y-2">
+                <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {t('scimRevokedSectionTitle')}
+                </p>
+                <ul className="divide-y divide-border rounded-md border border-border/80">
+                  {revokedTokens.map((row) => (
+                    <li
+                      key={row.id}
+                      className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 opacity-80"
+                    >
+                      <div className="min-w-0 space-y-0.5">
+                        <p className="font-mono text-xs">{row.label || t('scimTokenUnlabeled')}</p>
+                        <p className="font-mono text-[10px] text-muted-foreground">
+                          {row.token_prefix}…
+                          {row.revoked_at
+                            ? ` · ${t('scimRevokedAt', { date: row.revoked_at })}`
+                            : null}
+                        </p>
+                      </div>
+                      <Badge variant="outline">{t('scimRevokedBadge')}</Badge>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ) : null}
 
             <div className="space-y-2 rounded-md border border-border/70 p-3">
