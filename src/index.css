@@ -1,4 +1,9 @@
 @tailwind base;
+
+/* Only monochrome bundled icons inherit text color; full-color marks keep SVG fills. */
+.oauth-icon-monochrome {
+  fill: currentColor;
+}
 @tailwind components;
 @tailwind utilities;
 

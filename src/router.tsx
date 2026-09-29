@@ -102,7 +102,7 @@ export const router = createHashRouter([
       { index: true, element: <DashboardPage /> },
       { path: 'company', element: <CompanyPage /> },
       { path: 'groups', element: <GroupsListPage /> },
-      { path: 'oauth', element: <OAuthSetupPage /> },
+      { path: 'oauth/*', element: <OAuthSetupPage /> },
       { path: 'scim', element: <ScimSetupPage /> },
       ...identityWebhookRoutes,
       ...hostingWebhookRoutes,
