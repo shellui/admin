@@ -1,0 +1,85 @@
+/** Auto-generated simple-icons lazy loaders for OAuth catalog slugs (tree-shaken). */
+export type SimpleIconSvgLoader = () => Promise<{ default: string }>;
+
+export const OAUTH_SIMPLE_ICON_LOADERS: Record<string, SimpleIconSvgLoader> = {
+  '500px': () => import('simple-icons/icons/500px.svg?raw'),
+  apple: () => import('simple-icons/icons/apple.svg?raw'),
+  atlassian: () => import('simple-icons/icons/atlassian.svg?raw'),
+  auth0: () => import('simple-icons/icons/auth0.svg?raw'),
+  authelia: () => import('simple-icons/icons/authelia.svg?raw'),
+  baidu: () => import('simple-icons/icons/baidu.svg?raw'),
+  basecamp: () => import('simple-icons/icons/basecamp.svg?raw'),
+  battledotnet: () => import('simple-icons/icons/battledotnet.svg?raw'),
+  bitbucket: () => import('simple-icons/icons/bitbucket.svg?raw'),
+  box: () => import('simple-icons/icons/box.svg?raw'),
+  digitalocean: () => import('simple-icons/icons/digitalocean.svg?raw'),
+  discogs: () => import('simple-icons/icons/discogs.svg?raw'),
+  discord: () => import('simple-icons/icons/discord.svg?raw'),
+  draugiemdotlv: () => import('simple-icons/icons/draugiemdotlv.svg?raw'),
+  dropbox: () => import('simple-icons/icons/dropbox.svg?raw'),
+  edx: () => import('simple-icons/icons/edx.svg?raw'),
+  evernote: () => import('simple-icons/icons/evernote.svg?raw'),
+  facebook: () => import('simple-icons/icons/facebook.svg?raw'),
+  figma: () => import('simple-icons/icons/figma.svg?raw'),
+  firefox: () => import('simple-icons/icons/firefox.svg?raw'),
+  flickr: () => import('simple-icons/icons/flickr.svg?raw'),
+  gitea: () => import('simple-icons/icons/gitea.svg?raw'),
+  github: () => import('simple-icons/icons/github.svg?raw'),
+  gitlab: () => import('simple-icons/icons/gitlab.svg?raw'),
+  google: () => import('simple-icons/icons/google.svg?raw'),
+  gumroad: () => import('simple-icons/icons/gumroad.svg?raw'),
+  hubspot: () => import('simple-icons/icons/hubspot.svg?raw'),
+  instagram: () => import('simple-icons/icons/instagram.svg?raw'),
+  jupyter: () => import('simple-icons/icons/jupyter.svg?raw'),
+  kakao: () => import('simple-icons/icons/kakao.svg?raw'),
+  keycloak: () => import('simple-icons/icons/keycloak.svg?raw'),
+  lichess: () => import('simple-icons/icons/lichess.svg?raw'),
+  line: () => import('simple-icons/icons/line.svg?raw'),
+  mailchimp: () => import('simple-icons/icons/mailchimp.svg?raw'),
+  miro: () => import('simple-icons/icons/miro.svg?raw'),
+  naver: () => import('simple-icons/icons/naver.svg?raw'),
+  nextcloud: () => import('simple-icons/icons/nextcloud.svg?raw'),
+  notion: () => import('simple-icons/icons/notion.svg?raw'),
+  odnoklassniki: () => import('simple-icons/icons/odnoklassniki.svg?raw'),
+  okta: () => import('simple-icons/icons/okta.svg?raw'),
+  openid: () => import('simple-icons/icons/openid.svg?raw'),
+  openstreetmap: () => import('simple-icons/icons/openstreetmap.svg?raw'),
+  orcid: () => import('simple-icons/icons/orcid.svg?raw'),
+  patreon: () => import('simple-icons/icons/patreon.svg?raw'),
+  paypal: () => import('simple-icons/icons/paypal.svg?raw'),
+  pinterest: () => import('simple-icons/icons/pinterest.svg?raw'),
+  quickbooks: () => import('simple-icons/icons/quickbooks.svg?raw'),
+  reddit: () => import('simple-icons/icons/reddit.svg?raw'),
+  shopify: () => import('simple-icons/icons/shopify.svg?raw'),
+  sinaweibo: () => import('simple-icons/icons/sinaweibo.svg?raw'),
+  snapchat: () => import('simple-icons/icons/snapchat.svg?raw'),
+  soundcloud: () => import('simple-icons/icons/soundcloud.svg?raw'),
+  stackexchange: () => import('simple-icons/icons/stackexchange.svg?raw'),
+  steam: () => import('simple-icons/icons/steam.svg?raw'),
+  strava: () => import('simple-icons/icons/strava.svg?raw'),
+  stripe: () => import('simple-icons/icons/stripe.svg?raw'),
+  telegram: () => import('simple-icons/icons/telegram.svg?raw'),
+  tiktok: () => import('simple-icons/icons/tiktok.svg?raw'),
+  trello: () => import('simple-icons/icons/trello.svg?raw'),
+  tumblr: () => import('simple-icons/icons/tumblr.svg?raw'),
+  twitch: () => import('simple-icons/icons/twitch.svg?raw'),
+  untappd: () => import('simple-icons/icons/untappd.svg?raw'),
+  vimeo: () => import('simple-icons/icons/vimeo.svg?raw'),
+  vk: () => import('simple-icons/icons/vk.svg?raw'),
+  wechat: () => import('simple-icons/icons/wechat.svg?raw'),
+  x: () => import('simple-icons/icons/x.svg?raw'),
+  xing: () => import('simple-icons/icons/xing.svg?raw'),
+  zoho: () => import('simple-icons/icons/zoho.svg?raw'),
+  zoom: () => import('simple-icons/icons/zoom.svg?raw'),
+};
+
+export async function loadSimpleIconSvg(slug: string): Promise<string | null> {
+  const loader = OAUTH_SIMPLE_ICON_LOADERS[slug.toLowerCase()];
+  if (!loader) return null;
+  try {
+    const mod = await loader();
+    return mod.default;
+  } catch {
+    return null;
+  }
+}
