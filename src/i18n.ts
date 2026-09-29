@@ -459,7 +459,7 @@ const resources = {
       oauthWizardStepConsole: 'Set up on provider',
       oauthWizardStepCredentials: 'Credentials',
       oauthWizardStepSummary: 'Summary',
-      oauthWizardBackToList: 'Back to OAuth apps',
+      oauthWizardBackToList: 'Back to sign-in providers',
       oauthWizardPopularHeading: 'Popular providers',
       oauthWizardGenericHeading: 'Standard protocols',
       oauthWizardOtherHeading: 'More providers',
@@ -1271,7 +1271,7 @@ const resources = {
         'Il faut être propriétaire de l’entreprise pour initialiser les apps OAuth de cette société.',
       oauthSetupCatalogTitle: 'Fournisseurs configurés',
       oauthSetupCatalogDescription:
-        'Clés OAuth liées à cette entreprise. Ajoutez un fournisseur ou modifiez les identifiants via l’assistant.',
+        'Fournisseurs de connexion configurés pour cette entreprise. Ajoutez-en un ou modifiez les identifiants.',
       oauthSetupLoading: 'Chargement des SocialApps…',
       oauthSetupEmpty: 'Aucun SocialApp trouvé pour les fournisseurs activés.',
       oauthSetupLoadError: 'Impossible de charger les SocialApps OAuth.',
@@ -1316,7 +1316,7 @@ const resources = {
       oauthWizardStepConsole: 'Configuration chez le fournisseur',
       oauthWizardStepCredentials: 'Identifiants',
       oauthWizardStepSummary: 'Résumé',
-      oauthWizardBackToList: 'Retour aux apps OAuth',
+      oauthWizardBackToList: 'Retour aux fournisseurs de connexion',
       oauthWizardPopularHeading: 'Fournisseurs populaires',
       oauthWizardGenericHeading: 'Protocoles standard',
       oauthWizardOtherHeading: 'Autres fournisseurs',
@@ -1333,8 +1333,7 @@ const resources = {
       oauthWizardConsoleHint: 'URL de redirection',
       oauthWizardAllauthDocs: 'Ouvrir le guide de configuration',
       oauthWizardCallbackLabel: 'URL de redirection',
-      oauthWizardCallbackHelp:
-        'Collez exactement cette URL comme URI de redirection autorisée.',
+      oauthWizardCallbackHelp: 'Collez exactement cette URL comme URI de redirection autorisée.',
       oauthWizardCopy: 'Copier',
       oauthWizardCopied: 'Copié',
       oauthWizardCopyError: 'Copie automatique impossible. Copiez l’URL manuellement.',
@@ -1356,8 +1355,7 @@ const resources = {
       oauthWizardNoChanges: 'Modifiez au moins un champ avant d’enregistrer.',
       oauthWizardCancel: 'Annuler',
       oauthWizardSavedToast: 'Fournisseur OAuth enregistré',
-      oauthWizardEditStepsHint:
-        'Mettez à jour le client ID et le secret pour ce fournisseur.',
+      oauthWizardEditStepsHint: 'Mettez à jour le client ID et le secret pour ce fournisseur.',
       oauthWizardSummaryBody:
         'Les personnes de cette entreprise peuvent se connecter avec {{provider}}.',
       oauthConsoleKind_app_registration: 'Créer une app sur {{provider}}',
