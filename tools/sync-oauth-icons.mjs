@@ -11,6 +11,9 @@ import { optimize } from 'svgo';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const OUT_DIR = path.join(ROOT, 'src/assets/oauth-icons');
+const IMPORT_DIR = path.join(__dirname, 'oauth-icons-import');
+const IMPORT_META_PATH = path.join(IMPORT_DIR, 'importMeta.json');
+const IMPORT_SOURCES_PATH = path.join(IMPORT_DIR, 'SOURCES.md');
 const CATALOG_PATH =
   process.env.OAUTH_CATALOG_JSON ||
   '/home/ubuntu/.cursor/projects/workspace/uploads/providers_fa5d.json';
@@ -100,6 +103,17 @@ function isWhiteFill(fill) {
   return f === 'white' || f === '#fff' || f === '#ffffff';
 }
 
+/** SVGO prefixIds skips some `<style id="…">` ids; normalize those to `{slug}-…`. */
+function fixUnprefixedStyleElementIds(svg, slug) {
+  const prefix = slugIdPrefix(slug);
+  return svg.replace(/\bid="([^"]+)"/g, (match, id) => {
+    if (!id.startsWith(prefix)) {
+      return `id="${prefix}${id}"`;
+    }
+    return match;
+  });
+}
+
 function stripDanglingClipPaths(svg) {
   const clipRef = /clip-path="url\(#([^)]+)\)"/g;
   for (const match of svg.matchAll(clipRef)) {
@@ -132,6 +146,36 @@ function auditLightVisibility(svg, slug) {
   }
 }
 
+async function readBundledImportSvg(slug) {
+  const candidates = [
+    path.join(IMPORT_DIR, `${slug}.svg`),
+    path.join(IMPORT_DIR, 'png-as-svg', `${slug}.svg`),
+  ];
+  for (const filePath of candidates) {
+    try {
+      return await fs.readFile(filePath, 'utf8');
+    } catch {
+      /* try next */
+    }
+  }
+  return null;
+}
+
+async function readBundledImportDarkSvg(slug) {
+  const candidates = [
+    path.join(IMPORT_DIR, `${slug}-dark.svg`),
+    path.join(IMPORT_DIR, 'png-as-svg', `${slug}-dark.svg`),
+  ];
+  for (const filePath of candidates) {
+    try {
+      return await fs.readFile(filePath, 'utf8');
+    } catch {
+      /* try next */
+    }
+  }
+  return null;
+}
+
 function svgoOptimize(svg, slug) {
   const prefix = slugIdPrefix(slug);
   return optimize(svg, {
@@ -158,6 +202,13 @@ async function fetchText(url) {
 }
 
 async function main() {
+  let importMeta = {};
+  try {
+    importMeta = JSON.parse(await fs.readFile(IMPORT_META_PATH, 'utf8'));
+  } catch {
+    /* optional bundled import pack */
+  }
+
   const catalog = JSON.parse(await fs.readFile(CATALOG_PATH, 'utf8'));
   const svglCache = path.join(__dirname, '.svgl-cache.json');
   let svglRaw;
@@ -198,6 +249,14 @@ async function main() {
           ? 'Stripe brand (#635BFF tile + white mark; S path from simple-icons CC0-1.0)'
           : 'Shellui (custom composed mark)';
       license = slug === 'stripe' ? 'CC0-1.0' : 'CC0-1.0';
+    } else if (importMeta[slug]) {
+      lightSvg = await readBundledImportSvg(slug);
+      darkSvg = await readBundledImportDarkSvg(slug);
+      if (lightSvg) {
+        const meta = importMeta[slug];
+        source = meta.source;
+        license = meta.license;
+      }
     } else {
       entry = byTitle.get(String(title).toLowerCase());
       if (!entry) {
@@ -249,13 +308,16 @@ async function main() {
       continue;
     }
 
-    lightSvg = stripDanglingClipPaths(svgoOptimize(lightSvg, slug));
+    lightSvg = fixUnprefixedStyleElementIds(
+      stripDanglingClipPaths(svgoOptimize(lightSvg, slug)),
+      slug,
+    );
     auditLightVisibility(lightSvg, slug);
     const file = `${slug}.svg`;
     await fs.writeFile(path.join(OUT_DIR, file), lightSvg);
 
     let darkFile = null;
-    if (darkSvg || DARK_ALT_FROM_SVGL.has(slug)) {
+    if (darkSvg || DARK_ALT_FROM_SVGL.has(slug) || importMeta[slug]) {
       if (!darkSvg && entry) {
         const darkRoute = routeOf(entry).dark;
         if (darkRoute) {
@@ -268,16 +330,22 @@ async function main() {
       }
       if (darkSvg) {
         darkFile = `${slug}-dark.svg`;
-        await fs.writeFile(path.join(OUT_DIR, darkFile), svgoOptimize(darkSvg, slug));
+        await fs.writeFile(
+          path.join(OUT_DIR, darkFile),
+          fixUnprefixedStyleElementIds(svgoOptimize(darkSvg, slug), slug),
+        );
       }
     }
 
+    const importEntry = importMeta[slug];
     const fullColor =
-      !INVERT_ON_DARK.has(slug) &&
-      slug !== 'github' &&
-      (lightSvg.includes('url(#') ||
-        /fill="#(?!fff|ffffff|FFF)/i.test(lightSvg) ||
-        ['google', 'microsoft', 'slack', 'linkedin', 'zoom', 'instagram'].includes(slug));
+      importEntry && typeof importEntry.fullColor === 'boolean'
+        ? importEntry.fullColor
+        : !INVERT_ON_DARK.has(slug) &&
+          slug !== 'github' &&
+          (lightSvg.includes('url(#') ||
+            /fill="#(?!fff|ffffff|FFF)/i.test(lightSvg) ||
+            ['google', 'microsoft', 'slack', 'linkedin', 'zoom', 'instagram'].includes(slug));
     manifest.push({
       slug,
       file,
@@ -290,9 +358,16 @@ async function main() {
     notice.push(`- \`${file}\` (${slug}): ${source}, ${license}`);
   }
 
+  let sourcesAppendix = '';
+  try {
+    sourcesAppendix = await fs.readFile(IMPORT_SOURCES_PATH, 'utf8');
+  } catch {
+    /* no import pack */
+  }
+
   await fs.writeFile(
     path.join(OUT_DIR, 'NOTICE.md'),
-    `# OAuth provider icons\n\nBundled SVG logos for the Shellui admin OAuth setup wizard.\n\n## Attribution\n\n${notice.join('\n')}\n\n## Fallback\n\nProviders without an entry above use a Lucide icon in the UI: ${fallbacks.length ? fallbacks.join(', ') : 'none'}.\n`,
+    `# OAuth provider icons\n\nBundled SVG logos for the Shellui admin OAuth setup wizard.\n\n## Attribution\n\n${notice.join('\n')}\n\n## Fallback\n\nProviders without an entry above use a Lucide icon in the UI: ${fallbacks.length ? fallbacks.join(', ') : 'none'}.\n\n${sourcesAppendix ? `---\n\n${sourcesAppendix.trim()}\n` : ''}`,
   );
 
   const loaderLines = manifest

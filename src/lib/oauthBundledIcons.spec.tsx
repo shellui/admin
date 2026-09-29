@@ -3,7 +3,11 @@ import path from 'node:path';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import { OAuthProviderIcon } from '@/components/oauth/OAuthProviderIcon';
-import { OAUTH_ICON_LOADERS, OAUTH_ICON_META } from '@/assets/oauth-icons/oauthIconManifest';
+import {
+  OAUTH_ICON_FALLBACK_SLUGS,
+  OAUTH_ICON_LOADERS,
+  OAUTH_ICON_META,
+} from '@/assets/oauth-icons/oauthIconManifest';
 import { auditInlineSvgTree, auditSvgMarkupIds } from '@/lib/oauthSvgIds';
 import { auditSvgMarkupLightVisibility } from '@/lib/oauthIconLightVisibility';
 import { prepareOAuthInlineIconSvg } from '@/lib/oauthIconRender';
@@ -11,7 +15,44 @@ import { prepareOAuthInlineIconSvg } from '@/lib/oauthIconRender';
 const ICON_DIR = path.join(process.cwd(), 'src/assets/oauth-icons');
 
 /** Logos known to combine a white foreground mark with a colored background. */
-const VISUAL_REGRESSION_SLUGS = ['zoom', 'stripe', 'instagram'] as const;
+const VISUAL_REGRESSION_SLUGS = ['zoom', 'stripe', 'instagram', 'clever', 'yahoo'] as const;
+
+/** Providers that previously used Lucide before the bundled import pack (PR #29). */
+const FORMERLY_MISSING_SLUGS = [
+  '23andme',
+  'agave',
+  'authentiq',
+  'battlenet',
+  'cern',
+  'cilogon',
+  'clever',
+  'dataporten',
+  'daum',
+  'dingtalk',
+  'doximity',
+  'drip',
+  'dwolla',
+  'edmodo',
+  'eveonline',
+  'exist',
+  'feishu',
+  'frontier',
+  'jupyterhub',
+  'klaviyo',
+  'lemonldap',
+  'mailcow',
+  'netiq',
+  'questrade',
+  'sharefile',
+  'stocktwits',
+  'trainingpeaks',
+  'wahoo',
+  'weibo',
+  'weixin',
+  'yahoo',
+  'yandex',
+  'ynab',
+] as const;
 
 const bundledMarkups = vi.hoisted(() => new Map<string, string>());
 
@@ -31,6 +72,13 @@ describe('bundled OAuth SVG assets', () => {
     for (const slug of Object.keys(OAUTH_ICON_LOADERS)) {
       const mod = await OAUTH_ICON_LOADERS[slug]();
       bundledMarkups.set(slug, mod.default);
+    }
+  });
+
+  it('has no Lucide fallback slugs after the import pack', () => {
+    expect(OAUTH_ICON_FALLBACK_SLUGS).toEqual([]);
+    for (const slug of FORMERLY_MISSING_SLUGS) {
+      expect(OAUTH_ICON_LOADERS[slug], slug).toBeDefined();
     }
   });
 
@@ -54,6 +102,7 @@ describe('bundled OAuth SVG assets', () => {
 
   it('keeps contrasting paint on a light background for full-color bundled icons', () => {
     for (const file of svgFiles) {
+      if (file.endsWith('-dark.svg')) continue;
       const slug = file.replace(/-dark\.svg$/, '').replace(/\.svg$/, '');
       const meta = OAUTH_ICON_META[slug];
       if (meta && !meta.fullColor) continue;
@@ -105,7 +154,12 @@ describe('bundled OAuth SVG assets', () => {
       });
       const visibility = auditSvgMarkupLightVisibility(scoped);
       expect(visibility.ok, `${slug}: ${visibility.issue ?? ''}`).toBe(true);
-      expect(scoped.toLowerCase()).toMatch(/fill="#fff|fill="#ffffff|fill="white"/);
+      if (slug === 'zoom' || slug === 'stripe' || slug === 'instagram') {
+        expect(scoped.toLowerCase()).toMatch(/fill="#fff|fill="#ffffff|fill="white"/);
+      }
+      if (slug === 'clever' || slug === 'yahoo') {
+        expect(scoped).toMatch(/data:image\/png;base64,/);
+      }
     }
   });
 
