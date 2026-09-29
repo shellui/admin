@@ -22,6 +22,7 @@ import {
 } from '@/features/actions/components/ApiUnavailableNotice';
 import { useActionsApi } from '@/features/actions/useActionsApi';
 import type { ActionRule, ActionRuleId } from '@/features/actions/types';
+import { confirmAction } from '@/lib/confirmAction';
 import { SHELLUI_N8N_WEBHOOK_DOCS_URL } from '@/lib/webhookDocsUrls';
 
 export function ActionsRulesListPage() {
@@ -82,7 +83,14 @@ export function ActionsRulesListPage() {
 
   async function onDelete(rule: ActionRule) {
     if (!api) return;
-    if (!window.confirm(t('actionsRuleDeleteConfirm', { name: rule.name }))) return;
+    const confirmed = await confirmAction({
+      title: t('actionsRuleDeleteTitle'),
+      description: t('actionsRuleDeleteConfirm', { name: rule.name }),
+      okLabel: t('actionsDelete'),
+      cancelLabel: t('actionsCancel'),
+      danger: true,
+    });
+    if (!confirmed) return;
     setBusyId(rule.id);
     setError(null);
     try {

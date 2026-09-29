@@ -27,6 +27,7 @@ import {
   type HostingApp,
 } from '@/lib/hostingApi';
 import shellui from '@shellui/sdk';
+import { confirmAction } from '@/lib/confirmAction';
 
 function formatDate(value: string | null, locale: string): string {
   if (!value) return '—';
@@ -217,19 +218,12 @@ export function HostingAppsPage() {
 
   async function confirmDeleteApp(app: HostingApp): Promise<boolean> {
     const label = app.display_name || app.name;
-    if (typeof window === 'undefined' || window.parent === window) {
-      return window.confirm(t('hostingDeleteConfirm', { name: label }));
-    }
-    return await new Promise<boolean>((resolve) => {
-      shellui.dialog({
-        title: t('hostingDeleteTitle'),
-        description: t('hostingDeleteConfirm', { name: label }),
-        mode: 'confirm',
-        okLabel: t('hostingDelete'),
-        cancelLabel: t('hostingDeleteCancel'),
-        onOk: () => resolve(true),
-        onCancel: () => resolve(false),
-      });
+    return confirmAction({
+      title: t('hostingDeleteTitle'),
+      description: t('hostingDeleteConfirm', { name: label }),
+      okLabel: t('hostingDelete'),
+      cancelLabel: t('hostingDeleteCancel'),
+      danger: true,
     });
   }
 

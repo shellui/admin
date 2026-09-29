@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import shellui from '@shellui/sdk';
+import { confirmAction } from '@/lib/confirmAction';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -170,19 +170,11 @@ export function OAuthSetupPage() {
 
   const confirmDiscardIfDirty = useCallback(async (): Promise<boolean> => {
     if (!formDirty) return true;
-    if (typeof window === 'undefined' || window.parent === window) {
-      return window.confirm(t('oauthSetupDiscardConfirm'));
-    }
-    return await new Promise<boolean>((resolve) => {
-      shellui.dialog({
-        title: t('oauthSetupDiscardTitle'),
-        description: t('oauthSetupDiscardConfirm'),
-        mode: 'confirm',
-        okLabel: t('oauthSetupDiscardOk'),
-        cancelLabel: t('oauthSetupDiscardCancel'),
-        onOk: () => resolve(true),
-        onCancel: () => resolve(false),
-      });
+    return confirmAction({
+      title: t('oauthSetupDiscardTitle'),
+      description: t('oauthSetupDiscardConfirm'),
+      okLabel: t('oauthSetupDiscardOk'),
+      cancelLabel: t('oauthSetupDiscardCancel'),
     });
   }, [formDirty, t]);
 

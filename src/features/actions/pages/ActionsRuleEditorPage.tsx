@@ -2,13 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
-import shellui from '@shellui/sdk';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
+import { confirmAction } from '@/lib/confirmAction';
 import { getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
 import { ActionsSubNav } from '@/features/actions/components/ActionsSubNav';
 import { WebhookSecretOnceCallout } from '@/features/actions/components/WebhookSecretOnceCallout';
@@ -189,22 +189,13 @@ export function ActionsRuleEditorPage() {
 
   async function onRotateSecret() {
     if (!api || numericId == null) return;
-    const confirmed =
-      typeof window === 'undefined' || window.parent === window
-        ? window.confirm(
-            `${t('webhooksRotateConfirmTitle')}\n\n${t('webhooksRotateConfirmDescription')}`,
-          )
-        : await new Promise<boolean>((resolve) => {
-            shellui.dialog({
-              title: t('webhooksRotateConfirmTitle'),
-              description: t('webhooksRotateConfirmDescription'),
-              mode: 'confirm',
-              okLabel: t('webhooksRotateConfirmAction'),
-              cancelLabel: t('actionsCancel'),
-              onOk: () => resolve(true),
-              onCancel: () => resolve(false),
-            });
-          });
+    const confirmed = await confirmAction({
+      title: t('webhooksRotateConfirmTitle'),
+      description: t('webhooksRotateConfirmDescription'),
+      okLabel: t('webhooksRotateConfirmAction'),
+      cancelLabel: t('actionsCancel'),
+      danger: true,
+    });
     if (!confirmed) return;
 
     setRotateLoading(true);

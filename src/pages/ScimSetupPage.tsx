@@ -21,7 +21,9 @@ import {
   partitionScimTokens,
   scimSetupPhase,
 } from '@/lib/scimSetupView';
+import { confirmAction } from '@/lib/confirmAction';
 import { getCompanyIdFromJwt, getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
+import shellui from '@shellui/sdk';
 
 export function ScimSetupPage() {
   const { t } = useTranslation();
@@ -104,11 +106,20 @@ export function ScimSetupPage() {
 
   async function onRevoke(row: ScimTokenRow) {
     if (!accessToken || companyId == null) return;
-    if (!window.confirm(t('scimRevokeConfirm', { label: row.label || row.token_prefix }))) return;
+    const label = row.label || row.token_prefix;
+    const confirmed = await confirmAction({
+      title: t('scimRevokeTitle'),
+      description: t('scimRevokeConfirm', { label }),
+      okLabel: t('scimRevoke'),
+      cancelLabel: t('scimRevokeCancel'),
+      danger: true,
+    });
+    if (!confirmed) return;
     setBusy(true);
     setError(null);
     try {
       await revokeScimToken(accessToken, companyId, row.id);
+      shellui.toast({ title: t('scimRevoked'), type: 'success' });
       await load();
     } catch (e) {
       setError(e);

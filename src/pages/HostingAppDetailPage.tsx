@@ -34,6 +34,7 @@ import {
 } from '@/lib/hostingApi';
 import { getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
 import shellui from '@shellui/sdk';
+import { confirmAction } from '@/lib/confirmAction';
 
 function formatDate(value: string | null, locale: string): string {
   if (!value) return '—';
@@ -223,20 +224,13 @@ export function HostingAppDetailPage() {
   async function handleDelete() {
     if (!accessToken || !hostingBaseUrl || !name || deleting || !app) return;
     const label = app.display_name || app.name;
-    const confirmed =
-      typeof window === 'undefined' || window.parent === window
-        ? window.confirm(t('hostingDeleteConfirm', { name: label }))
-        : await new Promise<boolean>((resolve) => {
-            shellui.dialog({
-              title: t('hostingDeleteTitle'),
-              description: t('hostingDeleteConfirm', { name: label }),
-              mode: 'confirm',
-              okLabel: t('hostingDelete'),
-              cancelLabel: t('hostingDeleteCancel'),
-              onOk: () => resolve(true),
-              onCancel: () => resolve(false),
-            });
-          });
+    const confirmed = await confirmAction({
+      title: t('hostingDeleteTitle'),
+      description: t('hostingDeleteConfirm', { name: label }),
+      okLabel: t('hostingDelete'),
+      cancelLabel: t('hostingDeleteCancel'),
+      danger: true,
+    });
     if (!confirmed) return;
     setDeleting(true);
     setError(null);
