@@ -52,7 +52,9 @@ export function OAuthProviderConsoleStep({
         </div>
       </div>
 
-      <Text className="font-mono text-sm">{t('oauthWizardConsoleIntro')}</Text>
+      <Text className="font-mono text-sm">
+        {t('oauthWizardConsoleIntro', { provider: provider.name })}
+      </Text>
 
       <OAuthConsoleUrlList provider={provider} />
 
