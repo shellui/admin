@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { ExternalLink, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,6 +22,7 @@ import {
 } from '@/features/actions/components/ApiUnavailableNotice';
 import { useActionsApi } from '@/features/actions/useActionsApi';
 import type { ActionRule, ActionRuleId } from '@/features/actions/types';
+import { SHELLUI_N8N_WEBHOOK_DOCS_URL } from '@/lib/webhookDocsUrls';
 
 export function ActionsRulesListPage() {
   const { t, i18n } = useTranslation();
@@ -111,6 +112,18 @@ export function ActionsRulesListPage() {
         <Text className="max-w-3xl text-sm text-muted-foreground">
           {t('actionsPageDescription')}
         </Text>
+        <a
+          href={SHELLUI_N8N_WEBHOOK_DOCS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 font-mono text-xs text-primary underline-offset-2 hover:underline"
+        >
+          {t('webhooksN8nDocLink')}
+          <ExternalLink
+            className="size-3"
+            aria-hidden
+          />
+        </a>
       </header>
 
       <ActionsSubNav />

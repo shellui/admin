@@ -7,6 +7,7 @@ import type {
   ActionEventCatalogEntry,
   ActionRule,
   ActionRuleCreatePayload,
+  ActionRuleMutationResult,
   ActionRuleSendTestResult,
   ActionRuleUpdatePayload,
   ActionRuleWebhookConfig,
@@ -19,11 +20,35 @@ function isoString(value: unknown): string {
 }
 
 function parseWebhookConfig(cfg: Record<string, unknown>): ActionRuleWebhookConfig {
+  const has_secret = cfg.has_secret === true || cfg.secret_set === true;
+  const secret_hint = typeof cfg.secret_hint === 'string' ? cfg.secret_hint : undefined;
   return {
     url: typeof cfg.url === 'string' ? cfg.url : '',
+    ...(has_secret ? { has_secret: true } : {}),
+    ...(secret_hint ? { secret_hint } : {}),
     secret_set: cfg.secret_set === true,
     authorization_header_set: cfg.authorization_header_set === true,
   };
+}
+
+function extractRevealedSecret(raw: Record<string, unknown>): string | undefined {
+  const top = typeof raw.secret === 'string' ? raw.secret.trim() : '';
+  if (top) return top;
+  const configRaw = raw.config;
+  if (configRaw && typeof configRaw === 'object') {
+    const nested = (configRaw as Record<string, unknown>).secret;
+    if (typeof nested === 'string' && nested.trim()) return nested.trim();
+  }
+  return undefined;
+}
+
+export function parseIdentityRuleResponse(raw: unknown): ActionRuleMutationResult {
+  const rule = parseIdentityRule(raw);
+  if (!raw || typeof raw !== 'object') {
+    return { rule };
+  }
+  const revealedSecret = extractRevealedSecret(raw as Record<string, unknown>);
+  return revealedSecret ? { rule, revealedSecret } : { rule };
 }
 
 export function parseIdentityRule(raw: unknown): ActionRule {

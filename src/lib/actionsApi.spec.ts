@@ -3,6 +3,7 @@ import {
   parseDeliveriesList,
   parseEventsList,
   parseIdentityRule,
+  parseIdentityRuleResponse,
   parseRulesList,
   parseSendTestResult,
   toIdentityRuleWriteBody,
@@ -133,8 +134,59 @@ describe('actionsApi parsers', () => {
     });
     expect(rule.config).toMatchObject({
       url: 'https://hooks.example.com',
+      has_secret: true,
       secret_set: true,
       authorization_header_set: true,
     });
+  });
+
+  it('parseIdentityRule maps has_secret and secret_hint', () => {
+    const rule = parseIdentityRule({
+      id: 10,
+      name: 'Hook',
+      event_type: 'identity.user.created',
+      enabled: true,
+      config: {
+        url: 'https://hooks.example.com',
+        has_secret: true,
+        secret_hint: 'abcd',
+      },
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    });
+    expect(rule.config.has_secret).toBe(true);
+    expect(rule.config.secret_hint).toBe('abcd');
+  });
+
+  it('parseIdentityRuleResponse extracts one-time secret on create', () => {
+    const parsed = parseIdentityRuleResponse({
+      id: 11,
+      name: 'Hook',
+      event_type: 'identity.user.created',
+      enabled: true,
+      secret: 'whsec_dGVzdA',
+      config: {
+        url: 'https://hooks.example.com',
+        has_secret: true,
+        secret_hint: 'dGVz',
+      },
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    });
+    expect(parsed.revealedSecret).toBe('whsec_dGVzdA');
+    expect(parsed.rule.config.secret_hint).toBe('dGVz');
+    expect(parsed.rule.config.has_secret).toBe(true);
+  });
+
+  it('toIdentityRuleWriteBody omits secret when blank on create', () => {
+    const body = toIdentityRuleWriteBody({
+      name: 'Hook',
+      event: 'identity.user.created',
+      config: {
+        url: 'https://hooks.example.com',
+        secret: '   ',
+      },
+    });
+    expect(body.secret).toBeUndefined();
   });
 });

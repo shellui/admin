@@ -15,6 +15,7 @@ import {
   parseDeliveryDetail,
   parseEventsList,
   parseIdentityRule,
+  parseIdentityRuleResponse,
   parseRulesList,
   parseSendTestResult,
   toIdentityRuleWriteBody,
@@ -52,7 +53,7 @@ export function createIdentityActionsApiClient(
       return parseIdentityRule(body);
     },
 
-    async createRule(payload: ActionRuleCreatePayload): Promise<ActionRule> {
+    async createRule(payload: ActionRuleCreatePayload) {
       const res = await identityAuthFetch(
         '/api/v1/actions/rules',
         accessToken,
@@ -63,7 +64,18 @@ export function createIdentityActionsApiClient(
         company,
       );
       const body = await readJsonOrThrow(res, ACTIONS_API_UNAVAILABLE);
-      return parseIdentityRule(body);
+      return parseIdentityRuleResponse(body);
+    },
+
+    async rotateRuleSecret(id: ActionRuleId) {
+      const res = await identityAuthFetch(
+        `${rulePath(id)}/rotate-secret`,
+        accessToken,
+        { method: 'POST' },
+        company,
+      );
+      const body = await readJsonOrThrow(res, ACTIONS_API_UNAVAILABLE);
+      return parseIdentityRuleResponse(body);
     },
 
     async updateRule(id: ActionRuleId, payload: ActionRuleUpdatePayload): Promise<ActionRule> {

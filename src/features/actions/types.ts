@@ -13,6 +13,10 @@ export type ActionRuleWebhookConfig = {
   secret?: string;
   auth_header_name?: string;
   auth_header_value?: string;
+  /** New API: server stores secret but never returns it on read. */
+  has_secret?: boolean;
+  secret_hint?: string;
+  /** Legacy identity builds used secret_set instead of has_secret. */
   secret_set?: boolean;
   authorization_header_set?: boolean;
 };
@@ -25,6 +29,12 @@ export type ActionRule = {
   config: ActionRuleWebhookConfig;
   created_at: string;
   updated_at: string;
+};
+
+export type ActionRuleMutationResult = {
+  rule: ActionRule;
+  /** Plaintext signing secret returned only on create or rotate-secret. */
+  revealedSecret?: string;
 };
 
 export type ActionRuleSendTestResult = {
@@ -94,8 +104,9 @@ export interface ActionsApiClient {
   fetchEvents(): Promise<ActionEventCatalogEntry[]>;
   fetchRules(): Promise<ActionRule[]>;
   fetchRule(id: ActionRuleId): Promise<ActionRule>;
-  createRule(payload: ActionRuleCreatePayload): Promise<ActionRule>;
+  createRule(payload: ActionRuleCreatePayload): Promise<ActionRuleMutationResult>;
   updateRule(id: ActionRuleId, payload: ActionRuleUpdatePayload): Promise<ActionRule>;
+  rotateRuleSecret(id: ActionRuleId): Promise<ActionRuleMutationResult>;
   deleteRule(id: ActionRuleId): Promise<void>;
   sendRuleTest(id: ActionRuleId): Promise<ActionRuleSendTestResult>;
   fetchDeliveries(filters: ActionDeliveryListFilters): Promise<ActionDeliveriesListResponse>;

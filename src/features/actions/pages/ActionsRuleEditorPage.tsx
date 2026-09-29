@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import shellui from '@shellui/sdk';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +11,7 @@ import { Text } from '@/components/ui/text';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
 import { ActionsSubNav } from '@/features/actions/components/ActionsSubNav';
+import { WebhookSecretOnceCallout } from '@/features/actions/components/WebhookSecretOnceCallout';
 import {
   ApiUnavailableNotice,
   isApiUnavailableError,
@@ -26,12 +28,21 @@ function formatSampleEnvelope(value: unknown): string {
   }
 }
 
+type LocationSecretState = {
+  revealedSecret?: string;
+};
+
+function ruleHasStoredSecret(cfg: ActionRuleWebhookConfig): boolean {
+  return cfg.has_secret === true || cfg.secret_set === true;
+}
+
 export function ActionsRuleEditorPage() {
   const { t } = useTranslation();
   const { ruleId } = useParams();
   const isCreate = ruleId === 'new' || !ruleId;
   const numericId = !isCreate && ruleId ? Number.parseInt(ruleId, 10) : null;
   const navigate = useNavigate();
+  const location = useLocation();
   const accessToken = useShelluiAccessToken();
   const isOwner = Boolean(accessToken && getIsCompanyOwnerFromJwt(accessToken));
   const { api } = useActionsApi(accessToken);
@@ -39,12 +50,16 @@ export function ActionsRuleEditorPage() {
   const [events, setEvents] = useState<ActionEventCatalogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [rotateLoading, setRotateLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [sendTestLoading, setSendTestLoading] = useState(false);
   const [sendTestFeedback, setSendTestFeedback] = useState<{
     type: 'success' | 'error';
     message: string;
   } | null>(null);
+  const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
+  const [storedSecretHint, setStoredSecretHint] = useState<string | null>(null);
+  const [hasStoredSecret, setHasStoredSecret] = useState(false);
 
   const [name, setName] = useState('');
   const [eventKey, setEventKey] = useState('');
@@ -69,6 +84,11 @@ export function ActionsRuleEditorPage() {
       ? `/webhooks/deliveries?action_rule_id=${encodeURIComponent(String(numericId))}`
       : '/webhooks/deliveries';
 
+  const applyRuleConfigMeta = useCallback((cfg: ActionRuleWebhookConfig) => {
+    setHasStoredSecret(ruleHasStoredSecret(cfg));
+    setStoredSecretHint(cfg.secret_hint?.trim() || null);
+  }, []);
+
   const loadCatalog = useCallback(async () => {
     if (!api || !isOwner) return [];
     return api.fetchEvents();
@@ -78,6 +98,14 @@ export function ActionsRuleEditorPage() {
     if (!api || !isOwner || numericId == null || !Number.isFinite(numericId)) return null;
     return api.fetchRule(numericId);
   }, [api, isOwner, numericId]);
+
+  useEffect(() => {
+    const navState = location.state as LocationSecretState | null;
+    if (navState?.revealedSecret?.trim()) {
+      setRevealedSecret(navState.revealedSecret.trim());
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.pathname, location.state, navigate]);
 
   useEffect(() => {
     if (!api || !isOwner) {
@@ -100,9 +128,10 @@ export function ActionsRuleEditorPage() {
           setName(rule.name);
           setEventKey(rule.event);
           setEnabled(rule.enabled);
-          const cfg = rule.config as ActionRuleWebhookConfig;
+          const cfg = rule.config;
           setWebhookUrl(cfg.url ?? '');
           setAuthHeaderName(cfg.auth_header_name ?? '');
+          applyRuleConfigMeta(cfg);
         }
       } catch (e) {
         if (!cancelled) setError(e);
@@ -113,7 +142,7 @@ export function ActionsRuleEditorPage() {
     return () => {
       cancelled = true;
     };
-  }, [api, isCreate, isOwner, loadCatalog, loadRule, numericId]);
+  }, [api, applyRuleConfigMeta, isCreate, isOwner, loadCatalog, loadRule, numericId]);
 
   async function onSave() {
     if (!api || !name.trim() || !eventKey) return;
@@ -122,7 +151,7 @@ export function ActionsRuleEditorPage() {
     try {
       const config: ActionRuleWebhookConfig = {
         url: webhookUrl.trim(),
-        ...(webhookSecret.trim() ? { secret: webhookSecret.trim() } : {}),
+        ...(isCreate && webhookSecret.trim() ? { secret: webhookSecret.trim() } : {}),
         ...(authHeaderName.trim()
           ? {
               auth_header_name: authHeaderName.trim(),
@@ -138,19 +167,58 @@ export function ActionsRuleEditorPage() {
           enabled,
           config,
         });
-        navigate(`/webhooks/${created.id}`, { replace: true });
+        navigate(`/webhooks/${created.rule.id}`, {
+          replace: true,
+          state: created.revealedSecret ? { revealedSecret: created.revealedSecret } : null,
+        });
       } else if (numericId != null) {
-        await api.updateRule(numericId, {
+        const updated = await api.updateRule(numericId, {
           name: name.trim(),
           event: eventKey,
           enabled,
           config,
         });
+        applyRuleConfigMeta(updated.config);
       }
     } catch (e) {
       setError(e);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function onRotateSecret() {
+    if (!api || numericId == null) return;
+    const confirmed =
+      typeof window === 'undefined' || window.parent === window
+        ? window.confirm(
+            `${t('webhooksRotateConfirmTitle')}\n\n${t('webhooksRotateConfirmDescription')}`,
+          )
+        : await new Promise<boolean>((resolve) => {
+            shellui.dialog({
+              title: t('webhooksRotateConfirmTitle'),
+              description: t('webhooksRotateConfirmDescription'),
+              mode: 'confirm',
+              okLabel: t('webhooksRotateConfirmAction'),
+              cancelLabel: t('actionsCancel'),
+              onOk: () => resolve(true),
+              onCancel: () => resolve(false),
+            });
+          });
+    if (!confirmed) return;
+
+    setRotateLoading(true);
+    setError(null);
+    try {
+      const result = await api.rotateRuleSecret(numericId);
+      applyRuleConfigMeta(result.rule.config);
+      if (result.revealedSecret) {
+        setRevealedSecret(result.revealedSecret);
+      }
+    } catch (e) {
+      setError(e);
+    } finally {
+      setRotateLoading(false);
     }
   }
 
@@ -173,6 +241,16 @@ export function ActionsRuleEditorPage() {
       setSendTestLoading(false);
     }
   }
+
+  const secretHintLabel = useMemo(() => {
+    if (storedSecretHint) {
+      return t('webhooksSecretHintEnding', { hint: storedSecretHint });
+    }
+    if (hasStoredSecret) {
+      return t('webhooksSecretHintStored');
+    }
+    return t('webhooksSecretHintNone');
+  }, [hasStoredSecret, storedSecretHint, t]);
 
   return (
     <div className="w-full space-y-6">
@@ -226,6 +304,13 @@ export function ActionsRuleEditorPage() {
 
       {accessToken && isOwner && api && !loading ? (
         <div className="space-y-6">
+          {revealedSecret ? (
+            <WebhookSecretOnceCallout
+              secret={revealedSecret}
+              onDismiss={() => setRevealedSecret(null)}
+            />
+          ) : null}
+
           <Card className="border-border/80 shadow-sm">
             <CardHeader>
               <CardTitle className="font-heading text-lg">{t('actionsRuleBasicsTitle')}</CardTitle>
@@ -318,19 +403,42 @@ export function ActionsRuleEditorPage() {
                   placeholder="https://hooks.example.com/shellui"
                 />
               </div>
-              <div className="space-y-1 sm:col-span-2">
-                <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                  {t('actionsWebhookSecret')}
-                </label>
-                <Input
-                  type="password"
-                  value={webhookSecret}
-                  onChange={(e) => setWebhookSecret(e.target.value)}
-                  className="font-mono text-sm"
-                  placeholder={t('actionsWebhookSecretPlaceholder')}
-                  autoComplete="new-password"
-                />
-              </div>
+              {isCreate ? (
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                    {t('actionsWebhookSecret')}
+                  </label>
+                  <Input
+                    type="password"
+                    value={webhookSecret}
+                    onChange={(e) => setWebhookSecret(e.target.value)}
+                    className="font-mono text-sm"
+                    placeholder="whsec_…"
+                    autoComplete="new-password"
+                  />
+                  <p className="font-mono text-[10px] text-muted-foreground">
+                    {t('webhooksSecretGenerateHelp')}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3 sm:col-span-2">
+                  <div className="space-y-1">
+                    <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                      {t('actionsWebhookSecret')}
+                    </p>
+                    <p className="font-mono text-xs text-muted-foreground">{secretHintLabel}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    disabled={rotateLoading || saving}
+                    onClick={() => void onRotateSecret()}
+                  >
+                    {rotateLoading ? t('webhooksRotateLoading') : t('webhooksRotateSecret')}
+                  </Button>
+                </div>
+              )}
               <div className="space-y-1">
                 <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
                   {t('actionsWebhookAuthHeaderName')}
