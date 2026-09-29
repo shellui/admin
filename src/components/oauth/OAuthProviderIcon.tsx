@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
+import { sanitizeSvgInstancePrefix } from '@/lib/oauthSvgIds';
+import { prepareOAuthInlineIconSvg } from '@/lib/oauthIconRender';
 import { KeyRound, LogIn } from 'lucide-react';
 import type { OAuthCatalogProvider } from '@/lib/oauthProviderCatalogTypes';
 import { loadOAuthIconSvg, OAUTH_ICON_META, hasBundledOAuthIcon } from '@/lib/loadOAuthIcon';
@@ -42,6 +44,7 @@ export function OAuthProviderIcon({
 }: OAuthProviderIconProps) {
   const iconSlug = normalizeOAuthDocsSlug(docsSlugProp);
   const label = title ?? iconSlug;
+  const instancePrefix = sanitizeSvgInstancePrefix(useId());
 
   const [svgMarkup, setSvgMarkup] = useState<string | null>(null);
 
@@ -69,22 +72,24 @@ export function OAuthProviderIcon({
     return LogIn;
   }, [iconSlug, protocolProp]);
 
-  if (svgMarkup) {
-    const invert = meta?.invertOnDark && colorScheme === 'dark';
-    const fullColor = meta?.fullColor ?? true;
-    const svgClass = cn('h-full w-full', invert && 'dark:brightness-0 dark:invert');
+  const scopedSvg = useMemo(() => {
+    if (!svgMarkup) return null;
+    return prepareOAuthInlineIconSvg({
+      svgMarkup,
+      instancePrefix,
+      meta,
+      colorScheme,
+    });
+  }, [svgMarkup, instancePrefix, meta, colorScheme]);
+
+  if (scopedSvg) {
     return (
       <span
         className={cn('inline-flex shrink-0 items-center justify-center', iconClass)}
         role="img"
         aria-label={label}
         data-oauth-icon-slug={iconSlug}
-        dangerouslySetInnerHTML={{
-          __html: svgMarkup.replace(
-            '<svg ',
-            `<svg class="${svgClass}" ${fullColor ? '' : 'fill="currentColor"'} aria-hidden="true" `,
-          ),
-        }}
+        dangerouslySetInnerHTML={{ __html: scopedSvg }}
       />
     );
   }

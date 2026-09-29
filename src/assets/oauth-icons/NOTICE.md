@@ -28,9 +28,12 @@ Bundled SVG logos for the Shellui admin OAuth setup wizard.
 - `authelia.svg` (authelia): simple-icons (https://simpleicons.org, CC0-1.0), CC0-1.0
 - `baidu.svg` (baidu): simple-icons (https://simpleicons.org, CC0-1.0), CC0-1.0
 - `basecamp.svg` (basecamp): simple-icons (https://simpleicons.org, CC0-1.0), CC0-1.0
+- `battlenet.svg` (battlenet): simple-icons (https://simpleicons.org, CC0-1.0), CC0-1.0
 - `box.svg` (box): simple-icons (https://simpleicons.org, CC0-1.0), CC0-1.0
 - `digitalocean.svg` (digitalocean): SVGL (https://svgl.app, MIT), MIT
+- `dingtalk.svg` (dingtalk): simple-icons (https://simpleicons.org, CC0-1.0), CC0-1.0
 - `discogs.svg` (discogs): simple-icons (https://simpleicons.org, CC0-1.0), CC0-1.0
+- `draugiem.svg` (draugiem): simple-icons (https://simpleicons.org, CC0-1.0), CC0-1.0
 - `dropbox.svg` (dropbox): SVGL (https://svgl.app, MIT), MIT
 - `edx.svg` (edx): simple-icons (https://simpleicons.org, CC0-1.0), CC0-1.0
 - `eventbrite.svg` (eventbrite): simple-icons (https://simpleicons.org, CC0-1.0), CC0-1.0
@@ -68,7 +71,7 @@ Bundled SVG logos for the Shellui admin OAuth setup wizard.
 - `stackexchange.svg` (stackexchange): SVGL (https://svgl.app, MIT), MIT
 - `steam.svg` (steam): SVGL (https://svgl.app, MIT), MIT
 - `strava.svg` (strava): simple-icons (https://simpleicons.org, CC0-1.0), CC0-1.0
-- `stripe.svg` (stripe): SVGL (https://svgl.app, MIT), MIT
+- `stripe.svg` (stripe): Stripe brand (#635BFF tile + white mark; S path from simple-icons CC0-1.0), CC0-1.0
 - `telegram.svg` (telegram): SVGL (https://svgl.app, MIT), MIT
 - `tiktok.svg` (tiktok): SVGL (https://svgl.app, MIT), MIT
 - `trello.svg` (trello): SVGL (https://svgl.app, MIT), MIT
@@ -77,10 +80,12 @@ Bundled SVG logos for the Shellui admin OAuth setup wizard.
 - `untappd.svg` (untappd): simple-icons (https://simpleicons.org, CC0-1.0), CC0-1.0
 - `vimeo_oauth2.svg` (vimeo_oauth2): simple-icons (https://simpleicons.org, CC0-1.0), CC0-1.0
 - `vk.svg` (vk): SVGL (https://svgl.app, MIT), MIT
+- `weibo.svg` (weibo): simple-icons (https://simpleicons.org, CC0-1.0), CC0-1.0
+- `weixin.svg` (weixin): simple-icons (https://simpleicons.org, CC0-1.0), CC0-1.0
 - `xing.svg` (xing): simple-icons (https://simpleicons.org, CC0-1.0), CC0-1.0
 - `zoho.svg` (zoho): simple-icons (https://simpleicons.org, CC0-1.0), CC0-1.0
 - `zoom.svg` (zoom): SVGL (https://svgl.app, MIT), MIT
 
 ## Fallback
 
-Providers without an entry above use a Lucide icon in the UI: 23andme, agave, authentiq, battlenet, cern, cilogon, clever, dataporten, daum, dingtalk, doximity, draugiem, drip, dwolla, edmodo, eveonline, exist, feishu, frontier, jupyterhub, klaviyo, lemonldap, mailcow, netiq, questrade, sharefile, stocktwits, trainingpeaks, wahoo, weibo, weixin, yahoo, yandex, ynab.
+Providers without an entry above use a Lucide icon in the UI: 23andme, agave, authentiq, cern, cilogon, clever, dataporten, daum, doximity, drip, dwolla, edmodo, eveonline, exist, feishu, frontier, jupyterhub, klaviyo, lemonldap, mailcow, netiq, questrade, sharefile, stocktwits, trainingpeaks, wahoo, yahoo, yandex, ynab.

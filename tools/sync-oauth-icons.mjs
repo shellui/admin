@@ -46,6 +46,12 @@ const SLUG_TITLE = {
   draugiem: 'Draugiem.lv',
   soundcloud: 'SoundCloud',
   edx: 'edX',
+  stripe: 'Stripe',
+};
+
+/** Official or composed marks when CDN/simple-icons assets are incomplete. */
+const CUSTOM_SVGS = {
+  stripe: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img"><rect width="256" height="256" rx="48" fill="#635BFF"/><g transform="translate(52 48) scale(6.8333333)"><path fill="#FFFFFF" d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z"/></g></svg>`,
 };
 
 const PROTOCOL_SVGS = {
@@ -61,14 +67,22 @@ const DARK_ALT_FROM_SVGL = new Set(['twitter', 'twitter_oauth2']);
 /** Monochrome logos: invert in dark theme for legibility. */
 const INVERT_ON_DARK = new Set(['github', 'twitter', 'twitter_oauth2', 'x']);
 
-const SVGO_CONFIG = {
-  multipass: true,
-  plugins: [
-    'preset-default',
-    { name: 'removeViewBox', active: false },
-    { name: 'removeDimensions', active: true },
-  ],
-};
+const SVGO_BASE_PLUGINS = [
+  {
+    name: 'preset-default',
+    params: {
+      overrides: {
+        removeUselessStrokeAndFill: false,
+      },
+    },
+  },
+  { name: 'removeViewBox', active: false },
+  { name: 'removeDimensions', active: true },
+];
+
+function slugIdPrefix(slug) {
+  return `${String(slug).replace(/[^a-zA-Z0-9_-]/g, '_')}-`;
+}
 
 function routeOf(entry) {
   if (!entry) return { light: null, dark: null };
@@ -80,8 +94,61 @@ function routeOf(entry) {
   return { light: null, dark: null };
 }
 
-function svgoOptimize(svg) {
-  return optimize(svg, SVGO_CONFIG).data;
+function isWhiteFill(fill) {
+  if (!fill) return false;
+  const f = fill.trim().toLowerCase();
+  return f === 'white' || f === '#fff' || f === '#ffffff';
+}
+
+function stripDanglingClipPaths(svg) {
+  const clipRef = /clip-path="url\(#([^)]+)\)"/g;
+  for (const match of svg.matchAll(clipRef)) {
+    const id = match[1];
+    if (!svg.includes(`id="${id}"`)) {
+      svg = svg.replace(match[0], '');
+    }
+  }
+  return svg;
+}
+
+function auditLightVisibility(svg, slug) {
+  const idRe = /\bid="([^"]+)"/g;
+  const ids = new Set();
+  for (const m of svg.matchAll(idRe)) ids.add(m[1]);
+  const broken = [];
+  for (const m of svg.matchAll(/url\(#([^)]+)\)/g)) {
+    if (!ids.has(m[1])) broken.push(m[1]);
+  }
+  if (broken.length) {
+    console.warn(`${slug}: broken gradient refs ${broken.join(', ')}`);
+  }
+  const fills = [...svg.matchAll(/fill="([^"]+)"/g)].map((m) => m[1]);
+  const hasWhite = fills.some((f) => isWhiteFill(f));
+  const hasPaint =
+    fills.some((f) => f.startsWith('url(#')) ||
+    fills.some((f) => f && f !== 'none' && !isWhiteFill(f) && f !== 'currentColor');
+  if (hasWhite && !hasPaint) {
+    console.warn(`${slug}: possible light-background visibility issue (white-only fills)`);
+  }
+}
+
+function svgoOptimize(svg, slug) {
+  const prefix = slugIdPrefix(slug);
+  return optimize(svg, {
+    multipass: true,
+    plugins: [
+      ...SVGO_BASE_PLUGINS,
+      {
+        name: 'prefixIds',
+        params: {
+          prefix,
+          delim: '',
+          prefixIds: true,
+          prefixClassNames: false,
+        },
+      },
+    ],
+  }).data;
 }
 
 async function fetchText(url) {
@@ -124,6 +191,13 @@ async function main() {
       lightSvg = PROTOCOL_SVGS[slug];
       source = 'Shellui (generated protocol mark, CC0-1.0)';
       license = 'CC0-1.0';
+    } else if (CUSTOM_SVGS[slug]) {
+      lightSvg = CUSTOM_SVGS[slug];
+      source =
+        slug === 'stripe'
+          ? 'Stripe brand (#635BFF tile + white mark; S path from simple-icons CC0-1.0)'
+          : 'Shellui (custom composed mark)';
+      license = slug === 'stripe' ? 'CC0-1.0' : 'CC0-1.0';
     } else {
       entry = byTitle.get(String(title).toLowerCase());
       if (!entry) {
@@ -175,7 +249,8 @@ async function main() {
       continue;
     }
 
-    lightSvg = svgoOptimize(lightSvg);
+    lightSvg = stripDanglingClipPaths(svgoOptimize(lightSvg, slug));
+    auditLightVisibility(lightSvg, slug);
     const file = `${slug}.svg`;
     await fs.writeFile(path.join(OUT_DIR, file), lightSvg);
 
@@ -185,7 +260,7 @@ async function main() {
         const darkRoute = routeOf(entry).dark;
         if (darkRoute) {
           try {
-            darkSvg = svgoOptimize(await fetchText(darkRoute));
+            darkSvg = svgoOptimize(await fetchText(darkRoute), slug);
           } catch {
             /* ignore */
           }
@@ -193,16 +268,21 @@ async function main() {
       }
       if (darkSvg) {
         darkFile = `${slug}-dark.svg`;
-        await fs.writeFile(path.join(OUT_DIR, darkFile), svgoOptimize(darkSvg));
+        await fs.writeFile(path.join(OUT_DIR, darkFile), svgoOptimize(darkSvg, slug));
       }
     }
 
-    const fullColor = !INVERT_ON_DARK.has(slug) && slug !== 'github';
+    const fullColor =
+      !INVERT_ON_DARK.has(slug) &&
+      slug !== 'github' &&
+      (lightSvg.includes('url(#') ||
+        /fill="#(?!fff|ffffff|FFF)/i.test(lightSvg) ||
+        ['google', 'microsoft', 'slack', 'linkedin', 'zoom', 'instagram'].includes(slug));
     manifest.push({
       slug,
       file,
       darkFile,
-      fullColor: fullColor || ['google', 'microsoft', 'slack', 'linkedin'].includes(slug),
+      fullColor: fullColor || ['google', 'microsoft', 'slack', 'linkedin', 'zoom'].includes(slug),
       invertOnDark: INVERT_ON_DARK.has(slug),
       source,
       license,
