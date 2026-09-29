@@ -1,10 +1,20 @@
 export type OAuthProviderTier = 'popular' | 'generic' | 'other';
 
+export type OAuthConsoleUrlKind =
+  | 'app_registration'
+  | 'developer_console'
+  | 'app_settings'
+  | 'docs'
+  | 'other';
+
 export type OAuthConsoleUrlEntry = {
-  text: string;
+  kind: OAuthConsoleUrlKind;
   url: string;
-  label: string;
   form: string;
+  placeholders?: string[];
+  /** Legacy catalog fields (never shown raw in UI). */
+  text?: string;
+  label?: string;
 };
 
 export type OAuthExtraSettingField = {

@@ -1,25 +1,14 @@
 import type { OAuthConsoleUrlEntry } from '@/lib/oauthProviderCatalogTypes';
+import { consoleUrlHasPlaceholder, consoleUrlPresentation } from '@/lib/oauthConsoleUrlKind';
 
-const PLACEHOLDER_PATTERN = /\{\{[^}]+\}\}/;
+export { consoleUrlHasPlaceholder };
 
-export function consoleUrlHasPlaceholder(value: string): boolean {
-  return PLACEHOLDER_PATTERN.test(value);
-}
-
+/** @deprecated Use consoleUrlPresentation(entry) === 'link' */
 export function isConsoleUrlLinkable(entry: OAuthConsoleUrlEntry): boolean {
-  const form = String(entry.form || '')
-    .trim()
-    .toLowerCase();
-  if (form && form !== 'link') return false;
-  const url = String(entry.url || '').trim();
-  if (!url) return false;
-  if (consoleUrlHasPlaceholder(url)) return false;
-  return true;
+  return consoleUrlPresentation(entry) === 'link';
 }
 
-export function consoleUrlHintText(entry: OAuthConsoleUrlEntry): string {
-  const url = String(entry.url || entry.text || '').trim();
-  const label = String(entry.label || '').trim();
-  if (label && url) return `${label}: ${url}`;
-  return url || label;
+/** @deprecated Never show legacy catalog copy in UI */
+export function consoleUrlHintText(_entry: OAuthConsoleUrlEntry): string {
+  return '';
 }

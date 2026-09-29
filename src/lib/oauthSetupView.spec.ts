@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { OAuthCatalogProvider } from '@/lib/oauthProviderCatalogTypes';
+import { visibleCatalogProviders } from '@/lib/oauthCatalogDisplay';
 import {
   GENERIC_PROVIDER_ORDER,
   configuredProviderSlugs,
-  filterCatalogProviders,
   isProviderConfigured,
   oauthWizardStepFromParam,
   partitionProvidersForPicker,
+  pickerHasAnyProvider,
   providerMatchesSearch,
 } from '@/lib/oauthSetupView';
 
@@ -44,51 +45,49 @@ describe('oauthSetupView', () => {
     provider({ docs_slug: 'openid', name: 'OpenID', tier: 'generic' }),
     provider({ docs_slug: 'oauth2', name: 'OAuth2', tier: 'generic' }),
     provider({ docs_slug: 'box', name: 'Box', tier: 'other' }),
+    provider({ docs_slug: 'legacy_twitter', name: 'Twitter', tier: 'other', legacy: true }),
     provider({
-      docs_slug: 'twitter',
-      name: 'Twitter',
-      tier: 'other',
-      legacy: true,
-      replaced_by: 'twitter_oauth2',
-    }),
-    provider({
-      docs_slug: 'unsupported_vendor',
-      name: 'Unsupported',
+      docs_slug: 'disabled_vendor',
+      name: 'Disabled',
       tier: 'other',
       supported: false,
-      unsupported_reason: 'Not enabled on this deployment.',
     }),
   ];
 
-  it('partitions popular, generic (ordered), and other (by name)', () => {
-    const sections = partitionProvidersForPicker(catalog, { includeLegacy: true });
-    expect(sections.popular.map((p) => p.docs_slug)).toEqual(['github', 'google']);
-    expect(sections.generic.map((p) => p.docs_slug)).toEqual([...GENERIC_PROVIDER_ORDER]);
-    expect(sections.other.map((p) => p.docs_slug)).toEqual([
+  it('visibleCatalogProviders drops legacy and unsupported', () => {
+    const visible = visibleCatalogProviders(catalog);
+    expect(visible.map((p) => p.docs_slug)).toEqual([
+      'github',
+      'google',
+      'openid_connect',
+      'saml',
+      'openid',
+      'oauth2',
       'box',
-      'twitter',
-      'unsupported_vendor',
     ]);
   });
 
-  it('hides legacy providers unless includeLegacy is true', () => {
-    const hidden = partitionProvidersForPicker(catalog, { includeLegacy: false });
-    expect(hidden.other.some((p) => p.docs_slug === 'twitter')).toBe(false);
-    const shown = partitionProvidersForPicker(catalog, { includeLegacy: true });
-    expect(shown.other.some((p) => p.docs_slug === 'twitter')).toBe(true);
-  });
-
-  it('filters other providers by search query', () => {
-    const sections = partitionProvidersForPicker(catalog, {
-      includeLegacy: false,
-      searchQuery: 'box',
-    });
+  it('partitions popular, generic (ordered), and other (by name)', () => {
+    const sections = partitionProvidersForPicker(catalog, {});
+    expect(sections.popular.map((p) => p.docs_slug)).toEqual(['github', 'google']);
+    expect(sections.generic.map((p) => p.docs_slug)).toEqual([...GENERIC_PROVIDER_ORDER]);
     expect(sections.other.map((p) => p.docs_slug)).toEqual(['box']);
-    expect(sections.popular).toHaveLength(2);
   });
 
-  it('matches search on slug, name, and unsupported_reason', () => {
-    expect(providerMatchesSearch(catalog[8], 'not enabled')).toBe(true);
+  it('filters all tiers when searching', () => {
+    const sections = partitionProvidersForPicker(catalog, { searchQuery: 'git' });
+    expect(sections.popular.map((p) => p.docs_slug)).toEqual(['github']);
+    expect(sections.generic).toHaveLength(0);
+    expect(sections.other).toHaveLength(0);
+    expect(pickerHasAnyProvider(sections)).toBe(true);
+  });
+
+  it('shows empty picker when search matches nothing', () => {
+    const sections = partitionProvidersForPicker(catalog, { searchQuery: 'nomatch' });
+    expect(pickerHasAnyProvider(sections)).toBe(false);
+  });
+
+  it('matches search on slug and name', () => {
     expect(providerMatchesSearch(catalog[0], 'git')).toBe(true);
     expect(providerMatchesSearch(catalog[0], 'nomatch')).toBe(false);
   });
@@ -107,11 +106,5 @@ describe('oauthSetupView', () => {
     expect(oauthWizardStepFromParam('credentials')).toBe('credentials');
     expect(oauthWizardStepFromParam('3')).toBe('credentials');
     expect(oauthWizardStepFromParam('done')).toBe('summary');
-  });
-
-  it('keeps unsupported providers visible in filtered lists', () => {
-    const list = filterCatalogProviders(catalog, { includeLegacy: false });
-    const unsupported = list.find((p) => p.docs_slug === 'unsupported_vendor');
-    expect(unsupported?.supported).toBe(false);
   });
 });

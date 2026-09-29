@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { KeyRound, LogIn } from 'lucide-react';
 import type { OAuthCatalogProvider, OAuthProviderIcon } from '@/lib/oauthProviderCatalogTypes';
-import { loadSimpleIconSvg } from '@/lib/oauthSimpleIconLoaders';
-import {
-  protocolUsesKeyRoundFallback,
-  shouldUseBrandIconColor,
-} from '@/lib/oauthProviderIconStyle';
+import { loadOAuthIconSvg, OAUTH_ICON_META, hasBundledOAuthIcon } from '@/lib/loadOAuthIcon';
+import { protocolUsesKeyRoundFallback } from '@/lib/oauthProviderIconStyle';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -50,33 +47,24 @@ export function OAuthProviderIconView({
   const docsSlug = docsSlugProp ?? provider?.docs_slug ?? '';
   const label = title ?? provider?.name ?? docsSlug;
 
-  const simpleSlug =
-    icon && typeof icon === 'object' && icon.source === 'simple-icons' && 'slug' in icon
-      ? String(icon.slug)
-      : null;
-  const brandHex =
-    icon && typeof icon === 'object' && icon.source === 'simple-icons' && 'hex' in icon
-      ? String(icon.hex)
-      : undefined;
-
   const [svgMarkup, setSvgMarkup] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!simpleSlug) {
+    if (!docsSlug || !hasBundledOAuthIcon(docsSlug)) {
       setSvgMarkup(null);
       return;
     }
     let cancelled = false;
-    void loadSimpleIconSvg(simpleSlug).then((raw) => {
+    void loadOAuthIconSvg(docsSlug, colorScheme).then((raw) => {
       if (!cancelled) setSvgMarkup(raw);
     });
     return () => {
       cancelled = true;
     };
-  }, [simpleSlug]);
+  }, [docsSlug, colorScheme]);
 
-  const useBrand = shouldUseBrandIconColor(brandHex, colorScheme);
   const iconClass = cn(sizeClasses[size], className);
+  const meta = OAUTH_ICON_META[docsSlug.toLowerCase()];
 
   const Fallback = useMemo(() => {
     const pick = lucideFallbackName(icon);
@@ -87,17 +75,18 @@ export function OAuthProviderIconView({
   }, [docsSlug, icon, protocol]);
 
   if (svgMarkup) {
-    const colored = useBrand && brandHex ? `#${brandHex.replace(/^#/, '')}` : 'currentColor';
+    const invert = meta?.invertOnDark && colorScheme === 'dark';
+    const fullColor = meta?.fullColor ?? true;
+    const svgClass = cn('h-full w-full', invert && 'dark:brightness-0 dark:invert');
     return (
       <span
         className={cn('inline-flex shrink-0 items-center justify-center', iconClass)}
-        style={{ color: colored }}
         role="img"
         aria-label={label}
         dangerouslySetInnerHTML={{
           __html: svgMarkup.replace(
             '<svg ',
-            `<svg class="h-full w-full" fill="currentColor" aria-hidden="true" `,
+            `<svg class="${svgClass}" ${fullColor ? '' : 'fill="currentColor"'} aria-hidden="true" `,
           ),
         }}
       />

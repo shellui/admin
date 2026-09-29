@@ -5,16 +5,29 @@ import type {
   OAuthProviderCatalogResponse,
   OAuthProviderTier,
 } from '@/lib/oauthProviderCatalogTypes';
+import { extractConsoleUrlFromLegacyCopy, inferConsoleUrlKind } from '@/lib/oauthConsoleUrlKind';
 
 function parseConsoleUrlEntry(raw: unknown): OAuthConsoleUrlEntry | null {
   if (!raw || typeof raw !== 'object') return null;
   const o = raw as Record<string, unknown>;
   const text = typeof o.text === 'string' ? o.text : '';
-  const url = typeof o.url === 'string' ? o.url : text;
   const label = typeof o.label === 'string' ? o.label : '';
+  const rawUrl = typeof o.url === 'string' ? o.url : '';
+  let url = extractConsoleUrlFromLegacyCopy(rawUrl, text, label);
+  if (!url && label.startsWith('http')) url = label.trim();
   const form = typeof o.form === 'string' ? o.form : 'link';
-  if (!text && !url && !label) return null;
-  return { text, url, label, form };
+  if (!url.trim() && !label.trim() && !text.trim()) return null;
+  const placeholders = Array.isArray(o.placeholders)
+    ? o.placeholders.filter((p): p is string => typeof p === 'string')
+    : undefined;
+  return {
+    kind: inferConsoleUrlKind(o),
+    url: url.trim(),
+    form,
+    placeholders,
+    text: text || undefined,
+    label: label || undefined,
+  };
 }
 
 function parseExtraField(raw: unknown): OAuthExtraSettingField | null {

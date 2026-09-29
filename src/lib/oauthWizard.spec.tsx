@@ -1,12 +1,20 @@
-import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n';
 import { OAuthCallbackUrlCopy } from '@/components/oauth/OAuthCallbackUrlCopy';
+import { OAuthConsoleUrlList } from '@/components/oauth/OAuthConsoleUrlList';
 import { OAuthCredentialsForm } from '@/components/oauth/OAuthCredentialsForm';
 import type { OAuthCatalogProvider } from '@/lib/oauthProviderCatalogTypes';
 import { OAuthProviderPicker } from '@/components/oauth/OAuthProviderPicker';
+import { visibleCatalogProviders } from '@/lib/oauthCatalogDisplay';
+
+vi.mock('@/lib/loadOAuthIcon', () => ({
+  hasBundledOAuthIcon: () => false,
+  loadOAuthIconSvg: vi.fn(),
+  OAUTH_ICON_META: {},
+}));
 
 const github: OAuthCatalogProvider = {
   docs_slug: 'github',
@@ -34,6 +42,14 @@ const github: OAuthCatalogProvider = {
 };
 
 describe('OAuth wizard UI', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
   it('copies callback URL to clipboard', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText } });
@@ -54,54 +70,87 @@ describe('OAuth wizard UI', () => {
   it('renders dynamic extra_settings fields and masks secrets on edit', () => {
     render(
       <I18nextProvider i18n={i18n}>
-        <OAuthCredentialsForm
-          provider={github}
-          mode="edit"
-          values={{
-            client_id: 'id',
-            client_secret: '',
-            tenant: '',
-            extra_settings: { ORG: 'acme' },
-          }}
-          onChange={() => {}}
-          onSubmit={() => {}}
-        />
+        <MemoryRouter>
+          <OAuthCredentialsForm
+            provider={github}
+            mode="edit"
+            values={{
+              client_id: 'id',
+              client_secret: '',
+              tenant: '',
+              extra_settings: { ORG: 'acme' },
+            }}
+            onChange={() => {}}
+            onSubmit={() => {}}
+          />
+        </MemoryRouter>
       </I18nextProvider>,
     );
 
     expect(screen.getByDisplayValue('acme')).toBeTruthy();
+    expect(screen.getByText('Organization')).toBeTruthy();
     const secret = screen.getByPlaceholderText(/leave empty to keep current secret/i);
     expect(secret.getAttribute('type')).toBe('password');
   });
 
-  it('disables unsupported providers in the picker', () => {
+  it('shows translated console links instead of raw catalog labels', () => {
+    const linkedin: OAuthCatalogProvider = {
+      ...github,
+      docs_slug: 'linkedin',
+      name: 'LinkedIn',
+      console_url: [
+        {
+          kind: 'app_registration',
+          url: 'https://www.linkedin.com/secure/developer?newapp=',
+          form: 'link',
+          label: 'App registration (get your key and secret here)',
+        },
+      ],
+    };
+
+    render(
+      <I18nextProvider i18n={i18n}>
+        <OAuthConsoleUrlList provider={linkedin} />
+      </I18nextProvider>,
+    );
+
+    const link = screen.getByRole('link', { name: /create an app on linkedin/i });
+    expect(link.getAttribute('href')).toBe('https://www.linkedin.com/secure/developer?newapp=');
+    expect(screen.queryByText(/get your key and secret/i)).toBeNull();
+  });
+
+  it('omits unsupported and legacy providers from the visible catalog', () => {
+    const filtered = visibleCatalogProviders([
+      github,
+      { ...github, docs_slug: 'legacy', legacy: true },
+      {
+        ...github,
+        docs_slug: 'disabled',
+        name: 'Disabled',
+        supported: false,
+      },
+    ]);
+    expect(filtered.map((p) => p.docs_slug)).toEqual(['github']);
+  });
+
+  it('filters picker tiles with global search', () => {
     const onSelect = vi.fn();
     render(
       <I18nextProvider i18n={i18n}>
         <MemoryRouter>
           <OAuthProviderPicker
-            providers={[
-              github,
-              {
-                ...github,
-                docs_slug: 'disabled',
-                name: 'Disabled',
-                supported: false,
-                unsupported_reason: 'Requires extra deployment config.',
-              },
-            ]}
+            providers={[github, { ...github, docs_slug: 'google', name: 'Google' }]}
             socialApps={[]}
-            includeLegacy={false}
-            onIncludeLegacyChange={() => {}}
             onSelect={onSelect}
           />
         </MemoryRouter>
       </I18nextProvider>,
     );
 
-    const disabled = screen.getByRole('button', { name: /disabled/i });
-    expect((disabled as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(disabled);
-    expect(onSelect).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByRole('textbox', { name: /search providers/i }), {
+      target: { value: 'git' },
+    });
+    expect(screen.getByRole('button', { name: /github/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^google$/i })).toBeNull();
   });
 });

@@ -1,11 +1,16 @@
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import type { OAuthCatalogProvider } from '@/lib/oauthProviderCatalogTypes';
 import type { OAuthFieldErrors } from '@/lib/oauthApiErrors';
+import { extraSettingHelp, extraSettingLabel } from '@/lib/oauthExtraSettingCopy';
+import { OAuthCallbackUrlCopy } from '@/components/oauth/OAuthCallbackUrlCopy';
 import { OAuthProviderIconView } from '@/components/oauth/OAuthProviderIcon';
+import { OAuthWizardStepActions } from '@/components/oauth/OAuthWizardStepActions';
 
 export type OAuthCredentialsFormValues = {
   client_id: string;
@@ -25,6 +30,7 @@ type Props = {
   onBack?: () => void;
   onSubmit: () => void;
   onDelete?: () => void;
+  callbackUrl?: string;
   colorScheme?: 'light' | 'dark';
 };
 
@@ -44,6 +50,7 @@ export function OAuthCredentialsForm({
   onBack,
   onSubmit,
   onDelete,
+  callbackUrl = '',
   colorScheme = 'light',
 }: Props) {
   const { t } = useTranslation();
@@ -67,6 +74,19 @@ export function OAuthCredentialsForm({
 
   return (
     <div className="space-y-6">
+      {mode === 'edit' ? (
+        <Link
+          to="/oauth"
+          className="inline-flex items-center font-mono text-xs text-muted-foreground hover:text-foreground"
+        >
+          <ChevronLeft
+            className="mr-0.5 h-3.5 w-3.5"
+            aria-hidden
+          />
+          {t('oauthWizardBackToList')}
+        </Link>
+      ) : null}
+
       <div className="flex flex-wrap items-center gap-3">
         <OAuthProviderIconView
           provider={provider}
@@ -82,6 +102,13 @@ export function OAuthCredentialsForm({
       </div>
 
       {formError ? <Text className="font-mono text-sm text-destructive">{formError}</Text> : null}
+
+      {callbackUrl ? (
+        <OAuthCallbackUrlCopy
+          callbackUrl={callbackUrl}
+          description={t('oauthWizardCallbackHelp')}
+        />
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1 sm:col-span-2">
@@ -140,7 +167,7 @@ export function OAuthCredentialsForm({
               className="space-y-1 sm:col-span-2"
             >
               <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                {field.label}
+                {extraSettingLabel(t, field.name)}
                 {field.required ? ' *' : ''}
               </label>
               <Input
@@ -154,9 +181,9 @@ export function OAuthCredentialsForm({
                 }
                 aria-invalid={Boolean(err)}
               />
-              {field.help_text ? (
+              {extraSettingHelp(t, field.name) ? (
                 <Text className="font-mono text-[10px] text-muted-foreground">
-                  {field.help_text}
+                  {extraSettingHelp(t, field.name)}
                 </Text>
               ) : null}
               {err ? <Text className="font-mono text-xs text-destructive">{err}</Text> : null}
@@ -165,44 +192,35 @@ export function OAuthCredentialsForm({
         })}
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {onBack ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={busy}
-            onClick={onBack}
-          >
-            {t('oauthWizardBack')}
-          </Button>
-        ) : null}
-        <Button
-          type="button"
-          size="sm"
-          disabled={busy || (mode === 'create' ? !canSubmitCreate : !canSubmitEdit)}
-          onClick={onSubmit}
-        >
-          {busy
+      <OAuthWizardStepActions
+        backLabel={mode === 'edit' ? t('oauthWizardCancel') : t('oauthWizardBack')}
+        onBack={onBack}
+        primaryLabel={
+          busy
             ? mode === 'create'
               ? t('oauthSetupCreateLoading')
               : t('oauthSetupSaveLoading')
             : mode === 'create'
               ? t('oauthSetupCreateAction')
-              : t('oauthSetupSaveAction')}
-        </Button>
-        {mode === 'edit' && onDelete ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="destructive"
-            disabled={busy}
-            onClick={onDelete}
-          >
-            {t('oauthSetupDeleteAction')}
-          </Button>
-        ) : null}
-      </div>
+              : t('oauthSetupSaveAction')
+        }
+        onPrimary={onSubmit}
+        primaryDisabled={mode === 'create' ? !canSubmitCreate : !canSubmitEdit}
+        busy={busy}
+        extraActions={
+          mode === 'edit' && onDelete ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              disabled={busy}
+              onClick={onDelete}
+            >
+              {t('oauthSetupDeleteAction')}
+            </Button>
+          ) : null
+        }
+      />
     </div>
   );
 }

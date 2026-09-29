@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ChevronLeft } from 'lucide-react';
+import shellui from '@shellui/sdk';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import {
@@ -12,9 +13,11 @@ import {
 import { OAuthProviderConsoleStep } from '@/components/oauth/OAuthProviderConsoleStep';
 import { OAuthProviderPicker } from '@/components/oauth/OAuthProviderPicker';
 import { OAuthProviderIconView } from '@/components/oauth/OAuthProviderIcon';
+import { OAuthWizardStepActions } from '@/components/oauth/OAuthWizardStepActions';
 import { useDocumentColorScheme } from '@/hooks/useDocumentColorScheme';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { confirmAction } from '@/lib/confirmAction';
+import { visibleCatalogProviders } from '@/lib/oauthCatalogDisplay';
 import {
   OAuthApiRequestError,
   createOAuthSocialApp,
@@ -67,16 +70,11 @@ export function OAuthWizardRoute() {
 
   const stepParam = searchParams.get('step');
   const stepFromUrl = oauthWizardStepFromParam(stepParam);
-  const step = isEdit
-    ? stepFromUrl === 'summary'
-      ? 'summary'
-      : 'credentials'
-    : (stepFromUrl ?? (routeDocsSlug ? 'console' : 'pick'));
+  const step = isEdit ? 'credentials' : (stepFromUrl ?? (routeDocsSlug ? 'console' : 'pick'));
 
   const [catalogProviders, setCatalogProviders] = useState<OAuthCatalogProvider[]>([]);
   const [callbackUrl, setCallbackUrl] = useState('');
   const [socialApps, setSocialApps] = useState<OAuthSocialAppRow[]>([]);
-  const [includeLegacy, setIncludeLegacy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -94,10 +92,10 @@ export function OAuthWizardRoute() {
     setLoadError(null);
     try {
       const [catalog, apps] = await Promise.all([
-        fetchOAuthProviderCatalog(accessToken, companyId, { includeLegacy }),
+        fetchOAuthProviderCatalog(accessToken, companyId),
         fetchOAuthSocialApps(accessToken, companyId),
       ]);
-      setCatalogProviders(catalog.providers);
+      setCatalogProviders(visibleCatalogProviders(catalog.providers));
       setCallbackUrl(catalog.callback_url);
       setSocialApps(apps.social_apps);
     } catch (e) {
@@ -105,7 +103,7 @@ export function OAuthWizardRoute() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, companyId, includeLegacy, isOwner, t]);
+  }, [accessToken, companyId, isOwner, t]);
 
   useEffect(() => {
     void load();
@@ -196,10 +194,9 @@ export function OAuthWizardRoute() {
           setBusy(false);
           return;
         }
-        const updated = await updateOAuthSocialApp(accessToken, companyId, editingApp.id, payload);
-        setSavedSummary(updated);
-        setSearchParams({ step: 'summary' });
-        await load();
+        await updateOAuthSocialApp(accessToken, companyId, editingApp.id, payload);
+        shellui.toast({ title: t('oauthWizardSavedToast'), type: 'success' });
+        navigate('/oauth');
       } else {
         const created = await createOAuthSocialApp(accessToken, companyId, {
           docs_slug: selectedProvider.docs_slug,
@@ -246,44 +243,45 @@ export function OAuthWizardRoute() {
   }
 
   const wizardTitle = isEdit ? t('oauthWizardEditTitle') : t('oauthWizardCreateTitle');
+  const effectiveCallback = callbackUrl || selectedProvider?.callback_url || '';
 
   return (
     <Card className="border-border/80 shadow-sm">
       <CardHeader>
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="space-y-2">
+          <Link
+            to="/oauth"
+            className="inline-flex items-center font-mono text-xs text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeft
+              className="mr-0.5 h-3.5 w-3.5"
+              aria-hidden
+            />
+            {t('oauthWizardBackToList')}
+          </Link>
           <div>
             <CardTitle className="font-heading text-lg">{wizardTitle}</CardTitle>
             <CardDescription className="font-mono text-xs">
-              {t('oauthWizardStepsHint')}
+              {isEdit ? t('oauthWizardEditStepsHint') : t('oauthWizardStepsHint')}
             </CardDescription>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            asChild
-          >
-            <Link to="/oauth">{t('oauthWizardBackToList')}</Link>
-          </Button>
         </div>
-        <div className="flex flex-wrap gap-2 pt-2">
-          {!isEdit ? (
-            <>
-              <Badge variant={step === 'pick' ? 'default' : 'outline'}>
-                1. {t('oauthWizardStepPick')}
-              </Badge>
-              <Badge variant={step === 'console' ? 'default' : 'outline'}>
-                2. {t('oauthWizardStepConsole')}
-              </Badge>
-            </>
-          ) : null}
-          <Badge variant={step === 'credentials' ? 'default' : 'outline'}>
-            {isEdit ? '1' : '3'}. {t('oauthWizardStepCredentials')}
-          </Badge>
-          <Badge variant={step === 'summary' ? 'default' : 'outline'}>
-            {isEdit ? '2' : '4'}. {t('oauthWizardStepSummary')}
-          </Badge>
-        </div>
+        {!isEdit ? (
+          <div className="flex flex-wrap gap-2 pt-2">
+            <Badge variant={step === 'pick' ? 'default' : 'outline'}>
+              1. {t('oauthWizardStepPick')}
+            </Badge>
+            <Badge variant={step === 'console' ? 'default' : 'outline'}>
+              2. {t('oauthWizardStepConsole')}
+            </Badge>
+            <Badge variant={step === 'credentials' ? 'default' : 'outline'}>
+              3. {t('oauthWizardStepCredentials')}
+            </Badge>
+            <Badge variant={step === 'summary' ? 'default' : 'outline'}>
+              4. {t('oauthWizardStepSummary')}
+            </Badge>
+          </div>
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-4">
         {loadError ? <Text className="font-mono text-sm text-destructive">{loadError}</Text> : null}
@@ -295,8 +293,6 @@ export function OAuthWizardRoute() {
           <OAuthProviderPicker
             providers={catalogProviders}
             socialApps={socialApps}
-            includeLegacy={includeLegacy}
-            onIncludeLegacyChange={setIncludeLegacy}
             colorScheme={colorScheme}
             onSelect={(provider) => {
               navigate(`/oauth/new/${provider.docs_slug}?step=console`);
@@ -323,14 +319,15 @@ export function OAuthWizardRoute() {
             fieldErrors={fieldErrors}
             formError={formError}
             busy={busy}
+            callbackUrl={effectiveCallback}
             colorScheme={colorScheme}
-            onBack={isEdit ? undefined : () => setSearchParams({ step: 'console' })}
+            onBack={isEdit ? () => navigate('/oauth') : () => setSearchParams({ step: 'console' })}
             onSubmit={() => void onSave()}
             onDelete={isEdit ? () => void onDelete() : undefined}
           />
         ) : null}
 
-        {!loading && step === 'summary' && savedSummary && selectedProvider ? (
+        {!loading && step === 'summary' && savedSummary && selectedProvider && !isEdit ? (
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <OAuthProviderIconView
@@ -343,7 +340,7 @@ export function OAuthWizardRoute() {
                   {t('oauthWizardSummaryTitle')}
                 </h2>
                 <Text className="font-mono text-xs text-muted-foreground">
-                  {selectedProvider.name}
+                  {t('oauthWizardSummaryBody', { provider: selectedProvider.name })}
                 </Text>
               </div>
             </div>
@@ -352,30 +349,13 @@ export function OAuthWizardRoute() {
                 <dt className="text-muted-foreground">{t('oauthClientsClientId')}</dt>
                 <dd className="break-all">{savedSummary.client_id}</dd>
               </div>
-              <div>
-                <dt className="text-muted-foreground">{t('oauthSetupColStatus')}</dt>
-                <dd>{t('oauthSetupStatusEnabled')}</dd>
-              </div>
             </dl>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                asChild
-              >
-                <Link to="/oauth">{t('oauthWizardBackToList')}</Link>
-              </Button>
-              {!isEdit ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  asChild
-                >
-                  <Link to="/oauth/new?step=pick">{t('oauthWizardAddAnother')}</Link>
-                </Button>
-              ) : null}
-            </div>
+            <OAuthWizardStepActions
+              backLabel={t('oauthWizardBackToList')}
+              onBack={() => navigate('/oauth')}
+              primaryLabel={t('oauthWizardAddAnother')}
+              onPrimary={() => navigate('/oauth/new?step=pick')}
+            />
           </div>
         ) : null}
 

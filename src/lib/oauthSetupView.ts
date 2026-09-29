@@ -1,4 +1,5 @@
 import type { OAuthCatalogProvider } from '@/lib/oauthProviderCatalogTypes';
+import { visibleCatalogProviders } from '@/lib/oauthCatalogDisplay';
 
 /** Display order for generic protocol providers (after popular tiles). */
 export const GENERIC_PROVIDER_ORDER = ['openid_connect', 'saml', 'openid', 'oauth2'] as const;
@@ -16,30 +17,8 @@ export function normalizeProviderSearchQuery(query: string): string {
 export function providerMatchesSearch(provider: OAuthCatalogProvider, query: string): boolean {
   const q = normalizeProviderSearchQuery(query);
   if (!q) return true;
-  const haystack = [
-    provider.docs_slug,
-    provider.name,
-    provider.protocol,
-    provider.unsupported_reason ?? '',
-  ]
-    .join(' ')
-    .toLowerCase();
+  const haystack = [provider.docs_slug, provider.name, provider.protocol].join(' ').toLowerCase();
   return haystack.includes(q);
-}
-
-export function filterCatalogProviders(
-  providers: OAuthCatalogProvider[],
-  options: {
-    includeLegacy: boolean;
-    searchQuery?: string;
-  },
-): OAuthCatalogProvider[] {
-  const searchQuery = options.searchQuery ?? '';
-  return providers.filter((provider) => {
-    if (provider.legacy && !options.includeLegacy) return false;
-    if (!providerMatchesSearch(provider, searchQuery)) return false;
-    return true;
-  });
 }
 
 function genericSortIndex(docsSlug: string): number {
@@ -50,18 +29,18 @@ function genericSortIndex(docsSlug: string): number {
 export function partitionProvidersForPicker(
   providers: OAuthCatalogProvider[],
   options: {
-    includeLegacy: boolean;
     searchQuery?: string;
   },
 ): OAuthPickerSections {
-  const base = filterCatalogProviders(providers, {
-    includeLegacy: options.includeLegacy,
-  });
+  const base = visibleCatalogProviders(providers);
+  const q = normalizeProviderSearchQuery(options.searchQuery ?? '');
+  const filtered = q ? base.filter((p) => providerMatchesSearch(p, q)) : base;
+
   const popular: OAuthCatalogProvider[] = [];
   const generic: OAuthCatalogProvider[] = [];
   const other: OAuthCatalogProvider[] = [];
 
-  for (const provider of base) {
+  for (const provider of filtered) {
     if (provider.tier === 'popular') {
       popular.push(provider);
     } else if (provider.tier === 'generic') {
@@ -72,13 +51,13 @@ export function partitionProvidersForPicker(
   }
 
   generic.sort((a, b) => genericSortIndex(a.docs_slug) - genericSortIndex(b.docs_slug));
-  const searchQuery = options.searchQuery ?? '';
-  const searchedOther = searchQuery.trim()
-    ? other.filter((provider) => providerMatchesSearch(provider, searchQuery))
-    : other;
-  searchedOther.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  other.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 
-  return { popular, generic, other: searchedOther };
+  return { popular, generic, other };
+}
+
+export function pickerHasAnyProvider(sections: OAuthPickerSections): boolean {
+  return sections.popular.length + sections.generic.length + sections.other.length > 0;
 }
 
 export function configuredProviderSlugs(

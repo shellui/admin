@@ -1,11 +1,13 @@
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ExternalLink } from 'lucide-react';
+import { ChevronLeft, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import type { OAuthCatalogProvider } from '@/lib/oauthProviderCatalogTypes';
-import { consoleUrlHintText, isConsoleUrlLinkable } from '@/lib/oauthConsoleUrl';
 import { OAuthCallbackUrlCopy } from '@/components/oauth/OAuthCallbackUrlCopy';
+import { OAuthConsoleUrlList } from '@/components/oauth/OAuthConsoleUrlList';
 import { OAuthProviderIconView } from '@/components/oauth/OAuthProviderIcon';
+import { OAuthWizardStepActions } from '@/components/oauth/OAuthWizardStepActions';
 
 type Props = {
   provider: OAuthCatalogProvider;
@@ -27,6 +29,17 @@ export function OAuthProviderConsoleStep({
 
   return (
     <div className="space-y-6">
+      <Link
+        to="/oauth"
+        className="inline-flex items-center font-mono text-xs text-muted-foreground hover:text-foreground"
+      >
+        <ChevronLeft
+          className="mr-0.5 h-3.5 w-3.5"
+          aria-hidden
+        />
+        {t('oauthWizardBackToList')}
+      </Link>
+
       <div className="flex flex-wrap items-center gap-3">
         <OAuthProviderIconView
           provider={provider}
@@ -41,49 +54,7 @@ export function OAuthProviderConsoleStep({
 
       <Text className="font-mono text-sm">{t('oauthWizardConsoleIntro')}</Text>
 
-      <div className="space-y-3">
-        {provider.console_url.length === 0 ? (
-          <Text className="font-mono text-sm text-muted-foreground">
-            {t('oauthWizardConsoleEmpty')}
-          </Text>
-        ) : null}
-        {provider.console_url.map((entry, index) => {
-          const linkable = isConsoleUrlLinkable(entry);
-          const key = `${entry.url}-${index}`;
-          if (linkable) {
-            return (
-              <Button
-                key={key}
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="font-mono text-xs"
-                asChild
-              >
-                <a
-                  href={entry.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {entry.label || entry.text || entry.url}
-                  <ExternalLink className="ml-2 h-3.5 w-3.5" />
-                </a>
-              </Button>
-            );
-          }
-          return (
-            <div
-              key={key}
-              className="rounded-md border border-dashed border-border/80 px-3 py-2"
-            >
-              <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                {entry.label || t('oauthWizardConsoleHint')}
-              </p>
-              <p className="break-all font-mono text-xs">{consoleUrlHintText(entry)}</p>
-            </div>
-          );
-        })}
-      </div>
+      <OAuthConsoleUrlList provider={provider} />
 
       {provider.docs_url ? (
         <Button
@@ -109,23 +80,12 @@ export function OAuthProviderConsoleStep({
         description={t('oauthWizardCallbackHelp')}
       />
 
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onBack}
-        >
-          {t('oauthWizardBack')}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          onClick={onContinue}
-        >
-          {t('oauthWizardContinueCredentials')}
-        </Button>
-      </div>
+      <OAuthWizardStepActions
+        backLabel={t('oauthWizardBack')}
+        onBack={onBack}
+        primaryLabel={t('oauthWizardContinueCredentials')}
+        onPrimary={onContinue}
+      />
     </div>
   );
 }
