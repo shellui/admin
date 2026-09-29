@@ -15,7 +15,6 @@ import {
   isApiUnavailableError,
 } from '@/features/actions/components/ApiUnavailableNotice';
 import { useActionsApi } from '@/features/actions/useActionsApi';
-import { WebhookServicePicker } from '@/features/actions/components/WebhookServicePicker';
 import { WebhookServiceUnavailable } from '@/features/actions/components/WebhookServiceUnavailable';
 import { useWebhookPageMeta } from '@/features/actions/useWebhookPageMeta';
 import type { ActionDeliveryDetail } from '@/features/actions/types';
@@ -106,8 +105,6 @@ export function ActionsDeliveryDetailPage() {
           {t('actionsDeliveryDetailDescription')}
         </Text>
       </header>
-
-      <WebhookServicePicker />
 
       <ActionsSubNav />
 

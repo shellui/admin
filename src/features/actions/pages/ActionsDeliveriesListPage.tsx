@@ -23,7 +23,6 @@ import {
   isApiUnavailableError,
 } from '@/features/actions/components/ApiUnavailableNotice';
 import { useActionsApi } from '@/features/actions/useActionsApi';
-import { WebhookServicePicker } from '@/features/actions/components/WebhookServicePicker';
 import { WebhookServiceUnavailable } from '@/features/actions/components/WebhookServiceUnavailable';
 import { useWebhookPageMeta } from '@/features/actions/useWebhookPageMeta';
 import type { ActionDelivery } from '@/features/actions/types';
@@ -133,7 +132,7 @@ export function ActionsDeliveriesListPage() {
       <header className="space-y-1">
         <div className="flex flex-wrap items-baseline gap-3">
           <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            {t('actionsDeliveriesTitle')}
+            {t(service.deliveriesPageTitleKey)}
           </h1>
           <Badge
             variant="secondary"
@@ -146,8 +145,6 @@ export function ActionsDeliveriesListPage() {
           {t('actionsDeliveriesDescription')}
         </Text>
       </header>
-
-      <WebhookServicePicker />
 
       <ActionsSubNav />
 

@@ -44,7 +44,11 @@ export const adminShellUiConfig: AdminShellUIConfig = {
         },
         { label: { en: 'OAuth apps', fr: 'Apps OAuth' }, path: 'oauth', url: '#/oauth' },
         { label: { en: 'SCIM', fr: 'SCIM' }, path: 'scim', url: '#/scim' },
-        { label: { en: 'Webhooks', fr: 'Webhooks' }, path: 'webhooks', url: '#/webhooks' },
+        {
+          label: { en: 'Webhooks', fr: 'Webhooks' },
+          path: 'identity/webhooks',
+          url: '#/identity/webhooks',
+        },
         {
           label: { en: 'Access tokens', fr: 'Jetons d’accès' },
           path: 'personal-access-tokens',

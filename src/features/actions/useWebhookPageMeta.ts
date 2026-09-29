@@ -1,4 +1,9 @@
+import { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
+import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
+import { useShelluiAuthBackendBaseUrl } from '@/hooks/useShelluiAuthBackendBaseUrl';
+import { useShelluiHosting } from '@/hooks/useShelluiHosting';
+import { useShelluiStorage } from '@/hooks/useShelluiStorage';
 import { useWebhookServices } from '@/features/actions/useWebhookServices';
 import { resolveWebhookServiceFromPathname } from '@/lib/webhookRoutePaths';
 import {
@@ -7,17 +12,14 @@ import {
   type WebhookServiceDefinition,
   type WebhookServiceKey,
 } from '@/lib/webhookServices';
-import { useShelluiAuthBackendBaseUrl } from '@/hooks/useShelluiAuthBackendBaseUrl';
-import { useShelluiHosting } from '@/hooks/useShelluiHosting';
-import { useShelluiStorage } from '@/hooks/useShelluiStorage';
-import { useMemo } from 'react';
-import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
 
 const STATIC_DEFS: Record<WebhookServiceKey, Omit<WebhookServiceDefinition, 'baseUrl'>> = {
   identity: {
     key: 'identity',
     labelKey: 'webhooksServiceIdentity',
     badgeKey: 'webhooksBadgeIdentity',
+    pageTitleKey: 'webhooksPageTitleIdentity',
+    deliveriesPageTitleKey: 'webhooksDeliveriesPageTitleIdentity',
     descriptionKey: 'webhooksPageDescriptionIdentity',
     eventScopeKey: 'webhooksEventScopeIdentity',
   },
@@ -25,6 +27,8 @@ const STATIC_DEFS: Record<WebhookServiceKey, Omit<WebhookServiceDefinition, 'bas
     key: 'hosting',
     labelKey: 'webhooksServiceHosting',
     badgeKey: 'webhooksBadgeHosting',
+    pageTitleKey: 'webhooksPageTitleHosting',
+    deliveriesPageTitleKey: 'webhooksDeliveriesPageTitleHosting',
     descriptionKey: 'webhooksPageDescriptionHosting',
     eventScopeKey: 'webhooksEventScopeHosting',
   },
@@ -32,6 +36,8 @@ const STATIC_DEFS: Record<WebhookServiceKey, Omit<WebhookServiceDefinition, 'bas
     key: 'storage',
     labelKey: 'webhooksServiceStorage',
     badgeKey: 'webhooksBadgeStorage',
+    pageTitleKey: 'webhooksPageTitleStorage',
+    deliveriesPageTitleKey: 'webhooksDeliveriesPageTitleStorage',
     descriptionKey: 'webhooksPageDescriptionStorage',
     eventScopeKey: 'webhooksEventScopeStorage',
   },
@@ -68,7 +74,7 @@ export function useWebhookPageMeta(): {
   return { service, serviceConfigured: Boolean(baseUrl) };
 }
 
-/** All service definitions (including unconfigured) for tests and docs. */
+/** All service definitions (including unconfigured) for tests. */
 export function allWebhookServiceDefinitions(options: {
   identityBaseUrl?: string | null;
   hosting?: Parameters<typeof listConfiguredWebhookServices>[0]['hosting'];

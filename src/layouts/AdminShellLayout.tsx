@@ -114,6 +114,9 @@ const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
   oauth: KeyRound,
   scim: Network,
   webhooks: SendHorizonal,
+  'identity/webhooks': SendHorizonal,
+  'hosting/webhooks': SendHorizonal,
+  'storage/webhooks': SendHorizonal,
   actions: SendHorizonal,
   swagger: BookOpen,
   redoc: BookOpen,
@@ -1041,6 +1044,12 @@ export function AdminShellLayout() {
         });
       }
       storageItems.push({
+        key: 'navWebhooks',
+        icon: SendHorizonal,
+        label: t('navWebhooks'),
+        to: '/storage/webhooks',
+      });
+      storageItems.push({
         key: 'navStorageStatistics',
         icon: BarChart3,
         label: t('navStorageStatistics'),
@@ -1086,6 +1095,12 @@ export function AdminShellLayout() {
           icon: AppWindow,
           label: t('navHostingApps'),
           to: '/hosting',
+        },
+        {
+          key: 'navWebhooks',
+          icon: SendHorizonal,
+          label: t('navWebhooks'),
+          to: '/hosting/webhooks',
         },
         {
           key: 'navHostingStatistics',

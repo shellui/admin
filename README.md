@@ -73,16 +73,16 @@ hosting: {
 
 Point `backend.url` at a local or deployed **identity-service** (for example `http://localhost:8000`). Sign in through Shellui as a **company owner** so the JWT includes `company_id` and `user_metadata.is_company_owner`.
 
-| Route                   | API                                                                                                                                                                             |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `#/scim`                | `GET /api/v1/scim`, token CRUD under `/api/v1/scim/tokens`                                                                                                                      |
-| `#/company`             | `GET/PATCH /api/v1/auth-methods` (`enable_magic_link`, read-only global kill switch)                                                                                            |
-| `#/webhooks`            | Identity webhooks (default). Same API paths on **identity-service** (`backend.url` / `authBackendBaseUrl`).                                                                     |
-| `#/webhooks/hosting`    | Hosting webhooks when `hosting.url` is set (and `hosting.showInAdmin` is not `false`). Calls **hosting-service** `/api/v1/actions/*`.                                           |
-| `#/webhooks/storage`    | Storage webhooks when `storage.url` is set. Calls **storage-service** `/api/v1/actions/*`.                                                                                      |
-| `#/webhooks/deliveries` | Identity delivery log (`GET /api/v1/actions/deliveries`, detail + `POST …/requeue`). Use `#/webhooks/hosting/deliveries` or `#/webhooks/storage/deliveries` for other services. |
+| Route                            | API                                                                                                                      |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `#/scim`                         | `GET /api/v1/scim`, token CRUD under `/api/v1/scim/tokens`                                                               |
+| `#/company`                      | `GET/PATCH /api/v1/auth-methods` (`enable_magic_link`, read-only global kill switch)                                     |
+| `#/identity/webhooks`            | Identity webhooks (sidebar: Identity → Webhooks). API on **identity-service** (`backend.url` / `authBackendBaseUrl`).    |
+| `#/hosting/webhooks`             | Hosting webhooks when `hosting.url` is set (sidebar: Hosting → Webhooks). Calls **hosting-service** `/api/v1/actions/*`. |
+| `#/storage/webhooks`             | Storage webhooks when `storage.url` is set (sidebar: Storage → Webhooks). Calls **storage-service** `/api/v1/actions/*`. |
+| `#/identity/webhooks/deliveries` | Delivery log for the active service (`GET /api/v1/actions/deliveries`, detail + `POST …/requeue`).                       |
 
-Legacy `#/actions/...` hash routes redirect to the `#/webhooks/...` paths above.
+Legacy `#/webhooks` and `#/actions/...` redirect to `#/identity/webhooks/...`.
 
 The Webhooks UI lives in **`src/features/actions/`** with a shared `ActionsApiClient` in `src/lib/actionsApi.ts`. The client takes a service base URL (identity, hosting, or storage) and sends the same Shellui access token (`Authorization: Bearer …`) and `company_id` query parameter identity already uses.
 

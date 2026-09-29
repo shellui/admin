@@ -7,15 +7,6 @@ export const WEBHOOK_SERVICE_KEYS: WebhookServiceKey[] = ['identity', 'hosting',
 
 export const DEFAULT_WEBHOOK_SERVICE: WebhookServiceKey = 'identity';
 
-/** Path segments reserved under `/webhooks` (not numeric rule ids). */
-export const WEBHOOKS_RESERVED_SEGMENTS = new Set([
-  'identity',
-  'hosting',
-  'storage',
-  'new',
-  'deliveries',
-]);
-
 export function isWebhookServiceKey(value: string): value is WebhookServiceKey {
   return value === 'identity' || value === 'hosting' || value === 'storage';
 }
@@ -24,6 +15,14 @@ export type WebhookServiceDefinition = {
   key: WebhookServiceKey;
   labelKey: 'webhooksServiceIdentity' | 'webhooksServiceHosting' | 'webhooksServiceStorage';
   badgeKey: 'webhooksBadgeIdentity' | 'webhooksBadgeHosting' | 'webhooksBadgeStorage';
+  pageTitleKey:
+    | 'webhooksPageTitleIdentity'
+    | 'webhooksPageTitleHosting'
+    | 'webhooksPageTitleStorage';
+  deliveriesPageTitleKey:
+    | 'webhooksDeliveriesPageTitleIdentity'
+    | 'webhooksDeliveriesPageTitleHosting'
+    | 'webhooksDeliveriesPageTitleStorage';
   descriptionKey:
     | 'webhooksPageDescriptionIdentity'
     | 'webhooksPageDescriptionHosting'
@@ -71,6 +70,8 @@ export function listConfiguredWebhookServices(options: {
       key: 'identity',
       labelKey: 'webhooksServiceIdentity',
       badgeKey: 'webhooksBadgeIdentity',
+      pageTitleKey: 'webhooksPageTitleIdentity',
+      deliveriesPageTitleKey: 'webhooksDeliveriesPageTitleIdentity',
       descriptionKey: 'webhooksPageDescriptionIdentity',
       eventScopeKey: 'webhooksEventScopeIdentity',
       baseUrl: resolveWebhookServiceBaseUrl('identity', options),
@@ -79,6 +80,8 @@ export function listConfiguredWebhookServices(options: {
       key: 'hosting',
       labelKey: 'webhooksServiceHosting',
       badgeKey: 'webhooksBadgeHosting',
+      pageTitleKey: 'webhooksPageTitleHosting',
+      deliveriesPageTitleKey: 'webhooksDeliveriesPageTitleHosting',
       descriptionKey: 'webhooksPageDescriptionHosting',
       eventScopeKey: 'webhooksEventScopeHosting',
       baseUrl: resolveWebhookServiceBaseUrl('hosting', options),
@@ -87,6 +90,8 @@ export function listConfiguredWebhookServices(options: {
       key: 'storage',
       labelKey: 'webhooksServiceStorage',
       badgeKey: 'webhooksBadgeStorage',
+      pageTitleKey: 'webhooksPageTitleStorage',
+      deliveriesPageTitleKey: 'webhooksDeliveriesPageTitleStorage',
       descriptionKey: 'webhooksPageDescriptionStorage',
       eventScopeKey: 'webhooksEventScopeStorage',
       baseUrl: resolveWebhookServiceBaseUrl('storage', options),
