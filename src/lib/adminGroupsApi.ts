@@ -1,22 +1,12 @@
 import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
+import {
+  parseAdminGroupRow,
+  parseAdminGroupsList,
+  parseGroupsApiErrorMessage,
+  type AdminGroupRow,
+} from '@/lib/adminGroupsApiParsers';
 
-export type AdminGroupRow = {
-  id: number;
-  name: string;
-  user_count: number;
-};
-
-function parseErrorMessage(body: unknown): string | null {
-  if (!body || typeof body !== 'object') return null;
-  const o = body as Record<string, unknown>;
-  if (typeof o.detail === 'string') return o.detail;
-  if (typeof o.error === 'string') return o.error;
-  const firstKey = Object.keys(o)[0];
-  const v = firstKey ? o[firstKey] : null;
-  if (Array.isArray(v) && typeof v[0] === 'string') return `${firstKey}: ${v[0]}`;
-  if (typeof v === 'string') return v;
-  return null;
-}
+export type { AdminGroupRow, AdminGroupSource } from '@/lib/adminGroupsApiParsers';
 
 async function authFetch(
   path: string,
@@ -38,37 +28,40 @@ export async function fetchAdminGroups(accessToken: string): Promise<AdminGroupR
   const res = await authFetch('/api/v1/groups', accessToken);
   const body = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
+    throw new Error(parseGroupsApiErrorMessage(body) || `Request failed (${res.status})`);
   }
-  return body as AdminGroupRow[];
+  return parseAdminGroupsList(body);
 }
 
-export async function createAdminGroup(accessToken: string, name: string): Promise<AdminGroupRow> {
+export async function createAdminGroup(
+  accessToken: string,
+  displayName: string,
+): Promise<AdminGroupRow> {
   const res = await authFetch('/api/v1/groups', accessToken, {
     method: 'POST',
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ display_name: displayName }),
   });
   const body = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
+    throw new Error(parseGroupsApiErrorMessage(body) || `Request failed (${res.status})`);
   }
-  return body as AdminGroupRow;
+  return parseAdminGroupRow(body);
 }
 
 export async function renameAdminGroup(
   accessToken: string,
   groupId: number,
-  name: string,
+  displayName: string,
 ): Promise<AdminGroupRow> {
   const res = await authFetch(`/api/v1/groups/${groupId}`, accessToken, {
     method: 'PUT',
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ display_name: displayName }),
   });
   const body = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
+    throw new Error(parseGroupsApiErrorMessage(body) || `Request failed (${res.status})`);
   }
-  return body as AdminGroupRow;
+  return parseAdminGroupRow(body);
 }
 
 export async function deleteAdminGroup(accessToken: string, groupId: number): Promise<void> {
@@ -77,5 +70,5 @@ export async function deleteAdminGroup(accessToken: string, groupId: number): Pr
   });
   if (res.status === 204) return;
   const body = await res.json().catch(() => null);
-  throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
+  throw new Error(parseGroupsApiErrorMessage(body) || `Request failed (${res.status})`);
 }

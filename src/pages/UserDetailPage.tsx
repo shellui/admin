@@ -402,9 +402,14 @@ export function UserDetailPage() {
                             />
                             <label
                               htmlFor={`user-detail-group-${g.id}`}
-                              className="cursor-pointer text-sm"
+                              className="flex cursor-pointer items-center gap-2 text-sm"
                             >
-                              {g.name}
+                              <span>{g.display_name}</span>
+                              {g.source === 'scim' ? (
+                                <span className="text-[10px] text-muted-foreground">
+                                  ({t('groupsScimBadge')})
+                                </span>
+                              ) : null}
                             </label>
                           </li>
                         );
