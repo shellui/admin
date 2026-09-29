@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2, Pencil, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,7 +85,7 @@ export function GroupsListPage() {
 
   function startEdit(row: AdminGroupRow) {
     setEditingId(row.id);
-    setEditName(row.name);
+    setEditName(row.display_name);
   }
 
   async function onSaveEdit(id: number) {
@@ -241,93 +243,119 @@ export function GroupsListPage() {
                         </TableCell>
                       </TableRow>
                     ) : null}
-                    {rows.map((row) => (
-                      <TableRow
-                        key={row.id}
-                        className="hover:bg-muted/40"
-                      >
-                        <TableCell className="tabular-nums text-muted-foreground">
-                          {row.id}
-                        </TableCell>
-                        <TableCell>
-                          {editingId === row.id ? (
-                            <Input
-                              value={editName}
-                              onChange={(ev) => setEditName(ev.target.value)}
-                              className="h-8 font-mono text-xs"
-                              autoComplete="off"
-                              disabled={savingId === row.id}
-                            />
-                          ) : (
-                            <span className="font-medium text-foreground">{row.name}</span>
-                          )}
-                        </TableCell>
-                        <TableCell
-                          className="tabular-nums text-muted-foreground"
-                          title={t('groupsColMembers')}
+                    {rows.map((row) => {
+                      const isScim = row.source === 'scim';
+                      return (
+                        <TableRow
+                          key={row.id}
+                          className="hover:bg-muted/40"
                         >
-                          {typeof row.user_count === 'number' ? row.user_count : '—'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {editingId === row.id ? (
-                            <div className="flex justify-end gap-1">
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="secondary"
-                                className="h-7 px-2 text-[11px]"
-                                disabled={savingId === row.id || !editName.trim()}
-                                onClick={() => void onSaveEdit(row.id)}
-                              >
-                                {savingId === row.id ? (
-                                  <Loader2 className="size-3 animate-spin" />
-                                ) : (
-                                  t('groupsSave')
-                                )}
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 px-2 text-[11px]"
+                          <TableCell className="tabular-nums text-muted-foreground">
+                            {row.id}
+                          </TableCell>
+                          <TableCell>
+                            {editingId === row.id ? (
+                              <Input
+                                value={editName}
+                                onChange={(ev) => setEditName(ev.target.value)}
+                                className="h-8 font-mono text-xs"
+                                autoComplete="off"
                                 disabled={savingId === row.id}
-                                onClick={() => setEditingId(null)}
-                              >
-                                {t('groupsCancelEdit')}
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex justify-end gap-1">
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 w-7 p-0 text-muted-foreground"
-                                aria-label={t('groupsRename')}
-                                onClick={() => startEdit(row)}
-                              >
-                                <Pencil className="size-3.5" />
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                                aria-label={t('groupsDelete')}
-                                disabled={deletingId === row.id}
-                                onClick={() => void onDelete(row.id)}
-                              >
-                                {deletingId === row.id ? (
-                                  <Loader2 className="size-3.5 animate-spin" />
-                                ) : (
-                                  <Trash2 className="size-3.5" />
-                                )}
-                              </Button>
-                            </div>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                              />
+                            ) : (
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-medium text-foreground">
+                                  {row.display_name}
+                                </span>
+                                {isScim ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge
+                                        variant="outline"
+                                        className="font-sans text-[10px] font-normal normal-case"
+                                      >
+                                        {t('groupsScimBadge')}
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs text-xs">
+                                      {t('groupsScimTooltip')}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ) : null}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell
+                            className="tabular-nums text-muted-foreground"
+                            title={t('groupsColMembers')}
+                          >
+                            {typeof row.user_count === 'number' ? row.user_count : '—'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {editingId === row.id ? (
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="secondary"
+                                  className="h-7 px-2 text-[11px]"
+                                  disabled={savingId === row.id || !editName.trim()}
+                                  onClick={() => void onSaveEdit(row.id)}
+                                >
+                                  {savingId === row.id ? (
+                                    <Loader2 className="size-3 animate-spin" />
+                                  ) : (
+                                    t('groupsSave')
+                                  )}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 px-2 text-[11px]"
+                                  disabled={savingId === row.id}
+                                  onClick={() => setEditingId(null)}
+                                >
+                                  {t('groupsCancelEdit')}
+                                </Button>
+                              </div>
+                            ) : isScim ? (
+                              <span className="text-[11px] text-muted-foreground">
+                                {t('groupsScimActionsNote')}
+                              </span>
+                            ) : (
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0 text-muted-foreground"
+                                  aria-label={t('groupsRename')}
+                                  onClick={() => startEdit(row)}
+                                >
+                                  <Pencil className="size-3.5" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                  aria-label={t('groupsDelete')}
+                                  disabled={deletingId === row.id}
+                                  onClick={() => void onDelete(row.id)}
+                                >
+                                  {deletingId === row.id ? (
+                                    <Loader2 className="size-3.5 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="size-3.5" />
+                                  )}
+                                </Button>
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
