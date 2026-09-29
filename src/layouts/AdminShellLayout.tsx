@@ -32,6 +32,8 @@ import {
   KeyRound,
   LayoutDashboard,
   Lock,
+  Network,
+  SendHorizonal,
   PanelLeft,
   PanelLeftClose,
   ScrollText,
@@ -110,6 +112,9 @@ const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
   groups: Tags,
   'login-events': ScrollText,
   oauth: KeyRound,
+  scim: Network,
+  webhooks: SendHorizonal,
+  actions: SendHorizonal,
   swagger: BookOpen,
   redoc: BookOpen,
   'django-admin': Lock,
@@ -136,6 +141,9 @@ const mapLabelToTranslationKey = (label: string): string => {
   if (normalized === 'log events' || normalized === 'événements de connexion')
     return 'navLoginEvents';
   if (normalized === 'oauth apps' || normalized === 'apps oauth') return 'navOAuth';
+  if (normalized === 'scim') return 'navScim';
+  if (normalized === 'webhooks') return 'navWebhooks';
+  if (normalized === 'actions') return 'navWebhooks';
   if (
     normalized === 'access tokens' ||
     normalized === "jetons d'accès" ||

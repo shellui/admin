@@ -73,16 +73,18 @@ hosting: {
 
 Point `backend.url` at a local or deployed **identity-service** (for example `http://localhost:8000`). Sign in through Shellui as a **company owner** so the JWT includes `company_id` and `user_metadata.is_company_owner`.
 
-| Route                  | API                                                                                                                      |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `#/scim`               | `GET /api/v1/scim`, token CRUD under `/api/v1/scim/tokens`                                                               |
-| `#/company`            | `GET/PATCH /api/v1/auth-methods` (`enable_magic_link`, read-only global kill switch)                                     |
-| `#/actions/rules`      | `GET/POST/PATCH/DELETE /api/v1/actions/rules`; `POST …/rules/<id>/send-test` for a sample signed webhook (no outbox row) |
-| `#/actions/deliveries` | `GET /api/v1/actions/deliveries`, detail + `POST …/requeue`                                                              |
+| Route                   | API                                                                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `#/scim`                | `GET /api/v1/scim`, token CRUD under `/api/v1/scim/tokens`                                                               |
+| `#/company`             | `GET/PATCH /api/v1/auth-methods` (`enable_magic_link`, read-only global kill switch)                                     |
+| `#/webhooks`            | `GET/POST/PATCH/DELETE /api/v1/actions/rules`; `POST …/rules/<id>/send-test` for a sample signed webhook (no outbox row) |
+| `#/webhooks/deliveries` | `GET /api/v1/actions/deliveries`, detail + `POST …/requeue`                                                              |
 
-The Actions UI lives in **`src/features/actions/`** with an `ActionsApiClient` interface and identity implementation in `src/lib/actionsApi.ts`. Another backend (for example storage events) can reuse the same screens by swapping the client.
+Legacy `#/actions/...` hash routes redirect to the `#/webhooks/...` paths above.
 
-If identity does not yet expose Actions endpoints, the UI shows a clear “API not available on this identity version” banner while SCIM and magic link still work on older builds.
+The Webhooks UI lives in **`src/features/actions/`** with an `ActionsApiClient` interface and identity implementation in `src/lib/actionsApi.ts`. Another backend (for example storage events) can reuse the same screens by swapping the client.
+
+If identity does not yet expose webhook Actions API endpoints, the UI shows a clear “API not available on this identity version” banner while SCIM and magic link still work on older builds.
 
 ## OAuth setup and redirect allowlist
 

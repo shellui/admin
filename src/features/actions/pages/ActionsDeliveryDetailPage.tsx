@@ -110,7 +110,7 @@ export function ActionsDeliveryDetailPage() {
         variant="outline"
         asChild
       >
-        <Link to="/actions/deliveries">{t('actionsBackToDeliveries')}</Link>
+        <Link to="/webhooks/deliveries">{t('actionsBackToDeliveries')}</Link>
       </Button>
 
       {!accessToken && (

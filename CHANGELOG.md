@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### 🚨 Changed
 
-- **Actions admin:** webhook rules only. Removed the email channel, React Email editor, template APIs, and related dependencies. Aligned with identity-service webhook-only rules API (`sample_envelope` on events, `POST …/send-test` on rules, no `action_kind` on create).
+- **Webhooks admin:** renamed the Actions UI to Webhooks (`#/webhooks`, `#/webhooks/deliveries`) with redirects from legacy `#/actions/...` routes. Webhook rules only; aligned with identity-service webhook-only rules API (`sample_envelope`, `POST …/send-test`, no `action_kind` on create).
 
 ### 🔒 Security
 

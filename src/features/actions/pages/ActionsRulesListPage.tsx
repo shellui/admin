@@ -151,7 +151,7 @@ export function ActionsRulesListPage() {
               size="sm"
               asChild
             >
-              <Link to="/actions/rules/new">{t('actionsRuleCreate')}</Link>
+              <Link to="/webhooks/new">{t('actionsRuleCreate')}</Link>
             </Button>
           )}
         </div>
@@ -197,7 +197,7 @@ export function ActionsRulesListPage() {
                 <TableRow key={rule.id}>
                   <TableCell>
                     <Link
-                      to={`/actions/rules/${rule.id}`}
+                      to={`/webhooks/${rule.id}`}
                       className="text-primary underline-offset-2 hover:underline"
                     >
                       {rule.name}
@@ -229,7 +229,7 @@ export function ActionsRulesListPage() {
                         variant="ghost"
                         asChild
                       >
-                        <Link to={`/actions/rules/${rule.id}`}>{t('actionsEdit')}</Link>
+                        <Link to={`/webhooks/${rule.id}`}>{t('actionsEdit')}</Link>
                       </Button>
                       <Button
                         type="button"

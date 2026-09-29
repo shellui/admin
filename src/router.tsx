@@ -1,4 +1,4 @@
-import { createHashRouter, Navigate } from 'react-router-dom';
+import { createHashRouter, Navigate, useParams } from 'react-router-dom';
 import { AdminShellLayout } from '@/layouts/AdminShellLayout';
 import { CompanyPage } from '@/pages/CompanyPage';
 import { DashboardPage } from '@/pages/DashboardPage';
@@ -20,6 +20,31 @@ import { HostingAppsPage } from '@/pages/HostingAppsPage';
 import { HostingStatisticsPage } from '@/pages/HostingStatisticsPage';
 import { StorageStatisticsPage } from '@/pages/StorageStatisticsPage';
 
+function LegacyActionsRuleRedirect() {
+  const { ruleId } = useParams();
+  const suffix = ruleId ? encodeURIComponent(ruleId) : '';
+  return (
+    <Navigate
+      to={suffix ? `/webhooks/${suffix}` : '/webhooks'}
+      replace
+    />
+  );
+}
+
+function LegacyActionsDeliveryRedirect() {
+  const { deliveryId } = useParams();
+  return (
+    <Navigate
+      to={
+        deliveryId
+          ? `/webhooks/deliveries/${encodeURIComponent(deliveryId)}`
+          : '/webhooks/deliveries'
+      }
+      replace
+    />
+  );
+}
+
 /**
  * Hash routes: `#/`, `#/company`, `#/users`, …
  * Chrome mode embeds these via ContentView; content mode (nested same-origin) renders the page elements.
@@ -37,16 +62,48 @@ export const router = createHashRouter([
       { path: 'groups', element: <GroupsListPage /> },
       { path: 'oauth', element: <OAuthSetupPage /> },
       { path: 'scim', element: <ScimSetupPage /> },
-      { path: 'actions/rules/new', element: <ActionsRuleEditorPage /> },
-      { path: 'actions/rules/:ruleId', element: <ActionsRuleEditorPage /> },
-      { path: 'actions/rules', element: <ActionsRulesListPage /> },
-      { path: 'actions/deliveries/:deliveryId', element: <ActionsDeliveryDetailPage /> },
-      { path: 'actions/deliveries', element: <ActionsDeliveriesListPage /> },
+      { path: 'webhooks/deliveries/:deliveryId', element: <ActionsDeliveryDetailPage /> },
+      { path: 'webhooks/deliveries', element: <ActionsDeliveriesListPage /> },
+      { path: 'webhooks/new', element: <ActionsRuleEditorPage /> },
+      { path: 'webhooks/:ruleId', element: <ActionsRuleEditorPage /> },
+      { path: 'webhooks', element: <ActionsRulesListPage /> },
+      {
+        path: 'actions/rules/new',
+        element: (
+          <Navigate
+            to="/webhooks/new"
+            replace
+          />
+        ),
+      },
+      { path: 'actions/rules/:ruleId', element: <LegacyActionsRuleRedirect /> },
+      {
+        path: 'actions/rules',
+        element: (
+          <Navigate
+            to="/webhooks"
+            replace
+          />
+        ),
+      },
+      {
+        path: 'actions/deliveries/:deliveryId',
+        element: <LegacyActionsDeliveryRedirect />,
+      },
+      {
+        path: 'actions/deliveries',
+        element: (
+          <Navigate
+            to="/webhooks/deliveries"
+            replace
+          />
+        ),
+      },
       {
         path: 'actions',
         element: (
           <Navigate
-            to="/actions/rules"
+            to="/webhooks"
             replace
           />
         ),

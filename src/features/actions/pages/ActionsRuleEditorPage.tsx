@@ -66,8 +66,8 @@ export function ActionsRuleEditorPage() {
 
   const deliveryLogHref =
     numericId != null
-      ? `/actions/deliveries?action_rule_id=${encodeURIComponent(String(numericId))}`
-      : '/actions/deliveries';
+      ? `/webhooks/deliveries?action_rule_id=${encodeURIComponent(String(numericId))}`
+      : '/webhooks/deliveries';
 
   const loadCatalog = useCallback(async () => {
     if (!api || !isOwner) return [];
@@ -138,7 +138,7 @@ export function ActionsRuleEditorPage() {
           enabled,
           config,
         });
-        navigate(`/actions/rules/${created.id}`, { replace: true });
+        navigate(`/webhooks/${created.id}`, { replace: true });
       } else if (numericId != null) {
         await api.updateRule(numericId, {
           name: name.trim(),
@@ -372,7 +372,7 @@ export function ActionsRuleEditorPage() {
               variant="outline"
               asChild
             >
-              <Link to="/actions/rules">{t('actionsCancel')}</Link>
+              <Link to="/webhooks">{t('actionsCancel')}</Link>
             </Button>
             {!isCreate && numericId != null ? (
               <Button

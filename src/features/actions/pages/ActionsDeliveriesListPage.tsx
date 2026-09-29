@@ -261,7 +261,7 @@ export function ActionsDeliveriesListPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Link
-                        to={`/actions/deliveries/${row.id}`}
+                        to={`/webhooks/deliveries/${row.id}`}
                         className="text-primary underline-offset-2 hover:underline"
                       >
                         {t('loginEventsOpenDetail')}
