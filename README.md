@@ -84,6 +84,8 @@ Point `backend.url` at a local or deployed **identity-service** (for example `ht
 
 Legacy `#/webhooks` and `#/actions/...` redirect to `#/identity/webhooks/...`.
 
+In the Shellui shell, the address bar uses path URLs (for example `/admin/storage/webhooks`); the admin chrome maps those to the same hash routes above.
+
 The Webhooks UI lives in **`src/features/actions/`** with a shared `ActionsApiClient` in `src/lib/actionsApi.ts`. The client takes a service base URL (identity, hosting, or storage) and sends the same Shellui access token (`Authorization: Bearer …`) and `company_id` query parameter identity already uses.
 
 If a service does not yet expose webhook endpoints (404), the UI shows a clear “Webhooks API not available on this service version” banner for that tab only.

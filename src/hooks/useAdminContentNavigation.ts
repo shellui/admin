@@ -150,6 +150,14 @@ export function useAdminContentNavigation(): AdminContentFrame {
           useHashRouter: false,
         });
       }
+      const storageWebhooksHash = buildAdminHashContentUrl(origin, 'storage/webhooks', '', '');
+      items.push({
+        label: 'Webhooks',
+        path: 'storage/webhooks',
+        url: storageWebhooksHash,
+        embedUrl: storageWebhooksHash,
+        useHashRouter: true,
+      });
       const statsHash = buildAdminHashContentUrl(origin, 'storage/statistics', '', '');
       items.push({
         label: 'Statistics',
@@ -192,6 +200,14 @@ export function useAdminContentNavigation(): AdminContentFrame {
         path: 'hosting',
         url: appsHash,
         embedUrl: appsHash,
+        useHashRouter: true,
+      });
+      const hostingWebhooksHash = buildAdminHashContentUrl(origin, 'hosting/webhooks', '', '');
+      items.push({
+        label: 'Webhooks',
+        path: 'hosting/webhooks',
+        url: hostingWebhooksHash,
+        embedUrl: hostingWebhooksHash,
         useHashRouter: true,
       });
       const appDetailHash = buildAdminHashContentUrl(origin, 'hosting/apps', '', '');
