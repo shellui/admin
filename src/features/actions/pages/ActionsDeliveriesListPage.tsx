@@ -23,7 +23,11 @@ import {
   isApiUnavailableError,
 } from '@/features/actions/components/ApiUnavailableNotice';
 import { useActionsApi } from '@/features/actions/useActionsApi';
+import { WebhookServicePicker } from '@/features/actions/components/WebhookServicePicker';
+import { WebhookServiceUnavailable } from '@/features/actions/components/WebhookServiceUnavailable';
+import { useWebhookPageMeta } from '@/features/actions/useWebhookPageMeta';
 import type { ActionDelivery } from '@/features/actions/types';
+import { webhookDeliveryDetailPath } from '@/lib/webhookRoutePaths';
 
 const PAGE_SIZE = 20;
 
@@ -40,7 +44,8 @@ export function ActionsDeliveriesListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const accessToken = useShelluiAccessToken();
   const isOwner = Boolean(accessToken && getIsCompanyOwnerFromJwt(accessToken));
-  const { api } = useActionsApi(accessToken);
+  const { service, serviceConfigured } = useWebhookPageMeta();
+  const { api } = useActionsApi(accessToken, service.key);
 
   const pageParam = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
   const statusFilter = searchParams.get('status') || '';
@@ -134,7 +139,7 @@ export function ActionsDeliveriesListPage() {
             variant="secondary"
             className="font-mono text-[10px] uppercase"
           >
-            {t('actionsBadge')}
+            {t(service.badgeKey)}
           </Badge>
         </div>
         <Text className="max-w-3xl text-sm text-muted-foreground">
@@ -142,7 +147,11 @@ export function ActionsDeliveriesListPage() {
         </Text>
       </header>
 
+      <WebhookServicePicker />
+
       <ActionsSubNav />
+
+      {!serviceConfigured ? <WebhookServiceUnavailable serviceKey={service.key} /> : null}
 
       {!accessToken && (
         <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
@@ -163,7 +172,7 @@ export function ActionsDeliveriesListPage() {
         </Text>
       ) : null}
 
-      {accessToken && isOwner && api ? (
+      {serviceConfigured && accessToken && isOwner && api ? (
         <div className="grid gap-3 rounded-md border border-border/80 p-4 sm:grid-cols-4">
           <Input
             value={draftStatus}
@@ -204,7 +213,8 @@ export function ActionsDeliveriesListPage() {
         </div>
       ) : null}
 
-      {!loading &&
+      {serviceConfigured &&
+      !loading &&
       rows.length === 0 &&
       accessToken &&
       isOwner &&
@@ -261,7 +271,7 @@ export function ActionsDeliveriesListPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Link
-                        to={`/webhooks/deliveries/${row.id}`}
+                        to={webhookDeliveryDetailPath(service.key, row.id)}
                         className="text-primary underline-offset-2 hover:underline"
                       >
                         {t('loginEventsOpenDetail')}

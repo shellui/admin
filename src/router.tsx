@@ -62,6 +62,25 @@ export const router = createHashRouter([
       { path: 'groups', element: <GroupsListPage /> },
       { path: 'oauth', element: <OAuthSetupPage /> },
       { path: 'scim', element: <ScimSetupPage /> },
+      { path: 'webhooks/hosting/deliveries/:deliveryId', element: <ActionsDeliveryDetailPage /> },
+      { path: 'webhooks/hosting/deliveries', element: <ActionsDeliveriesListPage /> },
+      { path: 'webhooks/hosting/new', element: <ActionsRuleEditorPage /> },
+      { path: 'webhooks/hosting/:ruleId', element: <ActionsRuleEditorPage /> },
+      { path: 'webhooks/hosting', element: <ActionsRulesListPage /> },
+      { path: 'webhooks/storage/deliveries/:deliveryId', element: <ActionsDeliveryDetailPage /> },
+      { path: 'webhooks/storage/deliveries', element: <ActionsDeliveriesListPage /> },
+      { path: 'webhooks/storage/new', element: <ActionsRuleEditorPage /> },
+      { path: 'webhooks/storage/:ruleId', element: <ActionsRuleEditorPage /> },
+      { path: 'webhooks/storage', element: <ActionsRulesListPage /> },
+      {
+        path: 'webhooks/identity',
+        element: (
+          <Navigate
+            to="/webhooks"
+            replace
+          />
+        ),
+      },
       { path: 'webhooks/deliveries/:deliveryId', element: <ActionsDeliveryDetailPage /> },
       { path: 'webhooks/deliveries', element: <ActionsDeliveriesListPage /> },
       { path: 'webhooks/new', element: <ActionsRuleEditorPage /> },

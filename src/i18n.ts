@@ -641,6 +641,28 @@ const resources = {
         'Magic link is disabled platform-wide. Company settings cannot turn it on until staff re-enables the global switch.',
       actionsPageTitle: 'Webhooks',
       actionsBadge: 'identity-webhooks',
+      webhooksServicePickerAria: 'Webhook service',
+      webhooksServiceIdentity: 'Identity',
+      webhooksServiceHosting: 'Hosting',
+      webhooksServiceStorage: 'Storage',
+      webhooksBadgeIdentity: 'identity-webhooks',
+      webhooksBadgeHosting: 'hosting-webhooks',
+      webhooksBadgeStorage: 'storage-webhooks',
+      webhooksPageDescriptionIdentity:
+        'Send signed webhook payloads when identity events fire. Webhook rules and delivery logs are scoped to your company.',
+      webhooksPageDescriptionHosting:
+        'Send signed webhook payloads when hosting events fire (apps and deployments). Webhook rules and delivery logs are scoped to your company.',
+      webhooksPageDescriptionStorage:
+        'Send signed webhook payloads when storage events fire (buckets and objects). Webhook rules and delivery logs are scoped to your company.',
+      webhooksEventScopeIdentity: 'identity',
+      webhooksEventScopeHosting: 'hosting',
+      webhooksEventScopeStorage: 'storage',
+      webhooksServiceNotConfiguredIdentity:
+        'Identity is not configured. Set backend.url in shellui.config.json so Shellui Admin can reach identity-service.',
+      webhooksServiceNotConfiguredHosting:
+        'Hosting is not configured. Set hosting.url in shellui.config.json (and hosting.showInAdmin if needed) to manage hosting webhooks.',
+      webhooksServiceNotConfiguredStorage:
+        'Storage is not configured. Set storage.url in shellui.config.json to manage storage webhooks.',
       actionsPageDescription:
         'Send signed webhook payloads when identity events fire. Webhook rules and delivery logs are scoped to your company.',
       actionsPageForbidden: 'You need company-owner access to manage webhooks for this company.',
@@ -677,14 +699,14 @@ const resources = {
       actionsRuleCreateTitle: 'Create webhook rule',
       actionsRuleEditTitle: 'Edit webhook rule',
       actionsRuleEditorDescription:
-        'Pick an identity event and configure the webhook URL, signing secret, and optional auth header.',
+        'Pick a {{scope}} event and configure the webhook URL, signing secret, and optional auth header.',
       actionsRuleBasicsTitle: 'Rule basics',
       actionsRuleBasicsDescription:
-        'Name the rule and choose which identity event triggers deliveries.',
+        'Name the rule and choose which {{scope}} event triggers deliveries.',
       actionsRuleEnabledLabel: 'Rule enabled',
       actionsSampleEnvelopeTitle: 'Sample webhook body',
       actionsSampleEnvelopeDescription:
-        'Read-only JSON from identity for the selected event. Real deliveries use the same envelope shape.',
+        'Read-only JSON from {{scope}} for the selected event. Real deliveries use the same envelope shape.',
       actionsSendTestEvent: 'Send test event',
       actionsSendTestLoading: 'Sending test event…',
       actionsSendTestSuccess: 'Test webhook accepted (webhook-id {{webhook_id}}).',
@@ -692,7 +714,7 @@ const resources = {
       actionsSendTestDisabledRule: 'Enable the rule before sending a test event.',
       actionsViewDeliveryLogs: 'View delivery logs for this rule',
       actionsWebhookConfigTitle: 'Webhook delivery',
-      actionsWebhookConfigDescription: 'Identity POSTs signed payloads to your HTTPS endpoint.',
+      actionsWebhookConfigDescription: '{{service}} POSTs signed payloads to your HTTPS endpoint.',
       actionsWebhookSecret: 'Signing secret',
       actionsWebhookSecretPlaceholder: 'Leave empty to keep the current secret',
       webhooksSecretGenerateHelp: 'Leave empty to generate a secure secret.',
@@ -711,7 +733,7 @@ const resources = {
       webhooksRotateLoading: 'Rotating…',
       webhooksRotateConfirmTitle: 'Rotate signing secret?',
       webhooksRotateConfirmDescription:
-        'Identity will generate a new secret and stop signing with the old one. Update n8n and any other receivers before you rely on new deliveries.',
+        'Shellui generates a new secret and stops signing with the old one. Update n8n and any other receivers before you rely on new deliveries.',
       webhooksRotateConfirmAction: 'Rotate secret',
       webhooksN8nDocLink: 'Using with n8n',
       actionsWebhookAuthHeaderName: 'Optional auth header name',
@@ -734,7 +756,8 @@ const resources = {
       actionsAttemptsDescription: 'Newest attempts appear last.',
       actionsAttemptsEmpty: 'No attempts recorded yet.',
       actionsPayloadTitle: 'Event payload',
-      actionsApiUnavailableGeneric: 'This API is not available on the connected identity version.',
+      actionsApiUnavailableGeneric:
+        'Webhooks API is not available on this service version. Update the service or run a build that includes company webhook endpoints.',
       groupsTitle: 'Groups',
       groupsDescription:
         'Create and rename Django auth groups. Membership is visible on each user profile in Admin; group names appear in JWT user_metadata.groups after login or refresh.',
@@ -1420,6 +1443,28 @@ const resources = {
         'Le lien magique est désactivé sur toute la plateforme. Les paramètres entreprise ne peuvent pas l’activer tant que le staff ne réactive pas l’interrupteur global.',
       actionsPageTitle: 'Webhooks',
       actionsBadge: 'identity-webhooks',
+      webhooksServicePickerAria: 'Service webhook',
+      webhooksServiceIdentity: 'Identité',
+      webhooksServiceHosting: 'Hébergement',
+      webhooksServiceStorage: 'Stockage',
+      webhooksBadgeIdentity: 'identity-webhooks',
+      webhooksBadgeHosting: 'hosting-webhooks',
+      webhooksBadgeStorage: 'storage-webhooks',
+      webhooksPageDescriptionIdentity:
+        'Envoyez des webhooks signés lors d’événements identité. Règles webhook et journaux de livraison sont limités à votre entreprise.',
+      webhooksPageDescriptionHosting:
+        'Envoyez des webhooks signés lors d’événements hébergement (apps et déploiements). Règles webhook et journaux de livraison sont limités à votre entreprise.',
+      webhooksPageDescriptionStorage:
+        'Envoyez des webhooks signés lors d’événements stockage (buckets et objets). Règles webhook et journaux de livraison sont limités à votre entreprise.',
+      webhooksEventScopeIdentity: 'identité',
+      webhooksEventScopeHosting: 'hébergement',
+      webhooksEventScopeStorage: 'stockage',
+      webhooksServiceNotConfiguredIdentity:
+        'Identité non configurée. Définissez backend.url dans shellui.config.json pour que Shellui Admin atteigne identity-service.',
+      webhooksServiceNotConfiguredHosting:
+        'Hébergement non configuré. Définissez hosting.url dans shellui.config.json (et hosting.showInAdmin si besoin) pour gérer les webhooks hébergement.',
+      webhooksServiceNotConfiguredStorage:
+        'Stockage non configuré. Définissez storage.url dans shellui.config.json pour gérer les webhooks stockage.',
       actionsPageDescription:
         'Envoyez des webhooks signés lors d’événements identité. Règles webhook et journaux de livraison sont limités à votre entreprise.',
       actionsPageForbidden:
@@ -1458,14 +1503,14 @@ const resources = {
       actionsRuleCreateTitle: 'Créer une règle webhook',
       actionsRuleEditTitle: 'Modifier la règle webhook',
       actionsRuleEditorDescription:
-        'Choisissez un événement identité et configurez l’URL webhook, le secret de signature et l’en-tête d’auth optionnel.',
+        'Choisissez un événement {{scope}} et configurez l’URL webhook, le secret de signature et l’en-tête d’auth optionnel.',
       actionsRuleBasicsTitle: 'Informations de base',
       actionsRuleBasicsDescription:
-        'Nommez la règle et choisissez l’événement identité déclencheur.',
+        'Nommez la règle et choisissez l’événement {{scope}} déclencheur.',
       actionsRuleEnabledLabel: 'Règle activée',
       actionsSampleEnvelopeTitle: 'Exemple de corps webhook',
       actionsSampleEnvelopeDescription:
-        'JSON lecture seule fourni par identity pour l’événement choisi. Les livraisons réelles utilisent la même forme d’enveloppe.',
+        'JSON lecture seule fourni par {{scope}} pour l’événement choisi. Les livraisons réelles utilisent la même forme d’enveloppe.',
       actionsSendTestEvent: 'Envoyer un événement test',
       actionsSendTestLoading: 'Envoi de l’événement test…',
       actionsSendTestSuccess: 'Webhook test accepté (webhook-id {{webhook_id}}).',
@@ -1474,7 +1519,7 @@ const resources = {
       actionsViewDeliveryLogs: 'Voir les journaux de livraison pour cette règle',
       actionsWebhookConfigTitle: 'Livraison webhook',
       actionsWebhookConfigDescription:
-        'Identity envoie des payloads signés vers votre endpoint HTTPS.',
+        '{{service}} envoie des payloads signés vers votre endpoint HTTPS.',
       actionsWebhookSecret: 'Secret de signature',
       actionsWebhookSecretPlaceholder: 'Laisser vide pour conserver le secret actuel',
       webhooksSecretGenerateHelp: 'Laisser vide pour générer un secret sécurisé.',
@@ -1495,7 +1540,7 @@ const resources = {
       webhooksRotateLoading: 'Rotation…',
       webhooksRotateConfirmTitle: 'Rotation du secret de signature ?',
       webhooksRotateConfirmDescription:
-        'Identity génère un nouveau secret et ne signe plus avec l’ancien. Mettez à jour n8n et les autres récepteurs avant de compter sur les nouvelles livraisons.',
+        'Shellui génère un nouveau secret et ne signe plus avec l’ancien. Mettez à jour n8n et les autres récepteurs avant de compter sur les nouvelles livraisons.',
       webhooksRotateConfirmAction: 'Rotation du secret',
       webhooksN8nDocLink: 'Utiliser avec n8n',
       actionsWebhookAuthHeaderName: 'Nom d’en-tête d’auth optionnel',
@@ -1518,7 +1563,7 @@ const resources = {
       actionsAttemptsEmpty: 'Aucune tentative enregistrée.',
       actionsPayloadTitle: 'Payload événement',
       actionsApiUnavailableGeneric:
-        'Cette API n’est pas disponible sur la version identity connectée.',
+        'L’API Webhooks n’est pas disponible sur cette version du service. Mettez à jour le service ou utilisez une version avec les endpoints webhook entreprise.',
       groupsTitle: 'Groupes',
       groupsDescription:
         'Créez et renommez les groupes Django. L’appartenance est visible sur chaque profil utilisateur dans l’admin ; les noms apparaissent dans user_metadata.groups du JWT après connexion ou rafraîchissement.',

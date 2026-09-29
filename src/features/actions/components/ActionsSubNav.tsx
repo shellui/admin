@@ -1,27 +1,32 @@
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
-import { WEBHOOKS_DELIVERIES_PATH, WEBHOOKS_RULES_PATH } from '@/lib/webhookRoutePaths';
+import {
+  isWebhooksDeliveriesSectionPath,
+  isWebhooksRulesSectionPath,
+  resolveWebhookServiceFromPathname,
+  webhookDeliveriesPath,
+  webhookRulesListPath,
+} from '@/lib/webhookRoutePaths';
 import { cn } from '@/lib/utils';
-
-const RULES_PATH = WEBHOOKS_RULES_PATH;
-const DELIVERIES_PATH = WEBHOOKS_DELIVERIES_PATH;
-
-function isRulesSectionPath(pathname: string): boolean {
-  if (pathname === RULES_PATH || pathname === `${RULES_PATH}/new`) return true;
-  if (!pathname.startsWith(`${RULES_PATH}/`)) return false;
-  return !pathname.startsWith(DELIVERIES_PATH);
-}
 
 export function ActionsSubNav() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
+  const serviceKey = resolveWebhookServiceFromPathname(pathname);
+
+  const rulesPath = webhookRulesListPath(serviceKey);
+  const deliveriesPath = webhookDeliveriesPath(serviceKey);
 
   const links = [
-    { to: RULES_PATH, labelKey: 'actionsNavRules' as const, active: isRulesSectionPath(pathname) },
     {
-      to: DELIVERIES_PATH,
+      to: rulesPath,
+      labelKey: 'actionsNavRules' as const,
+      active: isWebhooksRulesSectionPath(pathname),
+    },
+    {
+      to: deliveriesPath,
       labelKey: 'actionsNavDeliveries' as const,
-      active: pathname === DELIVERIES_PATH || pathname.startsWith(`${DELIVERIES_PATH}/`),
+      active: isWebhooksDeliveriesSectionPath(pathname),
     },
   ];
 
