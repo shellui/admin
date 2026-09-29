@@ -39,6 +39,13 @@ export function getCompanyIdFromJwt(accessToken: string): number | null {
   return null;
 }
 
+export function getEmailFromJwt(accessToken: string): string | null {
+  const payload = decodeJwtPayload(accessToken);
+  if (!payload) return null;
+  const raw = payload.email;
+  return typeof raw === 'string' && raw.trim() ? raw.trim() : null;
+}
+
 function jwtUserMetadata(accessToken: string): Record<string, unknown> | null {
   const payload = decodeJwtPayload(accessToken);
   if (!payload) return null;
