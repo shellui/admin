@@ -56,6 +56,23 @@ describe('oauthConsoleUrlKind', () => {
     ).toBe('https://www.linkedin.com/secure/developer?newapp=');
   });
 
+  it('parses multiple_allowed from the catalog', () => {
+    const multi = parseCatalogProvider({
+      docs_slug: 'openid_connect',
+      name: 'OpenID Connect',
+      multiple_allowed: true,
+    });
+    const single = parseCatalogProvider({
+      docs_slug: 'github',
+      name: 'GitHub',
+      multiple_allowed: false,
+    });
+    const legacy = parseCatalogProvider({ docs_slug: 'google', name: 'Google' });
+    expect(multi?.multiple_allowed).toBe(true);
+    expect(single?.multiple_allowed).toBe(false);
+    expect(legacy?.multiple_allowed).toBeUndefined();
+  });
+
   it('parses legacy console_url entries without exposing label in structured fields', () => {
     const provider = parseCatalogProvider({
       docs_slug: 'linkedin',

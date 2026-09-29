@@ -84,6 +84,7 @@ export function parseCatalogProvider(raw: unknown): OAuthCatalogProvider | null 
     console_url: consoleUrl,
     callback_url: typeof o.callback_url === 'string' ? o.callback_url : '',
     extra_settings_schema,
+    multiple_allowed: typeof o.multiple_allowed === 'boolean' ? o.multiple_allowed : undefined,
   };
 }
 

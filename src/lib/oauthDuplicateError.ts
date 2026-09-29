@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 
 const CODE_TO_KEY: Record<string, string> = {
+  oauth_app_duplicate_provider: 'oauthErrorDuplicateProvider',
   duplicate: 'oauthErrorDuplicateProvider',
   duplicate_provider: 'oauthErrorDuplicateProvider',
   provider_already_configured: 'oauthErrorDuplicateProvider',

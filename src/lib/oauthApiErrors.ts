@@ -1,6 +1,9 @@
 export type OAuthFieldErrors = Record<string, string>;
 
-const DUPLICATE_ERROR_CODES = new Set([
+/** Identity oauth-social-apps create conflict (identity #68). */
+export const OAUTH_APP_DUPLICATE_PROVIDER_CODE = 'oauth_app_duplicate_provider';
+
+const LEGACY_DUPLICATE_ERROR_CODES = new Set([
   'duplicate',
   'duplicate_provider',
   'provider_already_configured',
@@ -18,7 +21,7 @@ export type OAuthApiErrorPayload = {
 };
 
 function readErrorCode(o: Record<string, unknown>): string | null {
-  for (const key of ['code', 'error_code', 'errorCode'] as const) {
+  for (const key of ['error_code', 'code', 'errorCode'] as const) {
     const value = o[key];
     if (typeof value === 'string' && value.trim()) return value.trim();
   }
@@ -26,12 +29,10 @@ function readErrorCode(o: Record<string, unknown>): string | null {
 }
 
 function readExistingSocialAppId(o: Record<string, unknown>): number | null {
-  for (const key of [
-    'existing_social_app_id',
-    'social_app_id',
-    'existing_app_id',
-    'app_id',
-  ] as const) {
+  if (typeof o.social_app_id === 'number' && Number.isFinite(o.social_app_id)) {
+    return o.social_app_id;
+  }
+  for (const key of ['existing_social_app_id', 'existing_app_id', 'app_id'] as const) {
     const value = o[key];
     if (typeof value === 'number' && Number.isFinite(value)) return value;
   }
@@ -43,10 +44,11 @@ function readExistingSocialAppId(o: Record<string, unknown>): number | null {
 }
 
 function isDuplicateError(code: string | null, httpStatus: number): boolean {
+  if (code?.toLowerCase() === OAUTH_APP_DUPLICATE_PROVIDER_CODE) return true;
   if (httpStatus === 409) return true;
   if (!code) return false;
   const normalized = code.toLowerCase();
-  if (DUPLICATE_ERROR_CODES.has(normalized)) return true;
+  if (LEGACY_DUPLICATE_ERROR_CODES.has(normalized)) return true;
   return normalized.includes('duplicate');
 }
 
@@ -55,9 +57,7 @@ export function parseOAuthApiErrorPayload(body: unknown, httpStatus: number): OA
   const o = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
   const errorCode = readErrorCode(o);
   const existingSocialAppId = readExistingSocialAppId(o);
-  const isDuplicate =
-    isDuplicateError(errorCode, httpStatus) ||
-    (httpStatus === 400 && isDuplicateError(errorCode, 409));
+  const isDuplicate = isDuplicateError(errorCode, httpStatus);
   return {
     message,
     fieldErrors,

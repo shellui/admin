@@ -97,8 +97,11 @@ export function linkedSocialAppsByDocsSlug(
   return map;
 }
 
-/** Standard protocols and generic OAuth2 allow multiple social apps per company. */
+/** Whether a company may add more than one social app for this catalog provider. */
 export function isMultiInstanceCatalogProvider(provider: OAuthCatalogProvider): boolean {
+  if (typeof provider.multiple_allowed === 'boolean') {
+    return provider.multiple_allowed;
+  }
   if (provider.tier === 'generic') return true;
   return (GENERIC_PROVIDER_ORDER as readonly string[]).includes(provider.docs_slug);
 }

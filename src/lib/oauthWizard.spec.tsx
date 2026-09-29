@@ -235,6 +235,7 @@ describe('OAuth wizard UI', () => {
       name: 'OpenID Connect',
       tier: 'generic' as const,
       protocol: 'OIDC',
+      multiple_allowed: true,
     };
     render(
       <I18nextProvider i18n={i18n}>

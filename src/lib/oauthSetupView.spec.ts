@@ -163,6 +163,29 @@ describe('oauthSetupView', () => {
     ] as OAuthSocialAppRow[]);
     expect(map.get('openid_connect')?.map((a) => a.id)).toEqual([10, 11]);
     expect(
+      isMultiInstanceCatalogProvider(
+        provider({ docs_slug: 'openid_connect', tier: 'generic', multiple_allowed: true }),
+      ),
+    ).toBe(true);
+    expect(
+      isMultiInstanceCatalogProvider(
+        provider({ docs_slug: 'saml', tier: 'generic', multiple_allowed: true }),
+      ),
+    ).toBe(true);
+    expect(
+      isMultiInstanceCatalogProvider(
+        provider({ docs_slug: 'oauth2', tier: 'generic', multiple_allowed: false }),
+      ),
+    ).toBe(false);
+    expect(
+      isMultiInstanceCatalogProvider(
+        provider({ docs_slug: 'github', tier: 'popular', multiple_allowed: false }),
+      ),
+    ).toBe(false);
+  });
+
+  it('falls back to tier when multiple_allowed is absent from the catalog', () => {
+    expect(
       isMultiInstanceCatalogProvider(provider({ docs_slug: 'openid_connect', tier: 'generic' })),
     ).toBe(true);
     expect(isMultiInstanceCatalogProvider(provider({ docs_slug: 'github', tier: 'popular' }))).toBe(

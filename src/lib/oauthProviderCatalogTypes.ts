@@ -54,6 +54,8 @@ export type OAuthCatalogProvider = {
   console_url: OAuthConsoleUrlEntry[];
   callback_url: string;
   extra_settings_schema: OAuthExtraSettingField[];
+  /** When true, a company may configure more than one social app for this provider. */
+  multiple_allowed?: boolean;
 };
 
 export type OAuthProviderCatalogResponse = {
