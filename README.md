@@ -15,14 +15,14 @@ External menus (host custom apps, storage files, Swagger/ReDoc) are opened as ab
 
 ## What the panel covers
 
-| Area            | When it appears                                         | Highlights                                                                                                                                     |
-| --------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Dashboard**   | Always                                                  | Company-scoped KPIs from identity (`GET /api/v1/metrics`). Optional storage and hosting Prometheus metrics when those services are configured. |
-| **Identity**    | Always (with `backend.url`)                             | Company, users, groups, login events, OAuth apps, personal access tokens; staff Django admin link.                                             |
-| **Storage**     | Host `storage.url` set                                  | Statistics (`GET /storage/v1/stats`); optional Files explorer via `storage.filesUrl`; staff Django admin.                                      |
-| **Hosting**     | Host `hosting.url` set and `showInAdmin` is not `false` | Apps list/detail, statistics, dashboard hosting KPIs (`GET /hosting/v1/metrics`); staff Django admin.                                          |
-| **Custom apps** | Host `administration` set                               | Extra sidebar links below Dashboard (iframe or external).                                                                                      |
-| **API docs**    | Shell developer mode                                    | Swagger / ReDoc for identity (and storage / hosting when those sections are on).                                                               |
+| Area            | When it appears                                         | Highlights                                                                                                                                                          |
+| --------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Dashboard**   | Always                                                  | Company-scoped KPIs from identity (`GET /api/v1/metrics`). Optional storage and hosting Prometheus metrics when those services are configured.                      |
+| **Identity**    | Always (with `backend.url`)                             | Company (incl. magic link toggle), users, groups, login events, OAuth apps, SCIM, Actions (rules + delivery logs), personal access tokens; staff Django admin link. |
+| **Storage**     | Host `storage.url` set                                  | Statistics (`GET /storage/v1/stats`); optional Files explorer via `storage.filesUrl`; staff Django admin.                                                           |
+| **Hosting**     | Host `hosting.url` set and `showInAdmin` is not `false` | Apps list/detail, statistics, dashboard hosting KPIs (`GET /hosting/v1/metrics`); staff Django admin.                                                               |
+| **Custom apps** | Host `administration` set                               | Extra sidebar links below Dashboard (iframe or external).                                                                                                           |
+| **API docs**    | Shell developer mode                                    | Swagger / ReDoc for identity (and storage / hosting when those sections are on).                                                                                    |
 
 ## Prerequisites
 
@@ -68,6 +68,23 @@ hosting: {
   // showInAdmin: false, // hide Admin → Hosting while keeping deploy
 },
 ```
+
+## Identity company admin (SCIM, magic link, Actions)
+
+Point `backend.url` at a local or deployed **identity-service** (for example `http://localhost:8000`). Sign in through Shellui as a **company owner** so the JWT includes `company_id` and `user_metadata.is_company_owner`.
+
+| Route                   | API                                                                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `#/scim`                | `GET /api/v1/scim`, token CRUD under `/api/v1/scim/tokens`                                                               |
+| `#/company`             | `GET/PATCH /api/v1/auth-methods` (`enable_magic_link`, read-only global kill switch)                                     |
+| `#/webhooks`            | `GET/POST/PATCH/DELETE /api/v1/actions/rules`; `POST …/rules/<id>/send-test` for a sample signed webhook (no outbox row) |
+| `#/webhooks/deliveries` | `GET /api/v1/actions/deliveries`, detail + `POST …/requeue`                                                              |
+
+Legacy `#/actions/...` hash routes redirect to the `#/webhooks/...` paths above.
+
+The Webhooks UI lives in **`src/features/actions/`** with an `ActionsApiClient` interface and identity implementation in `src/lib/actionsApi.ts`. Another backend (for example storage events) can reuse the same screens by swapping the client.
+
+If identity does not yet expose webhook Actions API endpoints, the UI shows a clear “API not available on this identity version” banner while SCIM and magic link still work on older builds.
 
 ## OAuth setup and redirect allowlist
 
