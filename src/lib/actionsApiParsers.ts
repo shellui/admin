@@ -7,8 +7,7 @@ import type {
   ActionEventCatalogEntry,
   ActionRule,
   ActionRuleCreatePayload,
-  ActionRuleEmailConfig,
-  ActionRuleKind,
+  ActionRuleSendTestResult,
   ActionRuleUpdatePayload,
   ActionRuleWebhookConfig,
 } from '@/features/actions/types';
@@ -17,16 +16,6 @@ function isoString(value: unknown): string {
   if (value == null) return '';
   if (typeof value === 'string') return value;
   return String(value);
-}
-
-function parseEmailConfig(cfg: Record<string, unknown>): ActionRuleEmailConfig {
-  const recipients = Array.isArray(cfg.recipients)
-    ? cfg.recipients.filter((r): r is string => typeof r === 'string')
-    : undefined;
-  return {
-    ...(recipients ? { recipients } : {}),
-    include_payload_email: cfg.include_payload_email === true,
-  };
 }
 
 function parseWebhookConfig(cfg: Record<string, unknown>): ActionRuleWebhookConfig {
@@ -42,7 +31,10 @@ export function parseIdentityRule(raw: unknown): ActionRule {
     throw new Error('Unexpected actions rule response.');
   }
   const o = raw as Record<string, unknown>;
-  const kind: ActionRuleKind = o.action_kind === 'webhook' ? 'webhook' : 'email';
+  const actionKind = o.action_kind;
+  if (actionKind != null && actionKind !== 'webhook') {
+    throw new Error('Unexpected actions rule response.');
+  }
   const configRaw =
     o.config && typeof o.config === 'object' ? (o.config as Record<string, unknown>) : {};
   return {
@@ -50,9 +42,8 @@ export function parseIdentityRule(raw: unknown): ActionRule {
     name: typeof o.name === 'string' ? o.name : '',
     event:
       typeof o.event_type === 'string' ? o.event_type : typeof o.event === 'string' ? o.event : '',
-    kind,
     enabled: o.enabled !== false,
-    config: kind === 'webhook' ? parseWebhookConfig(configRaw) : parseEmailConfig(configRaw),
+    config: parseWebhookConfig(configRaw),
     created_at: isoString(o.created_at),
     updated_at: isoString(o.updated_at),
   };
@@ -86,10 +77,30 @@ function parseEventEntry(raw: unknown): ActionEventCatalogEntry {
   }
   const o = raw as Record<string, unknown>;
   const key = typeof o.type === 'string' ? o.type : typeof o.key === 'string' ? o.key : '';
+  const sample_envelope =
+    o.sample_envelope !== undefined && o.sample_envelope !== null ? o.sample_envelope : undefined;
   return {
     key,
     label: typeof o.label === 'string' ? o.label : undefined,
     description: typeof o.description === 'string' ? o.description : undefined,
+    ...(sample_envelope !== undefined ? { sample_envelope } : {}),
+  };
+}
+
+export function parseSendTestResult(body: unknown): ActionRuleSendTestResult {
+  if (!body || typeof body !== 'object') {
+    throw new Error('Unexpected send-test response.');
+  }
+  const o = body as Record<string, unknown>;
+  const webhook_id = typeof o.webhook_id === 'string' ? o.webhook_id : '';
+  const event_type = typeof o.event_type === 'string' ? o.event_type : '';
+  if (!webhook_id) {
+    throw new Error('Unexpected send-test response.');
+  }
+  return {
+    ok: o.ok === true,
+    webhook_id,
+    event_type,
   };
 }
 
@@ -197,7 +208,6 @@ export function toIdentityRuleWriteBody(
 
   if (payload.name !== undefined) out.name = payload.name;
   if (payload.event !== undefined) out.event_type = payload.event;
-  if (payload.kind !== undefined) out.action_kind = payload.kind;
   if (payload.enabled !== undefined) out.enabled = payload.enabled;
 
   if (payload.config) {

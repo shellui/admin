@@ -673,10 +673,15 @@ const resources = {
       actionsRuleBasicsDescription:
         'Name the rule and choose which identity event triggers deliveries.',
       actionsRuleEnabledLabel: 'Rule enabled',
-      actionsLegacyEmailTitle: 'Email action rules are no longer supported',
-      actionsLegacyEmailDescription:
-        'This rule used the retired email channel. Create a webhook rule instead, or remove it in identity when the API allows.',
-      actionsBackToRules: 'Back to rules',
+      actionsSampleEnvelopeTitle: 'Sample webhook body',
+      actionsSampleEnvelopeDescription:
+        'Read-only JSON from identity for the selected event. Real deliveries use the same envelope shape.',
+      actionsSendTestEvent: 'Send test event',
+      actionsSendTestLoading: 'Sending test event…',
+      actionsSendTestSuccess: 'Test webhook accepted (webhook-id {{webhook_id}}).',
+      actionsSendTestError: 'Could not deliver the test webhook.',
+      actionsSendTestDisabledRule: 'Enable the rule before sending a test event.',
+      actionsViewDeliveryLogs: 'View delivery logs for this rule',
       actionsWebhookConfigTitle: 'Webhook delivery',
       actionsWebhookConfigDescription: 'Identity POSTs signed payloads to your HTTPS endpoint.',
       actionsWebhookSecret: 'Signing secret',
@@ -1415,10 +1420,15 @@ const resources = {
       actionsRuleBasicsDescription:
         'Nommez la règle et choisissez l’événement identité déclencheur.',
       actionsRuleEnabledLabel: 'Règle activée',
-      actionsLegacyEmailTitle: 'Les règles e-mail ne sont plus prises en charge',
-      actionsLegacyEmailDescription:
-        'Cette règle utilisait le canal e-mail retiré. Créez une règle webhook ou supprimez-la dans identity quand l’API le permettra.',
-      actionsBackToRules: 'Retour aux règles',
+      actionsSampleEnvelopeTitle: 'Exemple de corps webhook',
+      actionsSampleEnvelopeDescription:
+        'JSON lecture seule fourni par identity pour l’événement choisi. Les livraisons réelles utilisent la même forme d’enveloppe.',
+      actionsSendTestEvent: 'Envoyer un événement test',
+      actionsSendTestLoading: 'Envoi de l’événement test…',
+      actionsSendTestSuccess: 'Webhook test accepté (webhook-id {{webhook_id}}).',
+      actionsSendTestError: 'Impossible de livrer le webhook test.',
+      actionsSendTestDisabledRule: 'Activez la règle avant d’envoyer un événement test.',
+      actionsViewDeliveryLogs: 'Voir les journaux de livraison pour cette règle',
       actionsWebhookConfigTitle: 'Livraison webhook',
       actionsWebhookConfigDescription:
         'Identity envoie des payloads signés vers votre endpoint HTTPS.',

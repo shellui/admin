@@ -4,28 +4,18 @@ import {
   parseEventsList,
   parseIdentityRule,
   parseRulesList,
+  parseSendTestResult,
   toIdentityRuleWriteBody,
 } from '@/lib/actionsApiParsers';
 
 describe('actionsApi parsers', () => {
-  it('parseRulesList reads identity results envelope and legacy email rules', () => {
+  it('parseRulesList reads identity webhook rules without action_kind', () => {
     const rules = parseRulesList({
       results: [
-        {
-          id: 12,
-          name: 'Ops mail',
-          event_type: 'identity.user.created',
-          action_kind: 'email',
-          enabled: true,
-          config: { recipients: ['ops@example.com'], include_payload_email: false },
-          created_at: '2026-01-01T00:00:00Z',
-          updated_at: '2026-01-02T00:00:00Z',
-        },
         {
           id: 13,
           name: 'Hook',
           event_type: 'identity.group.created',
-          action_kind: 'webhook',
           enabled: true,
           config: { url: 'https://hooks.example.com' },
           created_at: '2026-01-01T00:00:00Z',
@@ -33,23 +23,55 @@ describe('actionsApi parsers', () => {
         },
       ],
     });
-    expect(rules).toHaveLength(2);
-    expect(rules[0].kind).toBe('email');
-    expect(rules[1].kind).toBe('webhook');
+    expect(rules).toHaveLength(1);
+    expect(rules[0].event).toBe('identity.group.created');
+    expect(rules[0].config.url).toBe('https://hooks.example.com');
   });
 
-  it('parseEventsList reads identity event catalog', () => {
+  it('parseIdentityRule rejects non-webhook action_kind', () => {
+    expect(() =>
+      parseIdentityRule({
+        id: 1,
+        event_type: 'identity.user.created',
+        action_kind: 'email',
+        config: {},
+      }),
+    ).toThrow();
+  });
+
+  it('parseEventsList maps sample_envelope from identity catalog', () => {
+    const envelope = {
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      type: 'identity.user.created',
+      company: { id: 1, slug: 'acme', name: 'Acme' },
+      data: { email: 'ada@acme.com' },
+    };
     const events = parseEventsList({
       results: [
         {
           type: 'identity.user.created',
           label: 'User created',
           description: 'Fires when a user is created',
+          sample_envelope: envelope,
         },
       ],
     });
     expect(events[0].key).toBe('identity.user.created');
-    expect(events[0].label).toBe('User created');
+    expect(events[0].sample_envelope).toEqual(envelope);
+  });
+
+  it('parseSendTestResult maps identity send-test payload', () => {
+    expect(
+      parseSendTestResult({
+        ok: true,
+        webhook_id: '550e8400-e29b-41d4-a716-446655440099',
+        event_type: 'identity.user.created',
+      }),
+    ).toEqual({
+      ok: true,
+      webhook_id: '550e8400-e29b-41d4-a716-446655440099',
+      event_type: 'identity.user.created',
+    });
   });
 
   it('parseDeliveriesList maps identity delivery fields', () => {
@@ -76,11 +98,10 @@ describe('actionsApi parsers', () => {
     expect(parsed.results[0].attempts_count).toBe(2);
   });
 
-  it('toIdentityRuleWriteBody flattens webhook rule for POST', () => {
+  it('toIdentityRuleWriteBody omits action_kind for webhook POST', () => {
     const body = toIdentityRuleWriteBody({
       name: 'Hook',
       event: 'identity.user.created',
-      kind: 'webhook',
       config: {
         url: 'https://hooks.example.com',
         secret: 'shhh',
@@ -89,7 +110,7 @@ describe('actionsApi parsers', () => {
       },
     });
     expect(body.event_type).toBe('identity.user.created');
-    expect(body.action_kind).toBe('webhook');
+    expect(body.action_kind).toBeUndefined();
     expect(body.url).toBe('https://hooks.example.com');
     expect(body.secret).toBe('shhh');
     expect(body.authorization_header).toBe('Authorization: Bearer token');
@@ -110,7 +131,6 @@ describe('actionsApi parsers', () => {
       created_at: '2026-01-01T00:00:00Z',
       updated_at: '2026-01-01T00:00:00Z',
     });
-    expect(rule.kind).toBe('webhook');
     expect(rule.config).toMatchObject({
       url: 'https://hooks.example.com',
       secret_set: true,

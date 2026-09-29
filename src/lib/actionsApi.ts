@@ -16,6 +16,7 @@ import {
   parseEventsList,
   parseIdentityRule,
   parseRulesList,
+  parseSendTestResult,
   toIdentityRuleWriteBody,
 } from '@/lib/actionsApiParsers';
 
@@ -77,6 +78,17 @@ export function createIdentityActionsApiClient(
       );
       const body = await readJsonOrThrow(res, ACTIONS_API_UNAVAILABLE);
       return parseIdentityRule(body);
+    },
+
+    async sendRuleTest(id: ActionRuleId) {
+      const res = await identityAuthFetch(
+        `${rulePath(id)}/send-test`,
+        accessToken,
+        { method: 'POST' },
+        company,
+      );
+      const body = await readJsonOrThrow(res, ACTIONS_API_UNAVAILABLE);
+      return parseSendTestResult(body);
     },
 
     async deleteRule(id: ActionRuleId): Promise<void> {

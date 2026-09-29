@@ -43,8 +43,7 @@ export function ActionsRulesListPage() {
     setLoading(true);
     setError(null);
     try {
-      const all = await api.fetchRules();
-      setRows(all.filter((rule) => rule.kind === 'webhook'));
+      setRows(await api.fetchRules());
     } catch (e) {
       setRows([]);
       setError(e);

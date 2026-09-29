@@ -17,6 +17,15 @@ import {
 import { useActionsApi } from '@/features/actions/useActionsApi';
 import type { ActionEventCatalogEntry, ActionRuleWebhookConfig } from '@/features/actions/types';
 
+function formatSampleEnvelope(value: unknown): string {
+  if (value === undefined) return '';
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
 export function ActionsRuleEditorPage() {
   const { t } = useTranslation();
   const { ruleId } = useParams();
@@ -31,7 +40,11 @@ export function ActionsRuleEditorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [legacyEmailRule, setLegacyEmailRule] = useState(false);
+  const [sendTestLoading, setSendTestLoading] = useState(false);
+  const [sendTestFeedback, setSendTestFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
   const [name, setName] = useState('');
   const [eventKey, setEventKey] = useState('');
@@ -45,6 +58,16 @@ export function ActionsRuleEditorPage() {
     () => events.find((e) => e.key === eventKey) ?? null,
     [events, eventKey],
   );
+
+  const sampleEnvelopeText = useMemo(
+    () => formatSampleEnvelope(selectedEvent?.sample_envelope),
+    [selectedEvent?.sample_envelope],
+  );
+
+  const deliveryLogHref =
+    numericId != null
+      ? `/actions/deliveries?action_rule_id=${encodeURIComponent(String(numericId))}`
+      : '/actions/deliveries';
 
   const loadCatalog = useCallback(async () => {
     if (!api || !isOwner) return [];
@@ -64,7 +87,6 @@ export function ActionsRuleEditorPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    setLegacyEmailRule(false);
     void (async () => {
       try {
         const catalog = await loadCatalog();
@@ -75,10 +97,6 @@ export function ActionsRuleEditorPage() {
         if (!isCreate && numericId != null) {
           const rule = await loadRule();
           if (cancelled || !rule) return;
-          if (rule.kind === 'email') {
-            setLegacyEmailRule(true);
-            return;
-          }
           setName(rule.name);
           setEventKey(rule.event);
           setEnabled(rule.enabled);
@@ -98,7 +116,7 @@ export function ActionsRuleEditorPage() {
   }, [api, isCreate, isOwner, loadCatalog, loadRule, numericId]);
 
   async function onSave() {
-    if (!api || !name.trim() || !eventKey || legacyEmailRule) return;
+    if (!api || !name.trim() || !eventKey) return;
     setSaving(true);
     setError(null);
     try {
@@ -117,7 +135,6 @@ export function ActionsRuleEditorPage() {
         const created = await api.createRule({
           name: name.trim(),
           event: eventKey,
-          kind: 'webhook',
           enabled,
           config,
         });
@@ -126,7 +143,6 @@ export function ActionsRuleEditorPage() {
         await api.updateRule(numericId, {
           name: name.trim(),
           event: eventKey,
-          kind: 'webhook',
           enabled,
           config,
         });
@@ -135,6 +151,26 @@ export function ActionsRuleEditorPage() {
       setError(e);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function onSendTest() {
+    if (!api || numericId == null || !enabled) return;
+    setSendTestLoading(true);
+    setSendTestFeedback(null);
+    try {
+      const result = await api.sendRuleTest(numericId);
+      setSendTestFeedback({
+        type: 'success',
+        message: t('actionsSendTestSuccess', { webhook_id: result.webhook_id }),
+      });
+    } catch (e) {
+      setSendTestFeedback({
+        type: 'error',
+        message: e instanceof Error ? e.message : t('actionsSendTestError'),
+      });
+    } finally {
+      setSendTestLoading(false);
     }
   }
 
@@ -188,28 +224,7 @@ export function ActionsRuleEditorPage() {
         </div>
       ) : null}
 
-      {legacyEmailRule ? (
-        <Card className="border-border/80 shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-heading text-lg">{t('actionsLegacyEmailTitle')}</CardTitle>
-            <CardDescription className="font-mono text-xs">
-              {t('actionsLegacyEmailDescription')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              asChild
-            >
-              <Link to="/actions/rules">{t('actionsBackToRules')}</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {accessToken && isOwner && api && !loading && !legacyEmailRule ? (
+      {accessToken && isOwner && api && !loading ? (
         <div className="space-y-6">
           <Card className="border-border/80 shadow-sm">
             <CardHeader>
@@ -263,6 +278,24 @@ export function ActionsRuleEditorPage() {
               </label>
             </CardContent>
           </Card>
+
+          {sampleEnvelopeText ? (
+            <Card className="border-border/80 shadow-sm">
+              <CardHeader>
+                <CardTitle className="font-heading text-lg">
+                  {t('actionsSampleEnvelopeTitle')}
+                </CardTitle>
+                <CardDescription className="font-mono text-xs">
+                  {t('actionsSampleEnvelopeDescription')}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <pre className="max-h-80 overflow-auto rounded-md border border-border bg-muted/30 p-3 font-mono text-[11px] leading-relaxed">
+                  {sampleEnvelopeText}
+                </pre>
+              </CardContent>
+            </Card>
+          ) : null}
 
           <Card className="border-border/80 shadow-sm">
             <CardHeader>
@@ -341,7 +374,41 @@ export function ActionsRuleEditorPage() {
             >
               <Link to="/actions/rules">{t('actionsCancel')}</Link>
             </Button>
+            {!isCreate && numericId != null ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={sendTestLoading || saving || !enabled}
+                title={!enabled ? t('actionsSendTestDisabledRule') : undefined}
+                onClick={() => void onSendTest()}
+              >
+                {sendTestLoading ? t('actionsSendTestLoading') : t('actionsSendTestEvent')}
+              </Button>
+            ) : null}
           </div>
+
+          {sendTestFeedback ? (
+            <div className="space-y-2 font-mono text-xs">
+              <Text
+                className={
+                  sendTestFeedback.type === 'success'
+                    ? 'text-emerald-800 dark:text-emerald-200'
+                    : 'text-destructive'
+                }
+              >
+                {sendTestFeedback.message}
+              </Text>
+              {sendTestFeedback.type === 'success' ? (
+                <Link
+                  to={deliveryLogHref}
+                  className="text-primary underline-offset-2 hover:underline"
+                >
+                  {t('actionsViewDeliveryLogs')}
+                </Link>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

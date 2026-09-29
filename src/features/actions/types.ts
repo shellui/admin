@@ -1,17 +1,11 @@
-export type ActionRuleKind = 'email' | 'webhook';
-
 export type ActionRuleId = string | number;
 
 export type ActionEventCatalogEntry = {
   key: string;
   label?: string;
   description?: string;
-};
-
-/** Legacy email rules may still appear in API responses until identity drops the channel. */
-export type ActionRuleEmailConfig = {
-  recipients?: string[];
-  include_payload_email?: boolean;
+  /** Sample webhook JSON body for this event (company-scoped from identity). */
+  sample_envelope?: unknown;
 };
 
 export type ActionRuleWebhookConfig = {
@@ -27,11 +21,16 @@ export type ActionRule = {
   id: ActionRuleId;
   name: string;
   event: string;
-  kind: ActionRuleKind;
   enabled: boolean;
-  config: ActionRuleEmailConfig | ActionRuleWebhookConfig;
+  config: ActionRuleWebhookConfig;
   created_at: string;
   updated_at: string;
+};
+
+export type ActionRuleSendTestResult = {
+  ok: boolean;
+  webhook_id: string;
+  event_type: string;
 };
 
 export type ActionDeliveryStatus =
@@ -83,7 +82,6 @@ export type ActionDeliveryListFilters = {
 export type ActionRuleCreatePayload = {
   name: string;
   event: string;
-  kind: 'webhook';
   enabled?: boolean;
   config: ActionRuleWebhookConfig;
 };
@@ -99,6 +97,7 @@ export interface ActionsApiClient {
   createRule(payload: ActionRuleCreatePayload): Promise<ActionRule>;
   updateRule(id: ActionRuleId, payload: ActionRuleUpdatePayload): Promise<ActionRule>;
   deleteRule(id: ActionRuleId): Promise<void>;
+  sendRuleTest(id: ActionRuleId): Promise<ActionRuleSendTestResult>;
   fetchDeliveries(filters: ActionDeliveryListFilters): Promise<ActionDeliveriesListResponse>;
   fetchDelivery(id: string): Promise<ActionDeliveryDetail>;
   requeueDelivery(id: string): Promise<void>;
