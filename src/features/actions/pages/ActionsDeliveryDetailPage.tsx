@@ -15,7 +15,10 @@ import {
   isApiUnavailableError,
 } from '@/features/actions/components/ApiUnavailableNotice';
 import { useActionsApi } from '@/features/actions/useActionsApi';
+import { WebhookServiceUnavailable } from '@/features/actions/components/WebhookServiceUnavailable';
+import { useWebhookPageMeta } from '@/features/actions/useWebhookPageMeta';
 import type { ActionDeliveryDetail } from '@/features/actions/types';
+import { webhookDeliveriesPath } from '@/lib/webhookRoutePaths';
 
 function statusClassName(status: string) {
   const s = status.toLowerCase();
@@ -31,7 +34,8 @@ export function ActionsDeliveryDetailPage() {
   const id = deliveryId?.trim() ?? '';
   const accessToken = useShelluiAccessToken();
   const isOwner = Boolean(accessToken && getIsCompanyOwnerFromJwt(accessToken));
-  const { api } = useActionsApi(accessToken);
+  const { service, serviceConfigured } = useWebhookPageMeta();
+  const { api } = useActionsApi(accessToken, service.key);
 
   const [detail, setDetail] = useState<ActionDeliveryDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,7 +98,7 @@ export function ActionsDeliveryDetailPage() {
             variant="secondary"
             className="font-mono text-[10px] uppercase"
           >
-            {t('actionsBadge')}
+            {t(service.badgeKey)}
           </Badge>
         </div>
         <Text className="max-w-3xl text-sm text-muted-foreground">
@@ -104,13 +108,15 @@ export function ActionsDeliveryDetailPage() {
 
       <ActionsSubNav />
 
+      {!serviceConfigured ? <WebhookServiceUnavailable serviceKey={service.key} /> : null}
+
       <Button
         type="button"
         size="sm"
         variant="outline"
         asChild
       >
-        <Link to="/webhooks/deliveries">{t('actionsBackToDeliveries')}</Link>
+        <Link to={webhookDeliveriesPath(service.key)}>{t('actionsBackToDeliveries')}</Link>
       </Button>
 
       {!accessToken && (

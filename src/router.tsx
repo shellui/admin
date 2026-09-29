@@ -19,13 +19,31 @@ import { HostingAppDetailPage } from '@/pages/HostingAppDetailPage';
 import { HostingAppsPage } from '@/pages/HostingAppsPage';
 import { HostingStatisticsPage } from '@/pages/HostingStatisticsPage';
 import { StorageStatisticsPage } from '@/pages/StorageStatisticsPage';
+import {
+  legacyWebhooksRedirectTarget,
+  webhookDeliveriesPath,
+  webhookDeliveryDetailPath,
+  webhookRuleEditPath,
+  webhookRulesListPath,
+  webhookRulesNewPath,
+} from '@/lib/webhookRoutePaths';
+
+function LegacyWebhooksCatchAll() {
+  const { '*': rest } = useParams();
+  const pathname = rest?.trim() ? `/webhooks/${rest.trim()}` : '/webhooks';
+  return (
+    <Navigate
+      to={legacyWebhooksRedirectTarget(pathname)}
+      replace
+    />
+  );
+}
 
 function LegacyActionsRuleRedirect() {
   const { ruleId } = useParams();
-  const suffix = ruleId ? encodeURIComponent(ruleId) : '';
   return (
     <Navigate
-      to={suffix ? `/webhooks/${suffix}` : '/webhooks'}
+      to={ruleId ? webhookRuleEditPath('identity', ruleId) : webhookRulesListPath('identity')}
       replace
     />
   );
@@ -37,13 +55,37 @@ function LegacyActionsDeliveryRedirect() {
     <Navigate
       to={
         deliveryId
-          ? `/webhooks/deliveries/${encodeURIComponent(deliveryId)}`
-          : '/webhooks/deliveries'
+          ? webhookDeliveryDetailPath('identity', deliveryId)
+          : webhookDeliveriesPath('identity')
       }
       replace
     />
   );
 }
+
+const identityWebhookRoutes = [
+  { path: 'identity/webhooks/deliveries/:deliveryId', element: <ActionsDeliveryDetailPage /> },
+  { path: 'identity/webhooks/deliveries', element: <ActionsDeliveriesListPage /> },
+  { path: 'identity/webhooks/new', element: <ActionsRuleEditorPage /> },
+  { path: 'identity/webhooks/:ruleId', element: <ActionsRuleEditorPage /> },
+  { path: 'identity/webhooks', element: <ActionsRulesListPage /> },
+] as const;
+
+const hostingWebhookRoutes = [
+  { path: 'hosting/webhooks/deliveries/:deliveryId', element: <ActionsDeliveryDetailPage /> },
+  { path: 'hosting/webhooks/deliveries', element: <ActionsDeliveriesListPage /> },
+  { path: 'hosting/webhooks/new', element: <ActionsRuleEditorPage /> },
+  { path: 'hosting/webhooks/:ruleId', element: <ActionsRuleEditorPage /> },
+  { path: 'hosting/webhooks', element: <ActionsRulesListPage /> },
+] as const;
+
+const storageWebhookRoutes = [
+  { path: 'storage/webhooks/deliveries/:deliveryId', element: <ActionsDeliveryDetailPage /> },
+  { path: 'storage/webhooks/deliveries', element: <ActionsDeliveriesListPage /> },
+  { path: 'storage/webhooks/new', element: <ActionsRuleEditorPage /> },
+  { path: 'storage/webhooks/:ruleId', element: <ActionsRuleEditorPage /> },
+  { path: 'storage/webhooks', element: <ActionsRulesListPage /> },
+] as const;
 
 /**
  * Hash routes: `#/`, `#/company`, `#/users`, …
@@ -62,16 +104,27 @@ export const router = createHashRouter([
       { path: 'groups', element: <GroupsListPage /> },
       { path: 'oauth', element: <OAuthSetupPage /> },
       { path: 'scim', element: <ScimSetupPage /> },
-      { path: 'webhooks/deliveries/:deliveryId', element: <ActionsDeliveryDetailPage /> },
-      { path: 'webhooks/deliveries', element: <ActionsDeliveriesListPage /> },
-      { path: 'webhooks/new', element: <ActionsRuleEditorPage /> },
-      { path: 'webhooks/:ruleId', element: <ActionsRuleEditorPage /> },
-      { path: 'webhooks', element: <ActionsRulesListPage /> },
+      ...identityWebhookRoutes,
+      ...hostingWebhookRoutes,
+      ...storageWebhookRoutes,
+      {
+        path: 'webhooks/*',
+        element: <LegacyWebhooksCatchAll />,
+      },
+      {
+        path: 'webhooks',
+        element: (
+          <Navigate
+            to={webhookRulesListPath('identity')}
+            replace
+          />
+        ),
+      },
       {
         path: 'actions/rules/new',
         element: (
           <Navigate
-            to="/webhooks/new"
+            to={webhookRulesNewPath('identity')}
             replace
           />
         ),
@@ -81,7 +134,7 @@ export const router = createHashRouter([
         path: 'actions/rules',
         element: (
           <Navigate
-            to="/webhooks"
+            to={webhookRulesListPath('identity')}
             replace
           />
         ),
@@ -94,7 +147,7 @@ export const router = createHashRouter([
         path: 'actions/deliveries',
         element: (
           <Navigate
-            to="/webhooks/deliveries"
+            to={webhookDeliveriesPath('identity')}
             replace
           />
         ),
@@ -103,7 +156,7 @@ export const router = createHashRouter([
         path: 'actions',
         element: (
           <Navigate
-            to="/webhooks"
+            to={webhookRulesListPath('identity')}
             replace
           />
         ),

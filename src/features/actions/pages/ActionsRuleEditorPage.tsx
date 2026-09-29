@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,16 @@ import {
   isApiUnavailableError,
 } from '@/features/actions/components/ApiUnavailableNotice';
 import { useActionsApi } from '@/features/actions/useActionsApi';
+import { WebhookServiceUnavailable } from '@/features/actions/components/WebhookServiceUnavailable';
+import { useWebhookPageMeta } from '@/features/actions/useWebhookPageMeta';
 import type { ActionEventCatalogEntry, ActionRuleWebhookConfig } from '@/features/actions/types';
+import {
+  isWebhookCreatePath,
+  parseWebhookRuleIdFromPathname,
+  webhookDeliveriesPath,
+  webhookRuleEditPath,
+  webhookRulesListPath,
+} from '@/lib/webhookRoutePaths';
 
 function formatSampleEnvelope(value: unknown): string {
   if (value === undefined) return '';
@@ -38,14 +47,15 @@ function ruleHasStoredSecret(cfg: ActionRuleWebhookConfig): boolean {
 
 export function ActionsRuleEditorPage() {
   const { t } = useTranslation();
-  const { ruleId } = useParams();
-  const isCreate = ruleId === 'new' || !ruleId;
-  const numericId = !isCreate && ruleId ? Number.parseInt(ruleId, 10) : null;
   const navigate = useNavigate();
   const location = useLocation();
+  const isCreate = isWebhookCreatePath(location.pathname);
+  const ruleIdParam = parseWebhookRuleIdFromPathname(location.pathname);
+  const numericId = !isCreate && ruleIdParam ? Number.parseInt(ruleIdParam, 10) : null;
   const accessToken = useShelluiAccessToken();
   const isOwner = Boolean(accessToken && getIsCompanyOwnerFromJwt(accessToken));
-  const { api } = useActionsApi(accessToken);
+  const { service, serviceConfigured } = useWebhookPageMeta();
+  const { api } = useActionsApi(accessToken, service.key);
 
   const [events, setEvents] = useState<ActionEventCatalogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,8 +91,8 @@ export function ActionsRuleEditorPage() {
 
   const deliveryLogHref =
     numericId != null
-      ? `/webhooks/deliveries?action_rule_id=${encodeURIComponent(String(numericId))}`
-      : '/webhooks/deliveries';
+      ? `${webhookDeliveriesPath(service.key)}?action_rule_id=${encodeURIComponent(String(numericId))}`
+      : webhookDeliveriesPath(service.key);
 
   const applyRuleConfigMeta = useCallback((cfg: ActionRuleWebhookConfig) => {
     setHasStoredSecret(ruleHasStoredSecret(cfg));
@@ -167,7 +177,7 @@ export function ActionsRuleEditorPage() {
           enabled,
           config,
         });
-        navigate(`/webhooks/${created.rule.id}`, {
+        navigate(webhookRuleEditPath(service.key, created.rule.id), {
           replace: true,
           state: created.revealedSecret ? { revealedSecret: created.revealedSecret } : null,
         });
@@ -248,21 +258,23 @@ export function ActionsRuleEditorPage() {
       <header className="space-y-1">
         <div className="flex flex-wrap items-baseline gap-3">
           <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            {isCreate ? t('actionsRuleCreateTitle') : t('actionsRuleEditTitle')}
+            {t(service.pageTitleKey)}
           </h1>
           <Badge
             variant="secondary"
             className="font-mono text-[10px] uppercase"
           >
-            {t('actionsBadge')}
+            {t(service.badgeKey)}
           </Badge>
         </div>
         <Text className="max-w-3xl text-sm text-muted-foreground">
-          {t('actionsRuleEditorDescription')}
+          {t('actionsRuleEditorDescription', { scope: t(service.eventScopeKey) })}
         </Text>
       </header>
 
       <ActionsSubNav />
+
+      {!serviceConfigured ? <WebhookServiceUnavailable serviceKey={service.key} /> : null}
 
       {!accessToken && (
         <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
@@ -293,7 +305,7 @@ export function ActionsRuleEditorPage() {
         </div>
       ) : null}
 
-      {accessToken && isOwner && api && !loading ? (
+      {serviceConfigured && accessToken && isOwner && api && !loading ? (
         <div className="space-y-6">
           {revealedSecret ? (
             <WebhookSecretOnceCallout
@@ -306,7 +318,7 @@ export function ActionsRuleEditorPage() {
             <CardHeader>
               <CardTitle className="font-heading text-lg">{t('actionsRuleBasicsTitle')}</CardTitle>
               <CardDescription className="font-mono text-xs">
-                {t('actionsRuleBasicsDescription')}
+                {t('actionsRuleBasicsDescription', { scope: t(service.eventScopeKey) })}
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -362,7 +374,7 @@ export function ActionsRuleEditorPage() {
                   {t('actionsSampleEnvelopeTitle')}
                 </CardTitle>
                 <CardDescription className="font-mono text-xs">
-                  {t('actionsSampleEnvelopeDescription')}
+                  {t('actionsSampleEnvelopeDescription', { scope: t(service.eventScopeKey) })}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -379,7 +391,7 @@ export function ActionsRuleEditorPage() {
                 {t('actionsWebhookConfigTitle')}
               </CardTitle>
               <CardDescription className="font-mono text-xs">
-                {t('actionsWebhookConfigDescription')}
+                {t('actionsWebhookConfigDescription', { service: t(service.labelKey) })}
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -471,7 +483,7 @@ export function ActionsRuleEditorPage() {
               variant="outline"
               asChild
             >
-              <Link to="/webhooks">{t('actionsCancel')}</Link>
+              <Link to={webhookRulesListPath(service.key)}>{t('actionsCancel')}</Link>
             </Button>
             {!isCreate && numericId != null ? (
               <Button

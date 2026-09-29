@@ -21,15 +21,19 @@ import {
   isApiUnavailableError,
 } from '@/features/actions/components/ApiUnavailableNotice';
 import { useActionsApi } from '@/features/actions/useActionsApi';
+import { WebhookServiceUnavailable } from '@/features/actions/components/WebhookServiceUnavailable';
+import { useWebhookPageMeta } from '@/features/actions/useWebhookPageMeta';
 import type { ActionRule, ActionRuleId } from '@/features/actions/types';
 import { confirmAction } from '@/lib/confirmAction';
 import { SHELLUI_N8N_WEBHOOK_DOCS_URL } from '@/lib/webhookDocsUrls';
+import { webhookRuleEditPath, webhookRulesNewPath } from '@/lib/webhookRoutePaths';
 
 export function ActionsRulesListPage() {
   const { t, i18n } = useTranslation();
   const accessToken = useShelluiAccessToken();
   const isOwner = Boolean(accessToken && getIsCompanyOwnerFromJwt(accessToken));
-  const { api } = useActionsApi(accessToken);
+  const { service, serviceConfigured } = useWebhookPageMeta();
+  const { api } = useActionsApi(accessToken, service.key);
   const [rows, setRows] = useState<ActionRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
@@ -108,18 +112,16 @@ export function ActionsRulesListPage() {
       <header className="space-y-1">
         <div className="flex flex-wrap items-baseline gap-3">
           <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            {t('actionsPageTitle')}
+            {t(service.pageTitleKey)}
           </h1>
           <Badge
             variant="secondary"
             className="font-mono text-[10px] uppercase"
           >
-            {t('actionsBadge')}
+            {t(service.badgeKey)}
           </Badge>
         </div>
-        <Text className="max-w-3xl text-sm text-muted-foreground">
-          {t('actionsPageDescription')}
-        </Text>
+        <Text className="max-w-3xl text-sm text-muted-foreground">{t(service.descriptionKey)}</Text>
         <a
           href={SHELLUI_N8N_WEBHOOK_DOCS_URL}
           target="_blank"
@@ -135,6 +137,8 @@ export function ActionsRulesListPage() {
       </header>
 
       <ActionsSubNav />
+
+      {!serviceConfigured ? <WebhookServiceUnavailable serviceKey={service.key} /> : null}
 
       {!accessToken && (
         <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
@@ -155,7 +159,7 @@ export function ActionsRulesListPage() {
         </Text>
       ) : null}
 
-      {accessToken && isOwner && api ? (
+      {serviceConfigured && accessToken && isOwner && api ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="font-mono text-xs text-muted-foreground">{t('actionsRulesListHint')}</p>
           {isApiUnavailableError(error) ? (
@@ -172,13 +176,13 @@ export function ActionsRulesListPage() {
               size="sm"
               asChild
             >
-              <Link to="/webhooks/new">{t('actionsRuleCreate')}</Link>
+              <Link to={webhookRulesNewPath(service.key)}>{t('actionsRuleCreate')}</Link>
             </Button>
           )}
         </div>
       ) : null}
 
-      {accessToken && isOwner && api && loading ? (
+      {serviceConfigured && accessToken && isOwner && api && loading ? (
         <div className="flex items-center gap-2 py-8 text-muted-foreground">
           <Loader2
             className="size-5 animate-spin"
@@ -188,7 +192,8 @@ export function ActionsRulesListPage() {
         </div>
       ) : null}
 
-      {!loading &&
+      {serviceConfigured &&
+      !loading &&
       rows.length === 0 &&
       accessToken &&
       isOwner &&
@@ -218,7 +223,7 @@ export function ActionsRulesListPage() {
                 <TableRow key={rule.id}>
                   <TableCell>
                     <Link
-                      to={`/webhooks/${rule.id}`}
+                      to={webhookRuleEditPath(service.key, rule.id)}
                       className="text-primary underline-offset-2 hover:underline"
                     >
                       {rule.name}
@@ -250,7 +255,9 @@ export function ActionsRulesListPage() {
                         variant="ghost"
                         asChild
                       >
-                        <Link to={`/webhooks/${rule.id}`}>{t('actionsEdit')}</Link>
+                        <Link to={webhookRuleEditPath(service.key, rule.id)}>
+                          {t('actionsEdit')}
+                        </Link>
                       </Button>
                       <Button
                         type="button"
