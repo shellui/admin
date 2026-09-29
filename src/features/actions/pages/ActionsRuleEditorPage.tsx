@@ -1,43 +1,21 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
-import shellui from '@shellui/sdk';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
-import { getEmailFromJwt, getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
+import { getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
 import { ActionsSubNav } from '@/features/actions/components/ActionsSubNav';
-import {
-  ReactEmailActionEditor,
-  type ReactEmailActionEditorHandle,
-} from '@/features/actions/components/ReactEmailActionEditor';
-import { emptyActionEmailTemplate, normalizeEmailTemplate } from '@/lib/actionEmailDefaults';
-import { resolveEventPreviewContext } from '@/lib/actionsApiParsers';
 import {
   ApiUnavailableNotice,
   isApiUnavailableError,
 } from '@/features/actions/components/ApiUnavailableNotice';
 import { useActionsApi } from '@/features/actions/useActionsApi';
-import type {
-  ActionEmailTemplate,
-  ActionEventCatalogEntry,
-  ActionRuleEmailConfig,
-  ActionRuleKind,
-  ActionRuleWebhookConfig,
-} from '@/features/actions/types';
-
-const emptyTemplate = emptyActionEmailTemplate;
-
-function parseRecipients(text: string): string[] {
-  return text
-    .split(/[\s,;]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
+import type { ActionEventCatalogEntry, ActionRuleWebhookConfig } from '@/features/actions/types';
 
 export function ActionsRuleEditorPage() {
   const { t } = useTranslation();
@@ -47,41 +25,25 @@ export function ActionsRuleEditorPage() {
   const navigate = useNavigate();
   const accessToken = useShelluiAccessToken();
   const isOwner = Boolean(accessToken && getIsCompanyOwnerFromJwt(accessToken));
-  const viewerEmail = accessToken ? getEmailFromJwt(accessToken) : null;
   const { api } = useActionsApi(accessToken);
 
   const [events, setEvents] = useState<ActionEventCatalogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [legacyEmailRule, setLegacyEmailRule] = useState(false);
 
   const [name, setName] = useState('');
   const [eventKey, setEventKey] = useState('');
-  const [kind, setKind] = useState<ActionRuleKind>('email');
   const [enabled, setEnabled] = useState(true);
-  const [recipientsText, setRecipientsText] = useState('');
-  const [includePayloadEmail, setIncludePayloadEmail] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState('');
   const [webhookSecret, setWebhookSecret] = useState('');
   const [authHeaderName, setAuthHeaderName] = useState('');
   const [authHeaderValue, setAuthHeaderValue] = useState('');
-  const [templateEn, setTemplateEn] = useState<ActionEmailTemplate>(emptyTemplate());
-  const [templateFr, setTemplateFr] = useState<ActionEmailTemplate>(emptyTemplate());
-  const [templatesLoading, setTemplatesLoading] = useState(false);
-  const [resetTemplatesLoading, setResetTemplatesLoading] = useState(false);
-  const [sendTestLoading, setSendTestLoading] = useState(false);
-  const [templateFetchError, setTemplateFetchError] = useState<string | null>(null);
-  const initialEventRef = useRef<string | null>(null);
-  const emailEditorRef = useRef<ReactEmailActionEditorHandle | null>(null);
-  const [templateContentRevision, setTemplateContentRevision] = useState(0);
 
   const selectedEvent = useMemo(
     () => events.find((e) => e.key === eventKey) ?? null,
     [events, eventKey],
-  );
-  const selectedEventPreviewContext = useMemo(
-    () => resolveEventPreviewContext(selectedEvent),
-    [selectedEvent],
   );
 
   const loadCatalog = useCallback(async () => {
@@ -102,6 +64,7 @@ export function ActionsRuleEditorPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setLegacyEmailRule(false);
     void (async () => {
       try {
         const catalog = await loadCatalog();
@@ -112,44 +75,16 @@ export function ActionsRuleEditorPage() {
         if (!isCreate && numericId != null) {
           const rule = await loadRule();
           if (cancelled || !rule) return;
+          if (rule.kind === 'email') {
+            setLegacyEmailRule(true);
+            return;
+          }
           setName(rule.name);
           setEventKey(rule.event);
-          initialEventRef.current = rule.event;
-          setKind(rule.kind);
           setEnabled(rule.enabled);
-          if (rule.kind === 'email') {
-            const cfg = rule.config as ActionRuleEmailConfig;
-            setRecipientsText((cfg.recipients ?? []).join(', '));
-            setIncludePayloadEmail(cfg.include_payload_email === true);
-            const templates = cfg.email_templates ?? {};
-            let nextEn = normalizeEmailTemplate(templates.en, 'en');
-            let nextFr = normalizeEmailTemplate(templates.fr, 'fr');
-            try {
-              const [defEn, defFr] = await Promise.all([
-                api.fetchEmailTemplate(rule.id, 'en'),
-                api.fetchEmailTemplate(rule.id, 'fr'),
-              ]);
-              if (!cancelled) {
-                if (!templates.en?.html && !templates.en?.document) {
-                  nextEn = normalizeEmailTemplate(defEn, 'en');
-                }
-                if (!templates.fr?.html && !templates.fr?.document) {
-                  nextFr = normalizeEmailTemplate(defFr, 'fr');
-                }
-              }
-            } catch {
-              /* defaults optional */
-            }
-            if (!cancelled) {
-              setTemplateEn(nextEn);
-              setTemplateFr(nextFr);
-              setTemplateContentRevision((r) => r + 1);
-            }
-          } else {
-            const cfg = rule.config as ActionRuleWebhookConfig;
-            setWebhookUrl(cfg.url ?? '');
-            setAuthHeaderName(cfg.auth_header_name ?? '');
-          }
+          const cfg = rule.config as ActionRuleWebhookConfig;
+          setWebhookUrl(cfg.url ?? '');
+          setAuthHeaderName(cfg.auth_header_name ?? '');
         }
       } catch (e) {
         if (!cancelled) setError(e);
@@ -162,148 +97,27 @@ export function ActionsRuleEditorPage() {
     };
   }, [api, isCreate, isOwner, loadCatalog, loadRule, numericId]);
 
-  useEffect(() => {
-    if (!api || !isOwner || loading || kind !== 'email' || !eventKey.trim()) return;
-
-    const shouldAutoFill =
-      isCreate || initialEventRef.current == null || eventKey !== initialEventRef.current;
-    if (!shouldAutoFill) return;
-
-    let cancelled = false;
-    setTemplatesLoading(true);
-    setTemplateFetchError(null);
-    void (async () => {
-      try {
-        const defaults = await api.fetchDefaultEmailTemplates(eventKey, ['en', 'fr']);
-        if (cancelled) return;
-        setTemplateEn(normalizeEmailTemplate(defaults.en, 'en'));
-        setTemplateFr(normalizeEmailTemplate(defaults.fr, 'fr'));
-        setTemplateContentRevision((r) => r + 1);
-      } catch (e) {
-        if (!cancelled) {
-          setTemplateFetchError(
-            e instanceof Error ? e.message : t('actionsEmailTemplateLoadError'),
-          );
-        }
-      } finally {
-        if (!cancelled) setTemplatesLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [api, eventKey, isCreate, isOwner, kind, loading, t]);
-
-  const resetEmailTemplatesToDefault = useCallback(async () => {
-    if (!api || kind !== 'email' || !eventKey.trim()) return;
-    // window.confirm is unreliable in the shell iframe; use SDK dialog when embedded.
-    const confirmed =
-      typeof window === 'undefined' || window.parent === window
-        ? window.confirm(t('actionsEmailResetConfirm'))
-        : await new Promise<boolean>((resolve) => {
-            shellui.dialog({
-              title: t('actionsEmailResetToDefault'),
-              description: t('actionsEmailResetConfirm'),
-              mode: 'confirm',
-              okLabel: t('actionsEmailResetToDefault'),
-              cancelLabel: t('actionsCancel'),
-              onOk: () => resolve(true),
-              onCancel: () => resolve(false),
-            });
-          });
-    if (!confirmed) return;
-    setResetTemplatesLoading(true);
-    setTemplateFetchError(null);
-    try {
-      const defaults = await api.fetchDefaultEmailTemplates(eventKey, ['en', 'fr']);
-      // Drop theme_id so the editor resolves the Shellui catalog default (active
-      // appearance / shellui / first) instead of keeping a user-picked theme.
-      const en = normalizeEmailTemplate(defaults.en, 'en');
-      const fr = normalizeEmailTemplate(defaults.fr, 'fr');
-      const { theme_id: _enTheme, ...enRest } = en;
-      const { theme_id: _frTheme, ...frRest } = fr;
-      setTemplateEn(enRest);
-      setTemplateFr(frRest);
-      setTemplateContentRevision((r) => r + 1);
-    } catch (e) {
-      setTemplateFetchError(e instanceof Error ? e.message : t('actionsEmailTemplateLoadError'));
-    } finally {
-      setResetTemplatesLoading(false);
-    }
-  }, [api, eventKey, kind, t]);
-
-  const sendTestEmailDisabledReason = useMemo(() => {
-    if (!eventKey.trim()) return t('actionsEmailSendTestNeedEvent');
-    if (!viewerEmail) return t('actionsEmailSendTestNeedEmail');
-    return null;
-  }, [eventKey, t, viewerEmail]);
-
-  const sendTestEmailToMyself = useCallback(async () => {
-    if (!api || kind !== 'email' || !eventKey.trim() || !viewerEmail) return;
-    setSendTestLoading(true);
-    setTemplateFetchError(null);
-    try {
-      let templates = { en: templateEn, fr: templateFr };
-      if (emailEditorRef.current) {
-        templates = await emailEditorRef.current.compileAll();
-      }
-      const lang = emailEditorRef.current?.getActiveLang() ?? 'en';
-      const active = templates[lang];
-      const result = await api.sendTestEmailTemplate(eventKey, {
-        language: lang,
-        subject: active.subject ?? '',
-        html: active.html ?? '',
-      });
-      shellui.toast({
-        title: t('actionsEmailSendTestSuccess', { email: result.sent_to }),
-        type: 'success',
-      });
-    } catch (e) {
-      const message = e instanceof Error ? e.message : t('actionsEmailSendTestError');
-      setTemplateFetchError(message);
-      shellui.toast({
-        title: t('actionsEmailSendTestError'),
-        description: message,
-        type: 'error',
-      });
-    } finally {
-      setSendTestLoading(false);
-    }
-  }, [api, eventKey, kind, t, templateEn, templateFr, viewerEmail]);
-
   async function onSave() {
-    if (!api || !name.trim() || !eventKey) return;
+    if (!api || !name.trim() || !eventKey || legacyEmailRule) return;
     setSaving(true);
     setError(null);
     try {
-      let emailTemplates = { en: templateEn, fr: templateFr };
-      if (kind === 'email' && emailEditorRef.current) {
-        emailTemplates = await emailEditorRef.current.compileAll();
-      }
-      const config =
-        kind === 'email'
-          ? ({
-              recipients: parseRecipients(recipientsText),
-              include_payload_email: includePayloadEmail,
-              email_templates: emailTemplates,
-            } satisfies ActionRuleEmailConfig)
-          : ({
-              url: webhookUrl.trim(),
-              ...(webhookSecret.trim() ? { secret: webhookSecret.trim() } : {}),
-              ...(authHeaderName.trim()
-                ? {
-                    auth_header_name: authHeaderName.trim(),
-                    auth_header_value: authHeaderValue.trim(),
-                  }
-                : {}),
-            } satisfies ActionRuleWebhookConfig);
+      const config: ActionRuleWebhookConfig = {
+        url: webhookUrl.trim(),
+        ...(webhookSecret.trim() ? { secret: webhookSecret.trim() } : {}),
+        ...(authHeaderName.trim()
+          ? {
+              auth_header_name: authHeaderName.trim(),
+              auth_header_value: authHeaderValue.trim(),
+            }
+          : {}),
+      };
 
       if (isCreate) {
         const created = await api.createRule({
           name: name.trim(),
           event: eventKey,
-          kind,
+          kind: 'webhook',
           enabled,
           config,
         });
@@ -312,18 +126,10 @@ export function ActionsRuleEditorPage() {
         await api.updateRule(numericId, {
           name: name.trim(),
           event: eventKey,
-          kind,
+          kind: 'webhook',
           enabled,
           config,
         });
-        if (kind === 'email') {
-          const refreshed = await api.fetchRule(numericId);
-          const cfg = refreshed.config as ActionRuleEmailConfig;
-          const templates = cfg.email_templates ?? {};
-          setTemplateEn(normalizeEmailTemplate(templates.en, 'en'));
-          setTemplateFr(normalizeEmailTemplate(templates.fr, 'fr'));
-          setTemplateContentRevision((r) => r + 1);
-        }
       }
     } catch (e) {
       setError(e);
@@ -382,7 +188,28 @@ export function ActionsRuleEditorPage() {
         </div>
       ) : null}
 
-      {accessToken && isOwner && api && !loading ? (
+      {legacyEmailRule ? (
+        <Card className="border-border/80 shadow-sm">
+          <CardHeader>
+            <CardTitle className="font-heading text-lg">{t('actionsLegacyEmailTitle')}</CardTitle>
+            <CardDescription className="font-mono text-xs">
+              {t('actionsLegacyEmailDescription')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              asChild
+            >
+              <Link to="/actions/rules">{t('actionsBackToRules')}</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {accessToken && isOwner && api && !loading && !legacyEmailRule ? (
         <div className="space-y-6">
           <Card className="border-border/80 shadow-sm">
             <CardHeader>
@@ -402,7 +229,7 @@ export function ActionsRuleEditorPage() {
                   className="font-mono text-sm"
                 />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1 sm:col-span-2">
                 <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
                   {t('actionsColEvent')}
                 </label>
@@ -426,19 +253,6 @@ export function ActionsRuleEditorPage() {
                   </p>
                 ) : null}
               </div>
-              <div className="space-y-1">
-                <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                  {t('actionsColKind')}
-                </label>
-                <select
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 font-mono text-sm"
-                  value={kind}
-                  onChange={(e) => setKind(e.target.value as ActionRuleKind)}
-                >
-                  <option value="email">{t('actionsKindEmail')}</option>
-                  <option value="webhook">{t('actionsKindWebhook')}</option>
-                </select>
-              </div>
               <label className="flex items-center gap-2 sm:col-span-2">
                 <input
                   type="checkbox"
@@ -450,149 +264,71 @@ export function ActionsRuleEditorPage() {
             </CardContent>
           </Card>
 
-          {kind === 'email' ? (
-            <Card className="border-border/80 shadow-sm">
-              <CardHeader>
-                <CardTitle className="font-heading text-lg">
-                  {t('actionsEmailConfigTitle')}
-                </CardTitle>
-                <CardDescription className="font-mono text-xs">
-                  {t('actionsEmailConfigDescription')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-1">
-                  <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                    {t('actionsEmailRecipients')}
-                  </label>
-                  <Input
-                    value={recipientsText}
-                    onChange={(e) => setRecipientsText(e.target.value)}
-                    className="font-mono text-sm"
-                    placeholder="ops@example.com, security@example.com"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label
-                    className={`flex items-center gap-2 ${!selectedEvent?.payload_email_field ? 'opacity-60' : ''}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={includePayloadEmail}
-                      disabled={!selectedEvent?.payload_email_field}
-                      onChange={(e) => setIncludePayloadEmail(e.target.checked)}
-                    />
-                    <span className="font-mono text-xs">{t('actionsEmailIncludePayload')}</span>
-                  </label>
-                  <p className="font-mono text-[10px] text-muted-foreground">
-                    {t('actionsEmailIncludePayloadHelp')}
-                  </p>
-                </div>
-                {templatesLoading || resetTemplatesLoading || sendTestLoading ? (
-                  <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
-                    <Loader2
-                      className="size-4 animate-spin"
-                      aria-hidden
-                    />
-                    {sendTestLoading
-                      ? t('actionsEmailSendTestLoading')
-                      : resetTemplatesLoading
-                        ? t('actionsEmailResetLoading')
-                        : t('actionsEmailTemplateLoading')}
-                  </div>
-                ) : null}
-                {templateFetchError ? (
-                  <Text className="font-mono text-xs text-amber-800 dark:text-amber-200">
-                    {templateFetchError}
-                  </Text>
-                ) : null}
-                <ReactEmailActionEditor
-                  ref={emailEditorRef}
-                  templateVariables={selectedEvent?.template_variables}
-                  previewContext={selectedEventPreviewContext}
-                  valueEn={templateEn}
-                  valueFr={templateFr}
-                  onChangeEn={setTemplateEn}
-                  onChangeFr={setTemplateFr}
-                  contentRevision={templateContentRevision}
-                  disabled={templatesLoading || resetTemplatesLoading || sendTestLoading || saving}
-                  showResetToDefault={Boolean(eventKey.trim())}
-                  resetLoading={resetTemplatesLoading}
-                  onResetToDefault={() => void resetEmailTemplatesToDefault()}
-                  showSendTest={Boolean(eventKey.trim())}
-                  sendTestLoading={sendTestLoading}
-                  sendTestDisabledReason={sendTestEmailDisabledReason}
-                  onSendTestToMyself={() => void sendTestEmailToMyself()}
+          <Card className="border-border/80 shadow-sm">
+            <CardHeader>
+              <CardTitle className="font-heading text-lg">
+                {t('actionsWebhookConfigTitle')}
+              </CardTitle>
+              <CardDescription className="font-mono text-xs">
+                {t('actionsWebhookConfigDescription')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1 sm:col-span-2">
+                <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                  URL
+                </label>
+                <Input
+                  value={webhookUrl}
+                  onChange={(e) => setWebhookUrl(e.target.value)}
+                  className="font-mono text-sm"
+                  placeholder="https://hooks.example.com/shellui"
                 />
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="border-border/80 shadow-sm">
-              <CardHeader>
-                <CardTitle className="font-heading text-lg">
-                  {t('actionsWebhookConfigTitle')}
-                </CardTitle>
-                <CardDescription className="font-mono text-xs">
-                  {t('actionsWebhookConfigDescription')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                    URL
-                  </label>
-                  <Input
-                    value={webhookUrl}
-                    onChange={(e) => setWebhookUrl(e.target.value)}
-                    className="font-mono text-sm"
-                    placeholder="https://hooks.example.com/shellui"
-                  />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                    {t('actionsWebhookSecret')}
-                  </label>
-                  <Input
-                    type="password"
-                    value={webhookSecret}
-                    onChange={(e) => setWebhookSecret(e.target.value)}
-                    className="font-mono text-sm"
-                    placeholder={t('actionsWebhookSecretPlaceholder')}
-                    autoComplete="new-password"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                    {t('actionsWebhookAuthHeaderName')}
-                  </label>
-                  <Input
-                    value={authHeaderName}
-                    onChange={(e) => setAuthHeaderName(e.target.value)}
-                    className="font-mono text-sm"
-                    placeholder="Authorization"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                    {t('actionsWebhookAuthHeaderValue')}
-                  </label>
-                  <Input
-                    type="password"
-                    value={authHeaderValue}
-                    onChange={(e) => setAuthHeaderValue(e.target.value)}
-                    className="font-mono text-sm"
-                    autoComplete="new-password"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                  {t('actionsWebhookSecret')}
+                </label>
+                <Input
+                  type="password"
+                  value={webhookSecret}
+                  onChange={(e) => setWebhookSecret(e.target.value)}
+                  className="font-mono text-sm"
+                  placeholder={t('actionsWebhookSecretPlaceholder')}
+                  autoComplete="new-password"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                  {t('actionsWebhookAuthHeaderName')}
+                </label>
+                <Input
+                  value={authHeaderName}
+                  onChange={(e) => setAuthHeaderName(e.target.value)}
+                  className="font-mono text-sm"
+                  placeholder="Authorization"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                  {t('actionsWebhookAuthHeaderValue')}
+                </label>
+                <Input
+                  type="password"
+                  value={authHeaderValue}
+                  onChange={(e) => setAuthHeaderValue(e.target.value)}
+                  className="font-mono text-sm"
+                  autoComplete="new-password"
+                />
+              </div>
+            </CardContent>
+          </Card>
 
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
               size="sm"
-              disabled={saving || !name.trim()}
+              disabled={saving || !name.trim() || !webhookUrl.trim()}
               onClick={() => void onSave()}
             >
               {saving ? t('actionsSaving') : t('actionsSave')}

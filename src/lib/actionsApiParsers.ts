@@ -1,16 +1,9 @@
-import { isJsonContent } from '@/lib/actionEmailDefaults';
-import {
-  buildEmailPreviewContextFromVariables,
-  normalizeEmailPreviewContext,
-} from '@/lib/actionEmailPreviewSubstitute';
 import { unwrapResultsArray } from '@/lib/listResults';
 import type {
   ActionDeliveriesListResponse,
   ActionDelivery,
   ActionDeliveryAttempt,
   ActionDeliveryDetail,
-  ActionEmailPreviewContext,
-  ActionEmailTemplate,
   ActionEventCatalogEntry,
   ActionRule,
   ActionRuleCreatePayload,
@@ -18,131 +11,7 @@ import type {
   ActionRuleKind,
   ActionRuleUpdatePayload,
   ActionRuleWebhookConfig,
-  ActionTemplateVariable,
 } from '@/features/actions/types';
-
-const DEFAULT_ENVELOPE_TEMPLATE_VARIABLES: ActionTemplateVariable[] = [
-  {
-    token: 'envelope.id',
-    description: 'Unique delivery envelope id',
-    example: '550e8400-e29b-41d4-a716-446655440000',
-  },
-  {
-    token: 'envelope.type',
-    description: 'Event type id',
-    example: 'identity.user.created',
-  },
-  {
-    token: 'envelope.time',
-    description: 'Event timestamp (ISO 8601)',
-    example: '2026-09-24T13:30:00+00:00',
-  },
-  { token: 'envelope.company.id', description: 'Company id', example: 1 },
-  { token: 'envelope.company.slug', description: 'Company slug', example: 'acme' },
-  {
-    token: 'envelope.company.name',
-    description: 'Company display name',
-    example: 'Acme',
-  },
-];
-
-function parseFieldDocArray(
-  raw: unknown,
-): Array<{ name: string; description?: string; example?: unknown }> {
-  if (!Array.isArray(raw)) return [];
-  return raw.flatMap((item) => {
-    if (!item || typeof item !== 'object') return [];
-    const o = item as Record<string, unknown>;
-    const name = typeof o.name === 'string' ? o.name.trim() : '';
-    if (!name) return [];
-    return [
-      {
-        name,
-        description: typeof o.description === 'string' ? o.description : undefined,
-        example: 'example' in o ? o.example : undefined,
-      },
-    ];
-  });
-}
-
-function dataToken(fieldName: string): string {
-  const trimmed = fieldName.trim().replace(/^data\./, '');
-  return `data.${trimmed}`;
-}
-
-export function isUrlLikeTemplateField(name: string, description?: string): boolean {
-  const blob = `${name} ${description ?? ''}`.toLowerCase();
-  return (
-    /(?:^|[_.-])(?:url|link|href)(?:$|[_.-])/.test(blob) ||
-    blob.includes('magic link') ||
-    blob.includes('sign-in url') ||
-    blob.includes('sign in url')
-  );
-}
-
-/** Build deduplicated Django template paths for TipTap placeholder chips. */
-export function buildEventTemplateVariables(
-  raw: Record<string, unknown>,
-  sharedEnvelopeFields?: unknown,
-): ActionTemplateVariable[] {
-  const byToken = new Map<string, ActionTemplateVariable>();
-
-  const add = (
-    token: string,
-    description?: string,
-    opts?: { isUrl?: boolean; example?: unknown },
-  ) => {
-    const normalized = token.trim();
-    if (!normalized) return;
-    const isUrl = opts?.isUrl ?? isUrlLikeTemplateField(normalized, description);
-    const prev = byToken.get(normalized);
-    if (prev) {
-      if (description && !prev.description) prev.description = description;
-      if (isUrl) prev.isUrl = true;
-      if (prev.example === undefined && opts?.example !== undefined) {
-        prev.example = opts.example;
-      }
-      return;
-    }
-    byToken.set(normalized, {
-      token: normalized,
-      description,
-      ...(isUrl ? { isUrl: true } : {}),
-      ...(opts?.example !== undefined ? { example: opts.example } : {}),
-    });
-  };
-
-  const fieldGroups: unknown[] = [
-    raw.payload_fields,
-    raw.email_template_fields,
-    raw.email_context_fields,
-    raw.envelope_fields,
-    sharedEnvelopeFields,
-  ];
-  for (const group of fieldGroups) {
-    for (const field of parseFieldDocArray(group)) {
-      if (field.name.startsWith('envelope.')) {
-        add(field.name, field.description, { example: field.example });
-      } else if (field.name.startsWith('data.')) {
-        add(field.name, field.description, { example: field.example });
-      } else {
-        add(dataToken(field.name), field.description, { example: field.example });
-      }
-    }
-  }
-
-  const payloadEmail =
-    typeof raw.payload_email_field === 'string' ? raw.payload_email_field.trim() : '';
-  if (payloadEmail) {
-    add(payloadEmail.includes('.') ? payloadEmail : dataToken(payloadEmail));
-  }
-
-  for (const env of DEFAULT_ENVELOPE_TEMPLATE_VARIABLES) {
-    add(env.token, env.description, { example: env.example });
-  }
-
-  return [...byToken.values()].sort((a, b) => a.token.localeCompare(b.token));
-}
 
 function isoString(value: unknown): string {
   if (value == null) return '';
@@ -150,58 +19,13 @@ function isoString(value: unknown): string {
   return String(value);
 }
 
-function mapEmailTemplatesFromIdentity(raw: unknown): ActionRuleEmailConfig['email_templates'] {
-  if (!raw || typeof raw !== 'object') return undefined;
-  const out: NonNullable<ActionRuleEmailConfig['email_templates']> = {};
-  for (const [lang, entry] of Object.entries(raw as Record<string, unknown>)) {
-    if (lang !== 'en' && lang !== 'fr') continue;
-    if (!entry || typeof entry !== 'object') continue;
-    const e = entry as Record<string, unknown>;
-    const html =
-      typeof e.html === 'string' ? e.html : typeof e.body_html === 'string' ? e.body_html : '';
-    const document = isJsonContent(e.document) ? e.document : undefined;
-    const theme_id = typeof e.theme_id === 'string' ? e.theme_id : undefined;
-    out[lang] = {
-      subject: typeof e.subject === 'string' ? e.subject : '',
-      html,
-      ...(document ? { document } : {}),
-      ...(theme_id ? { theme_id } : {}),
-    };
-  }
-  return Object.keys(out).length ? out : undefined;
-}
-
-function mapEmailTemplatesToIdentity(
-  templates: ActionRuleEmailConfig['email_templates'],
-):
-  | Record<string, { subject: string; html: string; document?: unknown; theme_id?: string }>
-  | undefined {
-  if (!templates) return undefined;
-  const out: Record<
-    string,
-    { subject: string; html: string; document?: unknown; theme_id?: string }
-  > = {};
-  for (const lang of ['en', 'fr'] as const) {
-    const t = templates[lang];
-    if (!t) continue;
-    out[lang] = {
-      subject: t.subject,
-      html: t.html,
-      ...(t.document ? { document: t.document } : {}),
-      ...(t.theme_id ? { theme_id: t.theme_id } : {}),
-    };
-  }
-  return Object.keys(out).length ? out : undefined;
-}
-
 function parseEmailConfig(cfg: Record<string, unknown>): ActionRuleEmailConfig {
   const recipients = Array.isArray(cfg.recipients)
     ? cfg.recipients.filter((r): r is string => typeof r === 'string')
-    : [];
+    : undefined;
   return {
-    recipients,
+    ...(recipients ? { recipients } : {}),
     include_payload_email: cfg.include_payload_email === true,
-    email_templates: mapEmailTemplatesFromIdentity(cfg.email_templates),
   };
 }
 
@@ -244,10 +68,8 @@ export function parseRulesList(body: unknown): ActionRule[] {
 
 export function parseEventsList(body: unknown): ActionEventCatalogEntry[] {
   let rows: unknown[] | null = unwrapResultsArray(body);
-  let sharedEnvelopeFields: unknown;
   if (body && typeof body === 'object') {
     const root = body as Record<string, unknown>;
-    sharedEnvelopeFields = root.email_envelope_fields;
     if (rows == null && Array.isArray(root.events)) {
       rows = root.events;
     }
@@ -255,79 +77,19 @@ export function parseEventsList(body: unknown): ActionEventCatalogEntry[] {
   if (rows == null) {
     throw new Error('Unexpected actions events response.');
   }
-  return rows.map((row) => parseEventEntry(row, sharedEnvelopeFields));
+  return rows.map(parseEventEntry);
 }
 
-function parseEventEntry(raw: unknown, sharedEnvelopeFields?: unknown): ActionEventCatalogEntry {
+function parseEventEntry(raw: unknown): ActionEventCatalogEntry {
   if (!raw || typeof raw !== 'object') {
     return { key: '' };
   }
   const o = raw as Record<string, unknown>;
   const key = typeof o.type === 'string' ? o.type : typeof o.key === 'string' ? o.key : '';
-  const payloadField = typeof o.payload_email_field === 'string' ? o.payload_email_field : null;
-  const template_variables = buildEventTemplateVariables(o, sharedEnvelopeFields);
-  const sample_context = normalizeEmailPreviewContext(o.sample_context);
   return {
     key,
     label: typeof o.label === 'string' ? o.label : undefined,
     description: typeof o.description === 'string' ? o.description : undefined,
-    payload_email_field: payloadField,
-    template_variables: template_variables.length ? template_variables : undefined,
-    ...(sample_context ? { sample_context } : {}),
-  };
-}
-
-export function resolveEventPreviewContext(
-  event: ActionEventCatalogEntry | null | undefined,
-): ActionEmailPreviewContext | null {
-  if (!event) return null;
-  if (event.sample_context) return event.sample_context;
-  const vars = event.template_variables ?? [];
-  if (!vars.some((v) => v.example !== undefined)) return null;
-  return buildEmailPreviewContextFromVariables(vars);
-}
-
-export type ActionEmailTemplateLang = 'en' | 'fr';
-
-export type ActionEmailTemplatesMap = Partial<Record<ActionEmailTemplateLang, ActionEmailTemplate>>;
-
-export function parseDefaultEmailTemplatesBatch(
-  body: unknown,
-  languages: readonly ActionEmailTemplateLang[],
-): ActionEmailTemplatesMap {
-  if (!body || typeof body !== 'object') {
-    throw new Error('Unexpected batch email template response.');
-  }
-  const root = body as Record<string, unknown>;
-  const templatesRaw = root.templates;
-  if (!templatesRaw || typeof templatesRaw !== 'object') {
-    throw new Error('Unexpected batch email template response.');
-  }
-  const map = templatesRaw as Record<string, unknown>;
-  const out: ActionEmailTemplatesMap = {};
-  for (const lang of languages) {
-    const entry = map[lang];
-    if (entry && typeof entry === 'object') {
-      out[lang] = parseEmailTemplate(entry);
-    }
-  }
-  return out;
-}
-
-export function parseEmailTemplate(body: unknown): ActionEmailTemplate {
-  if (!body || typeof body !== 'object') {
-    throw new Error('Unexpected email template response.');
-  }
-  const o = body as Record<string, unknown>;
-  const html =
-    typeof o.html === 'string' ? o.html : typeof o.body_html === 'string' ? o.body_html : '';
-  const document = isJsonContent(o.document) ? o.document : undefined;
-  const theme_id = typeof o.theme_id === 'string' ? o.theme_id : undefined;
-  return {
-    subject: typeof o.subject === 'string' ? o.subject : '',
-    html,
-    ...(document ? { document } : {}),
-    ...(theme_id ? { theme_id } : {}),
   };
 }
 
@@ -439,21 +201,11 @@ export function toIdentityRuleWriteBody(
   if (payload.enabled !== undefined) out.enabled = payload.enabled;
 
   if (payload.config) {
-    if (payload.kind === 'webhook' || (!payload.kind && 'url' in payload.config)) {
-      const cfg = payload.config as ActionRuleWebhookConfig;
-      if (cfg.url !== undefined || !partial) out.url = cfg.url;
-      if (cfg.secret?.trim()) out.secret = cfg.secret.trim();
-      const auth = webhookAuthorizationHeader(cfg);
-      if (auth) out.authorization_header = auth;
-    } else {
-      const cfg = payload.config as ActionRuleEmailConfig;
-      if (cfg.recipients !== undefined || !partial) out.recipients = cfg.recipients;
-      if (cfg.include_payload_email !== undefined || !partial) {
-        out.include_payload_email = cfg.include_payload_email ?? false;
-      }
-      const templates = mapEmailTemplatesToIdentity(cfg.email_templates);
-      if (templates) out.email_templates = templates;
-    }
+    const cfg = payload.config as ActionRuleWebhookConfig;
+    if (cfg.url !== undefined || !partial) out.url = cfg.url;
+    if (cfg.secret?.trim()) out.secret = cfg.secret.trim();
+    const auth = webhookAuthorizationHeader(cfg);
+    if (auth) out.authorization_header = auth;
   }
 
   return out;

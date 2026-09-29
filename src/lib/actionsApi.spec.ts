@@ -1,83 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
-  eventDefaultEmailTemplateRequest,
-  eventDefaultEmailTemplatesBatchRequest,
-} from '@/lib/actionsApiPaths';
-import {
-  buildEventTemplateVariables,
-  isUrlLikeTemplateField,
-  parseDefaultEmailTemplatesBatch,
   parseDeliveriesList,
-  parseEmailTemplate,
   parseEventsList,
   parseIdentityRule,
   parseRulesList,
   toIdentityRuleWriteBody,
 } from '@/lib/actionsApiParsers';
 
-describe('eventDefaultEmailTemplateRequest', () => {
-  it('builds nested event path and query fallback', () => {
-    const attempts = eventDefaultEmailTemplateRequest('identity.user.created', 'fr');
-    expect(attempts[0].path).toBe('/api/v1/actions/events/identity.user.created/email-template');
-    expect(attempts[0].query).toEqual({ language: 'fr' });
-    expect(attempts[1]).toEqual({
-      path: '/api/v1/actions/email-template',
-      query: { event_type: 'identity.user.created', language: 'fr' },
-    });
-  });
-});
-
-describe('eventDefaultEmailTemplatesBatchRequest', () => {
-  it('uses languages query on event and fallback paths', () => {
-    const attempts = eventDefaultEmailTemplatesBatchRequest('identity.user.created', 'en,fr');
-    expect(attempts[0].query).toEqual({ languages: 'en,fr' });
-    expect(attempts[1]).toEqual({
-      path: '/api/v1/actions/email-template',
-      query: { event_type: 'identity.user.created', languages: 'en,fr' },
-    });
-  });
-});
-
 describe('actionsApi parsers', () => {
-  it('parseDefaultEmailTemplatesBatch maps templates by language', () => {
-    const document = { type: 'doc', content: [{ type: 'paragraph' }] };
-    const parsed = parseDefaultEmailTemplatesBatch(
-      {
-        templates: {
-          en: { subject: 'Hi', html: '<p>en</p>', document },
-          fr: { subject: 'Salut', html: '<p>fr</p>' },
-        },
-      },
-      ['en', 'fr'],
-    );
-    expect(parsed.en).toEqual({ subject: 'Hi', html: '<p>en</p>', document });
-    expect(parsed.fr).toEqual({ subject: 'Salut', html: '<p>fr</p>' });
-  });
-
-  it('parseEmailTemplate maps identity html field', () => {
-    expect(parseEmailTemplate({ subject: 'Hi', html: '<p>a</p>' })).toEqual({
-      subject: 'Hi',
-      html: '<p>a</p>',
-    });
-  });
-
-  it('parseEmailTemplate still accepts body_html', () => {
-    expect(parseEmailTemplate({ subject: 'Hi', body_html: '<p>a</p>' })).toEqual({
-      subject: 'Hi',
-      html: '<p>a</p>',
-    });
-  });
-
-  it('parseEmailTemplate maps document json', () => {
-    const document = { type: 'doc', content: [{ type: 'paragraph' }] };
-    expect(parseEmailTemplate({ subject: 'Hi', html: '<p>a</p>', document })).toEqual({
-      subject: 'Hi',
-      html: '<p>a</p>',
-      document,
-    });
-  });
-
-  it('parseRulesList reads identity results envelope', () => {
+  it('parseRulesList reads identity results envelope and legacy email rules', () => {
     const rules = parseRulesList({
       results: [
         {
@@ -90,74 +21,35 @@ describe('actionsApi parsers', () => {
           created_at: '2026-01-01T00:00:00Z',
           updated_at: '2026-01-02T00:00:00Z',
         },
+        {
+          id: 13,
+          name: 'Hook',
+          event_type: 'identity.group.created',
+          action_kind: 'webhook',
+          enabled: true,
+          config: { url: 'https://hooks.example.com' },
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
       ],
     });
-    expect(rules).toHaveLength(1);
-    expect(rules[0].event).toBe('identity.user.created');
+    expect(rules).toHaveLength(2);
     expect(rules[0].kind).toBe('email');
-    expect(rules[0].config).toMatchObject({ recipients: ['ops@example.com'] });
+    expect(rules[1].kind).toBe('webhook');
   });
 
-  it('parseEventsList reads identity results envelope', () => {
+  it('parseEventsList reads identity event catalog', () => {
     const events = parseEventsList({
       results: [
         {
           type: 'identity.user.created',
           label: 'User created',
-          payload_email_field: 'email',
-          payload_fields: [{ name: 'email', description: 'User email address' }],
+          description: 'Fires when a user is created',
         },
       ],
     });
     expect(events[0].key).toBe('identity.user.created');
-    const tokens = events[0].template_variables?.map((v) => v.token) ?? [];
-    expect(tokens).toContain('data.email');
-    expect(tokens).toContain('envelope.company.name');
-  });
-
-  it('buildEventTemplateVariables includes magic link URL with isUrl', () => {
-    const vars = buildEventTemplateVariables({
-      type: 'identity.auth.magic_link.requested',
-      payload_fields: [{ name: 'email', description: 'Recipient email', example: 'ada@acme.com' }],
-      email_context_fields: [
-        {
-          name: 'magic_link_url',
-          description: 'Sign-in URL injected when the email is sent',
-          example: 'https://identity.example.com/verify?token=abc',
-        },
-      ],
-    });
-    const magic = vars.find((v) => v.token === 'data.magic_link_url');
-    expect(magic).toBeDefined();
-    expect(magic?.isUrl).toBe(true);
-    expect(magic?.example).toContain('https://');
-    expect(isUrlLikeTemplateField('magic_link_url', magic?.description)).toBe(true);
-    const email = vars.find((v) => v.token === 'data.email');
-    expect(email?.example).toBe('ada@acme.com');
-  });
-
-  it('parseEventsList keeps sample_context from identity', () => {
-    const events = parseEventsList({
-      results: [
-        {
-          type: 'identity.auth.magic_link.requested',
-          sample_context: {
-            envelope: { company: { name: 'Actions Co' }, data: { email: 'a@b.com' } },
-            data: {
-              email: 'a@b.com',
-              magic_link_url: 'https://id.example.com/ml',
-            },
-          },
-        },
-      ],
-      email_envelope_fields: [
-        { name: 'envelope.company.name', description: 'Company', example: 'Acme' },
-      ],
-    });
-    expect(events[0].sample_context?.data?.magic_link_url).toBe('https://id.example.com/ml');
-    expect(
-      events[0].template_variables?.find((v) => v.token === 'envelope.company.name')?.example,
-    ).toBe('Acme');
+    expect(events[0].label).toBe('User created');
   });
 
   it('parseDeliveriesList maps identity delivery fields', () => {
@@ -170,61 +62,37 @@ describe('actionsApi parsers', () => {
           id: '550e8400-e29b-41d4-a716-446655440099',
           event_type: 'identity.user.created',
           action_rule_id: 3,
-          action_rule_name: 'Ops mail',
+          action_rule_name: 'Ops hook',
           status: 'failed',
           attempt_count: 2,
-          last_error: 'smtp down',
+          last_error: 'connection refused',
           created_at: '2026-01-01T00:00:00Z',
           updated_at: '2026-01-01T01:00:00Z',
         },
       ],
     });
     expect(parsed.count).toBe(1);
-    expect(parsed.results[0].id).toBe('550e8400-e29b-41d4-a716-446655440099');
     expect(parsed.results[0].event).toBe('identity.user.created');
-    expect(parsed.results[0].rule_id).toBe(3);
     expect(parsed.results[0].attempts_count).toBe(2);
   });
 
-  it('toIdentityRuleWriteBody includes document and theme_id', () => {
-    const document = { type: 'doc', content: [{ type: 'paragraph' }] };
+  it('toIdentityRuleWriteBody flattens webhook rule for POST', () => {
     const body = toIdentityRuleWriteBody({
-      name: 'Ops',
+      name: 'Hook',
       event: 'identity.user.created',
-      kind: 'email',
+      kind: 'webhook',
       config: {
-        recipients: ['ops@example.com'],
-        email_templates: {
-          en: { subject: 'Hi', html: '<p>x</p>', document, theme_id: 'shellui' },
-        },
-      },
-    });
-    const templates = body.email_templates as Record<string, unknown>;
-    expect(templates.en).toEqual({
-      subject: 'Hi',
-      html: '<p>x</p>',
-      document,
-      theme_id: 'shellui',
-    });
-  });
-
-  it('toIdentityRuleWriteBody flattens email rule for POST', () => {
-    const body = toIdentityRuleWriteBody({
-      name: 'Ops',
-      event: 'identity.user.created',
-      kind: 'email',
-      config: {
-        recipients: ['ops@example.com'],
-        include_payload_email: true,
-        email_templates: {
-          en: { subject: 'Hi', html: '<p>x</p>' },
-        },
+        url: 'https://hooks.example.com',
+        secret: 'shhh',
+        auth_header_name: 'Authorization',
+        auth_header_value: 'Bearer token',
       },
     });
     expect(body.event_type).toBe('identity.user.created');
-    expect(body.action_kind).toBe('email');
-    expect(body.recipients).toEqual(['ops@example.com']);
-    expect(body.email_templates).toEqual({ en: { subject: 'Hi', html: '<p>x</p>' } });
+    expect(body.action_kind).toBe('webhook');
+    expect(body.url).toBe('https://hooks.example.com');
+    expect(body.secret).toBe('shhh');
+    expect(body.authorization_header).toBe('Authorization: Bearer token');
   });
 
   it('parseIdentityRule maps webhook config flags', () => {

@@ -43,7 +43,8 @@ export function ActionsRulesListPage() {
     setLoading(true);
     setError(null);
     try {
-      setRows(await api.fetchRules());
+      const all = await api.fetchRules();
+      setRows(all.filter((rule) => rule.kind === 'webhook'));
     } catch (e) {
       setRows([]);
       setError(e);
@@ -185,7 +186,6 @@ export function ActionsRulesListPage() {
               <TableRow className="bg-muted/30 hover:bg-muted/30">
                 <TableHead className="text-xs uppercase">{t('actionsColName')}</TableHead>
                 <TableHead className="text-xs uppercase">{t('actionsColEvent')}</TableHead>
-                <TableHead className="text-xs uppercase">{t('actionsColKind')}</TableHead>
                 <TableHead className="text-xs uppercase">{t('actionsColEnabled')}</TableHead>
                 <TableHead className="text-xs uppercase">{t('actionsColUpdated')}</TableHead>
                 <TableHead className="text-right text-xs uppercase">
@@ -205,7 +205,6 @@ export function ActionsRulesListPage() {
                     </Link>
                   </TableCell>
                   <TableCell>{rule.event}</TableCell>
-                  <TableCell>{rule.kind}</TableCell>
                   <TableCell>
                     <Badge variant={rule.enabled ? 'default' : 'outline'}>
                       {rule.enabled ? t('actionsEnabledYes') : t('actionsEnabledNo')}

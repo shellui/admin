@@ -73,16 +73,14 @@ hosting: {
 
 Point `backend.url` at a local or deployed **identity-service** (for example `http://localhost:8000`). Sign in through Shellui as a **company owner** so the JWT includes `company_id` and `user_metadata.is_company_owner`.
 
-| Route                  | API                                                                                                                                                                                                                                                                                                            |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `#/scim`               | `GET /api/v1/scim`, token CRUD under `/api/v1/scim/tokens`                                                                                                                                                                                                                                                     |
-| `#/company`            | `GET/PATCH /api/v1/auth-methods` (`enable_magic_link`, read-only global kill switch)                                                                                                                                                                                                                           |
-| `#/actions/rules`      | `GET/POST/PATCH/DELETE /api/v1/actions/rules`; create loads defaults via `GET /api/v1/actions/events/<event_type>/email-template?language=` (fallback: `GET /api/v1/actions/email-template?event_type=&language=`); email editor can `POST …/email-template/send-test` to mail a sample to the signed-in owner |
-| `#/actions/deliveries` | `GET /api/v1/actions/deliveries`, detail + `POST …/requeue`                                                                                                                                                                                                                                                    |
+| Route                  | API                                                                                  |
+| ---------------------- | ------------------------------------------------------------------------------------ |
+| `#/scim`               | `GET /api/v1/scim`, token CRUD under `/api/v1/scim/tokens`                           |
+| `#/company`            | `GET/PATCH /api/v1/auth-methods` (`enable_magic_link`, read-only global kill switch) |
+| `#/actions/rules`      | `GET/POST/PATCH/DELETE /api/v1/actions/rules` (webhook rules only in the admin UI)   |
+| `#/actions/deliveries` | `GET /api/v1/actions/deliveries`, detail + `POST …/requeue`                          |
 
 The Actions UI lives in **`src/features/actions/`** with an `ActionsApiClient` interface and identity implementation in `src/lib/actionsApi.ts`. Another backend (for example storage events) can reuse the same screens by swapping the client.
-
-**Email templates:** the rule editor uses **TipTap** (`@tiptap/react`) for WYSIWYG HTML with en/fr tabs, placeholder chips, and an iframe preview of standalone inline HTML. React Email is intentionally not used as the editor: it is JSX/code-first, not an admin-friendly WYSIWYG. Unlayer was skipped to avoid vendor lock-in and to keep exported HTML self-contained for identity to send.
 
 If identity does not yet expose Actions endpoints, the UI shows a clear “API not available on this identity version” banner while SCIM and magic link still work on older builds.
 

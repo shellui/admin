@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - 2026-09-26
 
+### 🚨 Changed
+
+- **Actions admin:** webhook rules only. Removed the email channel, React Email editor, template APIs, and related dependencies. Legacy email rules from the API are hidden in the list; opening one shows a retirement notice.
+
 ### 🔒 Security
 
 - Action email preview substitution matches identity: HTML-escape interpolated values; scheme-check URL attributes; plain mode for subjects.
