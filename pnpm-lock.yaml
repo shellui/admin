@@ -24,8 +24,8 @@ importers:
         specifier: ^1.2.16
         version: 1.2.16(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@shellui/sdk':
-        specifier: 0.5.0
-        version: 0.5.0
+        specifier: 0.5.3
+        version: 0.5.3
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -119,6 +119,10 @@ packages:
     resolution: {integrity: sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw==}
     engines: {node: '>=6.9.0'}
 
+  '@babel/code-frame@7.29.7':
+    resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
+    engines: {node: '>=6.9.0'}
+
   '@babel/compat-data@7.29.0':
     resolution: {integrity: sha512-T1NCJqT/j9+cn8fvkt7jtwbLBfLC/1y1c7NtCeXFRgzGTsafi68MRv8yzkYSapBnFA6L3U2VSc02ciDzoAJhJg==}
     engines: {node: '>=6.9.0'}
@@ -161,6 +165,10 @@ packages:
     resolution: {integrity: sha512-qSs4ifwzKJSV39ucNjsvc6WVHs6b7S03sOh2OcHF9UHfVPqWWALUsNUVzhSBiItjRZoLHx7nIarVjqKVusUZ1Q==}
     engines: {node: '>=6.9.0'}
 
+  '@babel/helper-validator-identifier@7.29.7':
+    resolution: {integrity: sha512-qehxGkRj55h/ff8EMaJ+cYhyaKlHIxqYDn682wQD7RNp9UujOQsHog2uS0r2vzr4pW+sXf90NeeayjcNaX3fFg==}
+    engines: {node: '>=6.9.0'}
+
   '@babel/helper-validator-option@7.27.1':
     resolution: {integrity: sha512-YvjJow9FxbhFFKDSuFnVCe2WxXk1zWc22fFePVNEaWJEu8IrZVlda6N0uHwzZrUM1il7NC9Mlp4MaJYbYd9JSg==}
     engines: {node: '>=6.9.0'}
@@ -188,6 +196,10 @@ packages:
 
   '@babel/runtime@7.29.2':
     resolution: {integrity: sha512-JiDShH45zKHWyGe4ZNVRrCjBz8Nh9TMmZG1kh4QTK8hCBTWBi8Da+i7s1fJw7/lYpM4ccepSNfqzZ/QvABBi5g==}
+    engines: {node: '>=6.9.0'}
+
+  '@babel/runtime@7.29.7':
+    resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
     engines: {node: '>=6.9.0'}
 
   '@babel/template@7.28.6':
@@ -832,8 +844,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@shellui/sdk@0.5.0':
-    resolution: {integrity: sha512-95ccEfR6lqyJa8JayU1MY0q3kooDZhdOtZ+SK5l1rUptnaum67t903ZgL569GzUwx2ovD4yEQlrSMT79N8z1Lw==}
+  '@shellui/sdk@0.5.3':
+    resolution: {integrity: sha512-ESlqhe7Z3/HcxNHF5J1CnD8sawGXzeUYbxSMiCrZ3EJ2nHjxZV+TyLkL4zzPXZxMEWmVzeaz1Xcaqu12h7/r6g==}
 
   '@testing-library/dom@10.4.1':
     resolution: {integrity: sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg==}
@@ -1604,8 +1616,8 @@ packages:
   rfdc@1.4.1:
     resolution: {integrity: sha512-q1b3N5QkRUWUl7iyylaaj3kOpIT0N2i9MqIEQXP73GVsN9cw3fdx8X63cEmWhJGi2PPCF23Ijp7ktmd39rawIA==}
 
-  roarr@7.21.4:
-    resolution: {integrity: sha512-qvfUKCrpPzhWmQ4NxRYnuwhkI5lwmObhBU06BCK/lpj6PID9nL4Hk6XDwek2foKI+TMaV+Yw//XZshGF2Lox/Q==}
+  roarr@7.21.7:
+    resolution: {integrity: sha512-6X9ID9jb83kPkDxm5xLb9rZdGm6ksdDjpeL0iW5weKelJFi+NVBSowRpEuH8CdpX2x+7RW0TZaezibE7yQB7pg==}
     engines: {node: '>=18.0'}
 
   rollup@4.60.1:
@@ -1934,6 +1946,12 @@ snapshots:
       js-tokens: 4.0.0
       picocolors: 1.1.1
 
+  '@babel/code-frame@7.29.7':
+    dependencies:
+      '@babel/helper-validator-identifier': 7.29.7
+      js-tokens: 4.0.0
+      picocolors: 1.1.1
+
   '@babel/compat-data@7.29.0': {}
 
   '@babel/core@7.29.0':
@@ -1996,6 +2014,8 @@ snapshots:
 
   '@babel/helper-validator-identifier@7.28.5': {}
 
+  '@babel/helper-validator-identifier@7.29.7': {}
+
   '@babel/helper-validator-option@7.27.1': {}
 
   '@babel/helpers@7.29.2':
@@ -2018,6 +2038,8 @@ snapshots:
       '@babel/helper-plugin-utils': 7.28.6
 
   '@babel/runtime@7.29.2': {}
+
+  '@babel/runtime@7.29.7': {}
 
   '@babel/template@7.28.6':
     dependencies:
@@ -2479,14 +2501,14 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.60.1':
     optional: true
 
-  '@shellui/sdk@0.5.0':
+  '@shellui/sdk@0.5.3':
     dependencies:
-      roarr: 7.21.4
+      roarr: 7.21.7
 
   '@testing-library/dom@10.4.1':
     dependencies:
-      '@babel/code-frame': 7.29.0
-      '@babel/runtime': 7.29.2
+      '@babel/code-frame': 7.29.7
+      '@babel/runtime': 7.29.7
       '@types/aria-query': 5.0.4
       aria-query: 5.3.0
       dom-accessibility-api: 0.5.16
@@ -3222,7 +3244,7 @@ snapshots:
 
   rfdc@1.4.1: {}
 
-  roarr@7.21.4:
+  roarr@7.21.7:
     dependencies:
       fast-printf: 1.6.10
       safe-stable-stringify: 2.5.0
