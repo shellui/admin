@@ -118,6 +118,53 @@ export async function updateAdminUser(
   return body as AdminUserRow;
 }
 
+export type InviteLanguage = 'en' | 'fr';
+
+export type InviteUserPayload = {
+  email: string;
+  language: InviteLanguage;
+  /** Shell URL linked from the email; must be on the company OAuth redirect allowlist. */
+  app_url?: string;
+};
+
+export type InviteUserResult = {
+  user: AdminUserRow;
+  user_created: boolean;
+};
+
+export class AdminApiError extends Error {
+  constructor(
+    message: string,
+    readonly code: string | null,
+  ) {
+    super(message);
+    this.name = 'AdminApiError';
+  }
+}
+
+/**
+ * Invites someone to the current company. The server reuses or creates the account, enables
+ * access, and sends the invitation email (or the `identity.user.invited` webhook).
+ */
+export async function inviteAdminUser(
+  accessToken: string,
+  payload: InviteUserPayload,
+): Promise<InviteUserResult> {
+  const res = await authFetch('/api/v1/invitations', accessToken, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) {
+    const code =
+      body && typeof (body as Record<string, unknown>).error_code === 'string'
+        ? ((body as Record<string, unknown>).error_code as string)
+        : null;
+    throw new AdminApiError(parseErrorMessage(body) || `Request failed (${res.status})`, code);
+  }
+  return body as InviteUserResult;
+}
+
 /**
  * Removes the user from the current company. The server deletes the account itself only when
  * this was their last company.

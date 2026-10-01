@@ -13,6 +13,8 @@ import { OAuthSetupPage } from '@/pages/OAuthSetupPage';
 import { ScimSetupPage } from '@/pages/ScimSetupPage';
 import { RouteErrorPage } from '@/pages/RouteErrorPage';
 import { AccessTokensPage } from '@/pages/AccessTokensPage';
+import { InviteUserPage } from '@/pages/InviteUserPage';
+import { INVITE_ROUTE } from '@/lib/inviteModal';
 import { UserDetailPage } from '@/pages/UserDetailPage';
 import { UsersListPage } from '@/pages/UsersListPage';
 import { HostingAppDetailPage } from '@/pages/HostingAppDetailPage';
@@ -94,6 +96,7 @@ const storageWebhookRoutes = [
  * their routes exist only so the chrome hash location stays bookmarkable.
  */
 export const router = createHashRouter([
+  { path: INVITE_ROUTE, element: <InviteUserPage />, errorElement: <RouteErrorPage /> },
   {
     path: '/',
     element: <AdminShellLayout />,
