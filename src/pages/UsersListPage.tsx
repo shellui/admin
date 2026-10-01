@@ -35,7 +35,8 @@ import {
   type AdminUserListResponse,
   type AdminUserRow,
 } from '@/lib/adminUsersApi';
-import { onUserInvited, openInviteUserModal } from '@/lib/inviteModal';
+import { openInviteUserModal } from '@/lib/inviteModal';
+import { PendingInvitationsButton } from '@/components/PendingInvitationsButton';
 
 /** Page size for directory fetch; use `page` in URL for additional pages (full directory is all pages together). */
 const PAGE_SIZE = 50;
@@ -107,9 +108,6 @@ export function UsersListPage() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => onUserInvited(() => void load()), [load]);
-
   function onSubmit(values: FilterValues) {
     setSearchParams(
       createSearchParams({
@@ -206,17 +204,20 @@ export function UsersListPage() {
           <Text className="max-w-3xl text-sm text-muted-foreground">{t('usersDescription')}</Text>
         </div>
         {accessToken ? (
-          <Button
-            type="button"
-            onClick={openInviteUserModal}
-            className="inline-flex shrink-0 items-center gap-2"
-          >
-            <UserPlus
-              className="size-4"
-              aria-hidden
-            />
-            {t('inviteAction')}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <PendingInvitationsButton accessToken={accessToken} />
+            <Button
+              type="button"
+              onClick={openInviteUserModal}
+              className="inline-flex shrink-0 items-center gap-2"
+            >
+              <UserPlus
+                className="size-4"
+                aria-hidden
+              />
+              {t('inviteAction')}
+            </Button>
+          </div>
         ) : null}
       </header>
 

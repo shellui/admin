@@ -127,9 +127,15 @@ export type InviteUserPayload = {
   app_url?: string;
 };
 
-export type InviteUserResult = {
-  user: AdminUserRow;
-  user_created: boolean;
+export type AdminInvitation = {
+  id: number;
+  email: string;
+  language: InviteLanguage;
+  /** `revoked` rows are listed while they still block sign-in for that email. */
+  status: 'pending' | 'revoked';
+  invited_by: { id: number; email: string | null; name: string } | null;
+  created_at: string;
+  revoked_at: string | null;
 };
 
 export class AdminApiError extends Error {
@@ -142,27 +148,62 @@ export class AdminApiError extends Error {
   }
 }
 
+async function adminApiError(res: Response): Promise<AdminApiError> {
+  const body = await res.json().catch(() => null);
+  const code =
+    body && typeof (body as Record<string, unknown>).error_code === 'string'
+      ? ((body as Record<string, unknown>).error_code as string)
+      : null;
+  return new AdminApiError(parseErrorMessage(body) || `Request failed (${res.status})`, code);
+}
+
 /**
- * Invites someone to the current company. The server reuses or creates the account, enables
- * access, and sends the invitation email (or the `identity.user.invited` webhook).
+ * Stores a pending invitation and sends the invitation email (or the `identity.user.invited`
+ * webhook). No account is created: the invitee gets access on their first sign-in.
  */
 export async function inviteAdminUser(
   accessToken: string,
   payload: InviteUserPayload,
-): Promise<InviteUserResult> {
+): Promise<AdminInvitation> {
   const res = await authFetch('/api/v1/invitations', accessToken, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
-  const body = await res.json().catch(() => null);
-  if (!res.ok) {
-    const code =
-      body && typeof (body as Record<string, unknown>).error_code === 'string'
-        ? ((body as Record<string, unknown>).error_code as string)
-        : null;
-    throw new AdminApiError(parseErrorMessage(body) || `Request failed (${res.status})`, code);
-  }
-  return body as InviteUserResult;
+  if (!res.ok) throw await adminApiError(res);
+  const body = (await res.json()) as { invitation: AdminInvitation };
+  return body.invitation;
+}
+
+/** Pending invitations, plus revoked ones that still block sign-in. */
+export async function fetchAdminInvitations(accessToken: string): Promise<AdminInvitation[]> {
+  const res = await authFetch('/api/v1/invitations', accessToken);
+  if (!res.ok) throw await adminApiError(res);
+  const body = (await res.json()) as { results: AdminInvitation[] };
+  return body.results;
+}
+
+/** Revokes a pending invitation; sign-in with that email is refused until a new invitation. */
+export async function revokeAdminInvitation(
+  accessToken: string,
+  invitationId: number,
+): Promise<AdminInvitation> {
+  const res = await authFetch(`/api/v1/invitations/${invitationId}/revoke`, accessToken, {
+    method: 'POST',
+  });
+  if (!res.ok) throw await adminApiError(res);
+  const body = (await res.json()) as { invitation: AdminInvitation };
+  return body.invitation;
+}
+
+/** Deletes a revoked invitation for good, which also lifts the sign-in block for that email. */
+export async function deleteAdminInvitation(
+  accessToken: string,
+  invitationId: number,
+): Promise<void> {
+  const res = await authFetch(`/api/v1/invitations/${invitationId}`, accessToken, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw await adminApiError(res);
 }
 
 /**

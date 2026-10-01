@@ -14,7 +14,8 @@ import { ScimSetupPage } from '@/pages/ScimSetupPage';
 import { RouteErrorPage } from '@/pages/RouteErrorPage';
 import { AccessTokensPage } from '@/pages/AccessTokensPage';
 import { InviteUserPage } from '@/pages/InviteUserPage';
-import { INVITE_ROUTE } from '@/lib/inviteModal';
+import { INVITATIONS_ROUTE, INVITE_ROUTE } from '@/lib/inviteModal';
+import { PendingInvitationsPage } from '@/pages/PendingInvitationsPage';
 import { UserDetailPage } from '@/pages/UserDetailPage';
 import { UsersListPage } from '@/pages/UsersListPage';
 import { HostingAppDetailPage } from '@/pages/HostingAppDetailPage';
@@ -97,6 +98,11 @@ const storageWebhookRoutes = [
  */
 export const router = createHashRouter([
   { path: INVITE_ROUTE, element: <InviteUserPage />, errorElement: <RouteErrorPage /> },
+  {
+    path: INVITATIONS_ROUTE,
+    element: <PendingInvitationsPage />,
+    errorElement: <RouteErrorPage />,
+  },
   {
     path: '/',
     element: <AdminShellLayout />,

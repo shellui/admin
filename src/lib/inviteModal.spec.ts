@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { inviteModalUrl, resolveShellAppUrl } from './inviteModal';
+import {
+  INVITATIONS_ROUTE,
+  adminModalUrl,
+  inviteModalUrl,
+  resolveShellAppUrl,
+} from './inviteModal';
 
 function locationWith(ancestors: string[] | undefined) {
   const list = ancestors
@@ -16,6 +21,12 @@ describe('inviteModalUrl', () => {
     expect(inviteModalUrl({ origin: 'https://admin.acme.com', pathname: '/' })).toBe(
       'https://admin.acme.com/#/invite',
     );
+  });
+
+  it('builds the pending invitations route', () => {
+    expect(
+      adminModalUrl(INVITATIONS_ROUTE, { origin: 'https://admin.acme.com', pathname: '/admin/' }),
+    ).toBe('https://admin.acme.com/admin/#/invitations');
   });
 });
 

@@ -1,16 +1,28 @@
 import shellui from '@shellui/sdk';
 
 export const INVITE_ROUTE = '/invite';
+export const INVITATIONS_ROUTE = '/invitations';
 
 const INVITE_CHANNEL = 'shellui-admin-invitations';
 
-/** Admin URL for the invite form, loaded by the shell in a modal iframe. */
+/** Admin URL for a top-level route (rendered without the admin chrome), loaded by the shell in a modal iframe. */
+export function adminModalUrl(
+  route: string,
+  location: Pick<Location, 'origin' | 'pathname'> = window.location,
+) {
+  return `${location.origin}${location.pathname}#${route}`;
+}
+
 export function inviteModalUrl(location: Pick<Location, 'origin' | 'pathname'> = window.location) {
-  return `${location.origin}${location.pathname}#${INVITE_ROUTE}`;
+  return adminModalUrl(INVITE_ROUTE, location);
 }
 
 export function openInviteUserModal(): void {
   shellui.openModal({ url: inviteModalUrl(), size: 'content', maxWidth: '32rem' });
+}
+
+export function openPendingInvitationsModal(): void {
+  shellui.openModal({ url: adminModalUrl(INVITATIONS_ROUTE), size: 'content' });
 }
 
 /**
@@ -36,19 +48,19 @@ export function resolveShellAppUrl(
   return null;
 }
 
-/** Tell other admin frames (same origin) that an invitation was sent. */
-export function notifyUserInvited(): void {
+/** Tell other admin frames (same origin) that an invitation was sent or revoked. */
+export function notifyInvitationsChanged(): void {
   if (typeof BroadcastChannel === 'undefined') return;
   const channel = new BroadcastChannel(INVITE_CHANNEL);
-  channel.postMessage({ type: 'invited' });
+  channel.postMessage({ type: 'changed' });
   channel.close();
 }
 
-export function onUserInvited(listener: () => void): () => void {
+export function onInvitationsChanged(listener: () => void): () => void {
   if (typeof BroadcastChannel === 'undefined') return () => undefined;
   const channel = new BroadcastChannel(INVITE_CHANNEL);
   channel.onmessage = (event: MessageEvent) => {
-    if ((event.data as { type?: string } | null)?.type === 'invited') listener();
+    if ((event.data as { type?: string } | null)?.type === 'changed') listener();
   };
   return () => channel.close();
 }

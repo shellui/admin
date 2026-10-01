@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { AdminApiError, inviteAdminUser, type InviteLanguage } from '@/lib/adminUsersApi';
-import { notifyUserInvited, resolveShellAppUrl } from '@/lib/inviteModal';
+import { notifyInvitationsChanged, resolveShellAppUrl } from '@/lib/inviteModal';
 
 const LANGUAGES: InviteLanguage[] = ['en', 'fr'];
 
@@ -40,12 +40,14 @@ export function InviteUserPage() {
         language,
         ...(appUrl ? { app_url: appUrl } : {}),
       });
-      notifyUserInvited();
+      notifyInvitationsChanged();
       shellui.toast({ title: t('inviteSent', { email: address }), type: 'success' });
       shellui.closeModal();
     } catch (e) {
       if (e instanceof AdminApiError && e.code === 'already_member') {
         setError(t('inviteAlreadyMember', { email: address }));
+      } else if (e instanceof AdminApiError && e.code === 'already_invited') {
+        setError(t('inviteAlreadyInvited', { email: address }));
       } else {
         setError(e instanceof Error ? e.message : t('usersErrorUnknown'));
       }

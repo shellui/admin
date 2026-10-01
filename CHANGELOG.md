@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### ✨ Feature
 
-- **Invite user:** an **Invite user** button on the Users page, and in Company access when **Invitation only** is selected, opens a Shellui modal asking for the email and the email language. The user gets access right away and receives the invitation email; the Users list refreshes on its own.
+- **Invite user:** an **Invite user** button on the Users page, and in Company access when **Invitation only** is selected, opens a Shellui modal asking for the email and the email language. The invitee gets access the first time they sign in. Next to it, a **Pending invitations** button shows the pending count (0 included) and opens a modal listing open invitations, with **Revoke** (blocks their sign-in), and **Invite again** or **Delete** (removed for good, which lifts the block) for revoked ones.
 - **Delete user:** the user profile page has a **Delete user** section with a red button. After a Shellui confirmation dialog, the user is removed from this application and the admin returns to the user list. The section is hidden on your own profile and, for company owners who aren't staff, on staff users. If the user is the company's only owner, a toast explains why the delete was refused.
 
 ### 🚨 Changed

@@ -12,6 +12,7 @@ import {
   type CompanyDto,
 } from '@/lib/companiesApi';
 import { openInviteUserModal } from '@/lib/inviteModal';
+import { PendingInvitationsButton } from '@/components/PendingInvitationsButton';
 import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
 
 type Props = {
@@ -256,19 +257,25 @@ export function DashboardCompanySection({ accessToken }: Props) {
               <p className="min-w-0 flex-1 text-sm text-muted-foreground">
                 {t('dashboardCompanyInviteHint')}
               </p>
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={openInviteUserModal}
-                className="inline-flex shrink-0 items-center gap-2"
-              >
-                <UserPlus
-                  className="size-4"
-                  aria-hidden
+              <div className="flex flex-wrap items-center gap-2">
+                <PendingInvitationsButton
+                  accessToken={accessToken}
+                  size="sm"
                 />
-                {t('inviteAction')}
-              </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={openInviteUserModal}
+                  className="inline-flex shrink-0 items-center gap-2"
+                >
+                  <UserPlus
+                    className="size-4"
+                    aria-hidden
+                  />
+                  {t('inviteAction')}
+                </Button>
+              </div>
             </div>
           ) : null}
 
