@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - 2026-09-26
 
+### ✨ Feature
+
+- **Delete user:** the user profile page has a **Delete user** section with a red button. After a Shellui confirmation dialog, the user is removed from this application and the admin returns to the user list. The section is hidden on your own profile and, for company owners who aren't staff, on staff users. If the user is the company's only owner, a toast explains why the delete was refused.
+
 ### 🚨 Changed
 
 - **Webhooks admin:** renamed the Actions UI to Webhooks (`#/webhooks`, `#/webhooks/deliveries`) with redirects from legacy `#/actions/...` routes. Webhook rules only; aligned with identity-service webhook-only rules API (`sample_envelope`, `POST …/send-test`, no `action_kind` on create).

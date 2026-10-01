@@ -17,7 +17,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
+import { useShelluiIsStaff } from '@/hooks/useShelluiIsStaff';
+import { confirmAction } from '@/lib/confirmAction';
+import { getUserIdFromJwt } from '@/lib/jwtCompany';
 import {
+  deleteAdminUser,
   fetchAdminLoginEvents,
   fetchAdminUser,
   updateAdminUser,
@@ -75,6 +79,7 @@ export function UserDetailPage() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const accessToken = useShelluiAccessToken();
+  const actorIsStaff = useShelluiIsStaff();
   const idNum = userId ? parseInt(userId, 10) : NaN;
 
   const [user, setUser] = useState<AdminUserRow | null>(null);
@@ -91,6 +96,7 @@ export function UserDetailPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [togglingAccess, setTogglingAccess] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const loadUser = useCallback(async () => {
     if (!accessToken || !Number.isFinite(idNum)) {
@@ -171,6 +177,11 @@ export function UserDetailPage() {
   }, [loadEvents]);
 
   const preferences = useMemo(() => (user ? parsePreferences(user.user_metadata) : null), [user]);
+  const actorUserId = useMemo(
+    () => (accessToken ? getUserIdFromJwt(accessToken) : null),
+    [accessToken],
+  );
+  const canDelete = !!user && user.id !== actorUserId && (!user.is_staff || actorIsStaff);
 
   const eventsTotalPages = useMemo(() => {
     if (!events?.count) return 1;
@@ -223,6 +234,32 @@ export function UserDetailPage() {
       setSaveError(e instanceof Error ? e.message : t('usersErrorUnknown'));
     } finally {
       setTogglingAccess(false);
+    }
+  }
+
+  async function onDeleteUser() {
+    if (!accessToken || !Number.isFinite(idNum) || !user || deleting) return;
+    const name = displayName(user);
+    const confirmed = await confirmAction({
+      title: t('userDetailDeleteConfirmTitle', { name }),
+      description: t('userDetailDeleteConfirm', { name }),
+      okLabel: t('userDetailDeleteAction'),
+      cancelLabel: t('userDetailDeleteCancel'),
+      danger: true,
+    });
+    if (!confirmed) return;
+    setDeleting(true);
+    try {
+      await deleteAdminUser(accessToken, idNum);
+      shellui.toast({ title: t('userDetailDeleted'), type: 'success' });
+      navigate('/users', { replace: true });
+    } catch (e) {
+      shellui.toast({
+        title: t('userDetailDeleteTitle'),
+        description: e instanceof Error ? e.message : t('usersErrorUnknown'),
+        type: 'error',
+      });
+      setDeleting(false);
     }
   }
 
@@ -649,6 +686,36 @@ export function UserDetailPage() {
               </CardContent>
             </Card>
           </div>
+
+          {canDelete ? (
+            <Card className="border-destructive/40 shadow-sm">
+              <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4 space-y-0">
+                <div className="min-w-0 space-y-1.5">
+                  <CardTitle className="text-lg">{t('userDetailDeleteTitle')}</CardTitle>
+                  <CardDescription>{t('userDetailDeleteHint')}</CardDescription>
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={deleting}
+                  onClick={() => void onDeleteUser()}
+                  className="inline-flex items-center gap-2"
+                >
+                  {deleting ? (
+                    <>
+                      <Loader2
+                        className="size-4 animate-spin"
+                        aria-hidden
+                      />
+                      {t('userDetailDeleting')}
+                    </>
+                  ) : (
+                    t('userDetailDeleteAction')
+                  )}
+                </Button>
+              </CardHeader>
+            </Card>
+          ) : null}
         </>
       ) : null}
     </div>

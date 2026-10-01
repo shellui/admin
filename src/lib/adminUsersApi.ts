@@ -118,6 +118,18 @@ export async function updateAdminUser(
   return body as AdminUserRow;
 }
 
+/**
+ * Removes the user from the current company. The server deletes the account itself only when
+ * this was their last company.
+ */
+export async function deleteAdminUser(accessToken: string, userId: number): Promise<void> {
+  const res = await authFetch(`/api/v1/users/${userId}`, accessToken, { method: 'DELETE' });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
+  }
+}
+
 export type AdminLoginEventRow = {
   id: number;
   company_id: number | null;

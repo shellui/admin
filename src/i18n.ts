@@ -611,6 +611,16 @@ const resources = {
       userDetailGroupsEditableHint:
         'Django auth groups; names appear in JWT user_metadata.groups after refresh.',
       userDetailGroupsEmpty: 'No groups exist yet. Create them on the Groups page.',
+      userDetailDeleteTitle: 'Delete user',
+      userDetailDeleteHint:
+        'Removes this user and their data from this application. This cannot be undone.',
+      userDetailDeleteAction: 'Delete user',
+      userDetailDeleting: 'Deleting…',
+      userDetailDeleteConfirmTitle: 'Delete {{name}}?',
+      userDetailDeleteConfirm:
+        '{{name}} and their data will be removed from this application. This cannot be undone.',
+      userDetailDeleteCancel: 'Cancel',
+      userDetailDeleted: 'User deleted',
       navAccessTokens: 'Access tokens',
       accessTokensPageTitle: 'Personal access tokens',
       accessTokensPageIntro:
@@ -1487,6 +1497,16 @@ const resources = {
       userDetailGroupsEditableHint:
         'Groupes Django ; les noms apparaissent dans user_metadata.groups du JWT après rafraîchissement.',
       userDetailGroupsEmpty: 'Aucun groupe pour l’instant. Créez-en depuis la page Groupes.',
+      userDetailDeleteTitle: 'Supprimer l’utilisateur',
+      userDetailDeleteHint:
+        'Retire cet utilisateur et ses données de cette application. Cette action est irréversible.',
+      userDetailDeleteAction: 'Supprimer l’utilisateur',
+      userDetailDeleting: 'Suppression…',
+      userDetailDeleteConfirmTitle: 'Supprimer {{name}} ?',
+      userDetailDeleteConfirm:
+        '{{name}} et ses données seront retirés de cette application. Cette action est irréversible.',
+      userDetailDeleteCancel: 'Annuler',
+      userDetailDeleted: 'Utilisateur supprimé',
       navAccessTokens: 'Jetons d’accès',
       accessTokensPageTitle: 'Jetons d’accès personnels',
       accessTokensPageIntro:
