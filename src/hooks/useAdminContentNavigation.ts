@@ -152,7 +152,7 @@ export function useAdminContentNavigation(): AdminContentFrame {
       }
       const storageWebhooksHash = buildAdminHashContentUrl(origin, 'storage/webhooks', '', '');
       items.push({
-        label: 'Webhooks',
+        label: 'Email and webhooks',
         path: 'storage/webhooks',
         url: storageWebhooksHash,
         embedUrl: storageWebhooksHash,
@@ -212,7 +212,7 @@ export function useAdminContentNavigation(): AdminContentFrame {
       });
       const hostingWebhooksHash = buildAdminHashContentUrl(origin, 'hosting/webhooks', '', '');
       items.push({
-        label: 'Webhooks',
+        label: 'Email and webhooks',
         path: 'hosting/webhooks',
         url: hostingWebhooksHash,
         embedUrl: hostingWebhooksHash,

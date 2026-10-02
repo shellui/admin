@@ -32,6 +32,7 @@ import {
   KeyRound,
   LayoutDashboard,
   Lock,
+  Mail,
   Network,
   SendHorizonal,
   PanelLeft,
@@ -46,6 +47,8 @@ import { useShelluiAuthBackendBaseUrl } from '@/hooks/useShelluiAuthBackendBaseU
 import { useShelluiDeveloperMode } from '@/hooks/useShelluiDeveloperMode';
 import { useShelluiIsStaff } from '@/hooks/useShelluiIsStaff';
 import { useShelluiHosting, isHostingAdminEnabled } from '@/hooks/useShelluiHosting';
+import { useShelluiEmail } from '@/hooks/useShelluiEmail';
+import { isEmailAdminEnabled } from '@/lib/emailServiceUrl';
 import { useShelluiStorage } from '@/hooks/useShelluiStorage';
 import { useAdminContentNavigation } from '@/hooks/useAdminContentNavigation';
 import type { AdminEmbedNavItem } from '@/hooks/useAdminContentNavigation';
@@ -117,6 +120,9 @@ const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
   'identity/webhooks': SendHorizonal,
   'hosting/webhooks': SendHorizonal,
   'storage/webhooks': SendHorizonal,
+  'email/templates': Mail,
+  'email/provider': KeyRound,
+  'email/statistics': BarChart3,
   actions: SendHorizonal,
   swagger: BookOpen,
   redoc: BookOpen,
@@ -146,8 +152,15 @@ const mapLabelToTranslationKey = (label: string): string => {
   if (normalized === 'log events' || normalized === 'journal des événements') return 'navEvents';
   if (normalized === 'oauth apps' || normalized === 'apps oauth') return 'navOAuth';
   if (normalized === 'scim') return 'navScim';
-  if (normalized === 'webhooks') return 'navWebhooks';
-  if (normalized === 'actions') return 'navWebhooks';
+  if (normalized === 'webhooks') return 'navEmailAndWebhooks';
+  if (normalized === 'actions') return 'navEmailAndWebhooks';
+  if (normalized === 'email and webhooks' || normalized === 'e-mail et webhooks') {
+    return 'navEmailAndWebhooks';
+  }
+  if (normalized === 'templates' || normalized === 'modèles' || normalized === 'modeles') {
+    return 'navEmailTemplates';
+  }
+  if (normalized === 'provider' || normalized === 'fournisseur') return 'navEmailProvider';
   if (
     normalized === 'access tokens' ||
     normalized === "jetons d'accès" ||
@@ -170,6 +183,11 @@ const toCustomAppRoutePath = (path: string) => `/app/${path.replace(/^\/+/, '')}
 function isIdentityGroup(title: string): boolean {
   const n = title.toLowerCase();
   return n === 'identity' || n === 'identité' || n === 'identite';
+}
+
+function isEmailGroup(title: string): boolean {
+  const n = title.toLowerCase();
+  return n === 'email' || n === 'e-mail';
 }
 
 const buildNavSections = (
@@ -968,6 +986,7 @@ export function AdminShellLayout() {
   const administration = useShelluiAdministration();
   const storage = useShelluiStorage();
   const hosting = useShelluiHosting();
+  const emailSettings = useShelluiEmail();
   const authBackendBaseUrl = useShelluiAuthBackendBaseUrl();
   const contentFrame = isAdminContentFrame();
   const shellNavigation = adminShellUiConfig.navigation ?? [];
@@ -1012,27 +1031,37 @@ export function AdminShellLayout() {
   }, [isMobile]);
 
   const groupSections = useMemo(() => {
-    const sections = groups.map((group) => {
-      if (isIdentityGroup(group.title)) {
-        const items = [...group.items];
-        if (isStaff && djangoAdminHref) {
-          items.push({
-            key: 'navDjangoAdmin',
-            icon: Lock,
-            label: t('navDjangoAdmin'),
-            openIn: 'external',
-            href: djangoAdminHref,
-          });
+    const sections = groups
+      .map((group) => {
+        if (isIdentityGroup(group.title)) {
+          const items = [...group.items];
+          if (isStaff && djangoAdminHref) {
+            items.push({
+              key: 'navDjangoAdmin',
+              icon: Lock,
+              label: t('navDjangoAdmin'),
+              openIn: 'external',
+              href: djangoAdminHref,
+            });
+          }
+          return {
+            ...group,
+            title: t('navAuthGroup'),
+            subtitle: authBackendBaseUrl,
+            items,
+          };
         }
-        return {
-          ...group,
-          title: t('navAuthGroup'),
-          subtitle: authBackendBaseUrl,
-          items,
-        };
-      }
-      return group;
-    });
+        if (isEmailGroup(group.title)) {
+          if (!isEmailAdminEnabled(emailSettings)) return null;
+          return {
+            ...group,
+            title: t('navEmailGroup'),
+            subtitle: emailSettings.url,
+          };
+        }
+        return group;
+      })
+      .filter((section): section is NonNullable<typeof section> => section !== null);
 
     if (storageUrl) {
       const storageItems: AdminNavItem[] = [];
@@ -1047,7 +1076,7 @@ export function AdminShellLayout() {
       storageItems.push({
         key: 'navWebhooks',
         icon: SendHorizonal,
-        label: t('navWebhooks'),
+        label: t('navEmailAndWebhooks'),
         to: '/storage/webhooks',
       });
       storageItems.push({
@@ -1106,7 +1135,7 @@ export function AdminShellLayout() {
         {
           key: 'navWebhooks',
           icon: SendHorizonal,
-          label: t('navWebhooks'),
+          label: t('navEmailAndWebhooks'),
           to: '/hosting/webhooks',
         },
         {
@@ -1165,6 +1194,7 @@ export function AdminShellLayout() {
     hosting?.showInAdmin,
     hosting?.url,
     hostingUrl,
+    emailSettings,
     isDeveloperMode,
     isStaff,
     storageDjangoAdminHref,

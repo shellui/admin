@@ -22,6 +22,8 @@ import {
 } from '@/features/actions/components/ApiUnavailableNotice';
 import { useActionsApi } from '@/features/actions/useActionsApi';
 import { WebhookServiceUnavailable } from '@/features/actions/components/WebhookServiceUnavailable';
+import { ServiceEmailRulesSection } from '@/features/email/components/ServiceEmailRulesSection';
+import { useEmailApi } from '@/features/email/useEmailApi';
 import { useWebhookPageMeta } from '@/features/actions/useWebhookPageMeta';
 import type { ActionRule, ActionRuleId } from '@/features/actions/types';
 import { confirmAction } from '@/lib/confirmAction';
@@ -34,6 +36,7 @@ export function ActionsRulesListPage() {
   const isOwner = Boolean(accessToken && getIsCompanyOwnerFromJwt(accessToken));
   const { service, serviceConfigured } = useWebhookPageMeta();
   const { api } = useActionsApi(accessToken, service.key);
+  const { api: emailApi, canManage: canManageEmail } = useEmailApi(accessToken);
   const [rows, setRows] = useState<ActionRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
@@ -137,6 +140,13 @@ export function ActionsRulesListPage() {
       </header>
 
       <ActionsSubNav />
+
+      <ServiceEmailRulesSection
+        service={service.key}
+        client={emailApi}
+        canManage={canManageEmail}
+        signedIn={Boolean(accessToken)}
+      />
 
       {!serviceConfigured ? <WebhookServiceUnavailable serviceKey={service.key} /> : null}
 

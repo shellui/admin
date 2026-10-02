@@ -22,6 +22,10 @@ import { HostingAppDetailPage } from '@/pages/HostingAppDetailPage';
 import { HostingAppsPage } from '@/pages/HostingAppsPage';
 import { HostingStatisticsPage } from '@/pages/HostingStatisticsPage';
 import { StorageStatisticsPage } from '@/pages/StorageStatisticsPage';
+import { EmailProviderPage } from '@/features/email/pages/EmailProviderPage';
+import { EmailStatisticsPage } from '@/features/email/pages/EmailStatisticsPage';
+import { EmailTemplateEditorPage } from '@/features/email/pages/EmailTemplateEditorPage';
+import { EmailTemplatesPage } from '@/features/email/pages/EmailTemplatesPage';
 import {
   legacyWebhooksRedirectTarget,
   webhookDeliveriesPath,
@@ -214,6 +218,10 @@ export const router = createHashRouter([
         ),
       },
       { path: 'storage/statistics', element: <StorageStatisticsPage /> },
+      { path: 'email/templates/:templateKey', element: <EmailTemplateEditorPage /> },
+      { path: 'email/templates', element: <EmailTemplatesPage /> },
+      { path: 'email/provider', element: <EmailProviderPage /> },
+      { path: 'email/statistics', element: <EmailStatisticsPage /> },
       { path: 'storage/swagger', element: null },
       { path: 'storage/redoc', element: null },
       { path: 'storage', element: null },

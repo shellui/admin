@@ -1,0 +1,285 @@
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Text } from '@/components/ui/text';
+import { EMAIL_PROVIDER_CATALOG, emailProviderDefinition } from '@/lib/emailProviders';
+import type { EmailProviderSettings, EmailProviderWrite } from '@/lib/emailTypes';
+
+type SmtpDraft = {
+  host: string;
+  port: string;
+  username: string;
+  useTls: boolean;
+  useSsl: boolean;
+};
+
+const EMPTY_SMTP: SmtpDraft = { host: '', port: '587', username: '', useTls: true, useSsl: false };
+
+export function EmailProviderForm({
+  settings,
+  jwtEmail,
+  isStaff,
+  saving,
+  testing,
+  onSave,
+  onTest,
+}: {
+  settings: EmailProviderSettings;
+  jwtEmail: string | null;
+  isStaff: boolean;
+  saving: boolean;
+  testing: boolean;
+  onSave: (body: EmailProviderWrite) => Promise<void>;
+  onTest: (to: string) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const initialProvider =
+    settings.provider && emailProviderDefinition(settings.provider)?.available
+      ? settings.provider
+      : 'resend';
+  const [provider, setProvider] = useState(initialProvider);
+  const [fromEmail, setFromEmail] = useState(settings.fromEmail);
+  const [fromName, setFromName] = useState(settings.fromName);
+  const [sendingDomain, setSendingDomain] = useState(settings.sendingDomain);
+  const [bulkFromEmail, setBulkFromEmail] = useState(settings.bulkFromEmail);
+  const [apiKey, setApiKey] = useState('');
+  const [smtpPassword, setSmtpPassword] = useState('');
+  const [smtp, setSmtp] = useState<SmtpDraft>(EMPTY_SMTP);
+  const [testTo, setTestTo] = useState(jwtEmail ?? '');
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const definition = emailProviderDefinition(provider);
+  const providerUnchanged = provider === (settings.provider ?? '');
+  const hint = settings.credentialsHint;
+
+  function clearSecrets() {
+    setApiKey('');
+    setSmtpPassword('');
+  }
+
+  async function submit() {
+    setFormError(null);
+    const secret = definition?.credentialKind === 'smtp' ? smtpPassword.trim() : apiKey.trim();
+    const providerChanged = !providerUnchanged || !settings.configured;
+    if (providerChanged && !secret) {
+      setFormError(t('emailCredentialsRequired'));
+      return;
+    }
+    const body: EmailProviderWrite = {
+      provider,
+      from_email: fromEmail.trim(),
+      from_name: fromName.trim(),
+      sending_domain: sendingDomain.trim(),
+      bulk_from_email: bulkFromEmail.trim(),
+    };
+    if (secret) {
+      if (definition?.credentialKind === 'smtp') {
+        body.credentials = {
+          host: smtp.host.trim(),
+          port: Number(smtp.port) || 587,
+          username: smtp.username.trim(),
+          password: smtpPassword,
+          use_tls: smtp.useTls,
+          use_ssl: smtp.useSsl,
+        };
+      } else {
+        body.credentials = { api_key: apiKey };
+      }
+    }
+    try {
+      await onSave(body);
+      clearSecrets();
+    } catch {
+      // The page maps error_code. Keep the typed secret so you can retry.
+    }
+  }
+
+  return (
+    <form
+      className="space-y-6"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submit();
+      }}
+    >
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="email-provider">{t('emailFieldProvider')}</Label>
+          <select
+            id="email-provider"
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+            value={provider}
+            onChange={(event) => {
+              setProvider(event.target.value);
+              clearSecrets();
+            }}
+          >
+            {EMAIL_PROVIDER_CATALOG.map((item) => (
+              <option
+                key={item.id}
+                value={item.id}
+                disabled={!item.available}
+              >
+                {t(`emailProvider_${item.id}`)}
+                {item.available ? '' : ` (${t('emailProviderUnavailable')})`}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="email-from">{t('emailFieldFromEmail')}</Label>
+          <Input
+            id="email-from"
+            type="email"
+            autoComplete="off"
+            value={fromEmail}
+            onChange={(event) => setFromEmail(event.target.value)}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="email-from-name">{t('emailFieldFromName')}</Label>
+          <Input
+            id="email-from-name"
+            value={fromName}
+            onChange={(event) => setFromName(event.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="email-domain">{t('emailFieldSendingDomain')}</Label>
+          <Input
+            id="email-domain"
+            value={sendingDomain}
+            onChange={(event) => setSendingDomain(event.target.value)}
+          />
+        </div>
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="email-bulk-from">{t('emailFieldBulkFrom')}</Label>
+          <Input
+            id="email-bulk-from"
+            type="email"
+            value={bulkFromEmail}
+            onChange={(event) => setBulkFromEmail(event.target.value)}
+          />
+        </div>
+      </div>
+
+      {definition?.credentialKind === 'smtp' ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="email-smtp-host">{t('emailSmtpHost')}</Label>
+            <Input
+              id="email-smtp-host"
+              value={smtp.host}
+              onChange={(event) => setSmtp((prev) => ({ ...prev, host: event.target.value }))}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email-smtp-port">{t('emailSmtpPort')}</Label>
+            <Input
+              id="email-smtp-port"
+              inputMode="numeric"
+              value={smtp.port}
+              onChange={(event) => setSmtp((prev) => ({ ...prev, port: event.target.value }))}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email-smtp-user">{t('emailSmtpUsername')}</Label>
+            <Input
+              id="email-smtp-user"
+              autoComplete="off"
+              value={smtp.username}
+              onChange={(event) => setSmtp((prev) => ({ ...prev, username: event.target.value }))}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email-smtp-password">{t('emailSmtpPassword')}</Label>
+            <Input
+              id="email-smtp-password"
+              name="smtpPassword"
+              type="password"
+              autoComplete="new-password"
+              value={smtpPassword}
+              placeholder={t('emailSecretPlaceholder')}
+              onChange={(event) => setSmtpPassword(event.target.value)}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={smtp.useTls}
+              onChange={(event) => setSmtp((prev) => ({ ...prev, useTls: event.target.checked }))}
+            />
+            {t('emailSmtpTls')}
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={smtp.useSsl}
+              onChange={(event) => setSmtp((prev) => ({ ...prev, useSsl: event.target.checked }))}
+            />
+            {t('emailSmtpSsl')}
+          </label>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <Label htmlFor="email-api-key">{t('emailFieldApiKey')}</Label>
+          <Input
+            id="email-api-key"
+            name="apiKey"
+            type="password"
+            autoComplete="new-password"
+            value={apiKey}
+            placeholder={t('emailSecretPlaceholder')}
+            onChange={(event) => setApiKey(event.target.value)}
+          />
+          <Text className="font-mono text-xs">
+            {hint ? t('emailCredentialsHint', { hint }) : t('emailCredentialsEmpty')}
+          </Text>
+        </div>
+      )}
+
+      {definition?.credentialKind === 'smtp' && hint ? (
+        <Text className="font-mono text-xs">{t('emailCredentialsHint', { hint })}</Text>
+      ) : null}
+
+      {formError ? <Text className="font-mono text-sm text-destructive">{formError}</Text> : null}
+
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="submit"
+          disabled={saving}
+        >
+          {saving ? t('emailProviderSaving') : t('emailProviderSave')}
+        </Button>
+      </div>
+
+      <div className="space-y-3 border-t border-border/80 pt-4">
+        <h2 className="text-base font-semibold tracking-tight">{t('emailTestSend')}</h2>
+        <Text>{isStaff ? t('emailTestStaffHint') : t('emailTestOwnerHint')}</Text>
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="min-w-[16rem] flex-1 space-y-2">
+            <Label htmlFor="email-test-to">{t('emailTestTo')}</Label>
+            <Input
+              id="email-test-to"
+              type="email"
+              value={isStaff ? testTo : (jwtEmail ?? '')}
+              disabled={!isStaff}
+              onChange={(event) => setTestTo(event.target.value)}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={testing || !(isStaff ? testTo.trim() : jwtEmail)}
+            onClick={() => void onTest((isStaff ? testTo : jwtEmail) ?? '')}
+          >
+            {testing ? t('emailTestSending') : t('emailTestSend')}
+          </Button>
+        </div>
+      </div>
+    </form>
+  );
+}
