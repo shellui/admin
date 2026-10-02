@@ -10,6 +10,7 @@ import {
 import { useEmailApi } from '@/features/email/useEmailApi';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { emailErrorText } from '@/lib/emailApiErrors';
+import { validateAuthLaneOverride } from '@/lib/emailAuthTemplate';
 import { emptyEmailDocument, type EmailLang, type EmailVariable } from '@/lib/emailDocument';
 import { confirmAction } from '@/lib/confirmAction';
 import type { EmailTemplateDefaults } from '@/lib/emailTypes';
@@ -38,6 +39,7 @@ export function EmailTemplateEditorPage() {
   const [error, setError] = useState<unknown>(null);
   const [defaults, setDefaults] = useState<EmailTemplateDefaults | null>(null);
   const [variables, setVariables] = useState<EmailVariable[]>([]);
+  const [laneClass, setLaneClass] = useState('');
   const [draftEn, setDraftEn] = useState<EmailLangDraft>(() => draftFromPack(null, 'en', null));
   const [draftFr, setDraftFr] = useState<EmailLangDraft>(() => draftFromPack(null, 'fr', null));
   const [publishing, setPublishing] = useState(false);
@@ -54,11 +56,13 @@ export function EmailTemplateEditorPage() {
     setLoading(true);
     setError(null);
     try {
-      const [nextDefaults, templates] = await Promise.all([
+      const [nextDefaults, templates, catalog] = await Promise.all([
         api.fetchDefaults(templateKey),
         api.fetchTemplates(),
+        api.fetchCatalog(),
       ]);
       const rows = templates.filter((row) => row.templateKey === templateKey);
+      setLaneClass(catalog.find((event) => event.templateKey === templateKey)?.laneClass ?? '');
       const enId = rows.find((row) => row.language === 'en')?.id ?? null;
       const frId = rows.find((row) => row.language === 'fr')?.id ?? null;
       setDefaults(nextDefaults);
@@ -87,6 +91,17 @@ export function EmailTemplateEditorPage() {
         ['fr', draftFr],
       ] as const) {
         if (!draft.subject.trim()) continue;
+        const issue = validateAuthLaneOverride({
+          laneClass,
+          variables,
+          subject: draft.subject,
+          preheader: draft.preheader,
+          document: draft.document,
+        });
+        if (issue) {
+          setError(issue);
+          return;
+        }
         let id = draft.templateId;
         if (!id) {
           const created = await api.createTemplate(templateKey, lang);
@@ -189,6 +204,7 @@ export function EmailTemplateEditorPage() {
       {!loading && api && canManage && defaults ? (
         <EmailTemplateEditor
           templateKey={templateKey}
+          laneClass={laneClass}
           draftEn={draftEn}
           draftFr={draftFr}
           variables={variables}

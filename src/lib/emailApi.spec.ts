@@ -74,6 +74,36 @@ describe('createEmailApiClient', () => {
     expect(body).not.toHaveProperty('api_key');
     expect(saved.credentialsHint).toBe('••••abcd');
     expect(JSON.stringify(saved)).not.toContain('re_');
+    expect(saved.smtpAllowed).toBe(false);
+  });
+
+  it('reads smtp_allowed and skipped stats from the contract', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/api/v1/provider')) {
+        return new Response(JSON.stringify({ configured: false, smtp_allowed: true }), {
+          status: 200,
+        });
+      }
+      return new Response(
+        JSON.stringify({
+          company_id: 42,
+          from: '2026-09-02T00:00:00Z',
+          to: '2026-10-02T00:00:00Z',
+          totals: { sent: 1, delivered: 1, bounced: 0, complained: 0, expired: 0, failed: 0 },
+          skipped: { total: 4, no_recipients: 1, rule_disabled: 3 },
+          by_lane: {},
+          by_event: {},
+          by_day: [],
+        }),
+        { status: 200 },
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const client = createEmailApiClient('https://email.shellui.com', 'jwt-token', 42);
+    expect((await client.fetchProvider()).smtpAllowed).toBe(true);
+    const stats = await client.fetchStats();
+    expect(stats.skipped).toEqual({ total: 4, noRecipients: 1, ruleDisabled: 3 });
   });
 
   it('maps error_code and ignores translated API prose', async () => {

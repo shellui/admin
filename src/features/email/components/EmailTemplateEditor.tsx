@@ -15,6 +15,8 @@ import {
   type EmailLang,
   type EmailVariable,
 } from '@/lib/emailDocument';
+import { emailErrorText } from '@/lib/emailApiErrors';
+import { requiredAuthLinkTokens, validateAuthLaneOverride } from '@/lib/emailAuthTemplate';
 import {
   availableThemeNamesKey,
   getAppearanceAvailableThemes,
@@ -50,6 +52,7 @@ function updateBlock(
 
 export function EmailTemplateEditor({
   templateKey,
+  laneClass,
   draftEn,
   draftFr,
   variables,
@@ -64,6 +67,7 @@ export function EmailTemplateEditor({
   servicePreviewNote,
 }: {
   templateKey: string;
+  laneClass: string;
   draftEn: EmailLangDraft;
   draftFr: EmailLangDraft;
   variables: EmailVariable[];
@@ -89,6 +93,17 @@ export function EmailTemplateEditor({
   const [showService, setShowService] = useState(false);
 
   const draft = lang === 'fr' ? draftFr : draftEn;
+  const authTokens = useMemo(() => requiredAuthLinkTokens(variables), [variables]);
+  const authIssue =
+    laneClass === 'auth'
+      ? validateAuthLaneOverride({
+          laneClass,
+          variables,
+          subject: draft.subject,
+          preheader: draft.preheader,
+          document: draft.document,
+        })
+      : null;
   const resolvedTheme = resolveEmailThemeName(themeName ?? undefined, appearance, themes);
   const palette = paletteForThemeName(resolvedTheme, appearance, themes);
   const themedHtml = renderEmailPreviewHtml(draft.document, palette);
@@ -185,6 +200,16 @@ export function EmailTemplateEditor({
           ) : null}
         </div>
 
+        {laneClass === 'auth' ? (
+          <Text>
+            {t('emailAuthLaneNotice', {
+              tokens: authTokens.map((token) => `{{ ${token} }}`).join(', '),
+            })}
+          </Text>
+        ) : null}
+        {authIssue ? (
+          <Text className="font-mono text-sm text-destructive">{emailErrorText(t, authIssue)}</Text>
+        ) : null}
         {hasCompanyTemplate ? <Text>{t('emailEditorDocumentGap')}</Text> : null}
         <Text className="font-mono text-xs">{t('emailEditorThemeNote')}</Text>
 

@@ -4,7 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
-import { EMAIL_PROVIDER_CATALOG, emailProviderDefinition } from '@/lib/emailProviders';
+import {
+  EMAIL_PROVIDER_CATALOG,
+  emailProviderDefinition,
+  type EmailProviderDefinition,
+} from '@/lib/emailProviders';
 import type { EmailProviderSettings, EmailProviderWrite } from '@/lib/emailTypes';
 
 type SmtpDraft = {
@@ -16,6 +20,15 @@ type SmtpDraft = {
 };
 
 const EMPTY_SMTP: SmtpDraft = { host: '', port: '587', username: '', useTls: true, useSsl: false };
+
+function providerOptionEnabled(
+  item: EmailProviderDefinition,
+  settings: EmailProviderSettings,
+): boolean {
+  if (!item.available) return false;
+  if (item.id !== 'smtp') return true;
+  return settings.smtpAllowed || settings.provider === 'smtp';
+}
 
 export function EmailProviderForm({
   settings,
@@ -35,11 +48,14 @@ export function EmailProviderForm({
   onTest: (to: string) => Promise<void>;
 }) {
   const { t } = useTranslation();
+  const initialDefinition = settings.provider
+    ? emailProviderDefinition(settings.provider)
+    : undefined;
   const initialProvider =
-    settings.provider && emailProviderDefinition(settings.provider)?.available
-      ? settings.provider
+    initialDefinition && providerOptionEnabled(initialDefinition, settings)
+      ? initialDefinition.id
       : 'resend';
-  const [provider, setProvider] = useState(initialProvider);
+  const [provider, setProvider] = useState<string>(initialProvider);
   const [fromEmail, setFromEmail] = useState(settings.fromEmail);
   const [fromName, setFromName] = useState(settings.fromName);
   const [sendingDomain, setSendingDomain] = useState(settings.sendingDomain);
@@ -116,17 +132,23 @@ export function EmailProviderForm({
               clearSecrets();
             }}
           >
-            {EMAIL_PROVIDER_CATALOG.map((item) => (
-              <option
-                key={item.id}
-                value={item.id}
-                disabled={!item.available}
-              >
-                {t(`emailProvider_${item.id}`)}
-                {item.available ? '' : ` (${t('emailProviderUnavailable')})`}
-              </option>
-            ))}
+            {EMAIL_PROVIDER_CATALOG.map((item) => {
+              const enabled = providerOptionEnabled(item, settings);
+              return (
+                <option
+                  key={item.id}
+                  value={item.id}
+                  disabled={!enabled}
+                >
+                  {t(`emailProvider_${item.id}`)}
+                  {enabled ? '' : ` (${t('emailProviderUnavailable')})`}
+                </option>
+              );
+            })}
           </select>
+          {!settings.smtpAllowed && settings.provider !== 'smtp' ? (
+            <Text className="font-mono text-xs">{t('emailSmtpDisabled')}</Text>
+          ) : null}
         </div>
         <div className="space-y-2">
           <Label htmlFor="email-from">{t('emailFieldFromEmail')}</Label>

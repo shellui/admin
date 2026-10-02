@@ -186,6 +186,27 @@ export function EmailStatisticsPage() {
             ))}
           </div>
 
+          <div className="grid gap-4 sm:grid-cols-3">
+            <StatBlock
+              label={t('emailStatsSkipped')}
+              value={formatInt(stats.skipped.total)}
+              hint={t('emailStatsSkippedHint')}
+              icon={MailWarning}
+            />
+            <StatBlock
+              label={t('emailStatsNoRecipients')}
+              value={formatInt(stats.skipped.noRecipients)}
+              hint={t('emailStatsNoRecipientsHint')}
+              icon={Inbox}
+            />
+            <StatBlock
+              label={t('emailStatsRuleDisabled')}
+              value={formatInt(stats.skipped.ruleDisabled)}
+              hint={t('emailStatsRuleDisabledHint')}
+              icon={Timer}
+            />
+          </div>
+
           <Card className="border-border/80 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">

@@ -69,7 +69,7 @@ hosting: {
   // showInAdmin: false, // hide Admin → Hosting while keeping deploy
 },
 email: {
-  url: 'https://email.shellui.com', // default when omitted
+  url: 'https://email.shellui.com', // default when omitted. Local Compose is http://localhost:8003
 },
 ```
 
@@ -85,8 +85,8 @@ Point `backend.url` at a local or deployed **identity-service** (for example `ht
 | `#/company`                      | `GET/PATCH /api/v1/auth-methods` (`enable_magic_link`, read-only global kill switch)                                                                 |
 | `#/identity/webhooks`            | Identity email and webhooks (sidebar: Identity → Email and webhooks). Webhook API on **identity-service**. Email rules call **email-service**.       |
 | `#/email/templates`              | Company email templates (suggested catalog plus published overrides), EN and FR.                                                                     |
-| `#/email/provider`               | Company provider (Resend or SMTP). The API key is write-only.                                                                                        |
-| `#/email/statistics`             | Delivery stats and Prometheus metrics from email-service.                                                                                            |
+| `#/email/provider`               | Company provider (Resend). Company SMTP stays disabled unless the provider response sets `smtp_allowed`. The API key is write-only.                  |
+| `#/email/statistics`             | Delivery stats (including skipped events) and Prometheus metrics from email-service.                                                                 |
 | `#/hosting/webhooks`             | Hosting email and webhooks when `hosting.url` is set (sidebar: Hosting → Email and webhooks). Webhooks call **hosting-service** `/api/v1/actions/*`. |
 | `#/storage/webhooks`             | Storage email and webhooks when `storage.url` is set (sidebar: Storage → Email and webhooks). Webhooks call **storage-service** `/api/v1/actions/*`. |
 | `#/identity/webhooks/deliveries` | Delivery log for the active service (`GET /api/v1/actions/deliveries`, detail + `POST …/requeue`).                                                   |

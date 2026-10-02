@@ -1,6 +1,6 @@
 /**
- * Provider catalog. Resend and SMTP are accepted by email-service.
- * Mailjet is listed so the selector can grow, and stays disabled until the service accepts it.
+ * Provider catalog. Resend is available. SMTP is a real provider name, but company SMTP
+ * is off unless GET /provider reports `smtp_allowed`. Mailjet stays disabled until the service accepts it.
  */
 export type EmailProviderId = 'resend' | 'smtp' | 'mailjet';
 

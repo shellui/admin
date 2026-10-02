@@ -994,6 +994,7 @@ const resources = {
       emailProvider_smtp: 'SMTP',
       emailProvider_mailjet: 'Mailjet',
       emailProviderUnavailable: 'not available',
+      emailSmtpDisabled: 'Company SMTP is off on this email service.',
       emailFieldApiKey: 'API key',
       emailSecretPlaceholder: 'Enter a new secret',
       emailCredentialsHint: 'Stored secret hint: {{hint}}',
@@ -1023,7 +1024,7 @@ const resources = {
         'A company owner can send the test only to the address on the session token.',
       emailStatsTitle: 'Email statistics',
       emailStatsDescription:
-        'Sent, delivered, bounced, complained, expired, and failed counts for this company, plus queue and provider metrics.',
+        'Sent, delivered, bounced, complained, expired, failed, and skipped counts for this company, plus queue and provider metrics.',
       emailStatsRefresh: 'Refresh',
       emailStatsWindow: '{{from}} to {{to}}',
       emailStatsAllLanes: 'All lanes',
@@ -1039,6 +1040,12 @@ const resources = {
       emailStatsExpired: 'Expired',
       emailStatsFailed: 'Failed',
       emailStatsSentHint: 'Sent includes messages the provider later marked delivered or bounced.',
+      emailStatsSkipped: 'Skipped',
+      emailStatsSkippedHint: 'Accepted events that queued no message.',
+      emailStatsNoRecipients: 'No recipients',
+      emailStatsNoRecipientsHint: 'The rule is on and no address could be resolved.',
+      emailStatsRuleDisabled: 'Rule off',
+      emailStatsRuleDisabledHint: 'The catalog or company rule is off.',
       emailLane_auth: 'Auth',
       emailLane_transactional: 'Transactional',
       emailLane_bulk: 'Bulk',
@@ -1063,15 +1070,25 @@ const resources = {
       emailError_unknown_event: 'That event is not in the catalog.',
       emailError_template_lane_mismatch: 'The lane does not match the template.',
       emailError_lane_requires_campaign: 'Bulk mail is not available in this version.',
-      emailError_lane_paused: 'That lane is paused. Try again later.',
+      emailError_lane_paused:
+        'That lane is paused. Staff paused it for every company, or the provider for this company refused the credential. Try again later.',
       emailError_idempotency_conflict: 'This request id was already used with a different body.',
       emailError_recipient_invalid: 'That address is not valid.',
       emailError_recipient_suppressed: 'That address cannot receive auth mail.',
       emailError_recipient_rate_limited: 'Too many messages to that address. Wait and retry.',
-      emailError_company_rate_limited: 'This company hit the hourly send limit.',
-      emailError_variable_url_not_allowed: 'A link variable must use https, mailto, or tel.',
+      emailError_company_rate_limited:
+        'This company hit its send limit. Auth mail allows 30 messages each minute. Transactional mail allows 1000 messages each hour.',
+      emailError_variable_url_not_allowed:
+        'A link variable must use https, mailto, or tel, and an auth link host must be on the allowlist.',
       emailError_unsubscribe_link_missing: 'A bulk template must include the unsubscribe link.',
-      emailError_provider_not_configured: 'No provider is configured for this company.',
+      emailError_provider_not_configured: 'No usable provider credentials for this send.',
+      emailError_platform_sender_not_allowed:
+        'Non-auth mail needs a company provider. This company cannot use the platform From address.',
+      emailError_company_smtp_disabled: 'Company SMTP is turned off on this email service.',
+      emailError_provider_host_not_public: 'The SMTP host must resolve to a public address.',
+      emailError_auth_link_missing: 'An auth template must keep its required link variable.',
+      emailError_auth_link_host_not_allowed:
+        'A button link on an auth template must be an allowed link variable or an allowlisted https address.',
       emailError_provider_not_available: 'That provider is not available.',
       emailError_provider_test_failed: 'The provider refused the test email.',
       emailError_message_not_found: 'That message was not found.',
@@ -1086,6 +1103,13 @@ const resources = {
       emailFieldError_use_versions: 'save a version',
       emailFieldError_not_available: 'not available',
       emailFieldError_template_tags_forbidden: 'template tags are not allowed',
+      emailFieldError_host_not_allowed: 'host is not allowlisted',
+      emailFieldError_token_not_allowed: 'token is not an allowed link variable',
+      emailFieldError_platform_from: 'platform From address',
+      emailFieldError_not_public: 'not a public address',
+      emailFieldError_invalid_port: 'invalid port',
+      emailAuthLaneNotice:
+        'This template is on the auth lane. Keep each required link variable in the copy: {{tokens}}. A button link must be one of those variables, or an https address on the email service allowlist.',
     },
   },
   fr: {
@@ -2102,6 +2126,7 @@ const resources = {
       emailProvider_smtp: 'SMTP',
       emailProvider_mailjet: 'Mailjet',
       emailProviderUnavailable: 'indisponible',
+      emailSmtpDisabled: 'Le SMTP d’entreprise est désactivé sur ce service d’e-mail.',
       emailFieldApiKey: 'Clé d’API',
       emailSecretPlaceholder: 'Saisir un nouveau secret',
       emailCredentialsHint: 'Indice du secret enregistré : {{hint}}',
@@ -2131,7 +2156,7 @@ const resources = {
         'Un propriétaire ne peut envoyer le test qu’à l’adresse du jeton de session.',
       emailStatsTitle: 'Statistiques d’e-mail',
       emailStatsDescription:
-        'Comptes envoyés, délivrés, rejetés, signalés, expirés et en échec pour cette entreprise, plus les métriques de file et de fournisseur.',
+        'Comptes envoyés, délivrés, rejetés, signalés, expirés, en échec et ignorés pour cette entreprise, plus les métriques de file et de fournisseur.',
       emailStatsRefresh: 'Actualiser',
       emailStatsWindow: '{{from}} à {{to}}',
       emailStatsAllLanes: 'Toutes les voies',
@@ -2148,6 +2173,12 @@ const resources = {
       emailStatsFailed: 'Échecs',
       emailStatsSentHint:
         'Envoyés inclut les messages que le fournisseur a ensuite marqués délivrés ou rejetés.',
+      emailStatsSkipped: 'Ignorés',
+      emailStatsSkippedHint: 'Événements acceptés qui n’ont mis aucun message en file.',
+      emailStatsNoRecipients: 'Sans destinataire',
+      emailStatsNoRecipientsHint: 'La règle est activée et aucune adresse n’a pu être résolue.',
+      emailStatsRuleDisabled: 'Règle désactivée',
+      emailStatsRuleDisabledHint: 'La règle du catalogue ou de l’entreprise est désactivée.',
       emailLane_auth: 'Auth',
       emailLane_transactional: 'Transactionnel',
       emailLane_bulk: 'Groupé',
@@ -2172,20 +2203,31 @@ const resources = {
       emailError_unknown_event: 'Cet événement n’est pas dans le catalogue.',
       emailError_template_lane_mismatch: 'La voie ne correspond pas au modèle.',
       emailError_lane_requires_campaign: 'L’envoi groupé n’est pas disponible dans cette version.',
-      emailError_lane_paused: 'Cette voie est en pause. Réessayez plus tard.',
+      emailError_lane_paused:
+        'Cette voie est en pause. Le staff l’a mise en pause pour toutes les entreprises, ou le fournisseur de cette entreprise a refusé l’identifiant. Réessayez plus tard.',
       emailError_idempotency_conflict:
         'Cet identifiant de requête a déjà été utilisé avec un autre corps.',
       emailError_recipient_invalid: 'Cette adresse n’est pas valide.',
       emailError_recipient_suppressed: 'Cette adresse ne peut pas recevoir d’e-mail d’auth.',
       emailError_recipient_rate_limited:
         'Trop de messages vers cette adresse. Patientez puis réessayez.',
-      emailError_company_rate_limited: 'Cette entreprise a atteint la limite horaire d’envoi.',
+      emailError_company_rate_limited:
+        'Cette entreprise a atteint sa limite d’envoi. L’e-mail d’auth autorise 30 messages par minute. L’e-mail transactionnel autorise 1000 messages par heure.',
       emailError_variable_url_not_allowed:
-        'Une variable de lien doit utiliser https, mailto ou tel.',
+        'Une variable de lien doit utiliser https, mailto ou tel, et un hôte de lien d’auth doit être sur la liste autorisée.',
       emailError_unsubscribe_link_missing:
         'Un modèle groupé doit inclure le lien de désinscription.',
       emailError_provider_not_configured:
-        'Aucun fournisseur n’est configuré pour cette entreprise.',
+        'Aucun identifiant de fournisseur utilisable pour cet envoi.',
+      emailError_platform_sender_not_allowed:
+        'L’e-mail hors auth exige un fournisseur d’entreprise. Cette entreprise ne peut pas utiliser l’adresse d’expéditeur de la plateforme.',
+      emailError_company_smtp_disabled:
+        'Le SMTP d’entreprise est désactivé sur ce service d’e-mail.',
+      emailError_provider_host_not_public:
+        'L’hôte SMTP doit se résoudre vers une adresse publique.',
+      emailError_auth_link_missing: 'Un modèle d’auth doit conserver sa variable de lien requise.',
+      emailError_auth_link_host_not_allowed:
+        'Le lien d’un bouton sur un modèle d’auth doit être une variable de lien autorisée ou une adresse https de la liste autorisée.',
       emailError_provider_not_available: 'Ce fournisseur n’est pas disponible.',
       emailError_provider_test_failed: 'Le fournisseur a refusé l’e-mail de test.',
       emailError_message_not_found: 'Ce message est introuvable.',
@@ -2200,6 +2242,13 @@ const resources = {
       emailFieldError_use_versions: 'enregistrer une version',
       emailFieldError_not_available: 'indisponible',
       emailFieldError_template_tags_forbidden: 'les balises de modèle ne sont pas autorisées',
+      emailFieldError_host_not_allowed: 'hôte hors liste autorisée',
+      emailFieldError_token_not_allowed: 'jeton qui n’est pas une variable de lien autorisée',
+      emailFieldError_platform_from: 'adresse d’expéditeur de la plateforme',
+      emailFieldError_not_public: 'adresse non publique',
+      emailFieldError_invalid_port: 'port invalide',
+      emailAuthLaneNotice:
+        'Ce modèle est sur la voie auth. Conservez chaque variable de lien requise dans le texte : {{tokens}}. Le lien d’un bouton doit être l’une de ces variables, ou une adresse https de la liste autorisée du service d’e-mail.',
     },
   },
 } as const;

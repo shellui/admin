@@ -79,6 +79,11 @@ export type EmailProviderSettings = {
   webhookHint: string;
   fallbackProvider: string;
   fallbackConfigured: boolean;
+  /**
+   * True only when GET /provider includes `smtp_allowed: true`.
+   * Company SMTP is off by default. The current contract omits this field.
+   */
+  smtpAllowed: boolean;
 };
 
 export type EmailProviderWrite = {
@@ -108,11 +113,18 @@ export type EmailCountBucket = {
   cancelled: number;
 };
 
+export type EmailSkipped = {
+  total: number;
+  noRecipients: number;
+  ruleDisabled: number;
+};
+
 export type EmailStats = {
   companyId: number | null;
   from: string;
   to: string;
   totals: EmailCountBucket;
+  skipped: EmailSkipped;
   byLane: Record<string, EmailCountBucket>;
   byEvent: Record<string, EmailCountBucket>;
   byDay: Array<EmailCountBucket & { day: string }>;

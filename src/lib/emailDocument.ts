@@ -22,6 +22,8 @@ export type EmailVariable = {
   description: string;
   example: string;
   isUrl: boolean;
+  /** Present when the catalog points button hosts at an operator allowlist. */
+  allowedHostsSetting?: string;
 };
 
 export function emptyEmailDocument(): EmailDocument {

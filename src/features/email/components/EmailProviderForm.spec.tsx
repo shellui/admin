@@ -18,6 +18,7 @@ const settings: EmailProviderSettings = {
   webhookHint: '',
   fallbackProvider: 'resend',
   fallbackConfigured: true,
+  smtpAllowed: false,
 };
 
 function renderForm(onSave = vi.fn(async (_body: EmailProviderWrite) => undefined)) {
@@ -68,6 +69,29 @@ describe('EmailProviderForm', () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
     expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty('credentials');
     expect(JSON.stringify(onSave.mock.calls[0]?.[0])).not.toContain('api_key');
+  });
+
+  it('disables SMTP unless the provider payload says company SMTP is allowed', () => {
+    renderForm();
+    const smtp = screen.getByRole('option', { name: /SMTP/ }) as HTMLOptionElement;
+    expect(smtp.disabled).toBe(true);
+    cleanup();
+    render(
+      <I18nextProvider i18n={i18n}>
+        <EmailProviderForm
+          settings={{ ...settings, smtpAllowed: true }}
+          jwtEmail="ada@acme.com"
+          isStaff={false}
+          saving={false}
+          testing={false}
+          onSave={vi.fn(async () => undefined)}
+          onTest={vi.fn(async () => undefined)}
+        />
+      </I18nextProvider>,
+    );
+    expect((screen.getByRole('option', { name: 'SMTP' }) as HTMLOptionElement).disabled).toBe(
+      false,
+    );
   });
 
   it('does not redisplay a key after the parent passes a new hint', () => {

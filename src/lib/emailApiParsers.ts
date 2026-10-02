@@ -34,13 +34,16 @@ function bool(value: unknown): boolean {
 function parseVariable(value: unknown): EmailVariable | null {
   const row = record(value);
   if (!row || typeof row.token !== 'string') return null;
+  const allowedHostsSetting =
+    typeof row.allowed_hosts_setting === 'string' ? row.allowed_hosts_setting.trim() : '';
   return {
     token: row.token,
     type: str(row.type) || 'string',
     required: bool(row.required),
     description: str(row.description),
     example: str(row.example),
-    isUrl: bool(row.is_url),
+    isUrl: bool(row.is_url) || str(row.type) === 'url',
+    ...(allowedHostsSetting ? { allowedHostsSetting } : {}),
   };
 }
 
@@ -178,6 +181,7 @@ export function parseProvider(body: unknown): EmailProviderSettings {
     webhookHint: str(row.webhook_hint),
     fallbackProvider: str(row.fallback_provider),
     fallbackConfigured: bool(row.fallback_configured),
+    smtpAllowed: row.smtp_allowed === true,
   };
 }
 
@@ -218,11 +222,17 @@ export function parseStats(body: unknown): EmailStats {
         return { day: str(row.day), ...parseBucket(row) };
       })
     : [];
+  const skippedRaw = record(root.skipped) ?? {};
   return {
     companyId: typeof root.company_id === 'number' ? root.company_id : null,
     from: str(root.from),
     to: str(root.to),
     totals: parseBucket(root.totals),
+    skipped: {
+      total: num(skippedRaw.total),
+      noRecipients: num(skippedRaw.no_recipients),
+      ruleDisabled: num(skippedRaw.rule_disabled),
+    },
     byLane,
     byEvent,
     byDay,
