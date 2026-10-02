@@ -24,8 +24,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Text } from '@/components/ui/text';
-import { EventRetentionAlert } from '@/components/EventRetentionAlert';
-import { useEventRetention } from '@/hooks/useEventRetention';
+import { AllServicesRetentionAlerts } from '@/components/EventRetentionAlert';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import {
   buildStaffPrometheusMetricsUrl,
@@ -86,7 +85,6 @@ type MetricsSourceId = 'identity' | 'storage' | 'hosting';
 export function DashboardPage() {
   const { t } = useTranslation();
   const accessToken = useShelluiAccessToken();
-  const eventRetention = useEventRetention(accessToken);
   const storageBaseUrl = useStorageBaseUrl();
   const storageEnabled = Boolean(storageBaseUrl);
   const hostingBaseUrl = useHostingBaseUrl();
@@ -281,7 +279,7 @@ export function DashboardPage() {
         <Text className="max-w-3xl font-mono text-sm">{t('dashboardDescription')}</Text>
       </header>
 
-      <EventRetentionAlert status={eventRetention} />
+      <AllServicesRetentionAlerts />
 
       {!accessToken && (
         <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>

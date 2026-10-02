@@ -1,10 +1,27 @@
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle } from 'lucide-react';
-import { SCHEDULED_JOBS_DOCS_URL, type EventRetentionStatus } from '@/lib/eventLogApi';
+import { useEventLogSource, useEventRetention } from '@/hooks/useEventRetention';
+import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
+import { RETENTION_DOCS_URL, type EventRetentionStatus } from '@/lib/eventLogApi';
+import { WEBHOOK_SERVICE_KEYS, type WebhookServiceKey } from '@/lib/webhookServices';
 
-export function EventRetentionAlert({ status }: { status: EventRetentionStatus | null }) {
+const SERVICE_LABEL_KEY = {
+  identity: 'webhooksServiceIdentity',
+  hosting: 'webhooksServiceHosting',
+  storage: 'webhooksServiceStorage',
+} as const satisfies Record<WebhookServiceKey, string>;
+
+export function EventRetentionAlert({
+  service,
+  status,
+}: {
+  service: WebhookServiceKey;
+  status: EventRetentionStatus | null;
+}) {
   const { t } = useTranslation();
   if (!status?.stale_events) return null;
+  const days = status.data_retention_days + 1;
+  const serviceLabel = t(SERVICE_LABEL_KEY[service]);
   return (
     <div
       role="alert"
@@ -15,10 +32,14 @@ export function EventRetentionAlert({ status }: { status: EventRetentionStatus |
         aria-hidden
       />
       <div className="space-y-1">
-        <p className="font-medium">{t('eventRetentionStaleTitle')}</p>
-        <p>{t('eventRetentionStaleBody', { days: status.data_retention_days + 1 })}</p>
+        <p className="font-medium">{t('eventRetentionStaleTitle', { service: serviceLabel })}</p>
+        <p>
+          {service === 'identity'
+            ? t('eventRetentionStaleBody', { days })
+            : t('eventRetentionStaleBodyService', { days, service: serviceLabel })}
+        </p>
         <a
-          href={SCHEDULED_JOBS_DOCS_URL}
+          href={RETENTION_DOCS_URL[service]}
           target="_blank"
           rel="noreferrer"
           className="inline-block font-medium underline underline-offset-2"
@@ -27,5 +48,30 @@ export function EventRetentionAlert({ status }: { status: EventRetentionStatus |
         </a>
       </div>
     </div>
+  );
+}
+
+function ServiceRetentionAlert({ service }: { service: WebhookServiceKey }) {
+  const accessToken = useShelluiAccessToken();
+  const status = useEventRetention(useEventLogSource(service), accessToken);
+  return (
+    <EventRetentionAlert
+      service={service}
+      status={status}
+    />
+  );
+}
+
+/** One alert per configured service whose purge job is not running. */
+export function AllServicesRetentionAlerts() {
+  return (
+    <>
+      {WEBHOOK_SERVICE_KEYS.map((service) => (
+        <ServiceRetentionAlert
+          key={service}
+          service={service}
+        />
+      ))}
+    </>
   );
 }

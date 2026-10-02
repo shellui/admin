@@ -8,7 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { Separator } from '@/components/ui/separator';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
+import { useEventLogSource } from '@/hooks/useEventRetention';
 import {
+  eventDetailPath,
+  eventsListPath,
   eventSummary,
   fetchEventLog,
   fetchEventLogEntry,
@@ -16,6 +19,7 @@ import {
   type EventLogListResponse,
   type EventLogRow,
 } from '@/lib/eventLogApi';
+import type { WebhookServiceKey } from '@/lib/webhookServices';
 import { cn } from '@/lib/utils';
 
 const SIBLING_PAGE_SIZE = 10;
@@ -40,10 +44,11 @@ function detailField(label: string, value: unknown, key?: string) {
   );
 }
 
-export function EventDetailPage() {
+export function EventDetailPage({ service = 'identity' }: { service?: WebhookServiceKey }) {
   const { t, i18n } = useTranslation();
   const { eventId } = useParams<{ eventId: string }>();
   const accessToken = useShelluiAccessToken();
+  const source = useEventLogSource(service);
 
   const idNum = useMemo(() => {
     const n = parseInt(eventId || '', 10);
@@ -60,7 +65,7 @@ export function EventDetailPage() {
   const [siblingsError, setSiblingsError] = useState<string | null>(null);
 
   const loadEvent = useCallback(async () => {
-    if (!accessToken || !Number.isFinite(idNum)) {
+    if (!accessToken || !source || !Number.isFinite(idNum)) {
       setLoadingEvent(false);
       setEvent(null);
       setEventError(null);
@@ -69,14 +74,14 @@ export function EventDetailPage() {
     setLoadingEvent(true);
     setEventError(null);
     try {
-      setEvent(await fetchEventLogEntry(accessToken, idNum));
+      setEvent(await fetchEventLogEntry(source, accessToken, idNum));
     } catch (e) {
       setEvent(null);
       setEventError(e instanceof Error ? e.message : t('eventsErrorUnknown'));
     } finally {
       setLoadingEvent(false);
     }
-  }, [accessToken, idNum, t]);
+  }, [accessToken, source, idNum, t]);
 
   useEffect(() => {
     void loadEvent();
@@ -87,7 +92,7 @@ export function EventDetailPage() {
   }, [event?.user_id, event?.id]);
 
   const loadSiblings = useCallback(async () => {
-    if (!accessToken || event?.user_id == null) {
+    if (!accessToken || !source || event?.user_id == null) {
       setSiblings(null);
       setSiblingsError(null);
       return;
@@ -96,7 +101,7 @@ export function EventDetailPage() {
     setSiblingsError(null);
     try {
       setSiblings(
-        await fetchEventLog(accessToken, {
+        await fetchEventLog(source, accessToken, {
           userId: event.user_id,
           page: siblingPage,
           pageSize: SIBLING_PAGE_SIZE,
@@ -108,7 +113,7 @@ export function EventDetailPage() {
     } finally {
       setLoadingSiblings(false);
     }
-  }, [accessToken, event?.user_id, siblingPage, t]);
+  }, [accessToken, source, event?.user_id, siblingPage, t]);
 
   useEffect(() => {
     void loadSiblings();
@@ -133,7 +138,7 @@ export function EventDetailPage() {
     : 1;
 
   const backLink = (
-    <Link to="/events">
+    <Link to={eventsListPath(service)}>
       <ArrowLeft
         className="mr-1 size-4"
         aria-hidden
@@ -228,7 +233,13 @@ export function EventDetailPage() {
               <CardTitle className="font-heading text-lg">
                 {t('eventsDetailPayloadTitle')}
               </CardTitle>
-              <CardDescription className="text-sm">{t('eventsDetailPayloadHint')}</CardDescription>
+              <CardDescription className="text-sm">
+                {t(
+                  service === 'identity'
+                    ? 'eventsDetailPayloadHint'
+                    : 'eventsDetailPayloadHintService',
+                )}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -269,7 +280,7 @@ export function EventDetailPage() {
                     return (
                       <li key={ev.id}>
                         <Link
-                          to={`/events/${ev.id}`}
+                          to={eventDetailPath(service, ev.id)}
                           className={cn(
                             'block rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted/50',
                             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',

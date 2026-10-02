@@ -184,8 +184,8 @@ export const router = createHashRouter([
           />
         ),
       },
-      { path: 'events/:eventId', element: <EventDetailPage /> },
-      { path: 'events', element: <EventsListPage /> },
+      { path: 'events/:eventId', element: <EventDetailPage key="identity" /> },
+      { path: 'events', element: <EventsListPage key="identity" /> },
       {
         path: 'login-events/*',
         element: (
@@ -195,11 +195,47 @@ export const router = createHashRouter([
           />
         ),
       },
+      {
+        path: 'storage/events/:eventId',
+        element: (
+          <EventDetailPage
+            key="storage"
+            service="storage"
+          />
+        ),
+      },
+      {
+        path: 'storage/events',
+        element: (
+          <EventsListPage
+            key="storage"
+            service="storage"
+          />
+        ),
+      },
       { path: 'storage/statistics', element: <StorageStatisticsPage /> },
       { path: 'storage/swagger', element: null },
       { path: 'storage/redoc', element: null },
       { path: 'storage', element: null },
       { path: 'hosting/apps/:name', element: <HostingAppDetailPage /> },
+      {
+        path: 'hosting/events/:eventId',
+        element: (
+          <EventDetailPage
+            key="hosting"
+            service="hosting"
+          />
+        ),
+      },
+      {
+        path: 'hosting/events',
+        element: (
+          <EventsListPage
+            key="hosting"
+            service="hosting"
+          />
+        ),
+      },
       { path: 'hosting/statistics', element: <HostingStatisticsPage /> },
       { path: 'hosting/swagger', element: null },
       { path: 'hosting/redoc', element: null },

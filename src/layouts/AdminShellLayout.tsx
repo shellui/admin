@@ -121,10 +121,12 @@ const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
   swagger: BookOpen,
   redoc: BookOpen,
   'django-admin': Lock,
+  'storage/events': ScrollText,
   'storage/statistics': BarChart3,
   'storage/swagger': BookOpen,
   'storage/redoc': BookOpen,
   hosting: AppWindow,
+  'hosting/events': ScrollText,
   'hosting/statistics': BarChart3,
   'hosting/swagger': BookOpen,
   'hosting/redoc': BookOpen,
@@ -1049,6 +1051,12 @@ export function AdminShellLayout() {
         to: '/storage/webhooks',
       });
       storageItems.push({
+        key: 'navStorageEvents',
+        icon: ScrollText,
+        label: t('navEvents'),
+        to: '/storage/events',
+      });
+      storageItems.push({
         key: 'navStorageStatistics',
         icon: BarChart3,
         label: t('navStorageStatistics'),
@@ -1100,6 +1108,12 @@ export function AdminShellLayout() {
           icon: SendHorizonal,
           label: t('navWebhooks'),
           to: '/hosting/webhooks',
+        },
+        {
+          key: 'navHostingEvents',
+          icon: ScrollText,
+          label: t('navEvents'),
+          to: '/hosting/events',
         },
         {
           key: 'navHostingStatistics',

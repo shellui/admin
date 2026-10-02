@@ -158,6 +158,14 @@ export function useAdminContentNavigation(): AdminContentFrame {
         embedUrl: storageWebhooksHash,
         useHashRouter: true,
       });
+      const storageEventsHash = buildAdminHashContentUrl(origin, 'storage/events', '', '');
+      items.push({
+        label: 'Log events',
+        path: 'storage/events',
+        url: storageEventsHash,
+        embedUrl: storageEventsHash,
+        useHashRouter: true,
+      });
       const statsHash = buildAdminHashContentUrl(origin, 'storage/statistics', '', '');
       items.push({
         label: 'Statistics',
@@ -216,6 +224,14 @@ export function useAdminContentNavigation(): AdminContentFrame {
         path: 'hosting/apps',
         url: appDetailHash,
         embedUrl: appDetailHash,
+        useHashRouter: true,
+      });
+      const hostingEventsHash = buildAdminHashContentUrl(origin, 'hosting/events', '', '');
+      items.push({
+        label: 'Log events',
+        path: 'hosting/events',
+        url: hostingEventsHash,
+        embedUrl: hostingEventsHash,
         useHashRouter: true,
       });
       const statsHash = buildAdminHashContentUrl(origin, 'hosting/statistics', '', '');

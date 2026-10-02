@@ -20,8 +20,9 @@ import { Text } from '@/components/ui/text';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EventRetentionAlert } from '@/components/EventRetentionAlert';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
-import { useEventRetention } from '@/hooks/useEventRetention';
+import { useEventLogSource, useEventRetention } from '@/hooks/useEventRetention';
 import {
+  eventDetailPath,
   eventSummary,
   fetchEventLog,
   fetchEventTypes,
@@ -29,10 +30,32 @@ import {
   type EventLogListResponse,
   type EventTypeRow,
 } from '@/lib/eventLogApi';
+import type { WebhookServiceKey } from '@/lib/webhookServices';
 import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 20;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+const PAGE_COPY = {
+  identity: {
+    title: 'eventsTitle',
+    badge: 'eventsBadge',
+    description: 'eventsDescription',
+    retentionHint: 'eventsStatRetentionHint',
+  },
+  storage: {
+    title: 'eventsTitleStorage',
+    badge: 'eventsBadgeStorage',
+    description: 'eventsDescriptionStorage',
+    retentionHint: 'eventsStatRetentionHintService',
+  },
+  hosting: {
+    title: 'eventsTitleHosting',
+    badge: 'eventsBadgeHosting',
+    description: 'eventsDescriptionHosting',
+    retentionHint: 'eventsStatRetentionHintService',
+  },
+} as const satisfies Record<WebhookServiceKey, Record<string, string>>;
 
 type FilterValues = {
   type: string;
@@ -97,14 +120,16 @@ function useIsLgViewport() {
   return useSyncExternalStore(subscribeMinWidth1024, getMinWidth1024Snapshot, () => false);
 }
 
-export function EventsListPage() {
+export function EventsListPage({ service = 'identity' }: { service?: WebhookServiceKey }) {
   const { t, i18n } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const accessToken = useShelluiAccessToken();
-  const retention = useEventRetention(accessToken);
+  const source = useEventLogSource(service);
+  const retention = useEventRetention(source, accessToken);
   const isLg = useIsLgViewport();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const sidebarOpen = isLg || mobileSidebarOpen;
+  const copy = PAGE_COPY[service];
 
   const pageParam = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
   const filters = useMemo(() => readFilters(searchParams), [searchParams]);
@@ -122,15 +147,15 @@ export function EventsListPage() {
   const [count24h, setCount24h] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!accessToken) return;
+    if (!accessToken || !source) return;
     let cancelled = false;
-    void fetchEventTypes(accessToken)
+    void fetchEventTypes(source, accessToken)
       .then((rows) => {
         if (!cancelled) setEventTypes([...rows].sort((a, b) => a.label.localeCompare(b.label)));
       })
       .catch(() => undefined);
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    void fetchEventLog(accessToken, { createdAfter: since, pageSize: 1 })
+    void fetchEventLog(source, accessToken, { createdAfter: since, pageSize: 1 })
       .then((res) => {
         if (!cancelled) setCount24h(res.count);
       })
@@ -138,10 +163,10 @@ export function EventsListPage() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken]);
+  }, [accessToken, source]);
 
   const load = useCallback(async () => {
-    if (!accessToken) {
+    if (!accessToken || !source) {
       setLoading(false);
       setData(null);
       setError(null);
@@ -151,7 +176,7 @@ export function EventsListPage() {
     setError(null);
     try {
       setData(
-        await fetchEventLog(accessToken, {
+        await fetchEventLog(source, accessToken, {
           page: pageParam,
           pageSize: PAGE_SIZE,
           eventTypes: filters.type ? [filters.type] : undefined,
@@ -167,7 +192,7 @@ export function EventsListPage() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, filters, pageParam, t]);
+  }, [accessToken, source, filters, pageParam, t]);
 
   useEffect(() => {
     void load();
@@ -212,19 +237,26 @@ export function EventsListPage() {
       <header className="space-y-1">
         <div className="flex flex-wrap items-baseline gap-3">
           <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            {t('eventsTitle')}
+            {t(copy.title)}
           </h1>
           <Badge
             variant="secondary"
             className="font-mono text-[10px] uppercase"
           >
-            {t('eventsBadge')}
+            {t(copy.badge)}
           </Badge>
         </div>
-        <Text className="max-w-3xl text-sm text-muted-foreground">{t('eventsDescription')}</Text>
+        <Text className="max-w-3xl text-sm text-muted-foreground">{t(copy.description)}</Text>
       </header>
 
-      <EventRetentionAlert status={retention} />
+      <EventRetentionAlert
+        service={service}
+        status={retention}
+      />
+
+      {!source ? (
+        <p className="text-sm text-muted-foreground">{t('eventsServiceNotConfigured')}</p>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_minmax(17rem,20rem)] lg:items-start">
         <aside className="min-w-0 lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1 lg:self-start">
@@ -280,9 +312,7 @@ export function EventsListPage() {
                         {t('eventsStatRetentionValue', { count: retention.data_retention_days })}
                       </p>
                     )}
-                    <CardDescription className="text-xs">
-                      {t('eventsStatRetentionHint')}
-                    </CardDescription>
+                    <CardDescription className="text-xs">{t(copy.retentionHint)}</CardDescription>
                   </CardContent>
                 </Card>
               </div>
@@ -473,7 +503,7 @@ export function EventsListPage() {
                       </TableHeader>
                       <TableBody className="text-xs">
                         {rows.map((ev) => {
-                          const href = `/events/${ev.id}`;
+                          const href = eventDetailPath(service, ev.id);
                           const summary = eventSummary(ev);
                           return (
                             <TableRow

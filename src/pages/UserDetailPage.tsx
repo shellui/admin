@@ -28,7 +28,10 @@ import {
   type ShellUIPreferencesPayload,
 } from '@/lib/adminUsersApi';
 import { fetchAdminGroups, type AdminGroupRow } from '@/lib/adminGroupsApi';
+import { useEventLogSource } from '@/hooks/useEventRetention';
 import {
+  eventDetailPath,
+  eventsListPath,
   eventSummary,
   fetchEventLog,
   isFailureEvent,
@@ -85,6 +88,9 @@ export function UserDetailPage() {
   const accessToken = useShelluiAccessToken();
   const actorIsStaff = useShelluiIsStaff();
   const idNum = userId ? parseInt(userId, 10) : NaN;
+  const identityEvents = useEventLogSource('identity');
+  const hasStorageEvents = Boolean(useEventLogSource('storage'));
+  const hasHostingEvents = Boolean(useEventLogSource('hosting'));
 
   const [user, setUser] = useState<AdminUserRow | null>(null);
   const [events, setEvents] = useState<EventLogListResponse | null>(null);
@@ -127,13 +133,13 @@ export function UserDetailPage() {
   }, [accessToken, idNum, t]);
 
   const loadEvents = useCallback(async () => {
-    if (!eventsInView || !accessToken || !Number.isFinite(idNum)) {
+    if (!eventsInView || !accessToken || !identityEvents || !Number.isFinite(idNum)) {
       return;
     }
     setLoadingEvents(true);
     setEventsError(null);
     try {
-      const ev = await fetchEventLog(accessToken, {
+      const ev = await fetchEventLog(identityEvents, accessToken, {
         userId: idNum,
         page: eventsPage,
         pageSize: EVENTS_PAGE_SIZE,
@@ -145,7 +151,7 @@ export function UserDetailPage() {
     } finally {
       setLoadingEvents(false);
     }
-  }, [eventsInView, accessToken, idNum, eventsPage, t]);
+  }, [eventsInView, accessToken, identityEvents, idNum, eventsPage, t]);
 
   useEffect(() => {
     void loadUser();
@@ -523,13 +529,39 @@ export function UserDetailPage() {
                   <CardTitle className="text-lg">{t('userDetailEventsTitle')}</CardTitle>
                   <CardDescription>{t('userDetailEventsHint')}</CardDescription>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  asChild
-                >
-                  <Link to={`/events?user_id=${idNum}`}>{t('userDetailEventsViewAll')}</Link>
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
+                  >
+                    <Link to={`${eventsListPath('identity')}?user_id=${idNum}`}>
+                      {t('userDetailEventsViewAll')}
+                    </Link>
+                  </Button>
+                  {hasStorageEvents ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                    >
+                      <Link to={`${eventsListPath('storage')}?user_id=${idNum}`}>
+                        {t('userDetailEventsStorage')}
+                      </Link>
+                    </Button>
+                  ) : null}
+                  {hasHostingEvents ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                    >
+                      <Link to={`${eventsListPath('hosting')}?user_id=${idNum}`}>
+                        {t('userDetailEventsHosting')}
+                      </Link>
+                    </Button>
+                  ) : null}
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 {!eventsInView && events === null ? (
@@ -604,7 +636,7 @@ export function UserDetailPage() {
                                   <TableCell className="whitespace-nowrap font-mono text-muted-foreground">
                                     <Link
                                       className="text-primary underline-offset-2 hover:underline"
-                                      to={`/events/${ev.id}`}
+                                      to={eventDetailPath('identity', ev.id)}
                                     >
                                       {formatDateTime(ev.created_at, locale)}
                                     </Link>

@@ -233,9 +233,23 @@ const resources = {
       eventsSiblingNoUser: 'This event is not linked to a user.',
       eventsSiblingEmpty: 'No other events for this user on this page.',
       eventsOpenDetail: 'Details →',
-      eventRetentionStaleTitle: 'Old events are not being deleted',
+      eventsTitleStorage: 'Storage log events',
+      eventsTitleHosting: 'Hosting log events',
+      eventsBadgeStorage: 'shellui-storage',
+      eventsBadgeHosting: 'shellui-hosting',
+      eventsDescriptionStorage:
+        'Every storage event in this company, newest first: file uploads and deletions, and bucket provisioning.',
+      eventsDescriptionHosting:
+        'Every hosting event in this company, newest first: apps created and deleted, and deployments created, succeeded and failed.',
+      eventsStatRetentionHintService:
+        'Older events are deleted. Set by the platform team with EVENT_LOG_RETENTION_DAYS.',
+      eventsServiceNotConfigured: 'This service is not configured in this shell.',
+      eventsDetailPayloadHintService: 'Empty values are not stored.',
+      eventRetentionStaleTitle: 'Old events are not being deleted ({{service}})',
       eventRetentionStaleBody:
         'Some log events are older than {{days}} days, past this company’s data retention. The scheduled purge job (purge_expired_data) is probably not configured. Ask your platform team to set up the cron job, or report this issue.',
+      eventRetentionStaleBodyService:
+        'Some {{service}} log events are older than {{days}} days, past the service retention. The scheduled purge job (purge_expired_data) is probably not configured on that service. Ask your platform team to set up the cron job, or report this issue.',
       eventRetentionStaleLink: 'How to configure scheduled jobs',
       dashboardTitle: 'Operations overview',
       dashboardEnvBadge: 'shellui-auth',
@@ -576,6 +590,8 @@ const resources = {
       userDetailEventsHint:
         'Log events for this user: sign-ins, account, SCIM access and group membership.',
       userDetailEventsViewAll: 'View all',
+      userDetailEventsStorage: 'Storage events',
+      userDetailEventsHosting: 'Hosting events',
       userDetailEventsDefer: 'Events load when this section scrolls into view, or load them now.',
       userDetailEventsLoadNow: 'Load activity',
       userDetailEventsEmpty: 'No events recorded for this user.',
@@ -1127,9 +1143,23 @@ const resources = {
       eventsSiblingNoUser: 'Cet événement n’est lié à aucun utilisateur.',
       eventsSiblingEmpty: 'Pas d’autre événement pour cet utilisateur sur cette page.',
       eventsOpenDetail: 'Détails →',
-      eventRetentionStaleTitle: 'Les anciens événements ne sont pas supprimés',
+      eventsTitleStorage: 'Journal des événements Stockage',
+      eventsTitleHosting: 'Journal des événements Hébergement',
+      eventsBadgeStorage: 'shellui-storage',
+      eventsBadgeHosting: 'shellui-hosting',
+      eventsDescriptionStorage:
+        'Tous les événements de stockage de cette entreprise, du plus récent au plus ancien : envois et suppressions de fichiers, création du bucket.',
+      eventsDescriptionHosting:
+        'Tous les événements d’hébergement de cette entreprise, du plus récent au plus ancien : applications créées et supprimées, déploiements créés, réussis et échoués.',
+      eventsStatRetentionHintService:
+        'Les événements plus anciens sont supprimés. Réglé par l’équipe plateforme avec EVENT_LOG_RETENTION_DAYS.',
+      eventsServiceNotConfigured: 'Ce service n’est pas configuré dans ce shell.',
+      eventsDetailPayloadHintService: 'Les valeurs vides ne sont pas stockées.',
+      eventRetentionStaleTitle: 'Anciens événements non supprimés ({{service}})',
       eventRetentionStaleBody:
         'Certains événements ont plus de {{days}} jours, au-delà de la durée de rétention de cette entreprise. La tâche planifiée de purge (purge_expired_data) n’est probablement pas configurée. Demandez à votre équipe plateforme de mettre en place le cron, ou signalez ce problème.',
+      eventRetentionStaleBodyService:
+        'Certains événements ({{service}}) ont plus de {{days}} jours, au-delà de la durée de rétention du service. La tâche planifiée de purge (purge_expired_data) n’est probablement pas configurée sur ce service. Demandez à votre équipe plateforme de mettre en place le cron, ou signalez ce problème.',
       eventRetentionStaleLink: 'Configurer les tâches planifiées',
       dashboardTitle: 'Vue opérations',
       dashboardEnvBadge: 'shellui-auth',
@@ -1478,6 +1508,8 @@ const resources = {
       userDetailEventsHint:
         'Événements de cet utilisateur : connexions, compte, accès SCIM et appartenance aux groupes.',
       userDetailEventsViewAll: 'Tout voir',
+      userDetailEventsStorage: 'Événements stockage',
+      userDetailEventsHosting: 'Événements hébergement',
       userDetailEventsDefer:
         'Les événements se chargent quand cette section devient visible, ou chargez-les maintenant.',
       userDetailEventsLoadNow: 'Charger l’activité',
