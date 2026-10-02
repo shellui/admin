@@ -193,8 +193,7 @@ const resources = {
       eventsStatRetentionTitle: 'Retention',
       eventsStatRetentionValue_one: '{{count}} day',
       eventsStatRetentionValue_other: '{{count}} days',
-      eventsStatRetentionHint:
-        'Older events are deleted. Set by the platform team in Django admin.',
+      eventsStatRetentionHint: 'Older events are deleted.',
       eventsFiltersTitle: 'Filters',
       eventsNoSession: 'Waiting for shell session… Open Admin from Shellui while signed in.',
       eventsFieldType: 'Event type',
@@ -241,8 +240,7 @@ const resources = {
         'Every storage event in this company, newest first: file uploads and deletions, and bucket provisioning.',
       eventsDescriptionHosting:
         'Every hosting event in this company, newest first: apps created and deleted, and deployments created, succeeded and failed.',
-      eventsStatRetentionHintService:
-        'Older events are deleted. Set by the platform team with EVENT_LOG_RETENTION_DAYS.',
+      eventsStatRetentionHintService: 'Older events are deleted.',
       eventsServiceNotConfigured: 'This service is not configured in this shell.',
       eventsDetailPayloadHintService: 'Empty values are not stored.',
       eventRetentionStaleTitle: 'Old events are not being deleted ({{service}})',
@@ -1102,8 +1100,7 @@ const resources = {
       eventsStatRetentionTitle: 'Rétention',
       eventsStatRetentionValue_one: '{{count}} jour',
       eventsStatRetentionValue_other: '{{count}} jours',
-      eventsStatRetentionHint:
-        'Les événements plus anciens sont supprimés. Réglé par l’équipe plateforme dans l’admin Django.',
+      eventsStatRetentionHint: 'Les événements plus anciens sont supprimés.',
       eventsFiltersTitle: 'Filtres',
       eventsNoSession:
         'En attente de la session shell… Ouvrez l’admin depuis Shellui en étant connecté.',
@@ -1151,8 +1148,7 @@ const resources = {
         'Tous les événements de stockage de cette entreprise, du plus récent au plus ancien : envois et suppressions de fichiers, création du bucket.',
       eventsDescriptionHosting:
         'Tous les événements d’hébergement de cette entreprise, du plus récent au plus ancien : applications créées et supprimées, déploiements créés, réussis et échoués.',
-      eventsStatRetentionHintService:
-        'Les événements plus anciens sont supprimés. Réglé par l’équipe plateforme avec EVENT_LOG_RETENTION_DAYS.',
+      eventsStatRetentionHintService: 'Les événements plus anciens sont supprimés.',
       eventsServiceNotConfigured: 'Ce service n’est pas configuré dans ce shell.',
       eventsDetailPayloadHintService: 'Les valeurs vides ne sont pas stockées.',
       eventRetentionStaleTitle: 'Anciens événements non supprimés ({{service}})',
