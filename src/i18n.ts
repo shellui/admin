@@ -589,7 +589,7 @@ const resources = {
       userDetailEventsTitle: 'Activity',
       userDetailEventsHint:
         'Log events for this user: sign-ins, account, SCIM access and group membership.',
-      userDetailEventsViewAll: 'View all',
+      userDetailEventsIdentity: 'Identity events',
       userDetailEventsStorage: 'Storage events',
       userDetailEventsHosting: 'Hosting events',
       userDetailEventsDefer: 'Events load when this section scrolls into view, or load them now.',
@@ -1507,7 +1507,7 @@ const resources = {
       userDetailEventsTitle: 'Activité',
       userDetailEventsHint:
         'Événements de cet utilisateur : connexions, compte, accès SCIM et appartenance aux groupes.',
-      userDetailEventsViewAll: 'Tout voir',
+      userDetailEventsIdentity: 'Événements identité',
       userDetailEventsStorage: 'Événements stockage',
       userDetailEventsHosting: 'Événements hébergement',
       userDetailEventsDefer:

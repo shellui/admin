@@ -536,7 +536,7 @@ export function UserDetailPage() {
                     asChild
                   >
                     <Link to={`${eventsListPath('identity')}?user_id=${idNum}`}>
-                      {t('userDetailEventsViewAll')}
+                      {t('userDetailEventsIdentity')}
                     </Link>
                   </Button>
                   {hasStorageEvents ? (
