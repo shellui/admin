@@ -196,7 +196,7 @@ export function ServiceEmailRulesSection({
         client.fetchCatalog(),
       ]);
       setRules(rulesForService(nextRules, service));
-      setCatalog(nextCatalog.filter((event) => event.service === service));
+      setCatalog(nextCatalog.events.filter((event) => event.service === service));
     } catch (err) {
       setRules([]);
       setCatalog([]);

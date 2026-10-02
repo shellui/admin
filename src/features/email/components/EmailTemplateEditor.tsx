@@ -53,31 +53,52 @@ function updateBlock(
 export function EmailTemplateEditor({
   templateKey,
   laneClass,
+  authLinkHosts,
+  storedThemeName,
   draftEn,
   draftFr,
   variables,
   hasCompanyTemplate,
   publishing,
   resetting,
+  sendingDraft,
+  isStaff,
+  jwtEmail,
   onChange,
   onPublish,
   onReset,
+  onSendDraft,
   onServicePreview,
   servicePreviewHtml,
   servicePreviewNote,
 }: {
   templateKey: string;
   laneClass: string;
+  authLinkHosts: string[];
+  storedThemeName: string | null;
   draftEn: EmailLangDraft;
   draftFr: EmailLangDraft;
   variables: EmailVariable[];
   hasCompanyTemplate: boolean;
   publishing: boolean;
   resetting: boolean;
+  sendingDraft: boolean;
+  isStaff: boolean;
+  jwtEmail: string | null;
   onChange: (lang: EmailLang, next: EmailLangDraft) => void;
   onPublish: (themeName: string | null, themePalette: Record<string, string>) => void;
   onReset: () => void;
-  onServicePreview: (lang: EmailLang, draft: EmailLangDraft) => void;
+  onSendDraft: (
+    lang: EmailLang,
+    draft: EmailLangDraft,
+    themePalette: Record<string, string>,
+    to?: string,
+  ) => void;
+  onServicePreview: (
+    lang: EmailLang,
+    draft: EmailLangDraft,
+    themePalette: Record<string, string>,
+  ) => void;
   servicePreviewHtml: string | null;
   servicePreviewNote: string | null;
 }) {
@@ -86,11 +107,12 @@ export function EmailTemplateEditor({
   const themes = useMemo(() => getAppearanceAvailableThemes(appearance), [appearance]);
   const themeKey = availableThemeNamesKey(themes);
   const [themeName, setThemeName] = useState<string | null>(() =>
-    resolveEmailThemeName(undefined, appearance, themes),
+    resolveEmailThemeName(storedThemeName ?? undefined, appearance, themes),
   );
   const [lang, setLang] = useState<EmailLang>('en');
   const [focus, setFocus] = useState<FocusTarget | null>(null);
   const [showService, setShowService] = useState(false);
+  const [draftTo, setDraftTo] = useState(jwtEmail ?? '');
 
   const draft = lang === 'fr' ? draftFr : draftEn;
   const authTokens = useMemo(() => requiredAuthLinkTokens(variables), [variables]);
@@ -99,11 +121,18 @@ export function EmailTemplateEditor({
       ? validateAuthLaneOverride({
           laneClass,
           variables,
+          authLinkHosts,
           subject: draft.subject,
           preheader: draft.preheader,
           document: draft.document,
         })
       : null;
+  function literalBeside(field: string): string | null {
+    if (authIssue?.errorCode !== 'auth_literal_link') return null;
+    return authIssue.fieldErrors[field]?.includes('literal_url')
+      ? t('emailError_auth_literal_link')
+      : null;
+  }
   const resolvedTheme = resolveEmailThemeName(themeName ?? undefined, appearance, themes);
   const palette = paletteForThemeName(resolvedTheme, appearance, themes);
   const themedHtml = renderEmailPreviewHtml(draft.document, palette);
@@ -207,10 +236,14 @@ export function EmailTemplateEditor({
             })}
           </Text>
         ) : null}
-        {authIssue ? (
+        {laneClass === 'auth' && authLinkHosts.length ? (
+          <Text className="font-mono text-xs">
+            {t('emailAuthLinkHosts', { hosts: authLinkHosts.join(', ') })}
+          </Text>
+        ) : null}
+        {authIssue && authIssue.errorCode !== 'auth_literal_link' ? (
           <Text className="font-mono text-sm text-destructive">{emailErrorText(t, authIssue)}</Text>
         ) : null}
-        {hasCompanyTemplate ? <Text>{t('emailEditorDocumentGap')}</Text> : null}
         <Text className="font-mono text-xs">{t('emailEditorThemeNote')}</Text>
 
         <div className="space-y-2">
@@ -222,6 +255,9 @@ export function EmailTemplateEditor({
             onSelect={(event) => rememberFocus('subject', event.currentTarget)}
             onBlur={(event) => rememberFocus('subject', event.currentTarget)}
           />
+          {literalBeside('subject') ? (
+            <Text className="font-mono text-xs text-destructive">{literalBeside('subject')}</Text>
+          ) : null}
         </div>
         <div className="space-y-2">
           <Label htmlFor="email-preheader">{t('emailPreheaderLabel')}</Label>
@@ -232,6 +268,9 @@ export function EmailTemplateEditor({
             onSelect={(event) => rememberFocus('preheader', event.currentTarget)}
             onBlur={(event) => rememberFocus('preheader', event.currentTarget)}
           />
+          {literalBeside('preheader') ? (
+            <Text className="font-mono text-xs text-destructive">{literalBeside('preheader')}</Text>
+          ) : null}
         </div>
         <div className="space-y-2">
           <Label htmlFor="email-preview-text">{t('emailPreviewLabel')}</Label>
@@ -244,6 +283,9 @@ export function EmailTemplateEditor({
             onSelect={(event) => rememberFocus('preview', event.currentTarget)}
             onBlur={(event) => rememberFocus('preview', event.currentTarget)}
           />
+          {literalBeside('preview') ? (
+            <Text className="font-mono text-xs text-destructive">{literalBeside('preview')}</Text>
+          ) : null}
         </div>
 
         {variables.length ? (
@@ -266,6 +308,9 @@ export function EmailTemplateEditor({
           </div>
         ) : null}
 
+        {literalBeside('document') ? (
+          <Text className="font-mono text-xs text-destructive">{literalBeside('document')}</Text>
+        ) : null}
         <ol className="space-y-3">
           {draft.document.blocks.map((block, index) => (
             <li
@@ -398,6 +443,38 @@ export function EmailTemplateEditor({
             {t('emailReset')}
           </Button>
         </div>
+        <div className="space-y-2 border-t border-border/80 pt-4">
+          <h2 className="text-base font-semibold tracking-tight">{t('emailSendDraft')}</h2>
+          <Text>{isStaff ? t('emailSendDraftStaffHint') : t('emailSendDraftOwnerHint')}</Text>
+          <div className="flex flex-wrap items-end gap-2">
+            {isStaff ? (
+              <div className="min-w-[16rem] flex-1 space-y-2">
+                <Label htmlFor="email-draft-to">{t('emailTestTo')}</Label>
+                <Input
+                  id="email-draft-to"
+                  type="email"
+                  value={draftTo}
+                  onChange={(event) => setDraftTo(event.target.value)}
+                />
+              </div>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={sendingDraft || (isStaff && !draftTo.trim())}
+              onClick={() =>
+                onSendDraft(
+                  lang,
+                  draft,
+                  themePalettePayload(palette),
+                  isStaff ? draftTo.trim() : undefined,
+                )
+              }
+            >
+              {sendingDraft ? t('emailTestSending') : t('emailSendDraft')}
+            </Button>
+          </div>
+        </div>
         <Text className="font-mono text-xs">{templateKey}</Text>
       </div>
 
@@ -410,7 +487,7 @@ export function EmailTemplateEditor({
             variant="outline"
             onClick={() => {
               setShowService(true);
-              onServicePreview(lang, draft);
+              onServicePreview(lang, draft, themePalettePayload(palette));
             }}
           >
             {t('emailPreviewService')}

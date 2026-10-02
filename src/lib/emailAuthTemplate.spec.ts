@@ -45,16 +45,42 @@ describe('validateAuthLaneOverride', () => {
     ).toBeNull();
   });
 
-  it('accepts an https button href and leaves the host check to the service', () => {
+  it('accepts an https button href on the exposed allowlist', () => {
     expect(
       validateAuthLaneOverride({
         laneClass: 'auth',
         variables,
+        authLinkHosts: ['id.shellui.com'],
         subject: 'Sign in {{ magic_link_url }}',
         preheader: '',
         document: document('https://id.shellui.com/api/v1/magic-link/verify'),
       }),
     ).toBeNull();
+  });
+
+  it('rejects a button host that is not on auth_link_hosts', () => {
+    const issue = validateAuthLaneOverride({
+      laneClass: 'auth',
+      variables,
+      authLinkHosts: ['id.shellui.com'],
+      subject: '{{ magic_link_url }}',
+      preheader: '',
+      document: document('https://evil.example/phish'),
+    });
+    expect(issue?.errorCode).toBe('auth_link_host_not_allowed');
+  });
+
+  it('rejects a literal URL in auth prose and names the field', () => {
+    const issue = validateAuthLaneOverride({
+      laneClass: 'auth',
+      variables,
+      authLinkHosts: ['id.shellui.com'],
+      subject: 'Sign in at https://evil.example',
+      preheader: '',
+      document: document('{{ magic_link_url }}'),
+    });
+    expect(issue?.errorCode).toBe('auth_literal_link');
+    expect(issue?.fieldErrors.subject).toEqual(['literal_url']);
   });
 
   it('rejects an auth override that drops the required link variable', () => {

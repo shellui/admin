@@ -65,7 +65,36 @@ export function paletteForThemeName(
   };
 }
 
-/** Compact palette stored on the template version. The service accepts it and does not render it yet. */
+const PALETTE_KEYS = [
+  'background',
+  'foreground',
+  'muted',
+  'mutedForeground',
+  'primary',
+  'primaryForeground',
+  'border',
+] as const;
+
+/** `#RGB` or `#RRGGBB`. The service stores lowercase `#rrggbb` only. */
+export function normalizePaletteColor(value: string): string | null {
+  const match = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value.trim());
+  if (!match) return null;
+  const hex = match[1].toLowerCase();
+  if (hex.length === 3) {
+    return `#${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}`;
+  }
+  return `#${hex}`;
+}
+
+/**
+ * Palette stored on a template version.
+ * Every key is `#rrggbb`. A color the service cannot store falls back to the Shellui palette.
+ */
 export function themePalettePayload(palette: EmailPreviewPalette): Record<string, string> {
-  return { ...palette };
+  const payload: Record<string, string> = {};
+  for (const key of PALETTE_KEYS) {
+    payload[key] =
+      normalizePaletteColor(palette[key]) ?? normalizePaletteColor(SHELLUI_EMAIL_PALETTE[key])!;
+  }
+  return payload;
 }

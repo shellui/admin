@@ -51,6 +51,11 @@ export type EmailTemplateVersion = {
   number: number;
   state: string;
   subject: string;
+  preheader: string;
+  document: EmailDocument;
+  themeName: string;
+  /** `{}` means the Shellui palette. Otherwise the seven `#RRGGBB` keys. */
+  themePalette: Record<string, string>;
   publishedAt: string | null;
 };
 
@@ -66,6 +71,11 @@ export type EmailTemplateDefaults = {
   variables: EmailVariable[];
 };
 
+export type EmailCatalog = {
+  events: EmailCatalogEvent[];
+  authLinkHosts: string[];
+};
+
 export type EmailProviderSettings = {
   companyId: number | null;
   configured: boolean;
@@ -79,19 +89,18 @@ export type EmailProviderSettings = {
   webhookHint: string;
   fallbackProvider: string;
   fallbackConfigured: boolean;
-  /**
-   * True only when GET /provider includes `smtp_allowed: true`.
-   * Company SMTP is off by default. The current contract omits this field.
-   */
+  /** `EMAIL_ALLOW_COMPANY_SMTP`. False hides company SMTP. */
   smtpAllowed: boolean;
+  /** Read-only `EMAIL_AUTH_LINK_HOSTS`. */
+  authLinkHosts: string[];
 };
 
 export type EmailProviderWrite = {
   provider: string;
   from_email: string;
-  from_name: string;
-  sending_domain: string;
-  bulk_from_email: string;
+  from_name?: string;
+  sending_domain?: string;
+  bulk_from_email?: string;
   credentials?: Record<string, unknown>;
 };
 

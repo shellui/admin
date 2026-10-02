@@ -27,7 +27,7 @@ function providerOptionEnabled(
 ): boolean {
   if (!item.available) return false;
   if (item.id !== 'smtp') return true;
-  return settings.smtpAllowed || settings.provider === 'smtp';
+  return settings.smtpAllowed;
 }
 
 export function EmailProviderForm({
@@ -52,8 +52,9 @@ export function EmailProviderForm({
     ? emailProviderDefinition(settings.provider)
     : undefined;
   const initialProvider =
-    initialDefinition && providerOptionEnabled(initialDefinition, settings)
-      ? initialDefinition.id
+    settings.provider === 'smtp' ||
+    (initialDefinition && providerOptionEnabled(initialDefinition, settings))
+      ? (settings.provider ?? 'resend')
       : 'resend';
   const [provider, setProvider] = useState<string>(initialProvider);
   const [fromEmail, setFromEmail] = useState(settings.fromEmail);
@@ -86,10 +87,13 @@ export function EmailProviderForm({
     const body: EmailProviderWrite = {
       provider,
       from_email: fromEmail.trim(),
-      from_name: fromName.trim(),
-      sending_domain: sendingDomain.trim(),
-      bulk_from_email: bulkFromEmail.trim(),
     };
+    const fromNameNext = fromName.trim();
+    const domainNext = sendingDomain.trim();
+    const bulkNext = bulkFromEmail.trim();
+    if (fromNameNext !== settings.fromName) body.from_name = fromNameNext;
+    if (domainNext !== settings.sendingDomain) body.sending_domain = domainNext;
+    if (bulkNext !== settings.bulkFromEmail) body.bulk_from_email = bulkNext;
     if (secret) {
       if (definition?.credentialKind === 'smtp') {
         body.credentials = {
@@ -146,8 +150,13 @@ export function EmailProviderForm({
               );
             })}
           </select>
-          {!settings.smtpAllowed && settings.provider !== 'smtp' ? (
+          {!settings.smtpAllowed ? (
             <Text className="font-mono text-xs">{t('emailSmtpDisabled')}</Text>
+          ) : null}
+          {settings.authLinkHosts.length ? (
+            <Text className="font-mono text-xs">
+              {t('emailAuthLinkHosts', { hosts: settings.authLinkHosts.join(', ') })}
+            </Text>
           ) : null}
         </div>
         <div className="space-y-2">
@@ -282,16 +291,17 @@ export function EmailProviderForm({
         <h2 className="text-base font-semibold tracking-tight">{t('emailTestSend')}</h2>
         <Text>{isStaff ? t('emailTestStaffHint') : t('emailTestOwnerHint')}</Text>
         <div className="flex flex-wrap items-end gap-2">
-          <div className="min-w-[16rem] flex-1 space-y-2">
-            <Label htmlFor="email-test-to">{t('emailTestTo')}</Label>
-            <Input
-              id="email-test-to"
-              type="email"
-              value={isStaff ? testTo : (jwtEmail ?? '')}
-              disabled={!isStaff}
-              onChange={(event) => setTestTo(event.target.value)}
-            />
-          </div>
+          {isStaff ? (
+            <div className="min-w-[16rem] flex-1 space-y-2">
+              <Label htmlFor="email-test-to">{t('emailTestTo')}</Label>
+              <Input
+                id="email-test-to"
+                type="email"
+                value={testTo}
+                onChange={(event) => setTestTo(event.target.value)}
+              />
+            </div>
+          ) : null}
           <Button
             type="button"
             variant="outline"

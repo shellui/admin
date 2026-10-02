@@ -13,7 +13,9 @@ import { emailErrorText } from '@/lib/emailApiErrors';
 import { validateAuthLaneOverride } from '@/lib/emailAuthTemplate';
 import { emptyEmailDocument, type EmailLang, type EmailVariable } from '@/lib/emailDocument';
 import { confirmAction } from '@/lib/confirmAction';
-import type { EmailTemplateDefaults } from '@/lib/emailTypes';
+import { preferredTemplateVersion } from '@/lib/emailApiParsers';
+import { getEmailFromJwt, getIsStaffFromJwt } from '@/lib/jwtCompany';
+import type { EmailTemplateDefaults, EmailTemplateVersion } from '@/lib/emailTypes';
 
 function draftFromPack(
   defaults: EmailTemplateDefaults | null,
@@ -40,9 +42,12 @@ export function EmailTemplateEditorPage() {
   const [defaults, setDefaults] = useState<EmailTemplateDefaults | null>(null);
   const [variables, setVariables] = useState<EmailVariable[]>([]);
   const [laneClass, setLaneClass] = useState('');
+  const [authLinkHosts, setAuthLinkHosts] = useState<string[]>([]);
+  const [storedThemeName, setStoredThemeName] = useState<string | null>(null);
   const [draftEn, setDraftEn] = useState<EmailLangDraft>(() => draftFromPack(null, 'en', null));
   const [draftFr, setDraftFr] = useState<EmailLangDraft>(() => draftFromPack(null, 'fr', null));
   const [publishing, setPublishing] = useState(false);
+  const [sendingDraft, setSendingDraft] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [serviceHtml, setServiceHtml] = useState<string | null>(null);
@@ -62,13 +67,40 @@ export function EmailTemplateEditorPage() {
         api.fetchCatalog(),
       ]);
       const rows = templates.filter((row) => row.templateKey === templateKey);
-      setLaneClass(catalog.find((event) => event.templateKey === templateKey)?.laneClass ?? '');
+      setLaneClass(
+        catalog.events.find((event) => event.templateKey === templateKey)?.laneClass ?? '',
+      );
+      setAuthLinkHosts(catalog.authLinkHosts);
+      const opened = await Promise.all(
+        rows.map(async (row) => {
+          const version = row.activeVersion
+            ? await api.fetchVersion(row.id, row.activeVersion)
+            : preferredTemplateVersion(await api.fetchVersions(row.id));
+          return { row, version };
+        }),
+      );
+      const versionFor = (lang: EmailLang): EmailTemplateVersion | null =>
+        opened.find((item) => item.row.language === lang)?.version ?? null;
+      const withVersion = (lang: EmailLang, id: number | null): EmailLangDraft => {
+        const base = draftFromPack(nextDefaults, lang, id);
+        const version = versionFor(lang);
+        if (!version) return base;
+        const hasDocument =
+          version.document.preview.length > 0 || version.document.blocks.length > 0;
+        return {
+          ...base,
+          subject: version.subject || base.subject,
+          preheader: version.preheader || base.preheader,
+          document: hasDocument ? version.document : base.document,
+        };
+      };
       const enId = rows.find((row) => row.language === 'en')?.id ?? null;
       const frId = rows.find((row) => row.language === 'fr')?.id ?? null;
+      setStoredThemeName(versionFor('en')?.themeName || versionFor('fr')?.themeName || null);
       setDefaults(nextDefaults);
       setVariables(nextDefaults.variables);
-      setDraftEn(draftFromPack(nextDefaults, 'en', enId));
-      setDraftFr(draftFromPack(nextDefaults, 'fr', frId));
+      setDraftEn(withVersion('en', enId));
+      setDraftFr(withVersion('fr', frId));
     } catch (err) {
       setError(err);
     } finally {
@@ -94,6 +126,7 @@ export function EmailTemplateEditorPage() {
         const issue = validateAuthLaneOverride({
           laneClass,
           variables,
+          authLinkHosts,
           subject: draft.subject,
           preheader: draft.preheader,
           document: draft.document,
@@ -111,7 +144,8 @@ export function EmailTemplateEditorPage() {
           subject: draft.subject,
           preheader: draft.preheader,
           document: draft.document,
-          ...(themeName ? { theme_name: themeName, theme_palette: themePalette } : {}),
+          theme_name: themeName || 'shellui',
+          theme_palette: themePalette,
         });
         await api.publishVersion(id, version.number);
       }
@@ -149,7 +183,57 @@ export function EmailTemplateEditorPage() {
     }
   }
 
-  async function preview(lang: EmailLang, draft: EmailLangDraft) {
+  async function sendDraft(
+    lang: EmailLang,
+    draft: EmailLangDraft,
+    themePalette: Record<string, string>,
+    to?: string,
+  ) {
+    if (!api) return;
+    const issue = validateAuthLaneOverride({
+      laneClass,
+      variables,
+      authLinkHosts,
+      subject: draft.subject,
+      preheader: draft.preheader,
+      document: draft.document,
+    });
+    if (issue) {
+      setError(issue);
+      return;
+    }
+    setSendingDraft(true);
+    setError(null);
+    setNotice(null);
+    try {
+      let id = draft.templateId;
+      if (!id) {
+        const created = await api.createTemplate(templateKey, lang);
+        id = created.id;
+        const next = { ...draft, templateId: id };
+        if (lang === 'fr') setDraftFr(next);
+        else setDraftEn(next);
+      }
+      await api.sendTemplateTest(id, {
+        document: draft.document,
+        subject: draft.subject,
+        preheader: draft.preheader,
+        theme_palette: themePalette,
+        ...(to ? { to } : {}),
+      });
+      setNotice(t('emailSendDraftSent'));
+    } catch (err) {
+      setError(err);
+    } finally {
+      setSendingDraft(false);
+    }
+  }
+
+  async function preview(
+    lang: EmailLang,
+    draft: EmailLangDraft,
+    themePalette: Record<string, string>,
+  ) {
     if (!api) return;
     setServiceNote(null);
     try {
@@ -161,6 +245,7 @@ export function EmailTemplateEditorPage() {
         document: draft.document,
         subject: draft.subject,
         variables: variablesMap,
+        theme_palette: themePalette,
       });
       setServiceHtml(rendered.html);
       setServiceNote(
@@ -205,16 +290,22 @@ export function EmailTemplateEditorPage() {
         <EmailTemplateEditor
           templateKey={templateKey}
           laneClass={laneClass}
+          authLinkHosts={authLinkHosts}
+          storedThemeName={storedThemeName}
           draftEn={draftEn}
           draftFr={draftFr}
           variables={variables}
           hasCompanyTemplate={hasCompany}
           publishing={publishing}
           resetting={resetting}
+          sendingDraft={sendingDraft}
+          isStaff={Boolean(accessToken && getIsStaffFromJwt(accessToken))}
+          jwtEmail={accessToken ? getEmailFromJwt(accessToken) : null}
           onChange={(lang, next) => (lang === 'fr' ? setDraftFr(next) : setDraftEn(next))}
           onPublish={(themeName, palette) => void publish(themeName, palette)}
           onReset={() => void reset()}
-          onServicePreview={(lang, draft) => void preview(lang, draft)}
+          onSendDraft={(lang, draft, palette, to) => void sendDraft(lang, draft, palette, to)}
+          onServicePreview={(lang, draft, palette) => void preview(lang, draft, palette)}
           servicePreviewHtml={serviceHtml}
           servicePreviewNote={serviceNote}
         />

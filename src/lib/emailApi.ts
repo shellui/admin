@@ -8,12 +8,13 @@ import {
   parseTemplateDefaults,
   parseTemplates,
   parseTestSend,
+  parseVersion,
   parseVersions,
 } from '@/lib/emailApiParsers';
 import { parseEmailMetrics, type EmailMetricsSnapshot } from '@/lib/emailMetrics';
 import type { EmailDocument } from '@/lib/emailDocument';
 import type {
-  EmailCatalogEvent,
+  EmailCatalog,
   EmailProviderSettings,
   EmailProviderWrite,
   EmailRenderResult,
@@ -27,7 +28,7 @@ import type {
 } from '@/lib/emailTypes';
 
 export type EmailApiClient = {
-  fetchCatalog: () => Promise<EmailCatalogEvent[]>;
+  fetchCatalog: () => Promise<EmailCatalog>;
   fetchRules: () => Promise<EmailRule[]>;
   saveRule: (body: EmailRuleWrite) => Promise<void>;
   deleteRule: (eventType: string) => Promise<void>;
@@ -38,6 +39,7 @@ export type EmailApiClient = {
   ) => Promise<{ id: number; draftVersion: number }>;
   deleteTemplate: (id: number) => Promise<void>;
   fetchVersions: (id: number) => Promise<EmailTemplateVersion[]>;
+  fetchVersion: (id: number, number: number) => Promise<EmailTemplateVersion>;
   createVersion: (
     id: number,
     body: {
@@ -59,11 +61,21 @@ export type EmailApiClient = {
     document?: EmailDocument;
     subject?: string;
     variables?: Record<string, string>;
+    theme_palette?: Record<string, string>;
   }) => Promise<EmailRenderResult>;
   fetchProvider: () => Promise<EmailProviderSettings>;
   saveProvider: (body: EmailProviderWrite) => Promise<EmailProviderSettings>;
   testProvider: (to: string) => Promise<EmailTestSendResult>;
-  sendTemplateTest: (id: number) => Promise<EmailTestSendResult>;
+  sendTemplateTest: (
+    id: number,
+    body: {
+      document: EmailDocument;
+      subject: string;
+      preheader: string;
+      theme_palette: Record<string, string>;
+      to?: string;
+    },
+  ) => Promise<EmailTestSendResult>;
   fetchStats: (query?: {
     from?: string;
     to?: string;
@@ -150,6 +162,9 @@ export function createEmailApiClient(
     async fetchVersions(id) {
       return parseVersions(await call(`/api/v1/templates/${id}/versions`));
     },
+    async fetchVersion(id, number) {
+      return parseVersion(await call(`/api/v1/templates/${id}/versions/${number}`));
+    },
     async createVersion(id, body) {
       const created = await call(`/api/v1/templates/${id}/versions`, {
         method: 'POST',
@@ -198,8 +213,20 @@ export function createEmailApiClient(
         await call('/api/v1/provider/test-send', { method: 'POST', body: JSON.stringify({ to }) }),
       );
     },
-    async sendTemplateTest(id) {
-      return parseTestSend(await call(`/api/v1/templates/${id}/send-test`, { method: 'POST' }));
+    async sendTemplateTest(id, body) {
+      const payload: Record<string, unknown> = {
+        document: body.document,
+        subject: body.subject,
+        preheader: body.preheader,
+        theme_palette: body.theme_palette,
+      };
+      if (body.to) payload.to = body.to;
+      return parseTestSend(
+        await call(`/api/v1/templates/${id}/send-test`, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        }),
+      );
     },
     async fetchStats(query) {
       return parseStats(

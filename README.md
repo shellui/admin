@@ -79,17 +79,17 @@ Admin reads `email.url` the same way it reads `storage.url` and `hosting.url` (S
 
 Point `backend.url` at a local or deployed **identity-service** (for example `http://localhost:8000`). Sign in through Shellui as a **company owner** so the JWT includes `company_id` and `user_metadata.is_company_owner`.
 
-| Route                            | API                                                                                                                                                  |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `#/scim`                         | `GET /api/v1/scim`, token CRUD under `/api/v1/scim/tokens`                                                                                           |
-| `#/company`                      | `GET/PATCH /api/v1/auth-methods` (`enable_magic_link`, read-only global kill switch)                                                                 |
-| `#/identity/webhooks`            | Identity email and webhooks (sidebar: Identity → Email and webhooks). Webhook API on **identity-service**. Email rules call **email-service**.       |
-| `#/email/templates`              | Company email templates (suggested catalog plus published overrides), EN and FR.                                                                     |
-| `#/email/provider`               | Company provider (Resend). Company SMTP stays disabled unless the provider response sets `smtp_allowed`. The API key is write-only.                  |
-| `#/email/statistics`             | Delivery stats (including skipped events) and Prometheus metrics from email-service.                                                                 |
-| `#/hosting/webhooks`             | Hosting email and webhooks when `hosting.url` is set (sidebar: Hosting → Email and webhooks). Webhooks call **hosting-service** `/api/v1/actions/*`. |
-| `#/storage/webhooks`             | Storage email and webhooks when `storage.url` is set (sidebar: Storage → Email and webhooks). Webhooks call **storage-service** `/api/v1/actions/*`. |
-| `#/identity/webhooks/deliveries` | Delivery log for the active service (`GET /api/v1/actions/deliveries`, detail + `POST …/requeue`).                                                   |
+| Route                            | API                                                                                                                                                    |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `#/scim`                         | `GET /api/v1/scim`, token CRUD under `/api/v1/scim/tokens`                                                                                             |
+| `#/company`                      | `GET/PATCH /api/v1/auth-methods` (`enable_magic_link`, read-only global kill switch)                                                                   |
+| `#/identity/webhooks`            | Identity email and webhooks (sidebar: Identity → Email and webhooks). Webhook API on **identity-service**. Email rules call **email-service**.         |
+| `#/email/templates`              | Company email templates (suggested catalog plus published overrides), EN and FR.                                                                       |
+| `#/email/provider`               | Company provider (Resend). SMTP stays disabled when `smtp_allowed` is false. Untouched optional fields are omitted on save. The API key is write-only. |
+| `#/email/statistics`             | Delivery stats (including skipped events) and Prometheus metrics from email-service.                                                                   |
+| `#/hosting/webhooks`             | Hosting email and webhooks when `hosting.url` is set (sidebar: Hosting → Email and webhooks). Webhooks call **hosting-service** `/api/v1/actions/*`.   |
+| `#/storage/webhooks`             | Storage email and webhooks when `storage.url` is set (sidebar: Storage → Email and webhooks). Webhooks call **storage-service** `/api/v1/actions/*`.   |
+| `#/identity/webhooks/deliveries` | Delivery log for the active service (`GET /api/v1/actions/deliveries`, detail + `POST …/requeue`).                                                     |
 
 Legacy `#/webhooks` and `#/actions/...` redirect to `#/identity/webhooks/...`.
 

@@ -98,7 +98,7 @@ export const SHELLUI_EMAIL_PALETTE: EmailPreviewPalette = {
   border: '#e7e0d4',
 };
 
-/** Local preview. The service renderer ignores theme_palette, so this is the themed view. */
+/** Local preview. The service applies the same palette when the version is sent. */
 export function renderEmailPreviewHtml(
   document: EmailDocument,
   palette: EmailPreviewPalette = SHELLUI_EMAIL_PALETTE,

@@ -925,10 +925,8 @@ const resources = {
       emailEditorTitle: 'Edit email template',
       emailEditorDescription:
         'Change the subject, preheader, and blocks. Publish stores a company version. Reset removes it and later mail uses the suggested document.',
-      emailEditorDocumentGap:
-        'email-service does not return the saved document on the versions endpoint. This editor opens the suggested copy. Publishing stores a new version from what you see here.',
       emailEditorThemeNote:
-        'The theme name is stored with the version. The service renderer still uses the Shellui palette, so the themed preview can differ from the service preview.',
+        'The theme palette is saved with the version and applied when the message is sent.',
       emailLanguageTabs: 'Template language',
       emailLangEn: 'English',
       emailLangFr: 'French',
@@ -1108,8 +1106,21 @@ const resources = {
       emailFieldError_platform_from: 'platform From address',
       emailFieldError_not_public: 'not a public address',
       emailFieldError_invalid_port: 'invalid port',
+      emailFieldError_literal_url: 'literal web address',
+      emailFieldError_draft_required: 'editor draft is required',
       emailAuthLaneNotice:
         'This template is on the auth lane. Keep each required link variable in the copy: {{tokens}}. A button link must be one of those variables, or an https address on the email service allowlist.',
+      emailAuthLinkHosts:
+        'Sign-in link hosts: {{hosts}}. The email service sets this list. It cannot be edited here.',
+      emailSendDraft: 'Send this draft',
+      emailSendDraftSent: 'Draft sent.',
+      emailSendDraftStaffHint: 'Sends the copy in the editor. Catalog examples fill the variables.',
+      emailSendDraftOwnerHint:
+        'Sends the copy in the editor to the address on the session token. Catalog examples fill the variables.',
+      emailError_draft_required:
+        'Send the copy in the editor. There is no saved draft to send on its own.',
+      emailError_auth_literal_link:
+        'Auth mail cannot include a web address in the text. Use the link variable, or put an allowlisted https address on the button.',
     },
   },
   fr: {
@@ -2057,10 +2068,8 @@ const resources = {
       emailEditorTitle: 'Modifier le modèle d’e-mail',
       emailEditorDescription:
         'Changez le sujet, le pré-en-tête et les blocs. Publier enregistre une version d’entreprise. Réinitialiser la retire et les prochains envois utilisent le document suggéré.',
-      emailEditorDocumentGap:
-        'email-service ne renvoie pas le document enregistré sur l’endpoint des versions. Cet éditeur ouvre la copie suggérée. Publier enregistre une nouvelle version à partir de ce que vous voyez ici.',
       emailEditorThemeNote:
-        'Le nom du thème est enregistré avec la version. Le rendu du service garde la palette Shellui, donc l’aperçu thématique peut différer de l’aperçu du service.',
+        'La palette du thème est enregistrée avec la version et appliquée à l’envoi du message.',
       emailLanguageTabs: 'Langue du modèle',
       emailLangEn: 'Anglais',
       emailLangFr: 'Français',
@@ -2247,8 +2256,22 @@ const resources = {
       emailFieldError_platform_from: 'adresse d’expéditeur de la plateforme',
       emailFieldError_not_public: 'adresse non publique',
       emailFieldError_invalid_port: 'port invalide',
+      emailFieldError_literal_url: 'adresse web littérale',
+      emailFieldError_draft_required: 'le brouillon de l’éditeur est requis',
       emailAuthLaneNotice:
         'Ce modèle est sur la voie auth. Conservez chaque variable de lien requise dans le texte : {{tokens}}. Le lien d’un bouton doit être l’une de ces variables, ou une adresse https de la liste autorisée du service d’e-mail.',
+      emailAuthLinkHosts:
+        'Hôtes de lien de connexion : {{hosts}}. Le service d’e-mail définit cette liste. Elle ne se modifie pas ici.',
+      emailSendDraft: 'Envoyer ce brouillon',
+      emailSendDraftSent: 'Brouillon envoyé.',
+      emailSendDraftStaffHint:
+        'Envoie le texte de l’éditeur. Les exemples du catalogue remplissent les variables.',
+      emailSendDraftOwnerHint:
+        'Envoie le texte de l’éditeur à l’adresse du jeton de session. Les exemples du catalogue remplissent les variables.',
+      emailError_draft_required:
+        'Envoyez le texte de l’éditeur. Aucun brouillon enregistré ne peut partir seul.',
+      emailError_auth_literal_link:
+        'L’e-mail d’auth ne peut pas contenir d’adresse web dans le texte. Utilisez la variable de lien, ou placez une adresse https autorisée sur le bouton.',
     },
   },
 } as const;

@@ -75,6 +75,62 @@ describe('createEmailApiClient', () => {
     expect(saved.credentialsHint).toBe('••••abcd');
     expect(JSON.stringify(saved)).not.toContain('re_');
     expect(saved.smtpAllowed).toBe(false);
+    expect(saved.authLinkHosts).toEqual([]);
+  });
+
+  it('reopens one template version and sends the editor draft on send-test', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes('/versions/2') && (!init || !init.method || init.method === 'GET')) {
+        return new Response(
+          JSON.stringify({
+            number: 2,
+            state: 'published',
+            subject: 'Hello',
+            preheader: 'Preview',
+            document: { preview: 'Preview', blocks: [{ type: 'text', text: 'Hi' }] },
+            theme_name: 'shellui',
+            theme_palette: { background: '#ffffff' },
+            published_at: null,
+          }),
+          { status: 200 },
+        );
+      }
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      expect(body.document).toBeTruthy();
+      expect(body.subject).toBe('Hello');
+      expect(body).not.toHaveProperty('to');
+      return new Response(
+        JSON.stringify({ status: 'sent', provider: 'resend', provider_message_id: 're_1' }),
+        { status: 200 },
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const client = createEmailApiClient('https://email.shellui.com', 'jwt-token', 42);
+    const version = await client.fetchVersion(11, 2);
+    expect(version.document.blocks[0]?.text).toBe('Hi');
+    expect(version.themeName).toBe('shellui');
+    await client.sendTemplateTest(11, {
+      document: version.document,
+      subject: 'Hello',
+      preheader: 'Preview',
+      theme_palette: { background: '#ffffff' },
+    });
+  });
+
+  it('reads auth_link_hosts from the catalog', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        return new Response(JSON.stringify({ auth_link_hosts: ['id.shellui.com'], events: [] }), {
+          status: 200,
+        });
+      }),
+    );
+    const client = createEmailApiClient('https://email.shellui.com', 'jwt-token', 42);
+    const catalog = await client.fetchCatalog();
+    expect(catalog.authLinkHosts).toEqual(['id.shellui.com']);
+    expect(catalog.events).toEqual([]);
   });
 
   it('reads smtp_allowed and skipped stats from the contract', async () => {

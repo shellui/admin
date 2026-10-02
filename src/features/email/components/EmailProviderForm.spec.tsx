@@ -19,6 +19,7 @@ const settings: EmailProviderSettings = {
   fallbackProvider: 'resend',
   fallbackConfigured: true,
   smtpAllowed: false,
+  authLinkHosts: ['id.shellui.com'],
 };
 
 function renderForm(onSave = vi.fn(async (_body: EmailProviderWrite) => undefined)) {
@@ -59,6 +60,11 @@ describe('EmailProviderForm', () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
     const body = onSave.mock.calls[0]?.[0];
     expect(body?.credentials).toEqual({ api_key: 're_company_key' });
+    expect(body).not.toHaveProperty('from_name');
+    expect(body).not.toHaveProperty('sending_domain');
+    expect(body).not.toHaveProperty('bulk_from_email');
+    expect(body).not.toHaveProperty('webhook_secret');
+    expect(body?.from_email).toBe('no-reply@acme.com');
     expect((screen.getByLabelText('API key') as HTMLInputElement).value).toBe('');
     expect(screen.getByLabelText('API key').getAttribute('value')).not.toBe('re_company_key');
   });
@@ -68,13 +74,57 @@ describe('EmailProviderForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save provider' }));
     await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
     expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty('credentials');
+    expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty('webhook_secret');
+    expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty('bulk_from_email');
     expect(JSON.stringify(onSave.mock.calls[0]?.[0])).not.toContain('api_key');
+  });
+
+  it('sends an empty string only when a stored optional field is cleared', async () => {
+    const onSave = vi.fn(async (_body: EmailProviderWrite) => undefined);
+    const stored = { ...settings, bulkFromEmail: 'news@acme.com' };
+    render(
+      <I18nextProvider i18n={i18n}>
+        <EmailProviderForm
+          settings={stored}
+          jwtEmail="ada@acme.com"
+          isStaff={false}
+          saving={false}
+          testing={false}
+          onSave={onSave}
+          onTest={vi.fn(async () => undefined)}
+        />
+      </I18nextProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Save provider' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
+    expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty('bulk_from_email');
+
+    cleanup();
+    const cleared = vi.fn(async (_body: EmailProviderWrite) => undefined);
+    render(
+      <I18nextProvider i18n={i18n}>
+        <EmailProviderForm
+          settings={stored}
+          jwtEmail="ada@acme.com"
+          isStaff={false}
+          saving={false}
+          testing={false}
+          onSave={cleared}
+          onTest={vi.fn(async () => undefined)}
+        />
+      </I18nextProvider>,
+    );
+    fireEvent.change(screen.getByLabelText('Bulk from address'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save provider' }));
+    await waitFor(() => expect(cleared).toHaveBeenCalledOnce());
+    expect(cleared.mock.calls[0]?.[0]?.bulk_from_email).toBe('');
   });
 
   it('disables SMTP unless the provider payload says company SMTP is allowed', () => {
     renderForm();
     const smtp = screen.getByRole('option', { name: /SMTP/ }) as HTMLOptionElement;
     expect(smtp.disabled).toBe(true);
+    expect(screen.queryByLabelText('Test recipient')).toBeNull();
     cleanup();
     render(
       <I18nextProvider i18n={i18n}>
@@ -108,6 +158,7 @@ describe('EmailProviderForm', () => {
         />
       </I18nextProvider>,
     );
+    expect(screen.getByLabelText('Test recipient')).toBeTruthy();
     const input = screen.getByLabelText('API key') as HTMLInputElement;
     fireEvent.change(input, { target: { value: 're_typed' } });
     rerender(

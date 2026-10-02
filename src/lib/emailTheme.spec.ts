@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Appearance, SettingsAvailableTheme } from '@shellui/sdk';
-import { paletteForThemeName, resolveEmailThemeName } from '@/lib/emailTheme';
+import { paletteForThemeName, resolveEmailThemeName, themePalettePayload } from '@/lib/emailTheme';
 
 const themes: SettingsAvailableTheme[] = [
   {
@@ -147,5 +147,21 @@ describe('resolveEmailThemeName', () => {
   it('builds a preview palette from the picked theme', () => {
     const appearance = { name: 'shellui', mode: 'light' } as Appearance;
     expect(paletteForThemeName('ocean', appearance, themes).primary).toBe('#036');
+  });
+});
+
+describe('themePalettePayload', () => {
+  it('stores every key as #rrggbb', () => {
+    const appearance = { name: 'ocean', mode: 'light' } as Appearance;
+    const payload = themePalettePayload(paletteForThemeName('ocean', appearance, themes));
+    expect(payload).toEqual({
+      background: '#ffffff',
+      foreground: '#002233',
+      muted: '#eeeeff',
+      mutedForeground: '#445566',
+      primary: '#003366',
+      primaryForeground: '#ffffff',
+      border: '#ccccdd',
+    });
   });
 });

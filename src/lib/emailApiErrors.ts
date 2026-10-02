@@ -52,6 +52,7 @@ export function emailErrorText(t: Translate, error: unknown): string {
   if (!(error instanceof EmailApiError)) return t('emailError_request_failed');
   const codeKey = `emailError_${error.errorCode}`;
   const translated = t(codeKey);
+  if (error.fieldErrors.version?.includes('draft_required')) return t('emailError_draft_required');
   const base = translated === codeKey ? t('emailError_request_failed') : translated;
   const fields = Object.entries(error.fieldErrors)
     .map(([field, codes]) => {

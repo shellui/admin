@@ -5,8 +5,8 @@ export const DEFAULT_EMAIL_SERVICE_URL = 'https://email.shellui.com';
 
 /**
  * Host `email` block in shellui.config, delivered on SDK settings the same way as
- * `storage` and `hosting`. SDK 0.5.0 has no `email` field yet, so this is read
- * from the settings object when the shell forwards it.
+ * `storage` and `hosting`. `@shellui/sdk` 0.6.0-alpha.1 will type this block, and that
+ * release is not on npm yet, so Admin still reads `settings.email` without a type.
  */
 export interface SettingsEmail {
   /** Base URL of email-service. Omitted values use `DEFAULT_EMAIL_SERVICE_URL`. */

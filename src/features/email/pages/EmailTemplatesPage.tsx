@@ -46,7 +46,7 @@ export function EmailTemplatesPage() {
         api.fetchCatalog(),
         api.fetchTemplates(),
       ]);
-      setEvents(catalog);
+      setEvents(catalog.events);
       setTemplates(companyTemplates);
     } catch (err) {
       setEvents([]);

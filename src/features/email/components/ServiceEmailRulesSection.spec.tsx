@@ -45,7 +45,10 @@ function event(
 function clientFor(rows: ReturnType<typeof event>[]): EmailApiClient {
   const saveRule = vi.fn(async (_body: EmailRuleWrite) => undefined);
   const api = {
-    fetchCatalog: vi.fn(async () => rows.map((row) => row.catalog)),
+    fetchCatalog: vi.fn(async () => ({
+      events: rows.map((row) => row.catalog),
+      authLinkHosts: ['id.shellui.com'],
+    })),
     fetchRules: vi.fn(async () => rows.map((row) => row.rule)),
     saveRule,
   };

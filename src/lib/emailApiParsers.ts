@@ -1,6 +1,7 @@
 import { parseEmailDocument, type EmailLang, type EmailVariable } from '@/lib/emailDocument';
 import { EmailApiError } from '@/lib/emailApiErrors';
 import type {
+  EmailCatalog,
   EmailCatalogEvent,
   EmailCountBucket,
   EmailProviderSettings,
@@ -52,34 +53,42 @@ function parseVariables(value: unknown): EmailVariable[] {
   return value.map(parseVariable).filter((item): item is EmailVariable => item !== null);
 }
 
-export function parseCatalog(body: unknown): EmailCatalogEvent[] {
+function stringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+}
+
+export function parseCatalog(body: unknown): EmailCatalog {
   const root = record(body);
   const events = root && Array.isArray(root.events) ? root.events : null;
   if (!events) throw new EmailApiError('request_failed', 200);
-  return events.map((item) => {
-    const row = record(item) ?? {};
-    const suggestedRaw = record(row.suggested) ?? {};
-    const suggested: EmailCatalogEvent['suggested'] = {};
-    for (const lang of ['en', 'fr'] as const) {
-      const pack = record(suggestedRaw[lang]);
-      if (!pack) continue;
-      suggested[lang] = { subject: str(pack.subject), preheader: str(pack.preheader) };
-    }
-    return {
-      service: str(row.service),
-      eventType: str(row.event_type),
-      templateKey: str(row.template_key),
-      label: str(row.label),
-      laneClass: str(row.lane_class),
-      defaultLane: str(row.default_lane),
-      defaultEnabled: bool(row.default_enabled),
-      category: str(row.category),
-      defaultTtlSeconds:
-        typeof row.default_ttl_seconds === 'number' ? row.default_ttl_seconds : null,
-      variables: parseVariables(row.variables),
-      suggested,
-    };
-  });
+  return {
+    authLinkHosts: stringList(root?.auth_link_hosts),
+    events: events.map((item) => {
+      const row = record(item) ?? {};
+      const suggestedRaw = record(row.suggested) ?? {};
+      const suggested: EmailCatalogEvent['suggested'] = {};
+      for (const lang of ['en', 'fr'] as const) {
+        const pack = record(suggestedRaw[lang]);
+        if (!pack) continue;
+        suggested[lang] = { subject: str(pack.subject), preheader: str(pack.preheader) };
+      }
+      return {
+        service: str(row.service),
+        eventType: str(row.event_type),
+        templateKey: str(row.template_key),
+        label: str(row.label),
+        laneClass: str(row.lane_class),
+        defaultLane: str(row.default_lane),
+        defaultEnabled: bool(row.default_enabled),
+        category: str(row.category),
+        defaultTtlSeconds:
+          typeof row.default_ttl_seconds === 'number' ? row.default_ttl_seconds : null,
+        variables: parseVariables(row.variables),
+        suggested,
+      };
+    }),
+  };
 }
 
 export function parseRules(body: unknown): EmailRule[] {
@@ -124,19 +133,40 @@ export function parseTemplates(body: unknown): EmailTemplateRow[] {
   });
 }
 
+export function parseVersion(body: unknown): EmailTemplateVersion {
+  const row = record(body) ?? {};
+  const palette = record(row.theme_palette) ?? {};
+  const themePalette: Record<string, string> = {};
+  for (const [key, value] of Object.entries(palette)) {
+    if (typeof value === 'string' && value.trim()) themePalette[key] = value.trim();
+  }
+  return {
+    number: num(row.number),
+    state: str(row.state),
+    subject: str(row.subject),
+    preheader: str(row.preheader),
+    document: parseEmailDocument(row.document),
+    themeName: str(row.theme_name) || 'shellui',
+    themePalette,
+    publishedAt: typeof row.published_at === 'string' ? row.published_at : null,
+  };
+}
+
 export function parseVersions(body: unknown): EmailTemplateVersion[] {
   const root = record(body);
   const versions = root && Array.isArray(root.versions) ? root.versions : null;
   if (!versions) throw new EmailApiError('request_failed', 200);
-  return versions.map((item) => {
-    const row = record(item) ?? {};
-    return {
-      number: num(row.number),
-      state: str(row.state),
-      subject: str(row.subject),
-      publishedAt: typeof row.published_at === 'string' ? row.published_at : null,
-    };
-  });
+  return versions.map((item) => parseVersion(item));
+}
+
+/** Published version when one exists, otherwise the highest number. */
+export function preferredTemplateVersion(
+  versions: EmailTemplateVersion[],
+): EmailTemplateVersion | null {
+  if (!versions.length) return null;
+  const published = versions.filter((version) => version.state === 'published');
+  const pool = published.length ? published : versions;
+  return pool.reduce((best, version) => (version.number > best.number ? version : best));
 }
 
 function parsePack(value: unknown): EmailTemplatePack | null {
@@ -182,6 +212,7 @@ export function parseProvider(body: unknown): EmailProviderSettings {
     fallbackProvider: str(row.fallback_provider),
     fallbackConfigured: bool(row.fallback_configured),
     smtpAllowed: row.smtp_allowed === true,
+    authLinkHosts: stringList(row.auth_link_hosts),
   };
 }
 
