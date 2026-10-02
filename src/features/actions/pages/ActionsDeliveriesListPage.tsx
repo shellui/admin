@@ -195,7 +195,7 @@ export function ActionsDeliveriesListPage() {
             variant="secondary"
             onClick={applyFilters}
           >
-            {t('loginEventsApplyFilters')}
+            {t('eventsApplyFilters')}
           </Button>
         </div>
       ) : null}
@@ -271,7 +271,7 @@ export function ActionsDeliveriesListPage() {
                         to={webhookDeliveryDetailPath(service.key, row.id)}
                         className="text-primary underline-offset-2 hover:underline"
                       >
-                        {t('loginEventsOpenDetail')}
+                        {t('eventsOpenDetail')}
                       </Link>
                     </TableCell>
                   </TableRow>
@@ -282,7 +282,7 @@ export function ActionsDeliveriesListPage() {
           {totalPages > 1 ? (
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs text-muted-foreground">
-                {t('loginEventsPageStatus', { page: pageParam, pages: totalPages, total })}
+                {t('eventsPageStatus', { page: pageParam, pages: totalPages, total })}
               </p>
               <div className="flex gap-2">
                 <Button

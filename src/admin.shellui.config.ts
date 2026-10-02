@@ -38,9 +38,9 @@ export const adminShellUiConfig: AdminShellUIConfig = {
         { label: { en: 'Users', fr: 'Utilisateurs' }, path: 'users', url: '#/users' },
         { label: { en: 'Groups', fr: 'Groupes' }, path: 'groups', url: '#/groups' },
         {
-          label: { en: 'Log events', fr: 'Événements de connexion' },
-          path: 'login-events',
-          url: '#/login-events',
+          label: { en: 'Log events', fr: 'Journal des événements' },
+          path: 'events',
+          url: '#/events',
         },
         { label: { en: 'OAuth apps', fr: 'Apps OAuth' }, path: 'oauth', url: '#/oauth' },
         { label: { en: 'SCIM', fr: 'SCIM' }, path: 'scim', url: '#/scim' },

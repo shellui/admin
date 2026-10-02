@@ -110,7 +110,7 @@ const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
   users: Users,
   'personal-access-tokens': Fingerprint,
   groups: Tags,
-  'login-events': ScrollText,
+  events: ScrollText,
   oauth: KeyRound,
   scim: Network,
   webhooks: SendHorizonal,
@@ -141,8 +141,7 @@ const mapLabelToTranslationKey = (label: string): string => {
   if (normalized === 'company' || normalized === 'entreprise') return 'navCompany';
   if (normalized === 'users' || normalized === 'utilisateurs') return 'navUsers';
   if (normalized === 'groups' || normalized === 'groupes') return 'navGroups';
-  if (normalized === 'log events' || normalized === 'événements de connexion')
-    return 'navLoginEvents';
+  if (normalized === 'log events' || normalized === 'journal des événements') return 'navEvents';
   if (normalized === 'oauth apps' || normalized === 'apps oauth') return 'navOAuth';
   if (normalized === 'scim') return 'navScim';
   if (normalized === 'webhooks') return 'navWebhooks';

@@ -9,28 +9,38 @@ import { Text } from '@/components/ui/text';
 import { Separator } from '@/components/ui/separator';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import {
-  fetchAdminLoginEvent,
-  fetchAdminLoginEvents,
-  type AdminLoginEventListResponse,
-  type AdminLoginEventRow,
-} from '@/lib/adminUsersApi';
+  eventSummary,
+  fetchEventLog,
+  fetchEventLogEntry,
+  isFailureEvent,
+  type EventLogListResponse,
+  type EventLogRow,
+} from '@/lib/eventLogApi';
 import { cn } from '@/lib/utils';
 
 const SIBLING_PAGE_SIZE = 10;
 
-function detailField(label: string, value: string | null | undefined) {
-  const v = value != null && String(value).trim() !== '' ? String(value) : '—';
+function formatValue(value: unknown): string {
+  if (value == null || value === '') return '—';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
+function detailField(label: string, value: unknown, key?: string) {
   return (
-    <div className="min-w-0 space-y-0.5">
+    <div
+      key={key}
+      className="min-w-0 space-y-0.5"
+    >
       <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </dt>
-      <dd className="break-words font-mono text-sm">{v}</dd>
+      <dd className="break-words font-mono text-sm">{formatValue(value)}</dd>
     </div>
   );
 }
 
-export function LoginEventDetailPage() {
+export function EventDetailPage() {
   const { t, i18n } = useTranslation();
   const { eventId } = useParams<{ eventId: string }>();
   const accessToken = useShelluiAccessToken();
@@ -40,11 +50,11 @@ export function LoginEventDetailPage() {
     return Number.isFinite(n) ? n : NaN;
   }, [eventId]);
 
-  const [event, setEvent] = useState<AdminLoginEventRow | null>(null);
+  const [event, setEvent] = useState<EventLogRow | null>(null);
   const [loadingEvent, setLoadingEvent] = useState(true);
   const [eventError, setEventError] = useState<string | null>(null);
 
-  const [siblings, setSiblings] = useState<AdminLoginEventListResponse | null>(null);
+  const [siblings, setSiblings] = useState<EventLogListResponse | null>(null);
   const [siblingPage, setSiblingPage] = useState(1);
   const [loadingSiblings, setLoadingSiblings] = useState(false);
   const [siblingsError, setSiblingsError] = useState<string | null>(null);
@@ -59,11 +69,10 @@ export function LoginEventDetailPage() {
     setLoadingEvent(true);
     setEventError(null);
     try {
-      const row = await fetchAdminLoginEvent(accessToken, idNum);
-      setEvent(row);
+      setEvent(await fetchEventLogEntry(accessToken, idNum));
     } catch (e) {
       setEvent(null);
-      setEventError(e instanceof Error ? e.message : t('loginEventsErrorUnknown'));
+      setEventError(e instanceof Error ? e.message : t('eventsErrorUnknown'));
     } finally {
       setLoadingEvent(false);
     }
@@ -78,7 +87,7 @@ export function LoginEventDetailPage() {
   }, [event?.user_id, event?.id]);
 
   const loadSiblings = useCallback(async () => {
-    if (!accessToken || !event?.user_id) {
+    if (!accessToken || event?.user_id == null) {
       setSiblings(null);
       setSiblingsError(null);
       return;
@@ -86,15 +95,16 @@ export function LoginEventDetailPage() {
     setLoadingSiblings(true);
     setSiblingsError(null);
     try {
-      const res = await fetchAdminLoginEvents(accessToken, {
-        user_id: event.user_id,
-        page: siblingPage,
-        pageSize: SIBLING_PAGE_SIZE,
-      });
-      setSiblings(res);
+      setSiblings(
+        await fetchEventLog(accessToken, {
+          userId: event.user_id,
+          page: siblingPage,
+          pageSize: SIBLING_PAGE_SIZE,
+        }),
+      );
     } catch (e) {
       setSiblings(null);
-      setSiblingsError(e instanceof Error ? e.message : t('loginEventsErrorUnknown'));
+      setSiblingsError(e instanceof Error ? e.message : t('eventsErrorUnknown'));
     } finally {
       setLoadingSiblings(false);
     }
@@ -118,27 +128,30 @@ export function LoginEventDetailPage() {
     return siblings.results.filter((r) => r.id !== event.id);
   }, [siblings, event]);
 
-  const siblingTotalPages = useMemo(() => {
-    if (!siblings?.count) return 1;
-    return Math.max(1, Math.ceil(siblings.count / SIBLING_PAGE_SIZE));
-  }, [siblings?.count]);
+  const siblingTotalPages = siblings?.count
+    ? Math.max(1, Math.ceil(siblings.count / SIBLING_PAGE_SIZE))
+    : 1;
+
+  const backLink = (
+    <Link to="/events">
+      <ArrowLeft
+        className="mr-1 size-4"
+        aria-hidden
+      />
+      {t('eventsBackToList')}
+    </Link>
+  );
 
   if (!Number.isFinite(idNum)) {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-destructive">{t('loginEventsInvalidId')}</p>
+        <p className="text-sm text-destructive">{t('eventsInvalidId')}</p>
         <Button
           variant="outline"
           size="sm"
           asChild
         >
-          <Link to="/login-events">
-            <ArrowLeft
-              className="mr-2 size-4"
-              aria-hidden
-            />
-            {t('loginEventsBackToList')}
-          </Link>
+          {backLink}
         </Button>
       </div>
     );
@@ -153,18 +166,12 @@ export function LoginEventDetailPage() {
           className="-ml-2 h-8 px-2"
           asChild
         >
-          <Link to="/login-events">
-            <ArrowLeft
-              className="mr-1 size-4"
-              aria-hidden
-            />
-            {t('loginEventsBackToList')}
-          </Link>
+          {backLink}
         </Button>
       </div>
 
       {!accessToken ? (
-        <p className="text-sm text-muted-foreground">{t('loginEventsNoSession')}</p>
+        <p className="text-sm text-muted-foreground">{t('eventsNoSession')}</p>
       ) : null}
 
       {accessToken && loadingEvent && !event ? (
@@ -173,7 +180,7 @@ export function LoginEventDetailPage() {
             className="size-5 animate-spin"
             aria-hidden
           />
-          <span className="text-sm">{t('loginEventsDetailLoading')}</span>
+          <span className="text-sm">{t('eventsDetailLoading')}</span>
         </div>
       ) : null}
 
@@ -188,24 +195,19 @@ export function LoginEventDetailPage() {
           <header className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-                {t('loginEventsDetailTitle', { id: event.id })}
+                {event.label}
               </h1>
               <Badge
                 variant="secondary"
-                className="font-mono text-[10px] uppercase"
+                className="font-mono text-[10px]"
               >
-                {t('loginEventsBadge')}
+                {event.event_type}
               </Badge>
-              <span
-                className={cn(
-                  'rounded px-2 py-0.5 text-xs font-medium',
-                  event.outcome === 'success'
-                    ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
-                    : 'bg-destructive/15 text-destructive',
-                )}
-              >
-                {event.outcome}
-              </span>
+              {isFailureEvent(event) ? (
+                <span className="rounded bg-destructive/15 px-2 py-0.5 text-xs font-medium text-destructive">
+                  {t('eventsFailureBadge')}
+                </span>
+              ) : null}
             </div>
             <Text className="text-sm text-muted-foreground">
               {formatDateTime(event.created_at)}
@@ -216,7 +218,7 @@ export function LoginEventDetailPage() {
                 className="h-auto p-0 text-sm"
                 asChild
               >
-                <Link to={`/users/${event.user_id}`}>{t('loginEventsOpenUserProfile')}</Link>
+                <Link to={`/users/${event.user_id}`}>{t('eventsOpenUserProfile')}</Link>
               </Button>
             ) : null}
           </header>
@@ -224,46 +226,29 @@ export function LoginEventDetailPage() {
           <Card className="border-border/80 shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="font-heading text-lg">
-                {t('loginEventsDetailPayloadTitle')}
+                {t('eventsDetailPayloadTitle')}
               </CardTitle>
-              <CardDescription className="text-sm">
-                {t('loginEventsDetailPayloadHint')}
-              </CardDescription>
+              <CardDescription className="text-sm">{t('eventsDetailPayloadHint')}</CardDescription>
             </CardHeader>
             <CardContent>
               <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {detailField(t('loginEventsDetailId'), String(event.id))}
-                {detailField(t('userDetailLoginColProvider'), event.provider)}
-                {detailField(t('userDetailLoginColOutcome'), event.outcome)}
-                {detailField(t('loginEventsDetailFailureReason'), event.failure_reason || null)}
-                {detailField(
-                  t('userDetailLoginColStaff'),
-                  event.is_staff_at_event ? t('usersStaffYes') : t('usersStaffNo'),
-                )}
-                {detailField(t('loginEventsDetailUserEmail'), event.user_email)}
-                {detailField(
-                  t('loginEventsDetailUserId'),
-                  event.user_id != null ? String(event.user_id) : null,
-                )}
-                {detailField(t('loginEventsDetailIpHash'), event.ip_hash)}
-                {detailField(t('userDetailLoginColUserAgent'), event.user_agent)}
-                {detailField(t('userDetailLoginColTimezone'), event.client_timezone)}
-                {detailField(t('loginEventsDetailDeviceHash'), event.client_device_id_hash)}
-                {detailField(t('userDetailLoginColCountry'), event.client_country)}
-                {detailField(t('loginEventsDetailCity'), event.client_city)}
+                {detailField(t('eventsDetailId'), event.id)}
+                {detailField(t('eventsDetailUserEmail'), event.user_email)}
+                {detailField(t('eventsDetailUserId'), event.user_id)}
+                {Object.entries(event.data).map(([key, value]) => detailField(key, value, key))}
               </dl>
             </CardContent>
           </Card>
 
           <section className="space-y-3">
             <div className="space-y-1">
-              <h2 className="font-heading text-lg font-semibold">{t('loginEventsSiblingTitle')}</h2>
-              <Text className="text-sm text-muted-foreground">{t('loginEventsSiblingHint')}</Text>
+              <h2 className="font-heading text-lg font-semibold">{t('eventsSiblingTitle')}</h2>
+              <Text className="text-sm text-muted-foreground">{t('eventsSiblingHint')}</Text>
             </div>
             <Separator />
 
             {event.user_id == null ? (
-              <p className="text-sm text-muted-foreground">{t('loginEventsSiblingNoUser')}</p>
+              <p className="text-sm text-muted-foreground">{t('eventsSiblingNoUser')}</p>
             ) : siblingsError ? (
               <p className="text-sm text-destructive">{siblingsError}</p>
             ) : loadingSiblings && !siblings ? (
@@ -272,56 +257,60 @@ export function LoginEventDetailPage() {
                   className="size-4 animate-spin"
                   aria-hidden
                 />
-                <span className="text-sm">{t('loginEventsSiblingLoading')}</span>
+                <span className="text-sm">{t('eventsLoading')}</span>
               </div>
             ) : siblingRows.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t('loginEventsSiblingEmpty')}</p>
+              <p className="text-sm text-muted-foreground">{t('eventsSiblingEmpty')}</p>
             ) : (
               <>
                 <ul className="space-y-2">
-                  {siblingRows.map((ev) => (
-                    <li key={ev.id}>
-                      <Link
-                        to={`/login-events/${ev.id}`}
-                        className={cn(
-                          'block rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted/50',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                        )}
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="min-w-0 space-y-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-mono text-[11px] text-muted-foreground">
-                                #{ev.id}
-                              </span>
-                              <span className="text-sm font-medium">{ev.provider}</span>
-                              <span
-                                className={cn(
-                                  'rounded px-1.5 py-0.5 text-[11px]',
-                                  ev.outcome === 'success'
-                                    ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
-                                    : 'bg-destructive/15 text-destructive',
-                                )}
-                              >
-                                {ev.outcome}
-                              </span>
+                  {siblingRows.map((ev) => {
+                    const summary = eventSummary(ev);
+                    return (
+                      <li key={ev.id}>
+                        <Link
+                          to={`/events/${ev.id}`}
+                          className={cn(
+                            'block rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted/50',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                          )}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="min-w-0 space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span
+                                  className={cn(
+                                    'rounded px-1.5 py-0.5 text-[11px] font-medium',
+                                    isFailureEvent(ev)
+                                      ? 'bg-destructive/15 text-destructive'
+                                      : 'bg-muted text-foreground',
+                                  )}
+                                >
+                                  {ev.label}
+                                </span>
+                                {summary ? (
+                                  <span className="truncate text-xs text-muted-foreground">
+                                    {summary}
+                                  </span>
+                                ) : null}
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {formatDateTime(ev.created_at)}
+                              </p>
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                              {formatDateTime(ev.created_at)}
-                            </p>
+                            <span className="shrink-0 text-xs text-primary">
+                              {t('eventsOpenDetail')}
+                            </span>
                           </div>
-                          <span className="shrink-0 text-xs text-primary">
-                            {t('loginEventsOpenDetail')}
-                          </span>
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
                 {siblingTotalPages > 1 ? (
                   <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-xs text-muted-foreground">
-                      {t('userDetailLoginPagination', {
+                      {t('eventsPageStatus', {
                         page: siblingPage,
                         pages: siblingTotalPages,
                         total: siblings?.count ?? 0,

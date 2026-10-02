@@ -22,18 +22,22 @@ import { confirmAction } from '@/lib/confirmAction';
 import { getUserIdFromJwt } from '@/lib/jwtCompany';
 import {
   deleteAdminUser,
-  fetchAdminLoginEvents,
   fetchAdminUser,
   updateAdminUser,
-  type AdminLoginEventListResponse,
   type AdminUserRow,
   type ShellUIPreferencesPayload,
 } from '@/lib/adminUsersApi';
 import { fetchAdminGroups, type AdminGroupRow } from '@/lib/adminGroupsApi';
+import {
+  eventSummary,
+  fetchEventLog,
+  isFailureEvent,
+  type EventLogListResponse,
+} from '@/lib/eventLogApi';
 import { cn } from '@/lib/utils';
 
-/** Matches server default cap; keep moderate to limit JSON payload per request. */
-const LOGIN_EVENTS_PAGE_SIZE = 15;
+/** Keep moderate to limit JSON payload per request. */
+const EVENTS_PAGE_SIZE = 15;
 
 function parsePreferences(meta: Record<string, unknown>): ShellUIPreferencesPayload | null {
   const raw = meta.shelluiPreferences;
@@ -83,10 +87,10 @@ export function UserDetailPage() {
   const idNum = userId ? parseInt(userId, 10) : NaN;
 
   const [user, setUser] = useState<AdminUserRow | null>(null);
-  const [events, setEvents] = useState<AdminLoginEventListResponse | null>(null);
+  const [events, setEvents] = useState<EventLogListResponse | null>(null);
   const [eventsPage, setEventsPage] = useState(1);
-  const [loginHistoryInView, setLoginHistoryInView] = useState(false);
-  const loginHistorySectionRef = useRef<HTMLDivElement>(null);
+  const [eventsInView, setEventsInView] = useState(false);
+  const eventsSectionRef = useRef<HTMLDivElement>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -123,16 +127,16 @@ export function UserDetailPage() {
   }, [accessToken, idNum, t]);
 
   const loadEvents = useCallback(async () => {
-    if (!loginHistoryInView || !accessToken || !Number.isFinite(idNum)) {
+    if (!eventsInView || !accessToken || !Number.isFinite(idNum)) {
       return;
     }
     setLoadingEvents(true);
     setEventsError(null);
     try {
-      const ev = await fetchAdminLoginEvents(accessToken, {
-        user_id: idNum,
+      const ev = await fetchEventLog(accessToken, {
+        userId: idNum,
         page: eventsPage,
-        pageSize: LOGIN_EVENTS_PAGE_SIZE,
+        pageSize: EVENTS_PAGE_SIZE,
       });
       setEvents(ev);
     } catch (e) {
@@ -141,7 +145,7 @@ export function UserDetailPage() {
     } finally {
       setLoadingEvents(false);
     }
-  }, [loginHistoryInView, accessToken, idNum, eventsPage, t]);
+  }, [eventsInView, accessToken, idNum, eventsPage, t]);
 
   useEffect(() => {
     void loadUser();
@@ -151,18 +155,18 @@ export function UserDetailPage() {
     setEventsPage(1);
     setEvents(null);
     setEventsError(null);
-    setLoginHistoryInView(false);
+    setEventsInView(false);
     setLoadingEvents(false);
   }, [idNum]);
 
   useEffect(() => {
-    const el = loginHistorySectionRef.current;
+    const el = eventsSectionRef.current;
     if (!el) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) {
-          setLoginHistoryInView(true);
+          setEventsInView(true);
           observer.disconnect();
         }
       },
@@ -185,7 +189,7 @@ export function UserDetailPage() {
 
   const eventsTotalPages = useMemo(() => {
     if (!events?.count) return 1;
-    const ps = events.page_size > 0 ? events.page_size : LOGIN_EVENTS_PAGE_SIZE;
+    const ps = events.page_size > 0 ? events.page_size : EVENTS_PAGE_SIZE;
     return Math.max(1, Math.ceil(events.count / ps));
   }, [events?.count, events?.page_size]);
 
@@ -512,25 +516,34 @@ export function UserDetailPage() {
             </CardContent>
           </Card>
 
-          <div ref={loginHistorySectionRef}>
+          <div ref={eventsSectionRef}>
             <Card className="border-border/80 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg">{t('userDetailLoginHistoryTitle')}</CardTitle>
-                <CardDescription>{t('userDetailLoginHistoryHint')}</CardDescription>
+              <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
+                <div className="min-w-0 space-y-1.5">
+                  <CardTitle className="text-lg">{t('userDetailEventsTitle')}</CardTitle>
+                  <CardDescription>{t('userDetailEventsHint')}</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                >
+                  <Link to={`/events?user_id=${idNum}`}>{t('userDetailEventsViewAll')}</Link>
+                </Button>
               </CardHeader>
               <CardContent className="space-y-4">
-                {!loginHistoryInView && events === null ? (
+                {!eventsInView && events === null ? (
                   <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                     <p className="max-w-xl text-sm text-muted-foreground">
-                      {t('userDetailLoginHistoryDefer')}
+                      {t('userDetailEventsDefer')}
                     </p>
                     <Button
                       type="button"
                       variant="secondary"
                       size="sm"
-                      onClick={() => setLoginHistoryInView(true)}
+                      onClick={() => setEventsInView(true)}
                     >
-                      {t('userDetailLoginHistoryLoadNow')}
+                      {t('userDetailEventsLoadNow')}
                     </Button>
                   </div>
                 ) : null}
@@ -539,19 +552,17 @@ export function UserDetailPage() {
                     {eventsError}
                   </p>
                 ) : null}
-                {loginHistoryInView && loadingEvents && !events ? (
+                {eventsInView && loadingEvents && !events ? (
                   <div className="flex items-center gap-2 py-6 text-muted-foreground">
                     <Loader2
                       className="size-4 animate-spin"
                       aria-hidden
                     />
-                    <span className="text-sm">{t('userDetailLoginHistoryLoading')}</span>
+                    <span className="text-sm">{t('eventsLoading')}</span>
                   </div>
                 ) : null}
                 {events && events.results.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    {t('userDetailLoginHistoryEmpty')}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{t('userDetailEventsEmpty')}</p>
                 ) : null}
                 {events && events.results.length > 0 ? (
                   <>
@@ -567,7 +578,7 @@ export function UserDetailPage() {
                             className="size-6 animate-spin text-muted-foreground"
                             aria-hidden
                           />
-                          <span className="sr-only">{t('userDetailLoginHistoryLoading')}</span>
+                          <span className="sr-only">{t('eventsLoading')}</span>
                         </div>
                       ) : null}
                       <div className="w-full overflow-x-auto">
@@ -575,77 +586,50 @@ export function UserDetailPage() {
                           <TableHeader>
                             <TableRow className="bg-muted/30 hover:bg-muted/30">
                               <TableHead className="whitespace-nowrap text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                {t('userDetailLoginColWhen')}
+                                {t('eventsColWhen')}
                               </TableHead>
                               <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                {t('userDetailLoginColProvider')}
-                              </TableHead>
-                              <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                {t('userDetailLoginColOutcome')}
+                                {t('eventsColEvent')}
                               </TableHead>
                               <TableHead className="hidden md:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                {t('userDetailLoginColStaff')}
-                              </TableHead>
-                              <TableHead className="hidden lg:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                {t('userDetailLoginColCountry')}
-                              </TableHead>
-                              <TableHead className="hidden lg:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                {t('userDetailLoginColTimezone')}
-                              </TableHead>
-                              <TableHead className="hidden xl:table-cell min-w-[12rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                {t('userDetailLoginColUserAgent')}
+                                {t('eventsColDetails')}
                               </TableHead>
                             </TableRow>
                           </TableHeader>
-                          <TableBody className="font-mono text-xs">
-                            {events.results.map((ev) => (
-                              <TableRow key={ev.id}>
-                                <TableCell className="whitespace-nowrap text-muted-foreground">
-                                  <Link
-                                    className="text-primary underline-offset-2 hover:underline"
-                                    to={`/login-events/${ev.id}`}
-                                  >
-                                    {formatDateTime(ev.created_at, locale)}
-                                  </Link>
-                                </TableCell>
-                                <TableCell>{ev.provider}</TableCell>
-                                <TableCell>
-                                  <span
-                                    className={cn(
-                                      'rounded px-1.5 py-0.5',
-                                      ev.outcome === 'success'
-                                        ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
-                                        : 'bg-destructive/15 text-destructive',
-                                    )}
-                                  >
-                                    {ev.outcome}
-                                  </span>
-                                  {ev.failure_reason ? (
-                                    <span
-                                      className="mt-1 block max-w-[14rem] truncate text-[10px] text-muted-foreground"
-                                      title={ev.failure_reason}
+                          <TableBody className="text-xs">
+                            {events.results.map((ev) => {
+                              const summary = eventSummary(ev);
+                              return (
+                                <TableRow key={ev.id}>
+                                  <TableCell className="whitespace-nowrap font-mono text-muted-foreground">
+                                    <Link
+                                      className="text-primary underline-offset-2 hover:underline"
+                                      to={`/events/${ev.id}`}
                                     >
-                                      {ev.failure_reason}
+                                      {formatDateTime(ev.created_at, locale)}
+                                    </Link>
+                                  </TableCell>
+                                  <TableCell>
+                                    <span
+                                      className={cn(
+                                        'rounded px-1.5 py-0.5 font-medium',
+                                        isFailureEvent(ev)
+                                          ? 'bg-destructive/15 text-destructive'
+                                          : 'bg-muted text-foreground',
+                                      )}
+                                    >
+                                      {ev.label}
                                     </span>
-                                  ) : null}
-                                </TableCell>
-                                <TableCell className="hidden md:table-cell">
-                                  {ev.is_staff_at_event ? t('usersStaffYes') : t('usersStaffNo')}
-                                </TableCell>
-                                <TableCell className="hidden lg:table-cell">
-                                  {ev.client_country || '—'}
-                                </TableCell>
-                                <TableCell className="hidden lg:table-cell font-mono text-[10px]">
-                                  {ev.client_timezone || '—'}
-                                </TableCell>
-                                <TableCell
-                                  className="hidden xl:table-cell max-w-[20rem] truncate text-[10px]"
-                                  title={ev.user_agent}
-                                >
-                                  {ev.user_agent || '—'}
-                                </TableCell>
-                              </TableRow>
-                            ))}
+                                  </TableCell>
+                                  <TableCell
+                                    className="hidden max-w-[20rem] truncate text-muted-foreground md:table-cell"
+                                    title={summary || undefined}
+                                  >
+                                    {summary || '—'}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
                           </TableBody>
                         </Table>
                       </div>
@@ -653,7 +637,7 @@ export function UserDetailPage() {
                     {eventsTotalPages > 1 ? (
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <p className="text-xs text-muted-foreground">
-                          {t('userDetailLoginPagination', {
+                          {t('eventsPageStatus', {
                             page: events.page,
                             pages: eventsTotalPages,
                             total: events.count,

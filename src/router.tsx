@@ -3,8 +3,8 @@ import { AdminShellLayout } from '@/layouts/AdminShellLayout';
 import { CompanyPage } from '@/pages/CompanyPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { GroupsListPage } from '@/pages/GroupsListPage';
-import { LoginEventDetailPage } from '@/pages/LoginEventDetailPage';
-import { LoginEventsListPage } from '@/pages/LoginEventsListPage';
+import { EventDetailPage } from '@/pages/EventDetailPage';
+import { EventsListPage } from '@/pages/EventsListPage';
 import { ActionsDeliveriesListPage } from '@/features/actions/pages/ActionsDeliveriesListPage';
 import { ActionsDeliveryDetailPage } from '@/features/actions/pages/ActionsDeliveryDetailPage';
 import { ActionsRuleEditorPage } from '@/features/actions/pages/ActionsRuleEditorPage';
@@ -184,8 +184,17 @@ export const router = createHashRouter([
           />
         ),
       },
-      { path: 'login-events/:eventId', element: <LoginEventDetailPage /> },
-      { path: 'login-events', element: <LoginEventsListPage /> },
+      { path: 'events/:eventId', element: <EventDetailPage /> },
+      { path: 'events', element: <EventsListPage /> },
+      {
+        path: 'login-events/*',
+        element: (
+          <Navigate
+            to="/events"
+            replace
+          />
+        ),
+      },
       { path: 'storage/statistics', element: <StorageStatisticsPage /> },
       { path: 'storage/swagger', element: null },
       { path: 'storage/redoc', element: null },
