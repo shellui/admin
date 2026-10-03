@@ -1,17 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ExternalLink, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Text } from '@/components/ui/text';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
@@ -22,90 +14,292 @@ import {
 } from '@/features/actions/components/ApiUnavailableNotice';
 import { useActionsApi } from '@/features/actions/useActionsApi';
 import { WebhookServiceUnavailable } from '@/features/actions/components/WebhookServiceUnavailable';
+import {
+  ActionFeedback,
+  feedbackFromError,
+  feedbackFromThrown,
+  type ActionFeedbackState,
+} from '@/features/email/components/ActionFeedback';
+import { SearchField } from '@/features/email/components/SearchField';
+import { useEmailApi } from '@/features/email/useEmailApi';
 import { useWebhookPageMeta } from '@/features/actions/useWebhookPageMeta';
-import type { ActionRule, ActionRuleId } from '@/features/actions/types';
+import type { ActionRule } from '@/features/actions/types';
 import { confirmAction } from '@/lib/confirmAction';
+import { emailErrorText } from '@/lib/emailApiErrors';
+import { filterByQuery, listNeedsSearch, sectionTitle } from '@/lib/emailList';
+import { askShelluiConfirm } from '@/lib/shelluiConfirm';
+import { mergeServiceRules, type MergedServiceRule } from '@/lib/serviceRules';
+import type { EmailRule, EmailTemplateRow } from '@/lib/emailTypes';
 import { SHELLUI_N8N_WEBHOOK_DOCS_URL } from '@/lib/webhookDocsUrls';
-import { webhookRuleEditPath, webhookRulesNewPath } from '@/lib/webhookRoutePaths';
+import {
+  emailRuleEditPath,
+  emailRuleNewPath,
+  webhookRuleEditPath,
+  webhookRulesNewPath,
+} from '@/lib/webhookRoutePaths';
+import { cn } from '@/lib/utils';
+
+function EnabledSwitch({
+  checked,
+  disabled,
+  label,
+  onClick,
+}: {
+  checked: boolean;
+  disabled: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        'relative inline-flex h-5 w-9 shrink-0 rounded-full border border-border transition-colors',
+        checked ? 'bg-primary' : 'bg-muted',
+        disabled && 'cursor-not-allowed opacity-60',
+      )}
+    >
+      <span
+        className={cn(
+          'pointer-events-none mt-0.5 block size-4 rounded-full bg-background shadow transition-transform',
+          checked ? 'translate-x-4' : 'translate-x-0.5',
+        )}
+      />
+    </button>
+  );
+}
 
 export function ActionsRulesListPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const accessToken = useShelluiAccessToken();
   const isOwner = Boolean(accessToken && getIsCompanyOwnerFromJwt(accessToken));
   const { service, serviceConfigured } = useWebhookPageMeta();
   const { api } = useActionsApi(accessToken, service.key);
-  const [rows, setRows] = useState<ActionRule[]>([]);
+  const { api: emailApi, canManage: canManageEmail } = useEmailApi(accessToken);
+  const [webhooks, setWebhooks] = useState<ActionRule[]>([]);
+  const [emails, setEmails] = useState<EmailRule[]>([]);
+  const [templates, setTemplates] = useState<EmailTemplateRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<unknown>(null);
-  const [busyId, setBusyId] = useState<ActionRuleId | null>(null);
+  const [webhookError, setWebhookError] = useState<unknown>(null);
+  const [emailError, setEmailError] = useState<unknown>(null);
+  const [query, setQuery] = useState('');
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [rowFeedback, setRowFeedback] = useState<Record<string, ActionFeedbackState>>({});
+  const [removed, setRemoved] = useState<MergedServiceRule[]>([]);
 
   const load = useCallback(async () => {
-    if (!api || !isOwner) {
-      setRows([]);
-      setLoading(false);
-      setError(null);
-      return;
-    }
     setLoading(true);
-    setError(null);
-    try {
-      setRows(await api.fetchRules());
-    } catch (e) {
-      setRows([]);
-      setError(e);
-    } finally {
-      setLoading(false);
+    const jobs: Promise<void>[] = [];
+    if (api && isOwner && serviceConfigured) {
+      jobs.push(
+        api
+          .fetchRules()
+          .then((rows) => {
+            setWebhooks(rows);
+            setWebhookError(null);
+          })
+          .catch((error) => {
+            setWebhooks([]);
+            setWebhookError(error);
+          }),
+      );
+    } else {
+      setWebhooks([]);
+      setWebhookError(null);
     }
-  }, [api, isOwner]);
+    if (emailApi && canManageEmail) {
+      jobs.push(
+        Promise.all([emailApi.fetchRules(service.key), emailApi.fetchTemplates()])
+          .then(([rules, rows]) => {
+            setEmails(rules);
+            setTemplates(rows);
+            setEmailError(null);
+          })
+          .catch((error) => {
+            setEmails([]);
+            setTemplates([]);
+            setEmailError(error);
+          }),
+      );
+    } else {
+      setEmails([]);
+      setTemplates([]);
+      setEmailError(null);
+    }
+    await Promise.all(jobs);
+    setLoading(false);
+  }, [api, canManageEmail, emailApi, isOwner, service.key, serviceConfigured]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
-    return new Intl.DateTimeFormat(i18n.language || 'en', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    }).format(d);
-  };
+  const templateName = useCallback(
+    (templateId: number) => templates.find((row) => row.id === templateId)?.name ?? '',
+    [templates],
+  );
 
-  async function onToggle(rule: ActionRule) {
-    if (!api) return;
-    setBusyId(rule.id);
-    setError(null);
-    try {
-      await api.updateRule(rule.id, { enabled: !rule.enabled });
-      await load();
-    } catch (e) {
-      setError(e);
-    } finally {
-      setBusyId(null);
-    }
-  }
+  const merged = useMemo(() => {
+    const removedKeys = new Set(removed.map((row) => row.key));
+    return mergeServiceRules({
+      webhooks,
+      emails,
+      templateName,
+      hintsLabel: t('emailRuleRecipientHints'),
+    }).filter((row) => !removedKeys.has(row.key));
+  }, [emails, removed, t, templateName, webhooks]);
 
-  async function onDelete(rule: ActionRule) {
-    if (!api) return;
-    const confirmed = await confirmAction({
-      title: t('actionsRuleDeleteTitle'),
-      description: t('actionsRuleDeleteConfirm', { name: rule.name }),
-      okLabel: t('actionsDelete'),
-      cancelLabel: t('actionsCancel'),
-      danger: true,
+  const visible = filterByQuery(
+    merged,
+    query,
+    (row) => `${row.kind} ${row.event} ${row.target} ${row.name}`,
+  );
+
+  function clearRowFeedback(key: string) {
+    setRowFeedback((prev) => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
     });
-    if (!confirmed) return;
-    setBusyId(rule.id);
-    setError(null);
+  }
+
+  async function refreshWebhooks() {
+    if (!api) return;
+    setWebhooks(await api.fetchRules());
+  }
+
+  async function refreshEmails() {
+    if (!emailApi) return;
+    const [rules, rows] = await Promise.all([
+      emailApi.fetchRules(service.key),
+      emailApi.fetchTemplates(),
+    ]);
+    setEmails(rules);
+    setTemplates(rows);
+  }
+
+  async function onToggle(row: MergedServiceRule) {
+    if (row.builtIn) return;
+    setBusyKey(row.key);
+    clearRowFeedback(row.key);
     try {
-      await api.deleteRule(rule.id);
-      await load();
-    } catch (e) {
-      setError(e);
+      if (row.kind === 'webhook') {
+        if (!api) return;
+        await api.updateRule(row.id, { enabled: !row.enabled });
+        setRowFeedback((prev) => ({
+          ...prev,
+          [row.key]: {
+            tone: 'success',
+            text: t(row.enabled ? 'actionsRuleDisabled' : 'actionsRuleEnabled'),
+          },
+        }));
+        try {
+          await refreshWebhooks();
+        } catch (reloadError) {
+          setWebhookError(reloadError);
+        }
+      } else {
+        if (!emailApi) return;
+        await emailApi.patchRule(Number(row.id), { enabled: !row.enabled });
+        setRowFeedback((prev) => ({
+          ...prev,
+          [row.key]: {
+            tone: 'success',
+            text: t(row.enabled ? 'emailRuleDisabled' : 'emailRuleEnabled'),
+          },
+        }));
+        try {
+          await refreshEmails();
+        } catch (reloadError) {
+          setEmailError(reloadError);
+        }
+      }
+    } catch (error) {
+      setRowFeedback((prev) => ({
+        ...prev,
+        [row.key]:
+          row.kind === 'webhook'
+            ? feedbackFromThrown(error, t('actionsSaveError'))
+            : feedbackFromError(t, error),
+      }));
     } finally {
-      setBusyId(null);
+      setBusyKey(null);
     }
   }
+
+  async function onDelete(row: MergedServiceRule) {
+    if (row.builtIn) return;
+    if (row.kind === 'webhook') {
+      if (!api) return;
+      const confirmed = await confirmAction({
+        title: t('actionsRuleDeleteTitle'),
+        description: t('actionsRuleDeleteConfirm', { name: row.name }),
+        okLabel: t('actionsDelete'),
+        cancelLabel: t('actionsCancel'),
+        danger: true,
+      });
+      if (!confirmed) return;
+    } else {
+      if (!emailApi) return;
+      const confirmed = await askShelluiConfirm({
+        title: t('emailRuleDeleteTitle'),
+        description: t('emailRuleDeleteDescription'),
+        okLabel: t('actionsDelete'),
+        cancelLabel: t('actionsCancel'),
+        mode: 'delete',
+      });
+      if (!confirmed) return;
+    }
+    setBusyKey(row.key);
+    clearRowFeedback(row.key);
+    try {
+      if (row.kind === 'webhook') {
+        await api?.deleteRule(row.id);
+      } else {
+        await emailApi?.deleteRule(Number(row.id));
+      }
+      setRemoved((prev) => [...prev.filter((item) => item.key !== row.key), row]);
+      try {
+        if (row.kind === 'webhook') await refreshWebhooks();
+        else await refreshEmails();
+      } catch (reloadError) {
+        if (row.kind === 'webhook') setWebhookError(reloadError);
+        else setEmailError(reloadError);
+      }
+    } catch (error) {
+      setRowFeedback((prev) => ({
+        ...prev,
+        [row.key]:
+          row.kind === 'webhook'
+            ? feedbackFromThrown(error, t('actionsSaveError'))
+            : feedbackFromError(t, error),
+      }));
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  function switchLabel(row: MergedServiceRule): string {
+    if (row.builtIn) return `${t('emailRuleBuiltInLocked')} ${row.event}`;
+    return row.kind === 'webhook' ? row.name : row.event;
+  }
+
+  const canCreateWebhook = Boolean(serviceConfigured && accessToken && isOwner && api);
+  const canCreateEmail = Boolean(accessToken && canManageEmail && emailApi);
+  const showList = visible.length > 0 || removed.length > 0;
+  const showEmpty =
+    !loading &&
+    visible.length === 0 &&
+    removed.length === 0 &&
+    !webhookError &&
+    !emailError &&
+    (canCreateWebhook || canCreateEmail);
 
   return (
     <div className="w-full space-y-6">
@@ -140,49 +334,63 @@ export function ActionsRulesListPage() {
 
       {!serviceConfigured ? <WebhookServiceUnavailable serviceKey={service.key} /> : null}
 
-      {!accessToken && (
+      {!accessToken ? (
         <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
-      )}
-      {accessToken && !isOwner && (
+      ) : null}
+      {accessToken && !isOwner && !canManageEmail ? (
         <Text className="font-mono text-sm text-muted-foreground">{t('actionsPageForbidden')}</Text>
-      )}
+      ) : null}
 
-      {error && isApiUnavailableError(error) ? (
+      {webhookError && isApiUnavailableError(webhookError) ? (
         <ApiUnavailableNotice
-          error={error}
+          error={webhookError}
           t={t}
         />
       ) : null}
-      {error && !isApiUnavailableError(error) ? (
+      {webhookError && !isApiUnavailableError(webhookError) ? (
         <Text className="font-mono text-sm text-destructive">
-          {error instanceof Error ? error.message : t('actionsLoadError')}
+          {webhookError instanceof Error ? webhookError.message : t('actionsLoadError')}
         </Text>
       ) : null}
+      {emailError ? (
+        <Text className="font-mono text-sm text-destructive">{emailErrorText(t, emailError)}</Text>
+      ) : null}
 
-      {serviceConfigured && accessToken && isOwner && api ? (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="font-mono text-xs text-muted-foreground">{t('actionsRulesListHint')}</p>
-          {isApiUnavailableError(error) ? (
+      {canCreateWebhook || canCreateEmail ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {canCreateWebhook ? (
+            isApiUnavailableError(webhookError) ? (
+              <Button
+                type="button"
+                size="sm"
+                disabled
+              >
+                {t('actionsRuleCreate')}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                asChild
+              >
+                <Link to={webhookRulesNewPath(service.key)}>{t('actionsRuleCreate')}</Link>
+              </Button>
+            )
+          ) : null}
+          {canCreateEmail ? (
             <Button
               type="button"
               size="sm"
-              disabled
-            >
-              {t('actionsRuleCreate')}
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              size="sm"
+              variant="secondary"
               asChild
             >
-              <Link to={webhookRulesNewPath(service.key)}>{t('actionsRuleCreate')}</Link>
+              <Link to={emailRuleNewPath(service.key)}>{t('emailRuleCreate')}</Link>
             </Button>
-          )}
+          ) : null}
         </div>
       ) : null}
 
-      {serviceConfigured && accessToken && isOwner && api && loading ? (
+      {loading ? (
         <div className="flex items-center gap-2 py-8 text-muted-foreground">
           <Loader2
             className="size-5 animate-spin"
@@ -192,89 +400,97 @@ export function ActionsRulesListPage() {
         </div>
       ) : null}
 
-      {serviceConfigured &&
-      !loading &&
-      rows.length === 0 &&
-      accessToken &&
-      isOwner &&
-      api &&
-      !isApiUnavailableError(error) ? (
-        <Text className="py-8 text-center font-mono text-sm text-muted-foreground">
-          {t('actionsRulesEmpty')}
-        </Text>
+      {!loading && (canCreateWebhook || canCreateEmail) && listNeedsSearch(merged.length) ? (
+        <SearchField
+          value={query}
+          onChange={setQuery}
+          label={t('emailServiceRulesSearch')}
+          placeholder={t('emailServiceRulesSearch')}
+        />
       ) : null}
 
-      {rows.length > 0 ? (
-        <div className="rounded-md border border-border">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/30 hover:bg-muted/30">
-                <TableHead className="text-xs uppercase">{t('actionsColName')}</TableHead>
-                <TableHead className="text-xs uppercase">{t('actionsColEvent')}</TableHead>
-                <TableHead className="text-xs uppercase">{t('actionsColEnabled')}</TableHead>
-                <TableHead className="text-xs uppercase">{t('actionsColUpdated')}</TableHead>
-                <TableHead className="text-right text-xs uppercase">
-                  {t('usersColActions')}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="font-mono text-xs">
-              {rows.map((rule) => (
-                <TableRow key={rule.id}>
-                  <TableCell>
-                    <Link
-                      to={webhookRuleEditPath(service.key, rule.id)}
-                      className="text-primary underline-offset-2 hover:underline"
-                    >
-                      {rule.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{rule.event}</TableCell>
-                  <TableCell>
-                    <Badge variant={rule.enabled ? 'default' : 'outline'}>
-                      {rule.enabled ? t('actionsEnabledYes') : t('actionsEnabledNo')}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDate(rule.updated_at)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex flex-wrap justify-end gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        disabled={busyId === rule.id}
-                        onClick={() => void onToggle(rule)}
-                      >
-                        {rule.enabled ? t('actionsDisable') : t('actionsEnable')}
-                      </Button>
+      {!loading && (showList || showEmpty) ? (
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold tracking-tight">
+            {sectionTitle(t('emailServiceRulesTitle'), visible.length)}
+          </h2>
+          {showEmpty ? (
+            <Text className="py-8 text-center font-mono text-sm text-muted-foreground">
+              {t('emailServiceRulesEmpty')}
+            </Text>
+          ) : (
+            <ul className="divide-y divide-border/80 rounded-md border border-border/80">
+              {visible.map((row) => (
+                <li
+                  key={row.key}
+                  className="flex flex-wrap items-start justify-between gap-3 px-3 py-3"
+                >
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={row.kind === 'email' ? 'secondary' : 'outline'}>
+                        {row.kind === 'email' ? t('emailRuleKindEmail') : t('emailRuleKindWebhook')}
+                      </Badge>
+                      {row.builtIn ? <Badge variant="muted">{t('emailRuleBuiltIn')}</Badge> : null}
+                    </div>
+                    <p className="font-mono text-xs">{row.event}</p>
+                    <p className="break-all text-sm text-muted-foreground">{row.target}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <EnabledSwitch
+                        checked={row.builtIn ? true : row.enabled}
+                        disabled={row.builtIn || busyKey === row.key}
+                        label={switchLabel(row)}
+                        onClick={() => void onToggle(row)}
+                      />
                       <Button
                         type="button"
                         size="sm"
                         variant="ghost"
                         asChild
                       >
-                        <Link to={webhookRuleEditPath(service.key, rule.id)}>
+                        <Link
+                          to={
+                            row.kind === 'webhook'
+                              ? webhookRuleEditPath(service.key, row.id)
+                              : emailRuleEditPath(service.key, row.id)
+                          }
+                        >
                           {t('actionsEdit')}
                         </Link>
                       </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="destructive"
-                        disabled={busyId === rule.id}
-                        onClick={() => void onDelete(rule)}
-                      >
-                        {t('actionsDelete')}
-                      </Button>
+                      {row.builtIn ? null : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          disabled={busyKey === row.key}
+                          onClick={() => void onDelete(row)}
+                        >
+                          {t('actionsDelete')}
+                        </Button>
+                      )}
                     </div>
-                  </TableCell>
-                </TableRow>
+                    <ActionFeedback feedback={rowFeedback[row.key] ?? null} />
+                  </div>
+                </li>
               ))}
-            </TableBody>
-          </Table>
-        </div>
+              {removed.map((row) => (
+                <li
+                  key={`removed-${row.key}`}
+                  className="flex justify-end px-3 py-3"
+                >
+                  <ActionFeedback
+                    feedback={{
+                      tone: 'success',
+                      text: t(row.kind === 'webhook' ? 'actionsRuleDeleted' : 'emailRuleDeleted'),
+                    }}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       ) : null}
     </div>
   );

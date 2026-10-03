@@ -45,7 +45,7 @@ export const adminShellUiConfig: AdminShellUIConfig = {
         { label: { en: 'OAuth apps', fr: 'Apps OAuth' }, path: 'oauth', url: '#/oauth' },
         { label: { en: 'SCIM', fr: 'SCIM' }, path: 'scim', url: '#/scim' },
         {
-          label: { en: 'Webhooks', fr: 'Webhooks' },
+          label: { en: 'Email and webhooks', fr: 'E-mail et webhooks' },
           path: 'identity/webhooks',
           url: '#/identity/webhooks',
         },
@@ -65,6 +65,26 @@ export const adminShellUiConfig: AdminShellUIConfig = {
           path: 'redoc',
           url: '#/redoc',
           requiresDevMode: true,
+        },
+      ],
+    },
+    {
+      title: { en: 'Email', fr: 'E-mail' },
+      items: [
+        {
+          label: { en: 'Templates', fr: 'Modèles' },
+          path: 'email/templates',
+          url: '#/email/templates',
+        },
+        {
+          label: { en: 'Provider', fr: 'Fournisseur' },
+          path: 'email/provider',
+          url: '#/email/provider',
+        },
+        {
+          label: { en: 'Statistics', fr: 'Statistiques' },
+          path: 'email/statistics',
+          url: '#/email/statistics',
         },
       ],
     },
