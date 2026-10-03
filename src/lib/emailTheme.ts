@@ -65,6 +65,24 @@ export function paletteForThemeName(
   };
 }
 
+export const EMAIL_THEME_KEYS = ['barebone', 'matte', 'protocol', 'arcane', 'studio'] as const;
+
+export type EmailThemeKey = (typeof EMAIL_THEME_KEYS)[number];
+
+export function isEmailThemeKey(value: string): value is EmailThemeKey {
+  return (EMAIL_THEME_KEYS as readonly string[]).includes(value);
+}
+
+/** `shellui` and unknown names fall back to the company theme, then Barebone. */
+export function emailThemeKeyOrDefault(
+  value: string | null | undefined,
+  fallback: string,
+): EmailThemeKey {
+  if (value && isEmailThemeKey(value)) return value;
+  if (isEmailThemeKey(fallback)) return fallback;
+  return 'barebone';
+}
+
 const PALETTE_KEYS = [
   'background',
   'foreground',
@@ -90,6 +108,20 @@ export function normalizePaletteColor(value: string): string | null {
  * Palette stored on a template version.
  * Every key is `#rrggbb`. A color the service cannot store falls back to the Shellui palette.
  */
+/** All seven colors, or null when the palette is partial. Partial palettes are rejected. */
+export function completeThemePalette(
+  palette: Record<string, string> | null | undefined,
+): Record<string, string> | null {
+  if (!palette) return null;
+  const payload: Record<string, string> = {};
+  for (const key of PALETTE_KEYS) {
+    const color = normalizePaletteColor(palette[key] ?? '');
+    if (!color) return null;
+    payload[key] = color;
+  }
+  return payload;
+}
+
 export function themePalettePayload(palette: EmailPreviewPalette): Record<string, string> {
   const payload: Record<string, string> = {};
   for (const key of PALETTE_KEYS) {

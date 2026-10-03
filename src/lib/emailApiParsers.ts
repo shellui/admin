@@ -3,16 +3,19 @@ import { EmailApiError } from '@/lib/emailApiErrors';
 import type {
   EmailCatalog,
   EmailCatalogEvent,
+  EmailCompanySettings,
   EmailCountBucket,
   EmailProviderSettings,
   EmailRenderResult,
   EmailRule,
+  EmailSettingsUpdate,
   EmailStats,
   EmailTemplateDefaults,
   EmailTemplatePack,
   EmailTemplateRow,
   EmailTemplateVersion,
   EmailTestSendResult,
+  EmailTheme,
 } from '@/lib/emailTypes';
 import { EMAIL_COUNT_KEYS } from '@/lib/emailTypes';
 
@@ -91,44 +94,87 @@ export function parseCatalog(body: unknown): EmailCatalog {
   };
 }
 
+function parseRecipientAddress(value: unknown): string {
+  if (typeof value === 'string') return value.trim();
+  const row = record(value);
+  return typeof row?.email === 'string' ? row.email.trim() : '';
+}
+
+export function parseRule(body: unknown): EmailRule {
+  const row = record(body) ?? {};
+  const staticRecipients = Array.isArray(row.static_recipients) ? row.static_recipients : [];
+  return {
+    id: num(row.id),
+    service: str(row.service),
+    eventType: str(row.event_type),
+    enabled: bool(row.enabled),
+    recipientMode: row.recipient_mode === 'static' ? 'static' : 'hints',
+    staticRecipients: staticRecipients.map(parseRecipientAddress).filter(Boolean),
+    language: str(row.language),
+    templateId: num(row.template_id),
+    builtIn: bool(row.built_in),
+    createdAt: str(row.created_at),
+    updatedAt: str(row.updated_at),
+  };
+}
+
 export function parseRules(body: unknown): EmailRule[] {
   const root = record(body);
   const rules = root && Array.isArray(root.rules) ? root.rules : null;
   if (!rules) throw new EmailApiError('request_failed', 200);
-  return rules.map((item) => {
+  return rules.map((item) => parseRule(item));
+}
+
+export function parseThemes(body: unknown): EmailTheme[] {
+  if (!Array.isArray(body)) throw new EmailApiError('request_failed', 200);
+  return body.map((item) => {
     const row = record(item) ?? {};
-    const mode = row.recipient_mode === 'static' ? 'static' : 'hints';
-    const staticRecipients = Array.isArray(row.static_recipients) ? row.static_recipients : [];
     return {
-      eventType: str(row.event_type),
-      service: str(row.service),
-      templateKey: str(row.template_key),
-      enabled: bool(row.enabled),
-      language: str(row.language),
-      recipientMode: mode,
-      staticRecipients: staticRecipients.filter(
-        (recipient): recipient is EmailRule['staticRecipients'][number] =>
-          typeof recipient === 'string' ||
-          (Boolean(record(recipient)) && typeof record(recipient)?.email === 'string'),
-      ),
-      customized: bool(row.customized),
-      defaultEnabled: bool(row.default_enabled),
+      key: str(row.key),
+      name: str(row.name),
+      previewUrl: str(row.preview_url),
     };
   });
 }
 
+export function parseCompanySettings(body: unknown): EmailCompanySettings {
+  const row = record(body);
+  if (!row) throw new EmailApiError('request_failed', 200);
+  return {
+    theme: str(row.theme) || 'barebone',
+    templatesUsingOtherTheme: num(row.templates_using_other_theme),
+  };
+}
+
+export function parseSettingsUpdate(body: unknown): EmailSettingsUpdate {
+  const row = record(body);
+  if (!row) throw new EmailApiError('request_failed', 200);
+  return {
+    theme: str(row.theme) || 'barebone',
+    updatedTemplates: num(row.updated_templates),
+  };
+}
+
 export function parseTemplates(body: unknown): EmailTemplateRow[] {
   const root = record(body);
-  const templates = root && Array.isArray(root.templates) ? root.templates : null;
+  const templates = Array.isArray(body)
+    ? body
+    : root && Array.isArray(root.templates)
+      ? root.templates
+      : null;
   if (!templates) throw new EmailApiError('request_failed', 200);
   return templates.map((item) => {
     const row = record(item) ?? {};
     return {
       id: num(row.id),
       templateKey: str(row.template_key),
+      name: str(row.name),
+      eventType: str(row.event_type),
       language: str(row.language),
       companyId: typeof row.company_id === 'number' ? row.company_id : null,
       activeVersion: typeof row.active_version === 'number' ? row.active_version : null,
+      theme: str(row.theme),
+      usesCompanyTheme: row.uses_company_theme !== false,
     };
   });
 }
@@ -146,7 +192,7 @@ export function parseVersion(body: unknown): EmailTemplateVersion {
     subject: str(row.subject),
     preheader: str(row.preheader),
     document: parseEmailDocument(row.document),
-    themeName: str(row.theme_name) || 'shellui',
+    themeName: str(row.theme_name) === 'shellui' ? 'barebone' : str(row.theme_name) || 'barebone',
     themePalette,
     publishedAt: typeof row.published_at === 'string' ? row.published_at : null,
   };

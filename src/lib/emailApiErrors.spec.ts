@@ -17,4 +17,17 @@ describe('emailErrorText', () => {
     );
     await i18n.changeLanguage('en');
   });
+
+  it('translates template variable mismatches in English and French', async () => {
+    const error = new EmailApiError('template_variables_mismatch', 400, {}, ['company_name']);
+    await i18n.changeLanguage('en');
+    expect(emailErrorText((key, options) => String(i18n.t(key, options)), error)).toBe(
+      'The template is missing variables: company_name.',
+    );
+    await i18n.changeLanguage('fr');
+    expect(emailErrorText((key, options) => String(i18n.t(key, options)), error)).toBe(
+      'Le modèle n’a pas ces variables : company_name.',
+    );
+    await i18n.changeLanguage('en');
+  });
 });

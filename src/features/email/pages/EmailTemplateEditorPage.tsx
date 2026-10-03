@@ -9,13 +9,18 @@ import {
 } from '@/features/email/components/EmailTemplateEditor';
 import { useEmailApi } from '@/features/email/useEmailApi';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
-import { emailErrorText } from '@/lib/emailApiErrors';
+import { EmailApiError, emailErrorText } from '@/lib/emailApiErrors';
 import { validateAuthLaneOverride } from '@/lib/emailAuthTemplate';
 import { emptyEmailDocument, type EmailLang, type EmailVariable } from '@/lib/emailDocument';
 import { confirmAction } from '@/lib/confirmAction';
 import { preferredTemplateVersion } from '@/lib/emailApiParsers';
+import { emailThemeKeyOrDefault } from '@/lib/emailTheme';
 import { getEmailFromJwt, getIsStaffFromJwt } from '@/lib/jwtCompany';
-import type { EmailTemplateDefaults, EmailTemplateVersion } from '@/lib/emailTypes';
+import type {
+  EmailTemplateDefaults,
+  EmailTemplateRow,
+  EmailTemplateVersion,
+} from '@/lib/emailTypes';
 
 function draftFromPack(
   defaults: EmailTemplateDefaults | null,
@@ -34,7 +39,8 @@ function draftFromPack(
 export function EmailTemplateEditorPage() {
   const { t } = useTranslation();
   const params = useParams();
-  const templateKey = decodeURIComponent(params.templateKey ?? '');
+  const templateIdParam = params.templateId ? Number(params.templateId) : null;
+  const templateKey = params.templateKey ? decodeURIComponent(params.templateKey) : '';
   const accessToken = useShelluiAccessToken();
   const { api, canManage } = useEmailApi(accessToken);
   const [loading, setLoading] = useState(true);
@@ -51,16 +57,74 @@ export function EmailTemplateEditorPage() {
   const [resetting, setResetting] = useState(false);
   const [serviceHtml, setServiceHtml] = useState<string | null>(null);
   const [serviceNote, setServiceNote] = useState<string | null>(null);
+  const [themeChoices, setThemeChoices] = useState<Array<{ key: string; name: string }>>([]);
+  const [companyTheme, setCompanyTheme] = useState('barebone');
+  const [storedPalette, setStoredPalette] = useState<Record<string, string> | null>(null);
+  const [languages, setLanguages] = useState<EmailLang[]>(['en', 'fr']);
+  const [openedRow, setOpenedRow] = useState<EmailTemplateRow | null>(null);
 
   const load = useCallback(
     async (opts?: { silent?: boolean }) => {
-      if (!api || !canManage || !templateKey) {
+      if (!api || !canManage || (!templateKey && !templateIdParam)) {
         setLoading(false);
         return;
       }
       if (!opts?.silent) setLoading(true);
       setError(null);
       try {
+        const [themes, settings] = await Promise.all([api.fetchThemes(), api.fetchSettings()]);
+        setThemeChoices(themes.map((theme) => ({ key: theme.key, name: theme.name })));
+        setCompanyTheme(emailThemeKeyOrDefault(settings.theme, 'barebone'));
+        if (templateIdParam) {
+          const [templates, catalog] = await Promise.all([
+            api.fetchTemplates(),
+            api.fetchCatalog(),
+          ]);
+          const row = templates.find((item) => item.id === templateIdParam) ?? null;
+          if (!row) throw new EmailApiError('template_not_found', 404);
+          setOpenedRow(row);
+          const lang: EmailLang = row.language === 'fr' ? 'fr' : 'en';
+          setLanguages([lang]);
+          const event = catalog.events.find((item) => item.eventType === row.eventType);
+          setLaneClass(event?.laneClass ?? '');
+          setAuthLinkHosts(catalog.authLinkHosts);
+          setVariables(event?.variables ?? []);
+          const version = row.activeVersion
+            ? await api.fetchVersion(row.id, row.activeVersion)
+            : preferredTemplateVersion(await api.fetchVersions(row.id));
+          const base = draftFromPack(null, lang, row.id);
+          const nextDraft = version
+            ? {
+                ...base,
+                subject: version.subject,
+                preheader: version.preheader,
+                document: version.document,
+              }
+            : base;
+          setStoredThemeName(
+            emailThemeKeyOrDefault(version?.themeName || row.theme, settings.theme),
+          );
+          setStoredPalette(version?.themePalette ?? null);
+          setDefaults({
+            templateKey: row.templateKey,
+            languages: {
+              [lang]: {
+                subject: nextDraft.subject,
+                preheader: nextDraft.preheader,
+                document: nextDraft.document,
+              },
+            },
+            variables: event?.variables ?? [],
+          });
+          if (lang === 'fr') {
+            setDraftFr(nextDraft);
+            setDraftEn(draftFromPack(null, 'en', null));
+          } else {
+            setDraftEn(nextDraft);
+            setDraftFr(draftFromPack(null, 'fr', null));
+          }
+          return;
+        }
         const [nextDefaults, templates, catalog] = await Promise.all([
           api.fetchDefaults(templateKey),
           api.fetchTemplates(),
@@ -96,7 +160,11 @@ export function EmailTemplateEditorPage() {
         };
         const enId = rows.find((row) => row.language === 'en')?.id ?? null;
         const frId = rows.find((row) => row.language === 'fr')?.id ?? null;
-        setStoredThemeName(versionFor('en')?.themeName || versionFor('fr')?.themeName || null);
+        const stored = versionFor('en')?.themeName || versionFor('fr')?.themeName || null;
+        setStoredThemeName(stored ? emailThemeKeyOrDefault(stored, settings.theme) : null);
+        setStoredPalette(versionFor('en')?.themePalette || versionFor('fr')?.themePalette || null);
+        setLanguages(['en', 'fr']);
+        setOpenedRow(null);
         setDefaults(nextDefaults);
         setVariables(nextDefaults.variables);
         setDraftEn(withVersion('en', enId));
@@ -107,7 +175,7 @@ export function EmailTemplateEditorPage() {
         setLoading(false);
       }
     },
-    [api, canManage, templateKey],
+    [api, canManage, templateIdParam, templateKey],
   );
 
   useEffect(() => {
@@ -141,8 +209,8 @@ export function EmailTemplateEditorPage() {
           subject: draft.subject,
           preheader: draft.preheader,
           document: draft.document,
-          theme_name: themeName || 'shellui',
-          theme_palette: themePalette,
+          theme_name: emailThemeKeyOrDefault(themeName, companyTheme),
+          theme_palette: Object.keys(themePalette).length === 7 ? themePalette : {},
         });
         await api.publishVersion(id, version.number);
       }
@@ -222,8 +290,9 @@ export function EmailTemplateEditorPage() {
     const variablesMap: Record<string, string> = {};
     for (const variable of variables) variablesMap[variable.token] = variable.example;
     const rendered = await api.render({
-      template_key: templateKey,
+      template_key: openedRow?.templateKey || templateKey,
       language: lang,
+      theme_name: emailThemeKeyOrDefault(storedThemeName, companyTheme),
       document: draft.document,
       subject: draft.subject,
       variables: variablesMap,
@@ -266,10 +335,14 @@ export function EmailTemplateEditorPage() {
       ) : null}
       {!loading && api && canManage && defaults ? (
         <EmailTemplateEditor
-          templateKey={templateKey}
+          templateKey={openedRow?.name || openedRow?.templateKey || templateKey}
           laneClass={laneClass}
           authLinkHosts={authLinkHosts}
           storedThemeName={storedThemeName}
+          storedPalette={storedPalette}
+          themeChoices={themeChoices}
+          companyTheme={companyTheme}
+          languages={languages}
           draftEn={draftEn}
           draftFr={draftFr}
           variables={variables}

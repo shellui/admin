@@ -1,13 +1,17 @@
 import { EmailApiError, parseEmailApiError } from '@/lib/emailApiErrors';
 import {
   parseCatalog,
+  parseCompanySettings,
   parseProvider,
   parseRender,
+  parseRule,
   parseRules,
+  parseSettingsUpdate,
   parseStats,
   parseTemplateDefaults,
   parseTemplates,
   parseTestSend,
+  parseThemes,
   parseVersion,
   parseVersions,
 } from '@/lib/emailApiParsers';
@@ -15,24 +19,37 @@ import { parseEmailMetrics, type EmailMetricsSnapshot } from '@/lib/emailMetrics
 import type { EmailDocument } from '@/lib/emailDocument';
 import type {
   EmailCatalog,
+  EmailCompanySettings,
   EmailProviderSettings,
   EmailProviderWrite,
   EmailRenderResult,
   EmailRule,
-  EmailRuleWrite,
+  EmailRuleCreate,
+  EmailRulePatch,
+  EmailSettingsUpdate,
   EmailStats,
   EmailTemplateDefaults,
   EmailTemplateRow,
   EmailTemplateVersion,
   EmailTestSendResult,
+  EmailTheme,
 } from '@/lib/emailTypes';
 
 export type EmailApiClient = {
   fetchCatalog: () => Promise<EmailCatalog>;
-  fetchRules: () => Promise<EmailRule[]>;
-  saveRule: (body: EmailRuleWrite) => Promise<void>;
-  deleteRule: (eventType: string) => Promise<void>;
-  fetchTemplates: () => Promise<EmailTemplateRow[]>;
+  fetchThemes: () => Promise<EmailTheme[]>;
+  fetchThemePreview: (previewUrl: string) => Promise<string>;
+  fetchSettings: () => Promise<EmailCompanySettings>;
+  saveSettings: (body: {
+    theme: string;
+    apply_to_existing: boolean;
+  }) => Promise<EmailSettingsUpdate>;
+  fetchRules: (service?: string) => Promise<EmailRule[]>;
+  fetchRule: (id: number) => Promise<EmailRule>;
+  createRule: (body: EmailRuleCreate) => Promise<EmailRule>;
+  patchRule: (id: number, body: EmailRulePatch) => Promise<EmailRule>;
+  deleteRule: (id: number) => Promise<void>;
+  fetchTemplates: (eventType?: string) => Promise<EmailTemplateRow[]>;
   createTemplate: (
     templateKey: string,
     language: string,
@@ -61,6 +78,7 @@ export type EmailApiClient = {
     document?: EmailDocument;
     subject?: string;
     variables?: Record<string, string>;
+    theme_name?: string;
     theme_palette?: Record<string, string>;
   }) => Promise<EmailRenderResult>;
   fetchProvider: () => Promise<EmailProviderSettings>;
@@ -133,17 +151,61 @@ export function createEmailApiClient(
     async fetchCatalog() {
       return parseCatalog(await call('/api/v1/catalog'));
     },
-    async fetchRules() {
-      return parseRules(await call('/api/v1/rules'));
+    async fetchThemes() {
+      return parseThemes(await call('/api/v1/themes'));
     },
-    async saveRule(body) {
-      await call('/api/v1/rules', { method: 'POST', body: JSON.stringify(body) });
+    async fetchThemePreview(previewUrl) {
+      const url = new URL(previewUrl, `${baseUrl.replace(/\/+$/, '')}/`);
+      if (!url.searchParams.has('company_id')) {
+        url.searchParams.set('company_id', String(companyId));
+      }
+      const res = await fetch(url.toString(), {
+        headers: {
+          Accept: 'text/html',
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const text = await res.text();
+      if (!res.ok) {
+        let body: unknown = null;
+        try {
+          body = JSON.parse(text);
+        } catch {
+          body = null;
+        }
+        throw parseEmailApiError(body, res.status);
+      }
+      return text;
     },
-    async deleteRule(eventType) {
-      await call(`/api/v1/rules/${encodeURIComponent(eventType)}`, { method: 'DELETE' });
+    async fetchSettings() {
+      return parseCompanySettings(await call('/api/v1/settings'));
     },
-    async fetchTemplates() {
-      return parseTemplates(await call('/api/v1/templates'));
+    async saveSettings(body) {
+      return parseSettingsUpdate(
+        await call('/api/v1/settings', { method: 'PUT', body: JSON.stringify(body) }),
+      );
+    },
+    async fetchRules(service) {
+      return parseRules(await call('/api/v1/rules', {}, service ? { service } : undefined));
+    },
+    async fetchRule(id) {
+      return parseRule(await call(`/api/v1/rules/${id}`));
+    },
+    async createRule(body) {
+      return parseRule(await call('/api/v1/rules', { method: 'POST', body: JSON.stringify(body) }));
+    },
+    async patchRule(id, body) {
+      return parseRule(
+        await call(`/api/v1/rules/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+      );
+    },
+    async deleteRule(id) {
+      await call(`/api/v1/rules/${id}`, { method: 'DELETE' });
+    },
+    async fetchTemplates(eventType) {
+      return parseTemplates(
+        await call('/api/v1/templates', {}, eventType ? { event_type: eventType } : undefined),
+      );
     },
     async createTemplate(templateKey, language) {
       const body = await call('/api/v1/templates', {

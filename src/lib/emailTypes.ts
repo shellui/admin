@@ -19,32 +19,65 @@ export type EmailRecipientMode = 'hints' | 'static';
 export type EmailStaticRecipient = string | { email: string; user_id?: number };
 
 export type EmailRule = {
-  eventType: string;
+  id: number;
   service: string;
-  templateKey: string;
+  eventType: string;
   enabled: boolean;
-  language: string;
   recipientMode: EmailRecipientMode;
-  staticRecipients: EmailStaticRecipient[];
-  customized: boolean;
-  defaultEnabled: boolean;
+  staticRecipients: string[];
+  language: string;
+  templateId: number;
+  builtIn: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
-export type EmailRuleWrite = {
+export type EmailRuleContent = { mode: 'suggested' } | { mode: 'existing'; template_id: number };
+
+export type EmailRuleCreate = {
   event_type: string;
-  enabled: boolean;
-  template_key: string;
+  service?: string;
+  enabled?: boolean;
   language: string;
   recipient_mode: EmailRecipientMode;
   static_recipients: string[];
+  content: EmailRuleContent;
+};
+
+export type EmailRulePatch = {
+  enabled?: boolean;
+  recipient_mode?: EmailRecipientMode;
+  static_recipients?: string[];
+  language?: string;
+  template_id?: number;
 };
 
 export type EmailTemplateRow = {
   id: number;
   templateKey: string;
+  name: string;
+  eventType: string;
   language: string;
   companyId: number | null;
   activeVersion: number | null;
+  theme: string;
+  usesCompanyTheme: boolean;
+};
+
+export type EmailTheme = {
+  key: string;
+  name: string;
+  previewUrl: string;
+};
+
+export type EmailCompanySettings = {
+  theme: string;
+  templatesUsingOtherTheme: number;
+};
+
+export type EmailSettingsUpdate = {
+  theme: string;
+  updatedTemplates: number;
 };
 
 export type EmailTemplateVersion = {

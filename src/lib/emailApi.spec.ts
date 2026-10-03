@@ -109,7 +109,7 @@ describe('createEmailApiClient', () => {
     const client = createEmailApiClient('https://email.shellui.com', 'jwt-token', 42);
     const version = await client.fetchVersion(11, 2);
     expect(version.document.blocks[0]?.text).toBe('Hi');
-    expect(version.themeName).toBe('shellui');
+    expect(version.themeName).toBe('barebone');
     await client.sendTemplateTest(11, {
       document: version.document,
       subject: 'Hello',

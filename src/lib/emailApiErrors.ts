@@ -1,14 +1,21 @@
 export class EmailApiError extends Error {
   readonly errorCode: string;
   readonly fieldErrors: Record<string, string[]>;
+  readonly missingVariables: string[];
   readonly status: number;
 
-  constructor(errorCode: string, status: number, fieldErrors: Record<string, string[]> = {}) {
+  constructor(
+    errorCode: string,
+    status: number,
+    fieldErrors: Record<string, string[]> = {},
+    missingVariables: string[] = [],
+  ) {
     super(errorCode);
     this.name = 'EmailApiError';
     this.errorCode = errorCode;
     this.status = status;
     this.fieldErrors = fieldErrors;
+    this.missingVariables = missingVariables;
   }
 }
 
@@ -43,13 +50,23 @@ export function parseEmailApiError(body: unknown, status: number): EmailApiError
       if (codes.length) fieldErrors[key] = codes;
     }
   }
-  return new EmailApiError(errorCode, status, fieldErrors);
+  const missingVariables = Array.isArray(record.missing_variables)
+    ? record.missing_variables.filter(
+        (item): item is string => typeof item === 'string' && item.trim().length > 0,
+      )
+    : [];
+  return new EmailApiError(errorCode, status, fieldErrors, missingVariables);
 }
 
-type Translate = (key: string) => string;
+type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 export function emailErrorText(t: Translate, error: unknown): string {
   if (!(error instanceof EmailApiError)) return t('emailError_request_failed');
+  if (error.errorCode === 'template_variables_mismatch') {
+    return t('emailError_template_variables_mismatch', {
+      variables: error.missingVariables.join(', '),
+    });
+  }
   const codeKey = `emailError_${error.errorCode}`;
   const translated = t(codeKey);
   if (error.fieldErrors.version?.includes('draft_required')) return t('emailError_draft_required');

@@ -25,6 +25,7 @@ import { StorageStatisticsPage } from '@/pages/StorageStatisticsPage';
 import { EmailProviderPage } from '@/features/email/pages/EmailProviderPage';
 import { EmailStatisticsPage } from '@/features/email/pages/EmailStatisticsPage';
 import { EmailTemplateEditorPage } from '@/features/email/pages/EmailTemplateEditorPage';
+import { EmailRuleFormPage } from '@/features/email/pages/EmailRuleFormPage';
 import { EmailTemplatesPage } from '@/features/email/pages/EmailTemplatesPage';
 import {
   legacyWebhooksRedirectTarget,
@@ -73,6 +74,8 @@ function LegacyActionsDeliveryRedirect() {
 const identityWebhookRoutes = [
   { path: 'identity/webhooks/deliveries/:deliveryId', element: <ActionsDeliveryDetailPage /> },
   { path: 'identity/webhooks/deliveries', element: <ActionsDeliveriesListPage /> },
+  { path: 'identity/webhooks/email/new', element: <EmailRuleFormPage /> },
+  { path: 'identity/webhooks/email/:emailRuleId', element: <EmailRuleFormPage /> },
   { path: 'identity/webhooks/new', element: <ActionsRuleEditorPage /> },
   { path: 'identity/webhooks/:ruleId', element: <ActionsRuleEditorPage /> },
   { path: 'identity/webhooks', element: <ActionsRulesListPage /> },
@@ -81,6 +84,8 @@ const identityWebhookRoutes = [
 const hostingWebhookRoutes = [
   { path: 'hosting/webhooks/deliveries/:deliveryId', element: <ActionsDeliveryDetailPage /> },
   { path: 'hosting/webhooks/deliveries', element: <ActionsDeliveriesListPage /> },
+  { path: 'hosting/webhooks/email/new', element: <EmailRuleFormPage /> },
+  { path: 'hosting/webhooks/email/:emailRuleId', element: <EmailRuleFormPage /> },
   { path: 'hosting/webhooks/new', element: <ActionsRuleEditorPage /> },
   { path: 'hosting/webhooks/:ruleId', element: <ActionsRuleEditorPage /> },
   { path: 'hosting/webhooks', element: <ActionsRulesListPage /> },
@@ -89,6 +94,8 @@ const hostingWebhookRoutes = [
 const storageWebhookRoutes = [
   { path: 'storage/webhooks/deliveries/:deliveryId', element: <ActionsDeliveryDetailPage /> },
   { path: 'storage/webhooks/deliveries', element: <ActionsDeliveriesListPage /> },
+  { path: 'storage/webhooks/email/new', element: <EmailRuleFormPage /> },
+  { path: 'storage/webhooks/email/:emailRuleId', element: <EmailRuleFormPage /> },
   { path: 'storage/webhooks/new', element: <ActionsRuleEditorPage /> },
   { path: 'storage/webhooks/:ruleId', element: <ActionsRuleEditorPage /> },
   { path: 'storage/webhooks', element: <ActionsRulesListPage /> },
@@ -218,6 +225,7 @@ export const router = createHashRouter([
         ),
       },
       { path: 'storage/statistics', element: <StorageStatisticsPage /> },
+      { path: 'email/templates/id/:templateId', element: <EmailTemplateEditorPage /> },
       { path: 'email/templates/:templateKey', element: <EmailTemplateEditorPage /> },
       { path: 'email/templates', element: <EmailTemplatesPage /> },
       { path: 'email/provider', element: <EmailProviderPage /> },

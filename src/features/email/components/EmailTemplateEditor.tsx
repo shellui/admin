@@ -25,6 +25,8 @@ import { requiredAuthLinkTokens, validateAuthLaneOverride } from '@/lib/emailAut
 import {
   availableThemeNamesKey,
   getAppearanceAvailableThemes,
+  completeThemePalette,
+  emailThemeKeyOrDefault,
   paletteForThemeName,
   resolveEmailThemeName,
   themePalettePayload,
@@ -60,6 +62,10 @@ export function EmailTemplateEditor({
   laneClass,
   authLinkHosts,
   storedThemeName,
+  storedPalette = null,
+  themeChoices = null,
+  companyTheme = 'barebone',
+  languages = ['en', 'fr'],
   draftEn,
   draftFr,
   variables,
@@ -81,6 +87,12 @@ export function EmailTemplateEditor({
   laneClass: string;
   authLinkHosts: string[];
   storedThemeName: string | null;
+  /** Stored version palette. Sent only when all seven colors are present. */
+  storedPalette?: Record<string, string> | null;
+  /** The five email themes. Appearance themes are used when this is omitted. */
+  themeChoices?: Array<{ key: string; name: string }> | null;
+  companyTheme?: string;
+  languages?: EmailLang[];
   draftEn: EmailLangDraft;
   draftFr: EmailLangDraft;
   variables: EmailVariable[];
@@ -111,10 +123,13 @@ export function EmailTemplateEditor({
   const appearance = useTheme();
   const themes = useMemo(() => getAppearanceAvailableThemes(appearance), [appearance]);
   const themeKey = availableThemeNamesKey(themes);
-  const [themeName, setThemeName] = useState<string | null>(() =>
-    resolveEmailThemeName(storedThemeName ?? undefined, appearance, themes),
-  );
-  const [lang, setLang] = useState<EmailLang>('en');
+  const [themeName, setThemeName] = useState<string | null>(() => {
+    if (themeChoices?.length) {
+      return emailThemeKeyOrDefault(storedThemeName, companyTheme);
+    }
+    return resolveEmailThemeName(storedThemeName ?? undefined, appearance, themes);
+  });
+  const [lang, setLang] = useState<EmailLang>(languages[0] ?? 'en');
   const [focus, setFocus] = useState<FocusTarget | null>(null);
   const [showService, setShowService] = useState(false);
   const [draftTo, setDraftTo] = useState(jwtEmail ?? '');
@@ -142,8 +157,17 @@ export function EmailTemplateEditor({
       ? t('emailError_auth_literal_link')
       : null;
   }
-  const resolvedTheme = resolveEmailThemeName(themeName ?? undefined, appearance, themes);
-  const palette = paletteForThemeName(resolvedTheme, appearance, themes);
+  const resolvedTheme = themeChoices?.length
+    ? emailThemeKeyOrDefault(themeName, companyTheme)
+    : resolveEmailThemeName(themeName ?? undefined, appearance, themes);
+  const palette = paletteForThemeName(
+    themeChoices?.length ? null : resolvedTheme,
+    appearance,
+    themes,
+  );
+  const palettePayload = themeChoices?.length
+    ? ((themeName === storedThemeName ? completeThemePalette(storedPalette) : null) ?? {})
+    : themePalettePayload(palette);
   const themedHtml = renderEmailPreviewHtml(draft.document, palette);
   const previewHtml = showService && servicePreviewHtml ? servicePreviewHtml : themedHtml;
 
@@ -162,7 +186,7 @@ export function EmailTemplateEditor({
   async function publishTemplate() {
     setPublishFeedback(null);
     try {
-      await onPublish(resolvedTheme, themePalettePayload(palette));
+      await onPublish(resolvedTheme, palettePayload);
       setPublishFeedback({ tone: 'success', text: t('emailPublished') });
     } catch (err) {
       setPublishFeedback(feedbackFromError(t, err));
@@ -182,12 +206,7 @@ export function EmailTemplateEditor({
   async function sendThisDraft() {
     setDraftFeedback(null);
     try {
-      await onSendDraft(
-        lang,
-        draft,
-        themePalettePayload(palette),
-        isStaff ? draftTo.trim() : undefined,
-      );
+      await onSendDraft(lang, draft, palettePayload, isStaff ? draftTo.trim() : undefined);
       setDraftFeedback({ tone: 'success', text: t('emailSendDraftSent') });
     } catch (err) {
       setDraftFeedback(feedbackFromError(t, err));
@@ -198,7 +217,7 @@ export function EmailTemplateEditor({
     setPreviewFeedback(null);
     setShowService(true);
     try {
-      await onServicePreview(lang, draft, themePalettePayload(palette));
+      await onServicePreview(lang, draft, palettePayload);
     } catch (err) {
       setPreviewFeedback(feedbackFromError(t, err));
     }
@@ -248,28 +267,52 @@ export function EmailTemplateEditor({
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <div className="min-w-0 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div
-            className="flex gap-2"
-            role="tablist"
-            aria-label={t('emailLanguageTabs')}
-          >
-            {(['en', 'fr'] as const).map((code) => (
-              <Button
-                key={code}
-                type="button"
-                size="sm"
-                variant={lang === code ? 'default' : 'outline'}
-                onClick={() => {
-                  setLang(code);
-                  setShowService(false);
+          {languages.length > 1 ? (
+            <div
+              className="flex gap-2"
+              role="tablist"
+              aria-label={t('emailLanguageTabs')}
+            >
+              {languages.map((code) => (
+                <Button
+                  key={code}
+                  type="button"
+                  size="sm"
+                  variant={lang === code ? 'default' : 'outline'}
+                  onClick={() => {
+                    setLang(code);
+                    setShowService(false);
+                    clearActionFeedback();
+                  }}
+                >
+                  {code === 'en' ? t('emailLangEn') : t('emailLangFr')}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+          {themeChoices?.length ? (
+            <label className="flex items-center gap-2 text-sm">
+              <span>{t('emailThemeLabel')}</span>
+              <select
+                className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
+                aria-label={t('emailThemeLabel')}
+                value={resolvedTheme ?? ''}
+                onChange={(event) => {
                   clearActionFeedback();
+                  setThemeName(event.target.value);
                 }}
               >
-                {code === 'en' ? t('emailLangEn') : t('emailLangFr')}
-              </Button>
-            ))}
-          </div>
-          {themes.length ? (
+                {themeChoices.map((theme) => (
+                  <option
+                    key={theme.key}
+                    value={theme.key}
+                  >
+                    {theme.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : themes.length ? (
             <label className="flex items-center gap-2 text-sm">
               <span>{t('emailThemeLabel')}</span>
               <select
