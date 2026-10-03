@@ -15,15 +15,15 @@ External menus (host custom apps, storage files, Swagger/ReDoc) are opened as ab
 
 ## What the panel covers
 
-| Area            | When it appears                                         | Highlights                                                                                                                                                          |
-| --------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Dashboard**   | Always                                                  | Company-scoped KPIs from identity (`GET /api/v1/metrics`). Optional storage and hosting Prometheus metrics when those services are configured.                      |
-| **Identity**    | Always (with `backend.url`)                             | Company (incl. magic link toggle), users, groups, login events, OAuth apps, SCIM, Actions (rules + delivery logs), personal access tokens; staff Django admin link. |
-| **Storage**     | Host `storage.url` set                                  | Statistics (`GET /storage/v1/stats`); optional Files explorer via `storage.filesUrl`; staff Django admin.                                                           |
-| **Hosting**     | Host `hosting.url` set and `showInAdmin` is not `false` | Apps list/detail, statistics, dashboard hosting KPIs (`GET /hosting/v1/metrics`); staff Django admin.                                                               |
-| **Email**       | Always (default `https://email.shellui.com`)            | Templates, provider settings, statistics. Identity, Storage, and Hosting each have an Email and webhooks page for that service's catalog events.                    |
-| **Custom apps** | Host `administration` set                               | Extra sidebar links below Dashboard (iframe or external).                                                                                                           |
-| **API docs**    | Shell developer mode                                    | Swagger / ReDoc for identity (and storage / hosting when those sections are on).                                                                                    |
+| Area            | When it appears                                         | Highlights                                                                                                                                                                                                         |
+| --------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Dashboard**   | Always                                                  | Company-scoped KPIs from identity (`GET /api/v1/metrics`). Optional storage and hosting Prometheus metrics when those services are configured. Email delivery counts from `GET /api/v1/stats` when Email is shown. |
+| **Identity**    | Always (with `backend.url`)                             | Company (incl. magic link toggle), users, groups, login events, OAuth apps, SCIM, Actions (rules + delivery logs), personal access tokens; staff Django admin link.                                                |
+| **Storage**     | Host `storage.url` set                                  | Statistics (`GET /storage/v1/stats`); optional Files explorer via `storage.filesUrl`; staff Django admin.                                                                                                          |
+| **Hosting**     | Host `hosting.url` set and `showInAdmin` is not `false` | Apps list/detail, statistics, dashboard hosting KPIs (`GET /hosting/v1/metrics`); staff Django admin.                                                                                                              |
+| **Email**       | Always (default `https://email.shellui.com`)            | Templates, provider settings, statistics. Identity, Storage, and Hosting each have an Email and webhooks page for that service's catalog events.                                                                   |
+| **Custom apps** | Host `administration` set                               | Extra sidebar links below Dashboard (iframe or external).                                                                                                                                                          |
+| **API docs**    | Shell developer mode                                    | Swagger / ReDoc for identity (and storage / hosting when those sections are on).                                                                                                                                   |
 
 ## Prerequisites
 
