@@ -4,6 +4,11 @@ import { Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
+import {
+  ActionFeedback,
+  feedbackFromError,
+  type ActionFeedbackState,
+} from '@/features/email/components/ActionFeedback';
 import { SearchField } from '@/features/email/components/SearchField';
 import { emailErrorText } from '@/lib/emailApiErrors';
 import type { EmailApiClient } from '@/lib/emailApi';
@@ -39,6 +44,8 @@ function RuleRow({
   const [language, setLanguage] = useState(rule.language);
   const [recipientMode, setRecipientMode] = useState(rule.recipientMode);
   const [addresses, setAddresses] = useState(staticRecipientLines(rule.staticRecipients));
+  const [feedback, setFeedback] = useState<ActionFeedbackState | null>(null);
+  const [feedbackOn, setFeedbackOn] = useState<'toggle' | 'save' | null>(null);
 
   useEffect(() => {
     setTemplateKey(rule.templateKey);
@@ -51,17 +58,29 @@ function RuleRow({
     ? templateKeys
     : [templateKey, ...templateKeys];
 
-  async function persist(enabled: boolean) {
-    await onSave(
-      rule,
-      nextRuleWrite(rule, {
-        enabled,
-        templateKey,
-        language,
-        recipientMode,
-        staticRecipients: parseStaticRecipientLines(addresses),
-      }),
-    );
+  function clearFeedback() {
+    setFeedback(null);
+    setFeedbackOn(null);
+  }
+
+  async function persist(enabled: boolean, target: 'toggle' | 'save') {
+    setFeedback(null);
+    setFeedbackOn(target);
+    try {
+      await onSave(
+        rule,
+        nextRuleWrite(rule, {
+          enabled,
+          templateKey,
+          language,
+          recipientMode,
+          staticRecipients: parseStaticRecipientLines(addresses),
+        }),
+      );
+      setFeedback({ tone: 'success', text: t('emailRuleSaved') });
+    } catch (err) {
+      setFeedback(feedbackFromError(t, err));
+    }
   }
 
   return (
@@ -75,17 +94,20 @@ function RuleRow({
           <Badge variant={rule.customized ? 'secondary' : 'muted'}>
             {rule.customized ? t('emailRuleCustom') : t('emailRuleSuggested')}
           </Badge>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              role="switch"
-              aria-label={t('emailRuleToggle', { event: row.label })}
-              checked={rule.enabled}
-              disabled={busy}
-              onChange={() => void persist(!rule.enabled)}
-            />
-            {rule.enabled ? t('emailEnabled') : t('emailDisabled')}
-          </label>
+          <div className="space-y-1">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                role="switch"
+                aria-label={t('emailRuleToggle', { event: row.label })}
+                checked={rule.enabled}
+                disabled={busy}
+                onChange={() => void persist(!rule.enabled, 'toggle')}
+              />
+              {rule.enabled ? t('emailEnabled') : t('emailDisabled')}
+            </label>
+            {feedbackOn === 'toggle' ? <ActionFeedback feedback={feedback} /> : null}
+          </div>
         </div>
       </div>
       <div className="grid gap-3 md:grid-cols-3">
@@ -95,7 +117,10 @@ function RuleRow({
             className="flex h-9 w-full rounded-md border border-input bg-transparent px-2 font-mono text-xs"
             value={templateKey}
             aria-label={t('emailRuleTemplate')}
-            onChange={(event) => setTemplateKey(event.target.value)}
+            onChange={(event) => {
+              clearFeedback();
+              setTemplateKey(event.target.value);
+            }}
           >
             {options.map((key) => (
               <option
@@ -113,7 +138,10 @@ function RuleRow({
             className="flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
             value={language}
             aria-label={t('emailRuleLanguage')}
-            onChange={(event) => setLanguage(event.target.value)}
+            onChange={(event) => {
+              clearFeedback();
+              setLanguage(event.target.value);
+            }}
           >
             <option value="">{t('emailRuleLanguageDefault')}</option>
             <option value="en">{t('emailLangEn')}</option>
@@ -126,9 +154,10 @@ function RuleRow({
             className="flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
             value={recipientMode}
             aria-label={t('emailRuleRecipients')}
-            onChange={(event) =>
-              setRecipientMode(event.target.value === 'static' ? 'static' : 'hints')
-            }
+            onChange={(event) => {
+              clearFeedback();
+              setRecipientMode(event.target.value === 'static' ? 'static' : 'hints');
+            }}
           >
             <option value="hints">{t('emailRuleModeHints')}</option>
             <option value="static">{t('emailRuleModeStatic')}</option>
@@ -142,22 +171,28 @@ function RuleRow({
             className="min-h-20 w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm"
             value={addresses}
             aria-label={t('emailRuleAddresses')}
-            onChange={(event) => setAddresses(event.target.value)}
+            onChange={(event) => {
+              clearFeedback();
+              setAddresses(event.target.value);
+            }}
           />
           <Text className="font-mono text-xs">{t('emailRuleAddressesHint')}</Text>
         </label>
       ) : (
         <Text className="font-mono text-xs">{t('emailRuleHintsHint')}</Text>
       )}
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        disabled={busy}
-        onClick={() => void persist(rule.enabled)}
-      >
-        {t('emailRuleSave')}
-      </Button>
+      <div className="space-y-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={busy}
+          onClick={() => void persist(rule.enabled, 'save')}
+        >
+          {t('emailRuleSave')}
+        </Button>
+        {feedbackOn === 'save' ? <ActionFeedback feedback={feedback} /> : null}
+      </div>
     </li>
   );
 }
@@ -181,30 +216,38 @@ export function ServiceEmailRulesSection({
   const [query, setQuery] = useState('');
   const [busyEvent, setBusyEvent] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!client || !canManage) {
-      setRules([]);
-      setCatalog([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const [nextRules, nextCatalog] = await Promise.all([
-        client.fetchRules(),
-        client.fetchCatalog(),
-      ]);
-      setRules(rulesForService(nextRules, service));
-      setCatalog(nextCatalog.events.filter((event) => event.service === service));
-    } catch (err) {
-      setRules([]);
-      setCatalog([]);
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [canManage, client, service]);
+  const load = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!client || !canManage) {
+        setRules([]);
+        setCatalog([]);
+        setLoading(false);
+        return;
+      }
+      if (!opts?.silent) {
+        setLoading(true);
+        setError(null);
+      }
+      try {
+        const [nextRules, nextCatalog] = await Promise.all([
+          client.fetchRules(),
+          client.fetchCatalog(),
+        ]);
+        setRules(rulesForService(nextRules, service));
+        setCatalog(nextCatalog.events.filter((event) => event.service === service));
+        if (opts?.silent) setError(null);
+      } catch (err) {
+        if (!opts?.silent) {
+          setRules([]);
+          setCatalog([]);
+        }
+        setError(err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [canManage, client, service],
+  );
 
   useEffect(() => {
     void load();
@@ -234,12 +277,9 @@ export function ServiceEmailRulesSection({
   async function onSave(rule: EmailRule, body: ReturnType<typeof nextRuleWrite>) {
     if (!client) return;
     setBusyEvent(rule.eventType);
-    setError(null);
     try {
       await client.saveRule(body);
-      await load();
-    } catch (err) {
-      setError(err);
+      await load({ silent: true });
     } finally {
       setBusyEvent(null);
     }

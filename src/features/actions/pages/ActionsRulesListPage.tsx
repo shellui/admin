@@ -22,6 +22,11 @@ import {
 } from '@/features/actions/components/ApiUnavailableNotice';
 import { useActionsApi } from '@/features/actions/useActionsApi';
 import { WebhookServiceUnavailable } from '@/features/actions/components/WebhookServiceUnavailable';
+import {
+  ActionFeedback,
+  feedbackFromThrown,
+  type ActionFeedbackState,
+} from '@/features/email/components/ActionFeedback';
 import { ServiceEmailRulesSection } from '@/features/email/components/ServiceEmailRulesSection';
 import { useEmailApi } from '@/features/email/useEmailApi';
 import { useWebhookPageMeta } from '@/features/actions/useWebhookPageMeta';
@@ -41,6 +46,8 @@ export function ActionsRulesListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [busyId, setBusyId] = useState<ActionRuleId | null>(null);
+  const [rowFeedback, setRowFeedback] = useState<Record<string, ActionFeedbackState>>({});
+  const [removedRows, setRemovedRows] = useState<ActionRule[]>([]);
 
   const load = useCallback(async () => {
     if (!api || !isOwner) {
@@ -74,15 +81,48 @@ export function ActionsRulesListPage() {
     }).format(d);
   };
 
+  function rowKey(id: ActionRuleId): string {
+    return String(id);
+  }
+
+  function clearRowFeedback(id: ActionRuleId) {
+    const key = rowKey(id);
+    setRowFeedback((prev) => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
+  async function refreshRows() {
+    if (!api) return;
+    setRows(await api.fetchRules());
+  }
+
   async function onToggle(rule: ActionRule) {
     if (!api) return;
     setBusyId(rule.id);
-    setError(null);
+    clearRowFeedback(rule.id);
     try {
       await api.updateRule(rule.id, { enabled: !rule.enabled });
-      await load();
+      setRowFeedback((prev) => ({
+        ...prev,
+        [rowKey(rule.id)]: {
+          tone: 'success',
+          text: t(rule.enabled ? 'actionsRuleDisabled' : 'actionsRuleEnabled'),
+        },
+      }));
+      try {
+        await refreshRows();
+      } catch (reloadError) {
+        setError(reloadError);
+      }
     } catch (e) {
-      setError(e);
+      setRowFeedback((prev) => ({
+        ...prev,
+        [rowKey(rule.id)]: feedbackFromThrown(e, t('actionsSaveError')),
+      }));
     } finally {
       setBusyId(null);
     }
@@ -99,16 +139,27 @@ export function ActionsRulesListPage() {
     });
     if (!confirmed) return;
     setBusyId(rule.id);
-    setError(null);
+    clearRowFeedback(rule.id);
     try {
       await api.deleteRule(rule.id);
-      await load();
+      setRemovedRows((prev) => [...prev.filter((row) => row.id !== rule.id), rule]);
+      try {
+        await refreshRows();
+      } catch (reloadError) {
+        setError(reloadError);
+      }
     } catch (e) {
-      setError(e);
+      setRowFeedback((prev) => ({
+        ...prev,
+        [rowKey(rule.id)]: feedbackFromThrown(e, t('actionsSaveError')),
+      }));
     } finally {
       setBusyId(null);
     }
   }
+
+  const removedIds = new Set(removedRows.map((rule) => rowKey(rule.id)));
+  const visibleRows = rows.filter((rule) => !removedIds.has(rowKey(rule.id)));
 
   return (
     <div className="w-full space-y-6">
@@ -204,7 +255,8 @@ export function ActionsRulesListPage() {
 
       {serviceConfigured &&
       !loading &&
-      rows.length === 0 &&
+      visibleRows.length === 0 &&
+      removedRows.length === 0 &&
       accessToken &&
       isOwner &&
       api &&
@@ -214,7 +266,7 @@ export function ActionsRulesListPage() {
         </Text>
       ) : null}
 
-      {rows.length > 0 ? (
+      {visibleRows.length > 0 || removedRows.length > 0 ? (
         <div className="rounded-md border border-border">
           <Table>
             <TableHeader>
@@ -229,7 +281,7 @@ export function ActionsRulesListPage() {
               </TableRow>
             </TableHeader>
             <TableBody className="font-mono text-xs">
-              {rows.map((rule) => (
+              {visibleRows.map((rule) => (
                 <TableRow key={rule.id}>
                   <TableCell>
                     <Link
@@ -249,36 +301,50 @@ export function ActionsRulesListPage() {
                     {formatDate(rule.updated_at)}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex flex-wrap justify-end gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        disabled={busyId === rule.id}
-                        onClick={() => void onToggle(rule)}
-                      >
-                        {rule.enabled ? t('actionsDisable') : t('actionsEnable')}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        asChild
-                      >
-                        <Link to={webhookRuleEditPath(service.key, rule.id)}>
-                          {t('actionsEdit')}
-                        </Link>
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="destructive"
-                        disabled={busyId === rule.id}
-                        onClick={() => void onDelete(rule)}
-                      >
-                        {t('actionsDelete')}
-                      </Button>
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          disabled={busyId === rule.id}
+                          onClick={() => void onToggle(rule)}
+                        >
+                          {rule.enabled ? t('actionsDisable') : t('actionsEnable')}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          asChild
+                        >
+                          <Link to={webhookRuleEditPath(service.key, rule.id)}>
+                            {t('actionsEdit')}
+                          </Link>
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          disabled={busyId === rule.id}
+                          onClick={() => void onDelete(rule)}
+                        >
+                          {t('actionsDelete')}
+                        </Button>
+                      </div>
+                      <ActionFeedback feedback={rowFeedback[rowKey(rule.id)] ?? null} />
                     </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {removedRows.map((rule) => (
+                <TableRow key={`removed-${rowKey(rule.id)}`}>
+                  <TableCell>{rule.name}</TableCell>
+                  <TableCell>{rule.event}</TableCell>
+                  <TableCell />
+                  <TableCell />
+                  <TableCell className="text-right">
+                    <ActionFeedback feedback={{ tone: 'success', text: t('actionsRuleDeleted') }} />
                   </TableCell>
                 </TableRow>
               ))}

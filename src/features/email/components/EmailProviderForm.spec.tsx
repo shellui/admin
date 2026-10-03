@@ -215,4 +215,31 @@ describe('EmailProviderForm', () => {
     expect(send.parentElement?.parentElement?.contains(sent)).toBe(true);
     expect(onTest).toHaveBeenCalledTimes(2);
   });
+
+  it('shows a save failure under Save provider and clears it when a field changes', async () => {
+    const onSave = vi.fn(async () => {
+      throw new EmailApiError('provider_host_not_public', 400);
+    });
+    render(
+      <I18nextProvider i18n={i18n}>
+        <EmailProviderForm
+          settings={settings}
+          jwtEmail="ada@acme.com"
+          isStaff={false}
+          saving={false}
+          testing={false}
+          onSave={onSave}
+          onTest={vi.fn(async () => undefined)}
+        />
+      </I18nextProvider>,
+    );
+    const save = screen.getByRole('button', { name: 'Save provider' });
+    fireEvent.click(save);
+    const failure = await screen.findByText('The SMTP host must resolve to a public address.');
+    expect(save.parentElement?.contains(failure)).toBe(true);
+    fireEvent.change(screen.getByLabelText('From address'), {
+      target: { value: 'hello@acme.com' },
+    });
+    expect(screen.queryByText('The SMTP host must resolve to a public address.')).toBeNull();
+  });
 });

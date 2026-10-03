@@ -5,6 +5,11 @@ import { BarChart3, Loader2, MailWarning, RefreshCw, Timer, Inbox } from 'lucide
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
+import {
+  ActionFeedback,
+  feedbackFromError,
+  type ActionFeedbackState,
+} from '@/features/email/components/ActionFeedback';
 import { SearchField } from '@/features/email/components/SearchField';
 import { useEmailApi } from '@/features/email/useEmailApi';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
@@ -69,33 +74,59 @@ export function EmailStatisticsPage() {
   const [lane, setLane] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
+  const [actionResult, setActionResult] = useState<'ok' | 'error' | null>(null);
+  const [actionError, setActionError] = useState<unknown>(null);
   const [eventQuery, setEventQuery] = useState('');
+  const refreshFeedback: ActionFeedbackState | null =
+    actionResult === 'ok'
+      ? { tone: 'success', text: t('emailStatsRefreshed') }
+      : actionResult === 'error'
+        ? feedbackFromError(t, actionError)
+        : null;
 
-  const load = useCallback(async () => {
-    if (!api || !canManage) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const [nextStats, nextMetrics] = await Promise.all([
-        api.fetchStats(lane ? { lane } : {}),
-        api.fetchMetrics(),
-      ]);
-      setStats(nextStats);
-      setMetrics(nextMetrics);
-    } catch (err) {
-      setStats(null);
-      setMetrics(null);
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [api, canManage, lane]);
+  const load = useCallback(
+    async (source: 'page' | 'action') => {
+      if (!api || !canManage) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      if (source === 'page') {
+        setError(null);
+        setActionResult(null);
+      } else {
+        setActionResult(null);
+      }
+      try {
+        const [nextStats, nextMetrics] = await Promise.all([
+          api.fetchStats(lane ? { lane } : {}),
+          api.fetchMetrics(),
+        ]);
+        setStats(nextStats);
+        setMetrics(nextMetrics);
+        if (source === 'action') {
+          setError(null);
+          setActionError(null);
+          setActionResult('ok');
+        }
+      } catch (err) {
+        if (source === 'page') {
+          setStats(null);
+          setMetrics(null);
+          setError(err);
+        } else {
+          setActionError(err);
+          setActionResult('error');
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [api, canManage, lane],
+  );
 
   useEffect(() => {
-    void load();
+    void load('page');
   }, [load]);
 
   const dayMax = Math.max(1, ...(stats?.byDay.map((row) => row.sent) ?? [1]));
@@ -131,32 +162,35 @@ export function EmailStatisticsPage() {
             </Text>
           ) : null}
         </div>
-        <div className="flex items-center gap-2">
-          <select
-            aria-label={t('emailMetricLane')}
-            className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
-            value={lane}
-            onChange={(event) => setLane(event.target.value)}
-          >
-            <option value="">{t('emailStatsAllLanes')}</option>
-            {EMAIL_LANES.map((item) => (
-              <option
-                key={item}
-                value={item}
-              >
-                {t(`emailLane_${item}`)}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm hover:bg-muted"
-            disabled={loading}
-          >
-            <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
-            {t('emailStatsRefresh')}
-          </button>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-2">
+            <select
+              aria-label={t('emailMetricLane')}
+              className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
+              value={lane}
+              onChange={(event) => setLane(event.target.value)}
+            >
+              <option value="">{t('emailStatsAllLanes')}</option>
+              {EMAIL_LANES.map((item) => (
+                <option
+                  key={item}
+                  value={item}
+                >
+                  {t(`emailLane_${item}`)}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => void load('action')}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm hover:bg-muted"
+              disabled={loading}
+            >
+              <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
+              {t('emailStatsRefresh')}
+            </button>
+          </div>
+          <ActionFeedback feedback={refreshFeedback} />
         </div>
       </header>
 

@@ -38,10 +38,10 @@ function renderEditor(onSendDraft: (to?: string) => Promise<void>) {
         isStaff={false}
         jwtEmail="ada@acme.com"
         onChange={vi.fn()}
-        onPublish={vi.fn()}
-        onReset={vi.fn()}
+        onPublish={vi.fn(async () => undefined)}
+        onReset={vi.fn(async () => false)}
         onSendDraft={(_lang, _draft, _palette, to) => onSendDraft(to)}
-        onServicePreview={vi.fn()}
+        onServicePreview={vi.fn(async () => undefined)}
         servicePreviewHtml={null}
         servicePreviewNote={null}
       />
@@ -77,5 +77,42 @@ describe('EmailTemplateEditor send this draft', () => {
     expect(sent.className).not.toContain('text-destructive');
     expect(send.closest('div.border-t')?.contains(sent)).toBe(true);
     expect(screen.queryByText('The provider refused the test email.')).toBeNull();
+  });
+
+  it('shows a publish failure under Publish', async () => {
+    render(
+      <I18nextProvider i18n={i18n}>
+        <EmailTemplateEditor
+          templateKey="hosting.deployment.failed"
+          laneClass="transactional"
+          authLinkHosts={[]}
+          storedThemeName={null}
+          draftEn={draft}
+          draftFr={draft}
+          variables={[]}
+          hasCompanyTemplate
+          publishing={false}
+          resetting={false}
+          sendingDraft={false}
+          isStaff={false}
+          jwtEmail="ada@acme.com"
+          onChange={vi.fn()}
+          onPublish={vi.fn(async () => {
+            throw new EmailApiError('provider_test_failed', 502);
+          })}
+          onReset={vi.fn(async () => false)}
+          onSendDraft={vi.fn(async () => undefined)}
+          onServicePreview={vi.fn(async () => undefined)}
+          servicePreviewHtml={null}
+          servicePreviewNote={null}
+        />
+      </I18nextProvider>,
+    );
+    const publish = screen.getByRole('button', { name: 'Publish' });
+    fireEvent.click(publish);
+    const failure = await screen.findByText('The provider refused the test email.');
+    expect(failure.className).toContain('text-destructive');
+    expect(publish.parentElement?.contains(failure)).toBe(true);
+    expect(screen.queryAllByText('The provider refused the test email.')).toHaveLength(1);
   });
 });

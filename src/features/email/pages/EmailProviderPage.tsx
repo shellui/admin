@@ -19,7 +19,6 @@ export function EmailProviderPage() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!api || !canManage) {
@@ -81,10 +80,8 @@ export function EmailProviderPage() {
       {error ? (
         <Text className="font-mono text-sm text-destructive">{emailErrorText(t, error)}</Text>
       ) : null}
-      {notice ? <Text className="font-mono text-sm">{notice}</Text> : null}
       {settings && api ? (
         <EmailProviderForm
-          key={`${settings.provider ?? ''}:${settings.credentialsHint}:${settings.fromEmail}`}
           settings={settings}
           jwtEmail={accessToken ? getEmailFromJwt(accessToken) : null}
           isStaff={Boolean(accessToken && getIsStaffFromJwt(accessToken))}
@@ -92,15 +89,8 @@ export function EmailProviderPage() {
           testing={testing}
           onSave={async (body) => {
             setSaving(true);
-            setError(null);
-            setNotice(null);
             try {
-              const next = await api.saveProvider(body);
-              setSettings(next);
-              setNotice(t('emailProviderSaved'));
-            } catch (err) {
-              setError(err);
-              throw err;
+              setSettings(await api.saveProvider(body));
             } finally {
               setSaving(false);
             }

@@ -15,6 +15,11 @@ import {
   type EmailLang,
   type EmailVariable,
 } from '@/lib/emailDocument';
+import {
+  ActionFeedback,
+  feedbackFromError,
+  type ActionFeedbackState,
+} from '@/features/email/components/ActionFeedback';
 import { emailErrorText } from '@/lib/emailApiErrors';
 import { requiredAuthLinkTokens, validateAuthLaneOverride } from '@/lib/emailAuthTemplate';
 import {
@@ -86,8 +91,8 @@ export function EmailTemplateEditor({
   isStaff: boolean;
   jwtEmail: string | null;
   onChange: (lang: EmailLang, next: EmailLangDraft) => void;
-  onPublish: (themeName: string | null, themePalette: Record<string, string>) => void;
-  onReset: () => void;
+  onPublish: (themeName: string | null, themePalette: Record<string, string>) => Promise<void>;
+  onReset: () => Promise<boolean>;
   onSendDraft: (
     lang: EmailLang,
     draft: EmailLangDraft,
@@ -98,7 +103,7 @@ export function EmailTemplateEditor({
     lang: EmailLang,
     draft: EmailLangDraft,
     themePalette: Record<string, string>,
-  ) => void;
+  ) => Promise<void>;
   servicePreviewHtml: string | null;
   servicePreviewNote: string | null;
 }) {
@@ -113,10 +118,10 @@ export function EmailTemplateEditor({
   const [focus, setFocus] = useState<FocusTarget | null>(null);
   const [showService, setShowService] = useState(false);
   const [draftTo, setDraftTo] = useState(jwtEmail ?? '');
-  const [draftFeedback, setDraftFeedback] = useState<{
-    tone: 'error' | 'success';
-    text: string;
-  } | null>(null);
+  const [draftFeedback, setDraftFeedback] = useState<ActionFeedbackState | null>(null);
+  const [publishFeedback, setPublishFeedback] = useState<ActionFeedbackState | null>(null);
+  const [resetFeedback, setResetFeedback] = useState<ActionFeedbackState | null>(null);
+  const [previewFeedback, setPreviewFeedback] = useState<ActionFeedbackState | null>(null);
 
   const draft = lang === 'fr' ? draftFr : draftEn;
   const authTokens = useMemo(() => requiredAuthLinkTokens(variables), [variables]);
@@ -142,9 +147,36 @@ export function EmailTemplateEditor({
   const themedHtml = renderEmailPreviewHtml(draft.document, palette);
   const previewHtml = showService && servicePreviewHtml ? servicePreviewHtml : themedHtml;
 
-  function patch(next: Partial<EmailLangDraft>) {
+  function clearActionFeedback() {
     setDraftFeedback(null);
+    setPublishFeedback(null);
+    setResetFeedback(null);
+    setPreviewFeedback(null);
+  }
+
+  function patch(next: Partial<EmailLangDraft>) {
+    clearActionFeedback();
     onChange(lang, { ...draft, ...next });
+  }
+
+  async function publishTemplate() {
+    setPublishFeedback(null);
+    try {
+      await onPublish(resolvedTheme, themePalettePayload(palette));
+      setPublishFeedback({ tone: 'success', text: t('emailPublished') });
+    } catch (err) {
+      setPublishFeedback(feedbackFromError(t, err));
+    }
+  }
+
+  async function resetTemplate() {
+    setResetFeedback(null);
+    try {
+      const completed = await onReset();
+      if (completed) setResetFeedback({ tone: 'success', text: t('emailResetDone') });
+    } catch (err) {
+      setResetFeedback(feedbackFromError(t, err));
+    }
   }
 
   async function sendThisDraft() {
@@ -158,7 +190,17 @@ export function EmailTemplateEditor({
       );
       setDraftFeedback({ tone: 'success', text: t('emailSendDraftSent') });
     } catch (err) {
-      setDraftFeedback({ tone: 'error', text: emailErrorText(t, err) });
+      setDraftFeedback(feedbackFromError(t, err));
+    }
+  }
+
+  async function previewOnService() {
+    setPreviewFeedback(null);
+    setShowService(true);
+    try {
+      await onServicePreview(lang, draft, themePalettePayload(palette));
+    } catch (err) {
+      setPreviewFeedback(feedbackFromError(t, err));
     }
   }
 
@@ -220,7 +262,7 @@ export function EmailTemplateEditor({
                 onClick={() => {
                   setLang(code);
                   setShowService(false);
-                  setDraftFeedback(null);
+                  clearActionFeedback();
                 }}
               >
                 {code === 'en' ? t('emailLangEn') : t('emailLangFr')}
@@ -236,7 +278,7 @@ export function EmailTemplateEditor({
                 value={resolvedTheme ?? ''}
                 data-themes={themeKey}
                 onChange={(event) => {
-                  setDraftFeedback(null);
+                  clearActionFeedback();
                   setThemeName(event.target.value);
                 }}
               >
@@ -450,22 +492,28 @@ export function EmailTemplateEditor({
           {t('emailAddBlock')}
         </Button>
 
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            disabled={publishing}
-            onClick={() => onPublish(resolvedTheme, themePalettePayload(palette))}
-          >
-            {publishing ? t('emailPublishing') : t('emailPublish')}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={resetting || !hasCompanyTemplate}
-            onClick={onReset}
-          >
-            {t('emailReset')}
-          </Button>
+        <div className="flex flex-wrap items-start gap-4">
+          <div className="space-y-2">
+            <Button
+              type="button"
+              disabled={publishing}
+              onClick={() => void publishTemplate()}
+            >
+              {publishing ? t('emailPublishing') : t('emailPublish')}
+            </Button>
+            <ActionFeedback feedback={publishFeedback} />
+          </div>
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={resetting || !hasCompanyTemplate}
+              onClick={() => void resetTemplate()}
+            >
+              {t('emailReset')}
+            </Button>
+            <ActionFeedback feedback={resetFeedback} />
+          </div>
         </div>
         <div className="space-y-2 border-t border-border/80 pt-4">
           <h2 className="text-base font-semibold tracking-tight">{t('emailSendDraft')}</h2>
@@ -479,7 +527,7 @@ export function EmailTemplateEditor({
                   type="email"
                   value={draftTo}
                   onChange={(event) => {
-                    setDraftFeedback(null);
+                    clearActionFeedback();
                     setDraftTo(event.target.value);
                   }}
                 />
@@ -494,17 +542,7 @@ export function EmailTemplateEditor({
               {sendingDraft ? t('emailTestSending') : t('emailSendDraft')}
             </Button>
           </div>
-          {draftFeedback ? (
-            <Text
-              className={
-                draftFeedback.tone === 'error'
-                  ? 'font-mono text-sm text-destructive'
-                  : 'font-mono text-sm'
-              }
-            >
-              {draftFeedback.text}
-            </Text>
-          ) : null}
+          <ActionFeedback feedback={draftFeedback} />
         </div>
         <Text className="font-mono text-xs">{templateKey}</Text>
       </div>
@@ -516,14 +554,12 @@ export function EmailTemplateEditor({
             type="button"
             size="sm"
             variant="outline"
-            onClick={() => {
-              setShowService(true);
-              onServicePreview(lang, draft, themePalettePayload(palette));
-            }}
+            onClick={() => void previewOnService()}
           >
             {t('emailPreviewService')}
           </Button>
         </div>
+        <ActionFeedback feedback={previewFeedback} />
         <Text>{showService ? t('emailPreviewServiceNote') : t('emailPreviewThemed')}</Text>
         {servicePreviewNote ? (
           <Text className="font-mono text-xs">{servicePreviewNote}</Text>

@@ -77,4 +77,19 @@ describe('EmailProviderPage', () => {
     expect(await screen.findByText('The email request failed.')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Send test email' })).toBeNull();
   });
+
+  it('keeps a save failure next to Save provider', async () => {
+    api.fetchProvider.mockResolvedValue(settings);
+    api.saveProvider.mockRejectedValue(new EmailApiError('provider_host_not_public', 400));
+    render(
+      <I18nextProvider i18n={i18n}>
+        <EmailProviderPage />
+      </I18nextProvider>,
+    );
+    const save = await screen.findByRole('button', { name: 'Save provider' });
+    fireEvent.click(save);
+    const messages = await screen.findAllByText('The SMTP host must resolve to a public address.');
+    expect(messages).toHaveLength(1);
+    expect(save.parentElement?.contains(messages[0])).toBe(true);
+  });
 });

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n';
 import { ServiceEmailRulesSection } from '@/features/email/components/ServiceEmailRulesSection';
+import { EmailApiError } from '@/lib/emailApiErrors';
 import type { EmailApiClient } from '@/lib/emailApi';
 import type { EmailCatalogEvent, EmailRule, EmailRuleWrite } from '@/lib/emailTypes';
 
@@ -113,5 +114,31 @@ describe('ServiceEmailRulesSection', () => {
     expect(screen.getByRole('heading', { name: 'Events' })).toBeTruthy();
     expect(screen.getByText('Label identity.group.item_1')).toBeTruthy();
     expect(screen.queryByText('Label identity.group.item_0')).toBeNull();
+  });
+
+  it('shows a toggle failure on that row, not as a section banner', async () => {
+    const hosting = event('hosting', 'hosting.deployment.failed', true);
+    const api = clientFor([hosting]);
+    vi.mocked(api.saveRule).mockRejectedValueOnce(new EmailApiError('request_failed', 503));
+    render(
+      <I18nextProvider i18n={i18n}>
+        <ServiceEmailRulesSection
+          service="hosting"
+          client={api}
+          canManage
+          signedIn
+        />
+      </I18nextProvider>,
+    );
+    const toggle = await screen.findByRole('switch', {
+      name: 'Email for Label hosting.deployment.failed',
+    });
+    fireEvent.click(toggle);
+    const failure = await screen.findByText('The email request failed.');
+    expect(failure.closest('li')).toBe(toggle.closest('li'));
+    expect(screen.getAllByText('The email request failed.')).toHaveLength(1);
+
+    fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'fr' } });
+    expect(screen.queryByText('The email request failed.')).toBeNull();
   });
 });

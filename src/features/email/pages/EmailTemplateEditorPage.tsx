@@ -49,64 +49,66 @@ export function EmailTemplateEditorPage() {
   const [publishing, setPublishing] = useState(false);
   const [sendingDraft, setSendingDraft] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
   const [serviceHtml, setServiceHtml] = useState<string | null>(null);
   const [serviceNote, setServiceNote] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!api || !canManage || !templateKey) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const [nextDefaults, templates, catalog] = await Promise.all([
-        api.fetchDefaults(templateKey),
-        api.fetchTemplates(),
-        api.fetchCatalog(),
-      ]);
-      const rows = templates.filter((row) => row.templateKey === templateKey);
-      setLaneClass(
-        catalog.events.find((event) => event.templateKey === templateKey)?.laneClass ?? '',
-      );
-      setAuthLinkHosts(catalog.authLinkHosts);
-      const opened = await Promise.all(
-        rows.map(async (row) => {
-          const version = row.activeVersion
-            ? await api.fetchVersion(row.id, row.activeVersion)
-            : preferredTemplateVersion(await api.fetchVersions(row.id));
-          return { row, version };
-        }),
-      );
-      const versionFor = (lang: EmailLang): EmailTemplateVersion | null =>
-        opened.find((item) => item.row.language === lang)?.version ?? null;
-      const withVersion = (lang: EmailLang, id: number | null): EmailLangDraft => {
-        const base = draftFromPack(nextDefaults, lang, id);
-        const version = versionFor(lang);
-        if (!version) return base;
-        const hasDocument =
-          version.document.preview.length > 0 || version.document.blocks.length > 0;
-        return {
-          ...base,
-          subject: version.subject || base.subject,
-          preheader: version.preheader || base.preheader,
-          document: hasDocument ? version.document : base.document,
+  const load = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!api || !canManage || !templateKey) {
+        setLoading(false);
+        return;
+      }
+      if (!opts?.silent) setLoading(true);
+      setError(null);
+      try {
+        const [nextDefaults, templates, catalog] = await Promise.all([
+          api.fetchDefaults(templateKey),
+          api.fetchTemplates(),
+          api.fetchCatalog(),
+        ]);
+        const rows = templates.filter((row) => row.templateKey === templateKey);
+        setLaneClass(
+          catalog.events.find((event) => event.templateKey === templateKey)?.laneClass ?? '',
+        );
+        setAuthLinkHosts(catalog.authLinkHosts);
+        const opened = await Promise.all(
+          rows.map(async (row) => {
+            const version = row.activeVersion
+              ? await api.fetchVersion(row.id, row.activeVersion)
+              : preferredTemplateVersion(await api.fetchVersions(row.id));
+            return { row, version };
+          }),
+        );
+        const versionFor = (lang: EmailLang): EmailTemplateVersion | null =>
+          opened.find((item) => item.row.language === lang)?.version ?? null;
+        const withVersion = (lang: EmailLang, id: number | null): EmailLangDraft => {
+          const base = draftFromPack(nextDefaults, lang, id);
+          const version = versionFor(lang);
+          if (!version) return base;
+          const hasDocument =
+            version.document.preview.length > 0 || version.document.blocks.length > 0;
+          return {
+            ...base,
+            subject: version.subject || base.subject,
+            preheader: version.preheader || base.preheader,
+            document: hasDocument ? version.document : base.document,
+          };
         };
-      };
-      const enId = rows.find((row) => row.language === 'en')?.id ?? null;
-      const frId = rows.find((row) => row.language === 'fr')?.id ?? null;
-      setStoredThemeName(versionFor('en')?.themeName || versionFor('fr')?.themeName || null);
-      setDefaults(nextDefaults);
-      setVariables(nextDefaults.variables);
-      setDraftEn(withVersion('en', enId));
-      setDraftFr(withVersion('fr', frId));
-    } catch (err) {
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [api, canManage, templateKey]);
+        const enId = rows.find((row) => row.language === 'en')?.id ?? null;
+        const frId = rows.find((row) => row.language === 'fr')?.id ?? null;
+        setStoredThemeName(versionFor('en')?.themeName || versionFor('fr')?.themeName || null);
+        setDefaults(nextDefaults);
+        setVariables(nextDefaults.variables);
+        setDraftEn(withVersion('en', enId));
+        setDraftFr(withVersion('fr', frId));
+      } catch (err) {
+        setError(err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [api, canManage, templateKey],
+  );
 
   useEffect(() => {
     void load();
@@ -115,8 +117,6 @@ export function EmailTemplateEditorPage() {
   async function publish(themeName: string | null, themePalette: Record<string, string>) {
     if (!api) return;
     setPublishing(true);
-    setError(null);
-    setNotice(null);
     try {
       for (const [lang, draft] of [
         ['en', draftEn],
@@ -131,10 +131,7 @@ export function EmailTemplateEditorPage() {
           preheader: draft.preheader,
           document: draft.document,
         });
-        if (issue) {
-          setError(issue);
-          return;
-        }
+        if (issue) throw issue;
         let id = draft.templateId;
         if (!id) {
           const created = await api.createTemplate(templateKey, lang);
@@ -149,17 +146,14 @@ export function EmailTemplateEditorPage() {
         });
         await api.publishVersion(id, version.number);
       }
-      setNotice(t('emailPublished'));
-      await load();
-    } catch (err) {
-      setError(err);
+      await load({ silent: true });
     } finally {
       setPublishing(false);
     }
   }
 
   async function reset() {
-    if (!api) return;
+    if (!api) return false;
     const confirmed = await confirmAction({
       title: t('emailResetTitle'),
       description: t('emailResetDescription', { name: templateKey }),
@@ -167,17 +161,14 @@ export function EmailTemplateEditorPage() {
       cancelLabel: t('actionsCancel'),
       danger: true,
     });
-    if (!confirmed) return;
+    if (!confirmed) return false;
     setResetting(true);
-    setError(null);
     try {
       for (const id of [draftEn.templateId, draftFr.templateId]) {
         if (id) await api.deleteTemplate(id);
       }
-      setNotice(t('emailResetDone'));
-      await load();
-    } catch (err) {
-      setError(err);
+      await load({ silent: true });
+      return true;
     } finally {
       setResetting(false);
     }
@@ -228,26 +219,22 @@ export function EmailTemplateEditorPage() {
   ) {
     if (!api) return;
     setServiceNote(null);
-    try {
-      const variablesMap: Record<string, string> = {};
-      for (const variable of variables) variablesMap[variable.token] = variable.example;
-      const rendered = await api.render({
-        template_key: templateKey,
-        language: lang,
-        document: draft.document,
-        subject: draft.subject,
-        variables: variablesMap,
-        theme_palette: themePalette,
-      });
-      setServiceHtml(rendered.html);
-      setServiceNote(
-        rendered.missingVariables.length
-          ? t('emailMissingVariables', { tokens: rendered.missingVariables.join(', ') })
-          : rendered.subject,
-      );
-    } catch (err) {
-      setError(err);
-    }
+    const variablesMap: Record<string, string> = {};
+    for (const variable of variables) variablesMap[variable.token] = variable.example;
+    const rendered = await api.render({
+      template_key: templateKey,
+      language: lang,
+      document: draft.document,
+      subject: draft.subject,
+      variables: variablesMap,
+      theme_palette: themePalette,
+    });
+    setServiceHtml(rendered.html);
+    setServiceNote(
+      rendered.missingVariables.length
+        ? t('emailMissingVariables', { tokens: rendered.missingVariables.join(', ') })
+        : rendered.subject,
+    );
   }
 
   const hasCompany = Boolean(draftEn.templateId || draftFr.templateId);
@@ -277,7 +264,6 @@ export function EmailTemplateEditorPage() {
       {error ? (
         <Text className="font-mono text-sm text-destructive">{emailErrorText(t, error)}</Text>
       ) : null}
-      {notice ? <Text className="font-mono text-sm">{notice}</Text> : null}
       {!loading && api && canManage && defaults ? (
         <EmailTemplateEditor
           templateKey={templateKey}
@@ -294,10 +280,10 @@ export function EmailTemplateEditorPage() {
           isStaff={Boolean(accessToken && getIsStaffFromJwt(accessToken))}
           jwtEmail={accessToken ? getEmailFromJwt(accessToken) : null}
           onChange={(lang, next) => (lang === 'fr' ? setDraftFr(next) : setDraftEn(next))}
-          onPublish={(themeName, palette) => void publish(themeName, palette)}
-          onReset={() => void reset()}
+          onPublish={(themeName, palette) => publish(themeName, palette)}
+          onReset={() => reset()}
           onSendDraft={(lang, draft, palette, to) => sendDraft(lang, draft, palette, to)}
-          onServicePreview={(lang, draft, palette) => void preview(lang, draft, palette)}
+          onServicePreview={(lang, draft, palette) => preview(lang, draft, palette)}
           servicePreviewHtml={serviceHtml}
           servicePreviewNote={serviceNote}
         />

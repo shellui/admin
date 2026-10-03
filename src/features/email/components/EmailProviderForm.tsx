@@ -1,18 +1,20 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import {
+  ActionFeedback,
+  feedbackFromError,
+  type ActionFeedbackState,
+} from '@/features/email/components/ActionFeedback';
+import {
   EMAIL_PROVIDER_CATALOG,
   emailProviderDefinition,
   type EmailProviderDefinition,
 } from '@/lib/emailProviders';
-import { emailErrorText } from '@/lib/emailApiErrors';
 import type { EmailProviderSettings, EmailProviderWrite } from '@/lib/emailTypes';
-
-type ActionFeedback = { tone: 'error' | 'success'; text: string };
 
 type SmtpDraft = {
   host: string;
@@ -68,8 +70,22 @@ export function EmailProviderForm({
   const [smtpPassword, setSmtpPassword] = useState('');
   const [smtp, setSmtp] = useState<SmtpDraft>(EMPTY_SMTP);
   const [testTo, setTestTo] = useState(jwtEmail ?? '');
-  const [formError, setFormError] = useState<string | null>(null);
-  const [testFeedback, setTestFeedback] = useState<ActionFeedback | null>(null);
+  const [saveFeedback, setSaveFeedback] = useState<ActionFeedbackState | null>(null);
+  const [testFeedback, setTestFeedback] = useState<ActionFeedbackState | null>(null);
+
+  useEffect(() => {
+    setProvider(initialProvider);
+    setFromEmail(settings.fromEmail);
+    setFromName(settings.fromName);
+    setSendingDomain(settings.sendingDomain);
+    setBulkFromEmail(settings.bulkFromEmail);
+  }, [
+    initialProvider,
+    settings.fromEmail,
+    settings.fromName,
+    settings.sendingDomain,
+    settings.bulkFromEmail,
+  ]);
 
   const definition = emailProviderDefinition(provider);
   const providerUnchanged = provider === (settings.provider ?? '');
@@ -81,11 +97,11 @@ export function EmailProviderForm({
   }
 
   async function submit() {
-    setFormError(null);
+    setSaveFeedback(null);
     const secret = definition?.credentialKind === 'smtp' ? smtpPassword.trim() : apiKey.trim();
     const providerChanged = !providerUnchanged || !settings.configured;
     if (providerChanged && !secret) {
-      setFormError(t('emailCredentialsRequired'));
+      setSaveFeedback({ tone: 'error', text: t('emailCredentialsRequired') });
       return;
     }
     const body: EmailProviderWrite = {
@@ -115,8 +131,9 @@ export function EmailProviderForm({
     try {
       await onSave(body);
       clearSecrets();
-    } catch {
-      // The page maps error_code. Keep the typed secret so you can retry.
+      setSaveFeedback({ tone: 'success', text: t('emailProviderSaved') });
+    } catch (err) {
+      setSaveFeedback(feedbackFromError(t, err));
     }
   }
 
@@ -126,14 +143,17 @@ export function EmailProviderForm({
       await onTest((isStaff ? testTo : jwtEmail) ?? '');
       setTestFeedback({ tone: 'success', text: t('emailTestSent') });
     } catch (err) {
-      setTestFeedback({ tone: 'error', text: emailErrorText(t, err) });
+      setTestFeedback(feedbackFromError(t, err));
     }
   }
 
   return (
     <form
       className="space-y-6"
-      onChange={() => setTestFeedback(null)}
+      onChange={() => {
+        setSaveFeedback(null);
+        setTestFeedback(null);
+      }}
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
@@ -291,15 +311,14 @@ export function EmailProviderForm({
         <Text className="font-mono text-xs">{t('emailCredentialsHint', { hint })}</Text>
       ) : null}
 
-      {formError ? <Text className="font-mono text-sm text-destructive">{formError}</Text> : null}
-
-      <div className="flex flex-wrap gap-2">
+      <div className="space-y-2">
         <Button
           type="submit"
           disabled={saving}
         >
           {saving ? t('emailProviderSaving') : t('emailProviderSave')}
         </Button>
+        <ActionFeedback feedback={saveFeedback} />
       </div>
 
       <div className="space-y-3 border-t border-border/80 pt-4">
@@ -326,17 +345,7 @@ export function EmailProviderForm({
             {testing ? t('emailTestSending') : t('emailTestSend')}
           </Button>
         </div>
-        {testFeedback ? (
-          <Text
-            className={
-              testFeedback.tone === 'error'
-                ? 'font-mono text-sm text-destructive'
-                : 'font-mono text-sm'
-            }
-          >
-            {testFeedback.text}
-          </Text>
-        ) : null}
+        <ActionFeedback feedback={testFeedback} />
       </div>
     </form>
   );
