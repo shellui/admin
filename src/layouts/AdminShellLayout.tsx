@@ -54,6 +54,8 @@ import { useAdminContentNavigation } from '@/hooks/useAdminContentNavigation';
 import type { AdminEmbedNavItem } from '@/hooks/useAdminContentNavigation';
 import {
   getAdminHashPath,
+  isStandaloneEmailGroupTitle,
+  placeStandaloneEmailSectionLast,
   readSidebarCollapsed,
   writeSidebarCollapsed,
 } from '@/lib/adminChromeNav';
@@ -183,11 +185,6 @@ const toCustomAppRoutePath = (path: string) => `/app/${path.replace(/^\/+/, '')}
 function isIdentityGroup(title: string): boolean {
   const n = title.toLowerCase();
   return n === 'identity' || n === 'identité' || n === 'identite';
-}
-
-function isEmailGroup(title: string): boolean {
-  const n = title.toLowerCase();
-  return n === 'email' || n === 'e-mail';
 }
 
 const buildNavSections = (
@@ -1051,7 +1048,7 @@ export function AdminShellLayout() {
             items,
           };
         }
-        if (isEmailGroup(group.title)) {
+        if (isStandaloneEmailGroupTitle(group.title)) {
           if (!isEmailAdminEnabled(emailSettings)) return null;
           return {
             ...group,
@@ -1184,7 +1181,7 @@ export function AdminShellLayout() {
       });
     }
 
-    return sections;
+    return placeStandaloneEmailSectionLast(sections);
   }, [
     authBackendBaseUrl,
     djangoAdminHref,

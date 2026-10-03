@@ -29,6 +29,27 @@ describe('email and webhooks route rename', () => {
     );
   });
 
+  it('keeps the standalone Email group items and leaves Email and webhooks under Identity', () => {
+    const groups = adminShellUiConfig.navigation.filter(
+      (entry) => 'title' in entry && 'items' in entry,
+    );
+    const identity = groups.find(
+      (entry) =>
+        'title' in entry && typeof entry.title !== 'string' && entry.title.en === 'Identity',
+    );
+    const email = groups.find(
+      (entry) => 'title' in entry && typeof entry.title !== 'string' && entry.title.en === 'Email',
+    );
+    expect(
+      identity && 'items' in identity ? identity.items.map((item) => item.path) : [],
+    ).toContain('identity/webhooks');
+    expect(email && 'items' in email ? email.items.map((item) => item.path) : []).toEqual([
+      'email/templates',
+      'email/provider',
+      'email/statistics',
+    ]);
+  });
+
   it('translates the shared sidebar label in English and French', async () => {
     await i18n.changeLanguage('en');
     expect(i18n.t('navEmailAndWebhooks')).toBe('Email and webhooks');
