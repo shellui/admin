@@ -9,7 +9,10 @@ import {
   emailProviderDefinition,
   type EmailProviderDefinition,
 } from '@/lib/emailProviders';
+import { emailErrorText } from '@/lib/emailApiErrors';
 import type { EmailProviderSettings, EmailProviderWrite } from '@/lib/emailTypes';
+
+type ActionFeedback = { tone: 'error' | 'success'; text: string };
 
 type SmtpDraft = {
   host: string;
@@ -66,6 +69,7 @@ export function EmailProviderForm({
   const [smtp, setSmtp] = useState<SmtpDraft>(EMPTY_SMTP);
   const [testTo, setTestTo] = useState(jwtEmail ?? '');
   const [formError, setFormError] = useState<string | null>(null);
+  const [testFeedback, setTestFeedback] = useState<ActionFeedback | null>(null);
 
   const definition = emailProviderDefinition(provider);
   const providerUnchanged = provider === (settings.provider ?? '');
@@ -116,9 +120,20 @@ export function EmailProviderForm({
     }
   }
 
+  async function sendTest() {
+    setTestFeedback(null);
+    try {
+      await onTest((isStaff ? testTo : jwtEmail) ?? '');
+      setTestFeedback({ tone: 'success', text: t('emailTestSent') });
+    } catch (err) {
+      setTestFeedback({ tone: 'error', text: emailErrorText(t, err) });
+    }
+  }
+
   return (
     <form
       className="space-y-6"
+      onChange={() => setTestFeedback(null)}
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
@@ -306,11 +321,22 @@ export function EmailProviderForm({
             type="button"
             variant="outline"
             disabled={testing || !(isStaff ? testTo.trim() : jwtEmail)}
-            onClick={() => void onTest((isStaff ? testTo : jwtEmail) ?? '')}
+            onClick={() => void sendTest()}
           >
             {testing ? t('emailTestSending') : t('emailTestSend')}
           </Button>
         </div>
+        {testFeedback ? (
+          <Text
+            className={
+              testFeedback.tone === 'error'
+                ? 'font-mono text-sm text-destructive'
+                : 'font-mono text-sm'
+            }
+          >
+            {testFeedback.text}
+          </Text>
+        ) : null}
       </div>
     </form>
   );

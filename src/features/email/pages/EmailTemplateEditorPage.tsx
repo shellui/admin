@@ -198,13 +198,8 @@ export function EmailTemplateEditorPage() {
       preheader: draft.preheader,
       document: draft.document,
     });
-    if (issue) {
-      setError(issue);
-      return;
-    }
+    if (issue) throw issue;
     setSendingDraft(true);
-    setError(null);
-    setNotice(null);
     try {
       let id = draft.templateId;
       if (!id) {
@@ -221,9 +216,6 @@ export function EmailTemplateEditorPage() {
         theme_palette: themePalette,
         ...(to ? { to } : {}),
       });
-      setNotice(t('emailSendDraftSent'));
-    } catch (err) {
-      setError(err);
     } finally {
       setSendingDraft(false);
     }
@@ -304,7 +296,7 @@ export function EmailTemplateEditorPage() {
           onChange={(lang, next) => (lang === 'fr' ? setDraftFr(next) : setDraftEn(next))}
           onPublish={(themeName, palette) => void publish(themeName, palette)}
           onReset={() => void reset()}
-          onSendDraft={(lang, draft, palette, to) => void sendDraft(lang, draft, palette, to)}
+          onSendDraft={(lang, draft, palette, to) => sendDraft(lang, draft, palette, to)}
           onServicePreview={(lang, draft, palette) => void preview(lang, draft, palette)}
           servicePreviewHtml={serviceHtml}
           servicePreviewNote={serviceNote}

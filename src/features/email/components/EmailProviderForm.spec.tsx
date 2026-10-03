@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n';
 import { EmailProviderForm } from '@/features/email/components/EmailProviderForm';
+import { EmailApiError } from '@/lib/emailApiErrors';
 import type { EmailProviderSettings, EmailProviderWrite } from '@/lib/emailTypes';
 
 const settings: EmailProviderSettings = {
@@ -177,5 +178,41 @@ describe('EmailProviderForm', () => {
     const next = screen.getByLabelText('API key') as HTMLInputElement;
     expect(next.value).toBe('re_typed');
     expect(next.value).not.toContain('••••');
+  });
+
+  it('shows test send success and failure under the button, and clears them on edit', async () => {
+    const onTest = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(new EmailApiError('provider_test_failed', 502))
+      .mockResolvedValueOnce(undefined);
+    render(
+      <I18nextProvider i18n={i18n}>
+        <EmailProviderForm
+          settings={settings}
+          jwtEmail="ada@acme.com"
+          isStaff={false}
+          saving={false}
+          testing={false}
+          onSave={vi.fn(async () => undefined)}
+          onTest={onTest}
+        />
+      </I18nextProvider>,
+    );
+    const send = screen.getByRole('button', { name: 'Send test email' });
+    fireEvent.click(send);
+    const failure = await screen.findByText('The provider refused the test email.');
+    expect(failure.className).toContain('text-destructive');
+    expect(send.parentElement?.parentElement?.contains(failure)).toBe(true);
+
+    fireEvent.change(screen.getByLabelText('From address'), {
+      target: { value: 'news@acme.com' },
+    });
+    expect(screen.queryByText('The provider refused the test email.')).toBeNull();
+
+    fireEvent.click(send);
+    const sent = await screen.findByText('Test email sent.');
+    expect(sent.className).not.toContain('text-destructive');
+    expect(send.parentElement?.parentElement?.contains(sent)).toBe(true);
+    expect(onTest).toHaveBeenCalledTimes(2);
   });
 });

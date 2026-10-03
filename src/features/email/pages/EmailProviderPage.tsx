@@ -107,13 +107,8 @@ export function EmailProviderPage() {
           }}
           onTest={async (to) => {
             setTesting(true);
-            setError(null);
-            setNotice(null);
             try {
               await api.testProvider(to);
-              setNotice(t('emailTestSent'));
-            } catch (err) {
-              setError(err);
             } finally {
               setTesting(false);
             }
