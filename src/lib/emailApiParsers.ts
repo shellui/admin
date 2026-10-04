@@ -3,18 +3,16 @@ import { EmailApiError } from '@/lib/emailApiErrors';
 import type {
   EmailCatalog,
   EmailCatalogEvent,
-  EmailCompanySettings,
   EmailCountBucket,
+  EmailLibrary,
+  EmailLibraryDetail,
+  EmailLibraryTemplate,
   EmailProviderSettings,
   EmailRule,
-  EmailSettingsUpdate,
   EmailStats,
-  EmailTemplateDefaults,
-  EmailTemplatePack,
   EmailTemplateRow,
   EmailTemplateVersion,
   EmailTestSendResult,
-  EmailTheme,
 } from '@/lib/emailTypes';
 import { EMAIL_COUNT_KEYS } from '@/lib/emailTypes';
 
@@ -87,6 +85,8 @@ export function parseCatalog(body: unknown): EmailCatalog {
         defaultTtlSeconds:
           typeof row.default_ttl_seconds === 'number' ? row.default_ttl_seconds : null,
         variables: parseVariables(row.variables),
+        linkToken: str(row.link_token),
+        defaultTemplate: str(row.default_template),
         suggested,
       };
     }),
@@ -124,33 +124,19 @@ export function parseRules(body: unknown): EmailRule[] {
   return rules.map((item) => parseRule(item));
 }
 
-export function parseThemes(body: unknown): EmailTheme[] {
-  if (!Array.isArray(body)) throw new EmailApiError('request_failed', 200);
-  return body.map((item) => {
-    const row = record(item) ?? {};
-    return {
-      key: str(row.key),
-      name: str(row.name),
-      previewUrl: str(row.preview_url),
-    };
-  });
-}
-
-export function parseCompanySettings(body: unknown): EmailCompanySettings {
-  const row = record(body);
-  if (!row) throw new EmailApiError('request_failed', 200);
+export function parseTemplate(body: unknown): EmailTemplateRow {
+  const row = record(body) ?? {};
   return {
-    theme: str(row.theme) || 'barebone',
-    templatesUsingOtherTheme: num(row.templates_using_other_theme),
-  };
-}
-
-export function parseSettingsUpdate(body: unknown): EmailSettingsUpdate {
-  const row = record(body);
-  if (!row) throw new EmailApiError('request_failed', 200);
-  return {
-    theme: str(row.theme) || 'barebone',
-    updatedTemplates: num(row.updated_templates),
+    id: num(row.id),
+    templateKey: str(row.template_key),
+    name: str(row.name),
+    eventType: str(row.event_type),
+    language: str(row.language),
+    companyId: typeof row.company_id === 'number' ? row.company_id : null,
+    activeVersion: typeof row.active_version === 'number' ? row.active_version : null,
+    sourceKey: str(row.source_key),
+    set: str(row.set),
+    head: str(row.head),
   };
 }
 
@@ -162,37 +148,17 @@ export function parseTemplates(body: unknown): EmailTemplateRow[] {
       ? root.templates
       : null;
   if (!templates) throw new EmailApiError('request_failed', 200);
-  return templates.map((item) => {
-    const row = record(item) ?? {};
-    return {
-      id: num(row.id),
-      templateKey: str(row.template_key),
-      name: str(row.name),
-      eventType: str(row.event_type),
-      language: str(row.language),
-      companyId: typeof row.company_id === 'number' ? row.company_id : null,
-      activeVersion: typeof row.active_version === 'number' ? row.active_version : null,
-      theme: str(row.theme),
-      usesCompanyTheme: row.uses_company_theme !== false,
-    };
-  });
+  return templates.map((item) => parseTemplate(item));
 }
 
 export function parseVersion(body: unknown): EmailTemplateVersion {
   const row = record(body) ?? {};
-  const palette = record(row.theme_palette) ?? {};
-  const themePalette: Record<string, string> = {};
-  for (const [key, value] of Object.entries(palette)) {
-    if (typeof value === 'string' && value.trim()) themePalette[key] = value.trim();
-  }
   return {
     number: num(row.number),
     state: str(row.state),
     subject: str(row.subject),
     preheader: str(row.preheader),
     document: parseEmailDocument(row.document),
-    themeName: str(row.theme_name) === 'shellui' ? 'barebone' : str(row.theme_name) || 'barebone',
-    themePalette,
     publishedAt: typeof row.published_at === 'string' ? row.published_at : null,
   };
 }
@@ -214,29 +180,46 @@ export function preferredTemplateVersion(
   return pool.reduce((best, version) => (version.number > best.number ? version : best));
 }
 
-function parsePack(value: unknown): EmailTemplatePack | null {
-  const row = record(value);
-  if (!row) return null;
+function parseLibraryTemplate(value: unknown): EmailLibraryTemplate {
+  const row = record(value) ?? {};
   return {
+    id: num(row.id),
+    key: str(row.key),
+    set: str(row.set),
+    name: str(row.name),
+    builtIn: bool(row.built_in),
+    companyId: typeof row.company_id === 'number' ? row.company_id : null,
     subject: str(row.subject),
     preheader: str(row.preheader),
-    document: parseEmailDocument(row.document),
+    updatedAt: typeof row.updated_at === 'string' ? row.updated_at : null,
+    html: str(row.html),
   };
 }
 
-export function parseTemplateDefaults(body: unknown): EmailTemplateDefaults {
+export function parseLibrary(body: unknown): EmailLibrary {
   const root = record(body);
-  if (!root) throw new EmailApiError('request_failed', 200);
-  const languagesRaw = record(root.languages) ?? {};
-  const languages: EmailTemplateDefaults['languages'] = {};
-  for (const lang of ['en', 'fr'] as const) {
-    const pack = parsePack(languagesRaw[lang]);
-    if (pack) languages[lang] = pack;
-  }
+  if (!root || !Array.isArray(root.templates)) throw new EmailApiError('request_failed', 200);
+  const sets = Array.isArray(root.sets) ? root.sets : [];
   return {
-    templateKey: str(root.template_key),
-    languages,
-    variables: parseVariables(root.variables),
+    sets: sets
+      .map((item) => {
+        const row = record(item) ?? {};
+        return { key: str(row.key), name: str(row.name) };
+      })
+      .filter((item) => item.key),
+    templates: root.templates.map(parseLibraryTemplate),
+  };
+}
+
+export function parseLibraryDetail(body: unknown): EmailLibraryDetail {
+  const row = record(body);
+  if (!row) throw new EmailApiError('request_failed', 200);
+  return {
+    ...parseLibraryTemplate(row),
+    document: parseEmailDocument(row.document),
+    text: str(row.text),
+    head: str(row.head),
+    variables: parseVariables(row.variables),
   };
 }
 

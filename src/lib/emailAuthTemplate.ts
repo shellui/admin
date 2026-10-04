@@ -1,12 +1,15 @@
 import { EmailApiError } from '@/lib/emailApiErrors';
 import {
-  documentRuns,
+  documentLinks,
+  documentTexts,
   emailTokenPattern as tokenPattern,
   type EmailDocument,
   type EmailVariable,
 } from '@/lib/emailDocument';
 
 const TAG_RE = /\{%|%\}|\{#|#\}/;
+/** Same as email-service `_AUTH_SYSTEM_LINKS`: auth mail has no unsubscribe page. */
+const AUTH_SYSTEM_LINKS = new Set(['system.message_id']);
 
 function findTokens(source: string): Set<string> {
   const tokens = new Set<string>();
@@ -36,10 +39,6 @@ function documentTokens(document: EmailDocument, subject: string, preheader: str
   return tokens;
 }
 
-function leftoverAfterTokens(href: string): string {
-  return href.replace(tokenPattern(), '').trim();
-}
-
 function httpsHost(value: string): string | null {
   try {
     const url = new URL(value);
@@ -65,10 +64,9 @@ export function requiredAuthLinkTokens(variables: EmailVariable[]): string[] {
 }
 
 /**
- * Auth-lane overrides must keep required link variables.
- * A button or inline link href must be one of those variables (or another declared URL
- * variable), or an https address on `authLinkHosts` when that list is known.
- * Subject, preheader, preview, and block text reject a literal URL (`auth_literal_link`).
+ * Same checks as email-service `validate_auth_template`. Every link must be a
+ * declared URL variable, or an https address on `authLinkHosts` when that list
+ * is known. Subject, preheader, and body text reject a literal URL.
  */
 export function validateAuthLaneOverride(input: {
   laneClass: string;
@@ -91,16 +89,12 @@ export function validateAuthLaneOverride(input: {
     for (const token of missing) fieldErrors[token] = ['required'];
     return new EmailApiError('auth_link_missing', 400, fieldErrors);
   }
-  const allowed = new Set(input.variables.filter(isUrlVariable).map((variable) => variable.token));
+  const allowed = new Set([
+    ...input.variables.filter(isUrlVariable).map((variable) => variable.token),
+    ...AUTH_SYSTEM_LINKS,
+  ]);
   const allowedHosts = (input.authLinkHosts ?? []).map((item) => item.toLowerCase());
-  const runs = documentRuns(input.document);
-  const hrefs = [
-    ...input.document.blocks
-      .filter((block) => block.type === 'button')
-      .map((block) => block.href ?? ''),
-    ...runs.map((run) => run.href ?? '').filter((href) => href.trim()),
-  ];
-  for (const href of hrefs) {
+  for (const href of documentLinks(input.document)) {
     const issue = linkIssue(href, allowed, allowedHosts);
     if (issue) return issue;
   }
@@ -108,18 +102,13 @@ export function validateAuthLaneOverride(input: {
   const prose: Array<[string, string]> = [
     ['subject', input.subject],
     ['preheader', input.preheader],
-    ['preview', input.document.preview],
   ];
   for (const [field, value] of prose) {
     if (LITERAL_LINK.test(withoutRequiredTokens(value, required))) {
       return new EmailApiError('auth_literal_link', 400, { [field]: ['literal_url'] });
     }
   }
-  const texts = [
-    ...input.document.blocks.map((block) => block.text ?? ''),
-    ...runs.map((run) => run.text),
-  ];
-  for (const text of texts) {
+  for (const text of documentTexts(input.document)) {
     if (LITERAL_LINK.test(withoutRequiredTokens(text, required))) {
       return new EmailApiError('auth_literal_link', 400, { document: ['literal_url'] });
     }
@@ -136,11 +125,10 @@ function linkIssue(
     return new EmailApiError('validation_failed', 400, { document: ['template_tags_forbidden'] });
   }
   const hrefTokens = [...findTokens(href)];
-  const unknown = hrefTokens.filter((token) => !allowed.has(token) && !token.startsWith('system.'));
-  if (unknown.length) {
+  if (hrefTokens.some((token) => !allowed.has(token))) {
     return new EmailApiError('auth_link_host_not_allowed', 400, { href: ['token_not_allowed'] });
   }
-  const leftover = leftoverAfterTokens(href);
+  const leftover = href.replace(tokenPattern(), '').trim();
   if (!hrefTokens.length && !leftover) {
     return new EmailApiError('auth_link_host_not_allowed', 400, { href: ['required'] });
   }

@@ -1,40 +1,37 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Loader2, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import {
+  ActionFeedback,
   feedbackFromError,
   type ActionFeedbackState,
 } from '@/features/email/components/ActionFeedback';
-import { EmailThemeSection } from '@/features/email/components/EmailThemeSection';
+import { EmailLibraryGrid } from '@/features/email/components/EmailLibraryGrid';
 import { SearchField } from '@/features/email/components/SearchField';
 import { useEmailApi } from '@/features/email/useEmailApi';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
+import { confirmAction } from '@/lib/confirmAction';
 import { emailErrorText } from '@/lib/emailApiErrors';
-import { filterByQuery, sectionTitle } from '@/lib/emailList';
-import type { EmailCompanySettings, EmailTemplateRow, EmailTheme } from '@/lib/emailTypes';
-import { emailTemplateEditorPath } from '@/lib/webhookRoutePaths';
-
-function languageLabel(t: (key: string) => string, language: string): string {
-  if (language === 'en') return t('emailLangEn');
-  if (language === 'fr') return t('emailLangFr');
-  return language;
-}
+import { emailAssetsUrl } from '@/lib/emailLibrary';
+import { filterByQuery } from '@/lib/emailList';
+import type { EmailLibrary, EmailLibraryTemplate } from '@/lib/emailTypes';
+import { emailLibraryTemplatePath } from '@/lib/webhookRoutePaths';
 
 export function EmailTemplatesPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const accessToken = useShelluiAccessToken();
   const { api, baseUrl, canManage } = useEmailApi(accessToken);
-  const [themes, setThemes] = useState<EmailTheme[]>([]);
-  const [settings, setSettings] = useState<EmailCompanySettings | null>(null);
-  const [templates, setTemplates] = useState<EmailTemplateRow[]>([]);
-  const [previews, setPreviews] = useState<Record<string, string | null | undefined>>({});
+  const [library, setLibrary] = useState<EmailLibrary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [query, setQuery] = useState('');
-  const [themeFeedback, setThemeFeedback] = useState<ActionFeedbackState | null>(null);
+  const [busyId, setBusyId] = useState<number | 'new' | null>(null);
+  const [feedback, setFeedback] = useState<ActionFeedbackState | null>(null);
 
   const load = useCallback(async () => {
     if (!api || !canManage) {
@@ -44,18 +41,9 @@ export function EmailTemplatesPage() {
     setLoading(true);
     setError(null);
     try {
-      const [nextThemes, nextSettings, nextTemplates] = await Promise.all([
-        api.fetchThemes(),
-        api.fetchSettings(),
-        api.fetchTemplates(),
-      ]);
-      setThemes(nextThemes);
-      setSettings(nextSettings);
-      setTemplates(nextTemplates);
+      setLibrary(await api.fetchLibrary());
     } catch (err) {
-      setThemes([]);
-      setSettings(null);
-      setTemplates([]);
+      setLibrary(null);
       setError(err);
     } finally {
       setLoading(false);
@@ -66,60 +54,59 @@ export function EmailTemplatesPage() {
     void load();
   }, [load]);
 
-  useEffect(() => {
-    if (!api || themes.length === 0) return;
-    let cancelled = false;
-    for (const theme of themes) {
-      void api
-        .fetchThemePreview(theme.previewUrl)
-        .then((html) => {
-          if (!cancelled) setPreviews((prev) => ({ ...prev, [theme.key]: html }));
-        })
-        .catch(() => {
-          if (!cancelled) setPreviews((prev) => ({ ...prev, [theme.key]: null }));
-        });
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [api, themes]);
+  const visible = useMemo<EmailLibrary | null>(
+    () =>
+      library && {
+        sets: library.sets,
+        templates: filterByQuery(
+          library.templates,
+          query,
+          (row) => `${row.name} ${row.key} ${row.subject}`,
+        ),
+      },
+    [library, query],
+  );
 
-  async function applyTheme(themeKey: string, applyToExisting: boolean) {
+  async function create(source?: EmailLibraryTemplate) {
     if (!api) return;
-    setThemeFeedback(null);
+    setBusyId(source ? source.id : 'new');
+    setFeedback(null);
     try {
-      const result = await api.saveSettings({
-        theme: themeKey,
-        apply_to_existing: applyToExisting,
-      });
-      setThemeFeedback({
-        tone: 'success',
-        text:
-          result.updatedTemplates > 0
-            ? t('emailThemeUpdatedCount', { count: result.updatedTemplates })
-            : t('emailThemeUpdated'),
-      });
-      try {
-        const next = await api.fetchSettings();
-        setSettings(next);
-        setTemplates(await api.fetchTemplates());
-      } catch {
-        setSettings({
-          theme: result.theme,
-          templatesUsingOtherTheme: applyToExisting ? 0 : (settings?.templatesUsingOtherTheme ?? 0),
-        });
-      }
+      const created = await api.createLibraryTemplate(
+        source ? { source_id: source.id } : { name: t('emailLibraryNewName') },
+      );
+      navigate(emailLibraryTemplatePath(created.id));
     } catch (err) {
-      setThemeFeedback(feedbackFromError(t, err));
+      setFeedback(feedbackFromError(t, err));
+    } finally {
+      setBusyId(null);
     }
   }
 
-  const themeName = (key: string) => themes.find((theme) => theme.key === key)?.name || key;
-  const visible = filterByQuery(
-    templates,
-    query,
-    (row) => `${row.name} ${row.eventType} ${row.language} ${row.theme} ${themeName(row.theme)}`,
-  );
+  async function remove(template: EmailLibraryTemplate) {
+    if (!api) return;
+    const ok = await confirmAction({
+      title: t('emailLibraryDeleteTitle'),
+      description: t('emailLibraryDeleteDescription', { name: template.name }),
+      okLabel: t('emailLibraryDelete'),
+      cancelLabel: t('actionsCancel'),
+      danger: true,
+    });
+    if (!ok) return;
+    setBusyId(template.id);
+    setFeedback(null);
+    try {
+      await api.deleteLibraryTemplate(template.id);
+      setLibrary(
+        (prev) =>
+          prev && { ...prev, templates: prev.templates.filter((row) => row.id !== template.id) },
+      );
+    } catch (err) {
+      setFeedback(feedbackFromError(t, err));
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   return (
     <div className="w-full space-y-6">
@@ -151,64 +138,70 @@ export function EmailTemplatesPage() {
         <Text className="font-mono text-sm text-destructive">{emailErrorText(t, error)}</Text>
       ) : null}
 
-      {!loading && canManage && settings && !error ? (
+      {!loading && canManage && visible && !error ? (
         <>
-          <EmailThemeSection
-            themes={themes}
-            currentKey={settings.theme}
-            otherCount={settings.templatesUsingOtherTheme}
-            previews={previews}
-            feedback={themeFeedback}
-            onApply={applyTheme}
-          />
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold tracking-tight">
-              {sectionTitle(t('emailTemplatesCompany'), visible.length)}
-            </h2>
-            <SearchField
-              value={query}
-              onChange={setQuery}
-              placeholder={t('emailTemplatesSearch')}
-              label={t('emailTemplatesSearch')}
-            />
-            {visible.length === 0 ? (
-              <Text>
-                {templates.length === 0
-                  ? t('emailTemplatesCompanyEmpty')
-                  : t('emailTemplatesEmpty')}
-              </Text>
-            ) : (
-              <ul className="divide-y divide-border/80 rounded-md border border-border/80">
-                {visible.map((row) => (
-                  <li
-                    key={row.id}
-                    className="flex flex-wrap items-start justify-between gap-3 px-3 py-3"
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <SearchField
+                value={query}
+                onChange={setQuery}
+                placeholder={t('emailTemplatesSearch')}
+                label={t('emailTemplatesSearch')}
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={() => void create()}
+              disabled={busyId !== null}
+            >
+              {busyId === 'new' ? <Loader2 className="animate-spin" /> : <Plus />}
+              {t('emailLibraryNew')}
+            </Button>
+          </div>
+          {feedback ? <ActionFeedback feedback={feedback} /> : null}
+          {query && visible.templates.length === 0 ? (
+            <Text>{t('emailTemplatesEmpty')}</Text>
+          ) : (
+            <EmailLibraryGrid
+              library={visible}
+              assetsUrl={emailAssetsUrl(baseUrl)}
+              actions={(template) => (
+                <>
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
                   >
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-medium">{row.name || row.templateKey}</p>
-                        {row.usesCompanyTheme ? null : (
-                          <Badge variant="outline">
-                            {t('emailThemeOther', { name: themeName(row.theme) })}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="font-mono text-xs text-muted-foreground">{row.eventType}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {languageLabel(t, row.language)}
-                      </p>
-                    </div>
-                    <Link
-                      to={emailTemplateEditorPath(row.id)}
-                      className="text-sm text-primary underline-offset-2 hover:underline"
-                    >
-                      {t('emailEditTemplate')}
+                    <Link to={emailLibraryTemplatePath(template.id)}>
+                      {template.builtIn ? t('emailLibraryOpen') : t('emailLibraryEdit')}
                     </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={busyId !== null}
+                    onClick={() => void create(template)}
+                  >
+                    {busyId === template.id ? <Loader2 className="animate-spin" /> : null}
+                    {t('emailLibraryDuplicate')}
+                  </Button>
+                  {template.builtIn ? null : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive"
+                      disabled={busyId !== null}
+                      onClick={() => void remove(template)}
+                    >
+                      {t('emailLibraryDelete')}
+                    </Button>
+                  )}
+                </>
+              )}
+            />
+          )}
         </>
       ) : null}
     </div>

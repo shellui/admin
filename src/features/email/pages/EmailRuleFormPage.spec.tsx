@@ -6,16 +6,14 @@ import shellui from '@shellui/sdk';
 import i18n from '@/i18n';
 import { EmailRuleFormPage } from '@/features/email/pages/EmailRuleFormPage';
 import { EmailApiError } from '@/lib/emailApiErrors';
-import type { EmailCatalogEvent, EmailRule, EmailTemplateRow } from '@/lib/emailTypes';
+import type { EmailCatalogEvent, EmailLibraryTemplate, EmailRule } from '@/lib/emailTypes';
 
 const emailApi = vi.hoisted(() => ({
   fetchCatalog: vi.fn(),
   fetchRule: vi.fn(),
-  fetchTemplates: vi.fn(),
+  fetchLibrary: vi.fn(),
   createRule: vi.fn(),
   patchRule: vi.fn(),
-  createTemplate: vi.fn(),
-  publishVersion: vi.fn(),
   deleteRule: vi.fn(),
 }));
 
@@ -30,6 +28,10 @@ vi.mock('@/features/email/useEmailApi', () => ({
     baseUrl: 'https://email.shellui.com',
     companyId: 1,
   }),
+}));
+
+vi.mock('@/features/email/components/EmailCopyEditor', () => ({
+  EmailCopyEditor: ({ templateId }: { templateId: number }) => <p>Copy editor {templateId}</p>,
 }));
 
 vi.mock('@/features/actions/useWebhookPageMeta', () => ({
@@ -60,25 +62,39 @@ function catalogEvent(overrides: Partial<EmailCatalogEvent> = {}): EmailCatalogE
     category: 'auth',
     defaultTtlSeconds: null,
     variables: [],
+    linkToken: 'invitation_url',
+    defaultTemplate: 'barebone.invite',
     suggested: {},
     ...overrides,
   };
 }
 
-function template(overrides: Partial<EmailTemplateRow> = {}): EmailTemplateRow {
+function design(id: number, key: string, name: string): EmailLibraryTemplate {
   return {
-    id: 15,
-    templateKey: 'company.abc',
-    name: 'Invite mail',
-    eventType: 'identity.user.invited',
-    language: 'en',
-    companyId: 1,
-    activeVersion: 1,
-    theme: 'barebone',
-    usesCompanyTheme: true,
-    ...overrides,
+    id,
+    key,
+    set: key.split('.')[0] ?? '',
+    name,
+    builtIn: true,
+    companyId: null,
+    subject: '',
+    preheader: '',
+    updatedAt: null,
+    html: '',
   };
 }
+
+const library = {
+  sets: [
+    { key: 'barebone', name: 'Barebone' },
+    { key: 'studio', name: 'Studio' },
+  ],
+  templates: [
+    design(3, 'barebone.invite', 'Barebone invite'),
+    design(4, 'barebone.alert', 'Barebone alert'),
+    design(7, 'studio.invite', 'Studio invite'),
+  ],
+};
 
 function rule(overrides: Partial<EmailRule> = {}): EmailRule {
   return {
@@ -123,105 +139,118 @@ function renderForm(path = '/identity/webhooks/email/new') {
 describe('EmailRuleFormPage', () => {
   afterEach(async () => {
     cleanup();
-    emailApi.fetchCatalog.mockReset();
-    emailApi.fetchRule.mockReset();
-    emailApi.fetchTemplates.mockReset();
-    emailApi.createRule.mockReset();
-    emailApi.patchRule.mockReset();
-    emailApi.createTemplate.mockReset();
-    emailApi.publishVersion.mockReset();
-    emailApi.deleteRule.mockReset();
+    for (const fn of Object.values(emailApi)) fn.mockReset();
     await i18n.changeLanguage('en');
   });
 
-  it('creates a rule from the suggested email and from an existing template', async () => {
+  function designCard(name: string): HTMLButtonElement {
+    return screen.getByRole('button', { name: new RegExp(name) }) as HTMLButtonElement;
+  }
+
+  it('picks an event, suggests its design, creates the rule from a library template, and opens it', async () => {
     emailApi.fetchCatalog.mockResolvedValue({
       events: [
         catalogEvent(),
         catalogEvent({
+          eventType: 'identity.user.deleted',
+          label: 'User deleted',
+          defaultTemplate: 'barebone.alert',
+        }),
+        catalogEvent({
           service: 'hosting',
           eventType: 'hosting.deployment.failed',
-          templateKey: 'hosting.deployment.failed',
           label: 'Deployment failed',
         }),
       ],
       authLinkHosts: [],
     });
-    emailApi.fetchTemplates.mockImplementation(async (eventType: string) =>
-      [
-        template(),
-        template({ id: 99, name: 'Hidden incompatible', eventType: 'hosting.deployment.failed' }),
-      ].filter((row) => row.eventType === eventType),
-    );
-    emailApi.createRule.mockImplementation(async (body: { event_type: string }) =>
-      rule({ id: 21, eventType: body.event_type, templateId: 21 }),
-    );
+    emailApi.fetchLibrary.mockResolvedValue(library);
+    emailApi.fetchRule.mockResolvedValue(rule({ id: 21, templateId: 33 }));
+    emailApi.createRule.mockResolvedValue(rule({ id: 21, templateId: 33 }));
 
     renderForm();
     fireEvent.click(await screen.findByRole('radio', { name: /Invitation/ }));
     expect(screen.queryByRole('radio', { name: /Deployment failed/ })).toBeNull();
+    expect(designCard('Barebone invite').getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(screen.getByRole('radio', { name: /User deleted/ }));
+    expect(designCard('Barebone alert').getAttribute('aria-pressed')).toBe('true');
+
+    fireEvent.click(designCard('Studio invite'));
+    fireEvent.click(screen.getByRole('radio', { name: /Invitation/ }));
+    expect(designCard('Studio invite').getAttribute('aria-pressed')).toBe('true');
+
     fireEvent.click(screen.getByRole('radio', { name: 'Specific addresses' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Addresses' }), {
       target: { value: 'a@example.com\nb@example.com' },
     });
     fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'fr' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create email rule' }));
 
-    await waitFor(() => expect(emailApi.createRule).toHaveBeenCalled());
-    expect(emailApi.createRule).toHaveBeenCalledWith({
-      event_type: 'identity.user.invited',
-      service: 'identity',
-      enabled: true,
-      language: 'fr',
-      recipient_mode: 'static',
-      static_recipients: ['a@example.com', 'b@example.com'],
-      content: { mode: 'suggested' },
-    });
-    expect((await screen.findByRole('link', { name: 'Edit email' })).getAttribute('href')).toBe(
-      '/email/templates/id/21',
-    );
-
-    fireEvent.click(screen.getByRole('radio', { name: 'Use an existing template' }));
-    expect(await screen.findByRole('option', { name: 'Invite mail' })).toBeTruthy();
-    expect(screen.queryByRole('option', { name: 'Hidden incompatible' })).toBeNull();
-    fireEvent.change(screen.getByRole('combobox', { name: 'Template' }), {
-      target: { value: '15' },
-    });
-    emailApi.createRule.mockImplementation(async () => rule({ id: 22, templateId: 15 }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() =>
-      expect(emailApi.createRule).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          content: { mode: 'existing', template_id: 15 },
-        }),
-      ),
+      expect(emailApi.createRule).toHaveBeenCalledWith({
+        event_type: 'identity.user.invited',
+        service: 'identity',
+        enabled: true,
+        language: 'fr',
+        recipient_mode: 'static',
+        static_recipients: ['a@example.com', 'b@example.com'],
+        content: { library_id: 7 },
+      }),
     );
-    expect(emailApi.fetchTemplates).toHaveBeenCalledWith('identity.user.invited');
+    expect(await screen.findByText('Copy editor 33')).toBeTruthy();
+    expect(emailApi.fetchRule).toHaveBeenCalledWith(21);
+  });
+
+  it('asks for a design when the event has no default one', async () => {
+    emailApi.fetchCatalog.mockResolvedValue({
+      events: [catalogEvent({ defaultTemplate: '' })],
+      authLinkHosts: [],
+    });
+    emailApi.fetchLibrary.mockResolvedValue(library);
+    renderForm();
+    fireEvent.click(await screen.findByRole('radio', { name: /Invitation/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create email rule' }));
+    expect(await screen.findByText('Choose a design.')).toBeTruthy();
+    expect(emailApi.createRule).not.toHaveBeenCalled();
   });
 
   it('shows a translated mismatch error under save', async () => {
     emailApi.fetchCatalog.mockResolvedValue({ events: [catalogEvent()], authLinkHosts: [] });
-    emailApi.fetchTemplates.mockResolvedValue([template()]);
+    emailApi.fetchLibrary.mockResolvedValue(library);
     emailApi.createRule.mockRejectedValue(
       new EmailApiError('template_variables_mismatch', 400, {}, ['company_name']),
     );
     renderForm();
     fireEvent.click(await screen.findByRole('radio', { name: /Invitation/ }));
-    fireEvent.click(screen.getByRole('radio', { name: 'Use an existing template' }));
-    fireEvent.change(await screen.findByRole('combobox', { name: 'Template' }), {
-      target: { value: '15' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    const save = screen.getByRole('button', { name: 'Create email rule' });
+    fireEvent.click(save);
     const failure = await screen.findByText('The template is missing variables: company_name.');
     expect(failure.className).toContain('text-destructive');
-    expect(screen.getByRole('button', { name: 'Save' }).compareDocumentPosition(failure)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
+    expect(save.compareDocumentPosition(failure)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it('edits recipients and language, and shows the copy editor below', async () => {
+    emailApi.fetchCatalog.mockResolvedValue({ events: [catalogEvent()], authLinkHosts: [] });
+    emailApi.fetchRule.mockResolvedValue(rule());
+    emailApi.patchRule.mockResolvedValue(rule({ language: 'en' }));
+    renderForm('/identity/webhooks/email/9');
+    expect(await screen.findByText('Copy editor 15')).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Barebone' })).toBeNull();
+    expect(emailApi.fetchLibrary).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'en' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() =>
+      expect(emailApi.patchRule).toHaveBeenCalledWith(9, {
+        recipient_mode: 'hints',
+        static_recipients: [],
+        language: 'en',
+      }),
     );
+    expect(await screen.findByText('Email rule saved.')).toBeTruthy();
   });
 
   it('keeps a built-in rule without a delete action and deletes others through shellui.dialog', async () => {
     emailApi.fetchCatalog.mockResolvedValue({ events: [catalogEvent()], authLinkHosts: [] });
-    emailApi.fetchTemplates.mockResolvedValue([template()]);
     emailApi.fetchRule.mockResolvedValue(rule({ builtIn: true }));
     renderForm('/identity/webhooks/email/9');
     expect(
@@ -243,27 +272,5 @@ describe('EmailRuleFormPage', () => {
     options.onOk();
     await waitFor(() => expect(emailApi.deleteRule).toHaveBeenCalledWith(9));
     confirm.mockRestore();
-  });
-
-  it('publishes a suggested template when editing a rule', async () => {
-    emailApi.fetchCatalog.mockResolvedValue({ events: [catalogEvent()], authLinkHosts: [] });
-    emailApi.fetchTemplates.mockResolvedValue([template()]);
-    emailApi.fetchRule.mockResolvedValue(rule());
-    emailApi.createTemplate.mockResolvedValue({ id: 44, draftVersion: 2 });
-    emailApi.publishVersion.mockResolvedValue({ number: 2, state: 'published', checksum: 'abc' });
-    emailApi.patchRule.mockImplementation(async () => rule({ templateId: 44 }));
-    renderForm('/identity/webhooks/email/9');
-    fireEvent.click(await screen.findByRole('radio', { name: 'Start from the suggested email' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(emailApi.patchRule).toHaveBeenCalled());
-    expect(emailApi.createTemplate).toHaveBeenCalledWith('identity.user.invited', 'en');
-    expect(emailApi.publishVersion).toHaveBeenCalledWith(44, 2);
-    expect(emailApi.patchRule).toHaveBeenCalledWith(
-      9,
-      expect.objectContaining({ template_id: 44, language: '', recipient_mode: 'hints' }),
-    );
-    expect((await screen.findByRole('link', { name: 'Edit email' })).getAttribute('href')).toBe(
-      '/email/templates/id/44',
-    );
   });
 });

@@ -29,8 +29,12 @@ function unescapeHtml(value: string): string {
 }
 
 /** Example values for the preview: catalog examples plus the `system.*` samples. */
-export function sampleValues(variables: EmailVariable[]): Record<string, string> {
-  const values = { ...SYSTEM_SAMPLES };
+export function sampleValues(
+  variables: EmailVariable[],
+  { assetsUrl = '' }: { assetsUrl?: string } = {},
+): Record<string, string> {
+  const values: Record<string, string> = { ...SYSTEM_SAMPLES };
+  if (assetsUrl) values['system.assets_url'] = assetsUrl;
   for (const variable of variables) {
     if (variable.example) values[variable.token] = variable.example;
   }

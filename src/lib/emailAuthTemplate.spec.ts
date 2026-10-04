@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { validateAuthLaneOverride } from '@/lib/emailAuthTemplate';
-import type { EmailDocument, EmailVariable } from '@/lib/emailDocument';
+import type { EmailDocument, EmailNode, EmailVariable } from '@/lib/emailDocument';
 
 const variables: EmailVariable[] = [
   {
@@ -22,24 +22,37 @@ const variables: EmailVariable[] = [
   },
 ];
 
-function document(href: string): EmailDocument {
+function paragraph(text: string, href?: string): EmailNode {
   return {
-    preview: 'Sign in',
-    blocks: [
-      { type: 'text', text: 'Use {{ magic_link_url }}' },
-      { type: 'button', text: 'Sign in', href },
+    type: 'paragraph',
+    content: [
+      href
+        ? { type: 'text', text, marks: [{ type: 'link', attrs: { href } }] }
+        : { type: 'text', text },
     ],
   };
 }
+
+function doc(...content: EmailNode[]): EmailDocument {
+  return { type: 'doc', content: [{ type: 'container', content }] };
+}
+
+function document(href: string, ...extra: EmailNode[]): EmailDocument {
+  return doc(
+    paragraph('Use {{ magic_link_url }}'),
+    { type: 'button', attrs: { href }, content: [{ type: 'text', text: 'Sign in' }] },
+    ...extra,
+  );
+}
+
+const auth = { laneClass: 'auth', variables, preheader: '' };
 
 describe('validateAuthLaneOverride', () => {
   it('accepts the magic link variable on an auth button', () => {
     expect(
       validateAuthLaneOverride({
-        laneClass: 'auth',
-        variables,
+        ...auth,
         subject: 'Sign in',
-        preheader: '',
         document: document('{{ magic_link_url }}'),
       }),
     ).toBeNull();
@@ -48,11 +61,9 @@ describe('validateAuthLaneOverride', () => {
   it('accepts an https button href on the exposed allowlist', () => {
     expect(
       validateAuthLaneOverride({
-        laneClass: 'auth',
-        variables,
+        ...auth,
         authLinkHosts: ['id.shellui.com'],
-        subject: 'Sign in {{ magic_link_url }}',
-        preheader: '',
+        subject: 'Sign in',
         document: document('https://id.shellui.com/api/v1/magic-link/verify'),
       }),
     ).toBeNull();
@@ -60,39 +71,30 @@ describe('validateAuthLaneOverride', () => {
 
   it('rejects a button host that is not on auth_link_hosts', () => {
     const issue = validateAuthLaneOverride({
-      laneClass: 'auth',
-      variables,
+      ...auth,
       authLinkHosts: ['id.shellui.com'],
-      subject: '{{ magic_link_url }}',
-      preheader: '',
+      subject: 'Sign in',
       document: document('https://evil.example/phish'),
     });
     expect(issue?.errorCode).toBe('auth_link_host_not_allowed');
   });
 
-  it('rejects a literal URL in auth prose and names the field', () => {
+  it('rejects a literal URL in the subject and names the field', () => {
     const issue = validateAuthLaneOverride({
-      laneClass: 'auth',
-      variables,
+      ...auth,
       authLinkHosts: ['id.shellui.com'],
       subject: 'Sign in at https://evil.example',
-      preheader: '',
       document: document('{{ magic_link_url }}'),
     });
     expect(issue?.errorCode).toBe('auth_literal_link');
     expect(issue?.fieldErrors.subject).toEqual(['literal_url']);
   });
 
-  it('rejects an auth override that drops the required link variable', () => {
+  it('rejects an auth email that drops the required link variable', () => {
     const issue = validateAuthLaneOverride({
-      laneClass: 'auth',
-      variables,
+      ...auth,
       subject: 'Sign in',
-      preheader: '',
-      document: {
-        preview: '',
-        blocks: [{ type: 'text', text: 'Sign in with the button.' }],
-      },
+      document: doc(paragraph('Sign in with the button.')),
     });
     expect(issue?.errorCode).toBe('auth_link_missing');
     expect(issue?.fieldErrors.magic_link_url).toEqual(['required']);
@@ -100,48 +102,55 @@ describe('validateAuthLaneOverride', () => {
 
   it('rejects a button href that is not the link variable or an https address', () => {
     const issue = validateAuthLaneOverride({
-      laneClass: 'auth',
-      variables,
-      subject: '{{ magic_link_url }}',
-      preheader: '',
+      ...auth,
+      subject: 'Sign in',
       document: document('http://evil.example/phish'),
     });
     expect(issue?.errorCode).toBe('auth_link_host_not_allowed');
   });
 
-  it('checks inline links like buttons and reads the rendered runs', () => {
-    const withRuns = (content: EmailDocument['blocks'][number]['content']): EmailDocument => ({
-      ...document('{{ magic_link_url }}'),
-      blocks: [
-        ...document('{{ magic_link_url }}').blocks,
-        { type: 'footer', text: 'Help', content },
-      ],
-    });
-    const input = {
-      laneClass: 'auth',
-      variables,
-      authLinkHosts: ['id.shellui.com'],
-      subject: 'Sign in',
-      preheader: '',
-    };
+  it('checks link marks, image links, and body text', () => {
+    const input = { ...auth, authLinkHosts: ['id.shellui.com'], subject: 'Sign in' };
     expect(
       validateAuthLaneOverride({
         ...input,
-        document: withRuns([{ text: 'Help', href: 'https://id.shellui.com/help' }]),
+        document: document(
+          '{{ magic_link_url }}',
+          paragraph('Help', 'https://id.shellui.com/help'),
+        ),
       }),
     ).toBeNull();
     expect(
       validateAuthLaneOverride({
         ...input,
-        document: withRuns([{ text: 'Help', href: 'https://evil.example' }]),
+        document: document('{{ magic_link_url }}', paragraph('Help', 'https://evil.example')),
       })?.errorCode,
     ).toBe('auth_link_host_not_allowed');
     expect(
       validateAuthLaneOverride({
         ...input,
-        document: withRuns([{ text: 'Go to https://evil.example' }]),
+        document: document('{{ magic_link_url }}', {
+          type: 'image',
+          attrs: { src: '{{ system.assets_url }}/logo.png', href: 'https://evil.example' },
+        }),
+      })?.errorCode,
+    ).toBe('auth_link_host_not_allowed');
+    expect(
+      validateAuthLaneOverride({
+        ...input,
+        document: document('{{ magic_link_url }}', paragraph('Go to https://evil.example')),
       })?.errorCode,
     ).toBe('auth_literal_link');
+  });
+
+  it('allows the message id link auth emails use for their footer', () => {
+    expect(
+      validateAuthLaneOverride({
+        ...auth,
+        subject: 'Sign in',
+        document: document('{{ magic_link_url }}', paragraph('Why?', '{{ system.message_id }}')),
+      }),
+    ).toBeNull();
   });
 
   it('does not apply auth rules to other lanes', () => {
@@ -149,9 +158,9 @@ describe('validateAuthLaneOverride', () => {
       validateAuthLaneOverride({
         laneClass: 'transactional',
         variables,
-        subject: 'Hello',
+        subject: 'Hello https://example.com',
         preheader: '',
-        document: { preview: '', blocks: [{ type: 'text', text: 'No link' }] },
+        document: doc(paragraph('No link')),
       }),
     ).toBeNull();
   });

@@ -18,166 +18,57 @@
   font-family: var(--font-body);
 }
 
+/* The canvas is the design itself: an email client's defaults, not the admin's. */
 .email-canvas {
-  background: var(--email-page);
-  padding: 32px 16px;
+  overflow: auto;
+  border: 1px solid var(--border);
   border-radius: 0.75rem;
-  transition: background-color 150ms ease;
-}
-
-.email-canvas-card {
-  max-width: var(--email-max-width);
-  margin: 0 auto;
-  padding: var(--email-frame);
-  background: var(--email-card);
-  border: var(--email-card-border);
-  border-radius: var(--email-card-radius);
-  box-shadow: var(--email-card-shadow);
-  transition:
-    background-color 150ms ease,
-    border-color 150ms ease;
-}
-
-.email-canvas-bar {
-  height: 8px;
-  background: var(--email-foreground);
-}
-
-.email-canvas-inner {
-  padding: var(--email-pad);
-  background: var(--email-inner);
-  border-radius: var(--email-inner-radius);
-  text-align: var(--email-align);
-  font-family: var(--email-font);
-  color: var(--email-body);
+  background: #ffffff;
+  color: #000000;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .email-canvas .tiptap {
   min-height: 14rem;
   outline: none;
-  color: var(--email-body);
-  caret-color: var(--email-foreground);
   overflow-wrap: anywhere;
 }
 
-.email-canvas .tiptap h1 {
-  margin: 0 0 16px;
-  font-family: var(--email-heading-font);
-  font-size: var(--email-heading-size);
-  font-weight: var(--email-heading-weight);
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-  text-transform: var(--email-heading-transform);
-  color: var(--email-foreground);
+.email-canvas .tiptap table {
+  border-collapse: separate;
 }
 
-.email-canvas .tiptap p {
-  margin: 0 0 16px;
-  font-size: var(--email-text-size);
-  line-height: 1.5;
-}
-
-.email-canvas .tiptap p.node-footer {
-  margin: 12px 0 0;
-  font-size: 12px;
-  color: var(--email-muted);
-}
-
-.email-canvas .tiptap ul,
-.email-canvas .tiptap ol {
-  margin: 0 0 16px;
-  padding-left: 24px;
-  text-align: left;
-  font-size: var(--email-text-size);
-  line-height: 1.5;
-}
-
-.email-canvas .tiptap ul {
-  list-style: disc;
-}
-
-.email-canvas .tiptap ol {
-  list-style: decimal;
-}
-
-.email-canvas .tiptap li {
-  margin-bottom: 4px;
-}
-
-.email-canvas .tiptap li > p {
-  margin: 0;
-}
-
-.email-canvas .tiptap a.node-link {
-  color: inherit !important;
-  text-decoration: underline !important;
-  cursor: text;
-}
-
-.email-canvas .tiptap em {
-  font-style: italic;
-}
-
-.email-canvas .tiptap u {
-  text-decoration: underline;
-}
-
-.email-canvas .tiptap hr.node-hr {
-  margin: 24px 0 !important;
-  border: 0 !important;
-  border-top: 1px solid var(--email-border-color) !important;
-}
-
-.email-canvas .tiptap div:has(> a.node-button) {
-  margin: 8px 0 20px;
-}
-
-.email-canvas .tiptap a.node-button {
+.email-canvas .tiptap img {
   display: inline-block;
-  min-width: 4ch;
-  padding: var(--email-button-pad);
-  border: var(--email-button-border);
-  border-radius: var(--email-button-radius);
-  background: var(--email-button-bg);
-  box-shadow: var(--email-button-shadow);
-  color: var(--email-button-fg);
-  font-family: var(--email-font);
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1.2;
-  text-decoration: none;
+  max-width: 100%;
+}
+
+.email-canvas .tiptap a {
   cursor: text;
 }
 
-/* Heading case transforms apply to the substituted value, not the token name. */
 .email-canvas .tiptap .email-token {
-  text-transform: none;
   border-radius: 4px;
   padding: 0 2px;
-  background: color-mix(in srgb, var(--email-primary) 12%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--email-primary) 28%, transparent);
-}
-
-.email-canvas .tiptap a.node-button .email-token {
-  background: transparent;
-  box-shadow: inset 0 -1px 0 currentColor;
+  background: rgb(59 130 246 / 0.12);
+  box-shadow: inset 0 0 0 1px rgb(59 130 246 / 0.35);
 }
 
 .email-canvas .tiptap .is-empty {
   position: relative;
 }
 
-.email-canvas .tiptap .is-empty::before {
+.email-canvas .tiptap p.is-empty::before {
   position: absolute;
   inset: 0 0 auto;
   content: attr(data-placeholder);
-  color: var(--email-muted);
-  opacity: 0.7;
+  color: #8a8a8a;
   pointer-events: none;
-  text-align: inherit;
 }
 
 .email-canvas .tiptap .ProseMirror-selectednode {
-  outline: 2px solid color-mix(in srgb, var(--email-primary) 45%, transparent);
+  outline: 2px solid rgb(59 130 246 / 0.5);
   outline-offset: 2px;
 }

@@ -11,6 +11,10 @@ export type EmailCatalogEvent = {
   category: string;
   defaultTtlSeconds: number | null;
   variables: EmailVariable[];
+  /** URL variable a library design's `{{ action_url }}` becomes. Empty when the event has none. */
+  linkToken: string;
+  /** Library key copied for built-in rules and direct sends. */
+  defaultTemplate: string;
   suggested: Partial<Record<EmailLang, { subject: string; preheader: string }>>;
 };
 
@@ -32,7 +36,7 @@ export type EmailRule = {
   updatedAt: string;
 };
 
-export type EmailRuleContent = { mode: 'suggested' } | { mode: 'existing'; template_id: number };
+export type EmailRuleContent = { library_id: number };
 
 export type EmailRuleCreate = {
   event_type: string;
@@ -49,7 +53,6 @@ export type EmailRulePatch = {
   recipient_mode?: EmailRecipientMode;
   static_recipients?: string[];
   language?: string;
-  template_id?: number;
 };
 
 export type EmailTemplateRow = {
@@ -60,24 +63,50 @@ export type EmailTemplateRow = {
   language: string;
   companyId: number | null;
   activeVersion: number | null;
-  theme: string;
-  usesCompanyTheme: boolean;
+  /** Library key the copy started from. */
+  sourceKey: string;
+  set: string;
+  /** Read-only fonts and mobile rules of the design's set. */
+  head: string;
 };
 
-export type EmailTheme = {
+export type EmailLibrarySet = {
   key: string;
   name: string;
-  previewUrl: string;
 };
 
-export type EmailCompanySettings = {
-  theme: string;
-  templatesUsingOtherTheme: number;
+export type EmailLibraryTemplate = {
+  id: number;
+  key: string;
+  /** Empty for a blank company template. */
+  set: string;
+  name: string;
+  builtIn: boolean;
+  companyId: number | null;
+  subject: string;
+  preheader: string;
+  updatedAt: string | null;
+  html: string;
 };
 
-export type EmailSettingsUpdate = {
-  theme: string;
-  updatedTemplates: number;
+export type EmailLibraryDetail = EmailLibraryTemplate & {
+  document: EmailDocument;
+  text: string;
+  head: string;
+  variables: EmailVariable[];
+};
+
+export type EmailLibrary = {
+  sets: EmailLibrarySet[];
+  templates: EmailLibraryTemplate[];
+};
+
+export type EmailLibraryWrite = {
+  name?: string;
+  source_id?: number;
+  subject?: string;
+  preheader?: string;
+  document?: EmailDocument;
 };
 
 export type EmailTemplateVersion = {
@@ -86,22 +115,7 @@ export type EmailTemplateVersion = {
   subject: string;
   preheader: string;
   document: EmailDocument;
-  themeName: string;
-  /** `{}` means the Shellui palette. Otherwise the seven `#RRGGBB` keys. */
-  themePalette: Record<string, string>;
   publishedAt: string | null;
-};
-
-export type EmailTemplatePack = {
-  subject: string;
-  preheader: string;
-  document: EmailDocument;
-};
-
-export type EmailTemplateDefaults = {
-  templateKey: string;
-  languages: Partial<Record<EmailLang, EmailTemplatePack>>;
-  variables: EmailVariable[];
 };
 
 export type EmailCatalog = {

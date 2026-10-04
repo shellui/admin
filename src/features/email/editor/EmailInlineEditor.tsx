@@ -2,30 +2,30 @@ import '@react-email/editor/themes/default.css';
 import '@/features/email/editor/emailCanvas.css';
 import { forwardRef, useImperativeHandle, useMemo, useRef, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { Schema } from '@tiptap/pm/model';
 import { EditorContent, EditorContext, useEditor } from '@tiptap/react';
 import { BubbleMenu, SlashCommand, type SlashCommandItem } from '@react-email/editor/ui';
 import {
   Braces,
   Heading1,
+  Heading2,
   List,
   ListOrdered,
   Minus,
   MousePointerClick,
-  PanelBottom,
   Pilcrow,
 } from 'lucide-react';
 import {
   formatEmailPlaceholder,
   safeHref,
-  type EmailBlock,
+  withAssetsUrl,
+  withoutAssetsUrl,
   type EmailDocument,
+  type EmailNode,
   type EmailVariable,
 } from '@/lib/emailDocument';
-import type { EmailThemeKey } from '@/lib/emailTheme';
-import { TEMPLATE_SPECS } from '@/features/email/templates/catalog';
-import { canvasLayout, canvasVariables, fontFaceCss } from '@/features/email/editor/canvasTheme';
+import { scopeHeadCss } from '@/lib/emailHeadCss';
 import { emailEditorExtensions } from '@/features/email/editor/extensions';
-import { documentToTiptap, tiptapToDocument } from '@/features/email/editor/tiptapDocument';
 
 export type EmailInlineEditorHandle = {
   /** Inserts text at the caret, or at the end when the editor never had focus. */
@@ -45,22 +45,48 @@ export function normalizeLink(value: string): string | null {
   return null;
 }
 
+/** Drops attributes that hold their schema default, as the library seeds do. */
+export function compactDocument(node: EmailNode, schema: Schema): EmailNode {
+  const out: EmailNode = { type: node.type };
+  const spec = (schema.nodes[node.type] ?? schema.marks[node.type])?.spec.attrs ?? {};
+  if (node.attrs) {
+    const attrs = Object.fromEntries(
+      Object.entries(node.attrs).filter(([name, value]) => {
+        const fallback = spec[name]?.default ?? null;
+        return value !== fallback && !(value === '' && fallback === null);
+      }),
+    );
+    if (Object.keys(attrs).length) out.attrs = attrs;
+  }
+  if (node.marks?.length) {
+    out.marks = node.marks.map((mark) => compactDocument(mark as EmailNode, schema));
+  }
+  if (typeof node.text === 'string') out.text = node.text;
+  if (node.content?.length)
+    out.content = node.content.map((child) => compactDocument(child, schema));
+  return out;
+}
+
 const ICON = { size: 18 } as const;
+const CANVAS_SCOPE = '.email-canvas';
 
 export const EmailInlineEditor = forwardRef<
   EmailInlineEditorHandle,
   {
     /** Initial content. Remount the editor (change its `key`) to load another document. */
     document: EmailDocument;
-    template: EmailThemeKey;
-    palette: Record<string, string> | null;
+    /** Fonts and mobile rules of the design's set. */
+    head: string;
+    /** Service URL that `{{ system.assets_url }}` stands for while editing. */
+    assetsUrl: string;
     variables: EmailVariable[];
     label: string;
-    onChange: (blocks: EmailBlock[]) => void;
+    editable?: boolean;
+    onChange: (document: EmailDocument) => void;
     onFocus?: () => void;
   }
 >(function EmailInlineEditor(
-  { document, template, palette, variables, label, onChange, onFocus },
+  { document, head, assetsUrl, variables, label, editable = true, onChange, onFocus },
   ref,
 ) {
   const { t } = useTranslation();
@@ -71,12 +97,9 @@ export const EmailInlineEditor = forwardRef<
   const focusedOnce = useRef(false);
 
   const editor = useEditor({
-    extensions: emailEditorExtensions({
-      text: t('emailEditorPlaceholder'),
-      heading: t('emailEditorPlaceholderHeading'),
-      footer: t('emailEditorPlaceholderFooter'),
-    }),
-    content: documentToTiptap(document),
+    extensions: emailEditorExtensions({ head, placeholder: t('emailEditorPlaceholder') }),
+    content: withAssetsUrl(document, assetsUrl),
+    editable,
     editorProps: {
       attributes: {
         role: 'textbox',
@@ -86,7 +109,8 @@ export const EmailInlineEditor = forwardRef<
       },
     },
     onUpdate: ({ editor: current }) => {
-      onChangeRef.current(tiptapToDocument(current.getJSON(), '').blocks);
+      const compact = compactDocument(current.getJSON() as EmailNode, current.schema);
+      onChangeRef.current(withoutAssetsUrl(compact as EmailDocument, assetsUrl));
     },
     onFocus: () => {
       focusedOnce.current = true;
@@ -109,10 +133,7 @@ export const EmailInlineEditor = forwardRef<
     [editor],
   );
 
-  const spec = TEMPLATE_SPECS[template] ?? TEMPLATE_SPECS.barebone;
-  const layout = canvasLayout(spec);
-  const style = useMemo(() => canvasVariables(spec, palette), [spec, palette]);
-  const fonts = useMemo(() => fontFaceCss(spec), [spec]);
+  const scopedHead = useMemo(() => scopeHeadCss(head, CANVAS_SCOPE), [head]);
   const contextValue = useMemo(() => ({ editor }), [editor]);
 
   const items = useMemo<SlashCommandItem[]>(() => {
@@ -136,6 +157,16 @@ export const EmailInlineEditor = forwardRef<
         searchTerms: ['h1', 'title', 'titre', 'heading'],
         command: ({ editor: e, range }) => {
           e.chain().focus().deleteRange(range).setNode('heading', { level: 1 }).run();
+        },
+      },
+      {
+        title: t('emailBlock_subheading'),
+        description: t('emailSlash_subheading'),
+        icon: <Heading2 {...ICON} />,
+        category: blocks,
+        searchTerms: ['h2', 'subtitle', 'sous-titre', 'heading'],
+        command: ({ editor: e, range }) => {
+          e.chain().focus().deleteRange(range).setNode('heading', { level: 2 }).run();
         },
       },
       {
@@ -186,16 +217,6 @@ export const EmailInlineEditor = forwardRef<
           e.chain().focus().deleteRange(range).setHorizontalRule().run();
         },
       },
-      {
-        title: t('emailBlock_footer'),
-        description: t('emailSlash_footer'),
-        icon: <PanelBottom {...ICON} />,
-        category: blocks,
-        searchTerms: ['footer', 'pied', 'small', 'note'],
-        command: ({ editor: e, range }) => {
-          e.chain().focus().deleteRange(range).setNode('footer').run();
-        },
-      },
     ];
     const variableCategory = t('emailSlashVariables');
     const variableItems: SlashCommandItem[] = variables.map((variable) => ({
@@ -216,35 +237,25 @@ export const EmailInlineEditor = forwardRef<
   }, [t, variables]);
 
   function focusFromPadding(event: MouseEvent<HTMLDivElement>) {
-    if (!editor || (event.target as HTMLElement).closest('.tiptap')) return;
+    if (!editor || !editable || (event.target as HTMLElement).closest('.tiptap')) return;
     event.preventDefault();
     editor.commands.focus('end');
   }
 
   return (
     <EditorContext.Provider value={contextValue}>
-      {fonts ? <style>{fonts}</style> : null}
+      {scopedHead ? <style>{scopedHead}</style> : null}
       <div
         className="email-canvas"
-        style={style}
-        data-template={template}
-        data-layout={layout}
+        onMouseDown={focusFromPadding}
       >
-        <div className="email-canvas-card">
-          {layout === 'studio' ? <div className="email-canvas-bar" /> : null}
-          <div
-            className="email-canvas-inner"
-            onMouseDown={focusFromPadding}
-          >
-            <EditorContent editor={editor} />
-          </div>
-        </div>
+        <EditorContent editor={editor} />
       </div>
-      {editor ? (
+      {editor && editable ? (
         <>
           <BubbleMenu.Root
             placement="top"
-            hideWhenActiveNodes={['button', 'horizontalRule']}
+            hideWhenActiveNodes={['button', 'horizontalRule', 'image']}
             hideWhenActiveMarks={['link']}
           >
             <BubbleMenu.ItemGroup>

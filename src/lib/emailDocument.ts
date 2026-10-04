@@ -1,45 +1,19 @@
-export const EMAIL_BLOCK_TYPES = [
-  'heading',
-  'text',
-  'button',
-  'footer',
-  'list',
-  'divider',
-] as const;
-
-export type EmailBlockType = (typeof EMAIL_BLOCK_TYPES)[number];
-
-/** Inline run of a heading, text, footer, or list item. */
-export type EmailRun = {
-  text: string;
-  bold?: true;
-  italic?: true;
-  underline?: true;
-  href?: string;
-};
-
-export type EmailListItem = {
-  text: string;
-  content?: EmailRun[];
-};
-
-/**
- * One block. `text` is always the plain text. When `content` is present the
- * service renders it instead of `text`.
- */
-export type EmailBlock = {
-  type: EmailBlockType;
+/** One React Email editor node, as stored by email-service. */
+export type EmailNode = {
+  type: string;
+  attrs?: Record<string, unknown>;
+  marks?: EmailMark[];
+  content?: EmailNode[];
   text?: string;
-  href?: string;
-  content?: EmailRun[];
-  ordered?: boolean;
-  items?: EmailListItem[];
 };
 
-export type EmailDocument = {
-  preview: string;
-  blocks: EmailBlock[];
+export type EmailMark = {
+  type: string;
+  attrs?: Record<string, unknown>;
 };
+
+/** Editor JSON with a `doc` root. */
+export type EmailDocument = EmailNode & { type: 'doc' };
 
 export type EmailLang = 'en' | 'fr';
 
@@ -54,122 +28,98 @@ export type EmailVariable = {
   allowedHostsSetting?: string;
 };
 
-const TEXT_BLOCKS: ReadonlySet<EmailBlockType> = new Set(['heading', 'text', 'footer']);
-const RUN_MARKS = ['bold', 'italic', 'underline'] as const;
+/** Same token email-service writes into image sources: `{{ system.assets_url }}/…`. */
+export const ASSETS_TOKEN = '{{ system.assets_url }}';
 
 export function emptyEmailDocument(): EmailDocument {
-  return { preview: '', blocks: [] };
-}
-
-export function isEmailBlockType(value: string): value is EmailBlockType {
-  return (EMAIL_BLOCK_TYPES as readonly string[]).includes(value);
+  return { type: 'doc', content: [{ type: 'container', content: [{ type: 'paragraph' }] }] };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-function parseRun(raw: unknown): EmailRun | null {
-  if (!isRecord(raw) || typeof raw.text !== 'string') return null;
-  const run: EmailRun = { text: raw.text };
-  for (const mark of RUN_MARKS) {
-    if (raw[mark] === undefined || raw[mark] === false) continue;
-    if (raw[mark] !== true) return null;
-    run[mark] = true;
-  }
-  if (raw.href !== undefined) {
-    if (typeof raw.href !== 'string') return null;
-    if (raw.href.trim()) run.href = raw.href;
-  }
-  return run;
-}
-
-function parseRuns(raw: unknown): EmailRun[] | null | undefined {
-  if (raw === undefined) return undefined;
-  if (!Array.isArray(raw)) return null;
-  const runs: EmailRun[] = [];
-  for (const item of raw) {
-    const run = parseRun(item);
-    if (!run) return null;
-    runs.push(run);
-  }
-  return runs;
-}
-
-function parseListItem(raw: unknown): EmailListItem | null {
-  if (!isRecord(raw)) return null;
-  if (raw.text !== undefined && typeof raw.text !== 'string') return null;
-  const content = parseRuns(raw.content);
-  if (content === null) return null;
-  const text = typeof raw.text === 'string' ? raw.text : content ? runsPlainText(content) : '';
-  return content ? { text, content } : { text };
-}
-
-/** One block from untrusted JSON, or null when a field has the wrong shape. */
-export function parseEmailBlock(raw: unknown): EmailBlock | null {
-  if (!isRecord(raw) || typeof raw.type !== 'string' || !isEmailBlockType(raw.type)) return null;
-  const type = raw.type;
-  if (raw.text !== undefined && typeof raw.text !== 'string') return null;
-  if (raw.href !== undefined && typeof raw.href !== 'string') return null;
-  const text = typeof raw.text === 'string' ? raw.text : '';
-  if (type === 'divider') return { type };
-  if (type === 'list') {
-    if (raw.ordered !== undefined && typeof raw.ordered !== 'boolean') return null;
-    if (!Array.isArray(raw.items)) return null;
-    const items: EmailListItem[] = [];
-    for (const item of raw.items) {
-      const parsed = parseListItem(item);
-      if (!parsed) return null;
-      items.push(parsed);
-    }
-    return raw.ordered ? { type, ordered: true, items } : { type, items };
-  }
-  if (type === 'button') {
-    return typeof raw.href === 'string' ? { type, text, href: raw.href } : { type, text };
-  }
-  const content = parseRuns(raw.content);
-  if (content === null) return null;
-  if (!content) return { type, text };
-  return { type, text: typeof raw.text === 'string' ? text : runsPlainText(content), content };
+export function isEmailDocument(value: unknown): value is EmailDocument {
+  return (
+    isRecord(value) &&
+    value.type === 'doc' &&
+    (value.content === undefined || Array.isArray(value.content))
+  );
 }
 
 export function parseEmailDocument(value: unknown): EmailDocument {
-  if (!isRecord(value)) return emptyEmailDocument();
-  const preview = typeof value.preview === 'string' ? value.preview : '';
-  const rawBlocks = Array.isArray(value.blocks) ? value.blocks : [];
-  const blocks: EmailBlock[] = [];
-  for (const item of rawBlocks) {
-    const block = parseEmailBlock(item);
-    if (block) blocks.push(block);
-  }
-  return { preview, blocks };
+  return isEmailDocument(value) ? value : emptyEmailDocument();
 }
 
-export function runsPlainText(runs: EmailRun[]): string {
-  return runs.map((run) => run.text).join('');
+/** Every node, depth first, the root included. */
+export function* documentNodes(node: EmailNode): Generator<EmailNode> {
+  yield node;
+  for (const child of node.content ?? []) yield* documentNodes(child);
 }
 
-/** What the service renders for a text-like block. Matches `block_runs` in email-service. */
-export function blockRuns(block: { text?: string; content?: EmailRun[] }): EmailRun[] {
-  if (Array.isArray(block.content)) return block.content;
-  return [{ text: block.text ?? '' }];
+function attrString(attrs: Record<string, unknown> | undefined, name: string): string {
+  const value = attrs?.[name];
+  return typeof value === 'string' ? value : '';
 }
 
-/** Every inline run in the document, list items included. */
-export function documentRuns(document: EmailDocument): EmailRun[] {
-  const runs: EmailRun[] = [];
-  for (const block of document.blocks) {
-    if (TEXT_BLOCKS.has(block.type)) runs.push(...blockRuns(block));
-    else if (block.type === 'list') {
-      for (const item of block.items ?? []) runs.push(...blockRuns(item));
+/** Link marks plus button and image hrefs. Matches `document.links` in email-service. */
+export function documentLinks(document: EmailDocument): string[] {
+  const hrefs: string[] = [];
+  for (const node of documentNodes(document)) {
+    if (node.type === 'button' || node.type === 'image') {
+      const href = attrString(node.attrs, 'href');
+      if (href) hrefs.push(href);
+    }
+    for (const mark of node.marks ?? []) {
+      if (mark.type === 'link') hrefs.push(attrString(mark.attrs, 'href'));
     }
   }
-  return runs;
+  return hrefs;
+}
+
+export function documentTexts(document: EmailDocument): string[] {
+  const texts: string[] = [];
+  for (const node of documentNodes(document)) {
+    if (node.type === 'text' && typeof node.text === 'string') texts.push(node.text);
+  }
+  return texts;
+}
+
+/** A copy with every image source passed through `map`. */
+export function mapImageSources(
+  document: EmailDocument,
+  map: (src: string) => string,
+): EmailDocument {
+  const visit = (node: EmailNode): EmailNode => {
+    const next: EmailNode = { ...node };
+    if (node.type === 'image' && node.attrs && typeof node.attrs.src === 'string') {
+      next.attrs = { ...node.attrs, src: map(node.attrs.src) };
+    }
+    if (node.content) next.content = node.content.map(visit);
+    return next;
+  };
+  return visit(document) as EmailDocument;
+}
+
+/** Shows library images while editing: the token becomes the service URL. */
+export function withAssetsUrl(document: EmailDocument, assetsUrl: string): EmailDocument {
+  if (!assetsUrl) return document;
+  return mapImageSources(document, (src) =>
+    src.startsWith(`${ASSETS_TOKEN}/`) ? `${assetsUrl}${src.slice(ASSETS_TOKEN.length)}` : src,
+  );
+}
+
+/** The reverse of `withAssetsUrl`, before saving. */
+export function withoutAssetsUrl(document: EmailDocument, assetsUrl: string): EmailDocument {
+  if (!assetsUrl) return document;
+  return mapImageSources(document, (src) =>
+    src.startsWith(`${assetsUrl}/`) ? `${ASSETS_TOKEN}${src.slice(assetsUrl.length)}` : src,
+  );
 }
 
 const SAFE_HREF = /^(https?:\/\/|mailto:|tel:)/i;
 
-/** A link target the service keeps. Others render as plain text. */
+/** A link target the service keeps. */
 export function safeHref(value: string | undefined): string | null {
   const href = (value ?? '').trim();
   if (!href) return null;

@@ -1,16 +1,15 @@
-import { EmailApiError, parseEmailApiError } from '@/lib/emailApiErrors';
+import { parseEmailApiError } from '@/lib/emailApiErrors';
 import {
   parseCatalog,
-  parseCompanySettings,
+  parseLibrary,
+  parseLibraryDetail,
   parseProvider,
   parseRule,
   parseRules,
-  parseSettingsUpdate,
   parseStats,
-  parseTemplateDefaults,
+  parseTemplate,
   parseTemplates,
   parseTestSend,
-  parseThemes,
   parseVersion,
   parseVersions,
 } from '@/lib/emailApiParsers';
@@ -18,58 +17,46 @@ import { parseEmailMetrics, type EmailMetricsSnapshot } from '@/lib/emailMetrics
 import type { EmailDocument } from '@/lib/emailDocument';
 import type {
   EmailCatalog,
-  EmailCompanySettings,
+  EmailLibrary,
+  EmailLibraryDetail,
+  EmailLibraryWrite,
   EmailProviderSettings,
   EmailProviderWrite,
   EmailRule,
   EmailRuleCreate,
   EmailRulePatch,
-  EmailSettingsUpdate,
   EmailStats,
-  EmailTemplateDefaults,
   EmailTemplateRow,
   EmailTemplateVersion,
   EmailTestSendResult,
-  EmailTheme,
 } from '@/lib/emailTypes';
+
+export type EmailVersionCreate =
+  | { subject: string; preheader: string; document: EmailDocument }
+  | { library_id: number };
 
 export type EmailApiClient = {
   fetchCatalog: () => Promise<EmailCatalog>;
-  fetchThemes: () => Promise<EmailTheme[]>;
-  fetchThemePreview: (previewUrl: string) => Promise<string>;
-  fetchSettings: () => Promise<EmailCompanySettings>;
-  saveSettings: (body: {
-    theme: string;
-    apply_to_existing: boolean;
-  }) => Promise<EmailSettingsUpdate>;
+  fetchLibrary: () => Promise<EmailLibrary>;
+  fetchLibraryTemplate: (id: number) => Promise<EmailLibraryDetail>;
+  createLibraryTemplate: (body: EmailLibraryWrite) => Promise<EmailLibraryDetail>;
+  updateLibraryTemplate: (id: number, body: EmailLibraryWrite) => Promise<EmailLibraryDetail>;
+  deleteLibraryTemplate: (id: number) => Promise<void>;
   fetchRules: (service?: string) => Promise<EmailRule[]>;
   fetchRule: (id: number) => Promise<EmailRule>;
   createRule: (body: EmailRuleCreate) => Promise<EmailRule>;
   patchRule: (id: number, body: EmailRulePatch) => Promise<EmailRule>;
   deleteRule: (id: number) => Promise<void>;
   fetchTemplates: (eventType?: string) => Promise<EmailTemplateRow[]>;
-  createTemplate: (
-    templateKey: string,
-    language: string,
-  ) => Promise<{ id: number; draftVersion: number }>;
-  deleteTemplate: (id: number) => Promise<void>;
+  fetchTemplate: (id: number) => Promise<EmailTemplateRow>;
   fetchVersions: (id: number) => Promise<EmailTemplateVersion[]>;
   fetchVersion: (id: number, number: number) => Promise<EmailTemplateVersion>;
-  createVersion: (
-    id: number,
-    body: {
-      subject: string;
-      preheader: string;
-      document: EmailDocument;
-      theme_name?: string;
-      theme_palette?: Record<string, string>;
-    },
-  ) => Promise<{ number: number }>;
+  /** A draft from an edit, or from a library template to start over. */
+  createVersion: (id: number, body: EmailVersionCreate) => Promise<{ number: number }>;
   publishVersion: (
     id: number,
     number: number,
   ) => Promise<{ number: number; state: string; checksum: string }>;
-  fetchDefaults: (templateKey: string) => Promise<EmailTemplateDefaults>;
   fetchProvider: () => Promise<EmailProviderSettings>;
   saveProvider: (body: EmailProviderWrite) => Promise<EmailProviderSettings>;
   testProvider: (to: string) => Promise<EmailTestSendResult>;
@@ -79,8 +66,6 @@ export type EmailApiClient = {
       document: EmailDocument;
       subject: string;
       preheader: string;
-      theme_name?: string;
-      theme_palette: Record<string, string>;
       to?: string;
     },
   ) => Promise<EmailTestSendResult>;
@@ -141,39 +126,24 @@ export function createEmailApiClient(
     async fetchCatalog() {
       return parseCatalog(await call('/api/v1/catalog'));
     },
-    async fetchThemes() {
-      return parseThemes(await call('/api/v1/themes'));
+    async fetchLibrary() {
+      return parseLibrary(await call('/api/v1/library'));
     },
-    async fetchThemePreview(previewUrl) {
-      const url = new URL(previewUrl, `${baseUrl.replace(/\/+$/, '')}/`);
-      if (!url.searchParams.has('company_id')) {
-        url.searchParams.set('company_id', String(companyId));
-      }
-      const res = await fetch(url.toString(), {
-        headers: {
-          Accept: 'text/html',
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      const text = await res.text();
-      if (!res.ok) {
-        let body: unknown = null;
-        try {
-          body = JSON.parse(text);
-        } catch {
-          body = null;
-        }
-        throw parseEmailApiError(body, res.status);
-      }
-      return text;
+    async fetchLibraryTemplate(id) {
+      return parseLibraryDetail(await call(`/api/v1/library/${id}`));
     },
-    async fetchSettings() {
-      return parseCompanySettings(await call('/api/v1/settings'));
-    },
-    async saveSettings(body) {
-      return parseSettingsUpdate(
-        await call('/api/v1/settings', { method: 'PUT', body: JSON.stringify(body) }),
+    async createLibraryTemplate(body) {
+      return parseLibraryDetail(
+        await call('/api/v1/library', { method: 'POST', body: JSON.stringify(body) }),
       );
+    },
+    async updateLibraryTemplate(id, body) {
+      return parseLibraryDetail(
+        await call(`/api/v1/library/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+      );
+    },
+    async deleteLibraryTemplate(id) {
+      await call(`/api/v1/library/${id}`, { method: 'DELETE' });
     },
     async fetchRules(service) {
       return parseRules(await call('/api/v1/rules', {}, service ? { service } : undefined));
@@ -197,19 +167,8 @@ export function createEmailApiClient(
         await call('/api/v1/templates', {}, eventType ? { event_type: eventType } : undefined),
       );
     },
-    async createTemplate(templateKey, language) {
-      const body = await call('/api/v1/templates', {
-        method: 'POST',
-        body: JSON.stringify({ template_key: templateKey, language }),
-      });
-      const row = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
-      const id = typeof row.id === 'number' ? row.id : 0;
-      const draftVersion = typeof row.draft_version === 'number' ? row.draft_version : 0;
-      if (!id) throw new EmailApiError('request_failed', 201);
-      return { id, draftVersion };
-    },
-    async deleteTemplate(id) {
-      await call(`/api/v1/templates/${id}`, { method: 'DELETE' });
+    async fetchTemplate(id) {
+      return parseTemplate(await call(`/api/v1/templates/${id}`));
     },
     async fetchVersions(id) {
       return parseVersions(await call(`/api/v1/templates/${id}/versions`));
@@ -238,15 +197,6 @@ export function createEmailApiClient(
         checksum: typeof row.checksum === 'string' ? row.checksum : '',
       };
     },
-    async fetchDefaults(templateKey) {
-      return parseTemplateDefaults(
-        await call(
-          '/api/v1/templates/defaults',
-          {},
-          { template_key: templateKey, languages: 'en,fr' },
-        ),
-      );
-    },
     async fetchProvider() {
       return parseProvider(await call('/api/v1/provider'));
     },
@@ -265,9 +215,7 @@ export function createEmailApiClient(
         document: body.document,
         subject: body.subject,
         preheader: body.preheader,
-        theme_palette: body.theme_palette,
       };
-      if (body.theme_name) payload.theme_name = body.theme_name;
       if (body.to) payload.to = body.to;
       return parseTestSend(
         await call(`/api/v1/templates/${id}/send-test`, {

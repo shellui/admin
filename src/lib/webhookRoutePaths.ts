@@ -48,6 +48,10 @@ export function emailTemplateEditorPath(templateId: number): string {
   return `/email/templates/id/${templateId}`;
 }
 
+export function emailLibraryTemplatePath(libraryId: number): string {
+  return `/email/templates/${libraryId}`;
+}
+
 export function webhookDeliveriesPath(
   service: WebhookServiceKey = DEFAULT_WEBHOOK_SERVICE,
 ): string {

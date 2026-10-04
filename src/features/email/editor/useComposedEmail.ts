@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { EmailDocument } from '@/lib/emailDocument';
 
-/** Renders the email in the browser, debounced. React Email loads on first use. */
-export function useRenderedEmail(input: {
-  template: string;
-  palette: Record<string, string> | null;
+/** Composes the email in the browser, debounced. The editor loads on first use. */
+export function useComposedEmail(input: {
   document: EmailDocument;
+  head: string;
+  preheader: string;
 }): { html: string | null; failed: boolean } {
   const [html, setHtml] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -14,8 +14,8 @@ export function useRenderedEmail(input: {
   useEffect(() => {
     let cancelled = false;
     const timer = setTimeout(() => {
-      import('@/features/email/templates/renderEmail')
-        .then(({ renderEmailHtml }) => renderEmailHtml(JSON.parse(key)))
+      import('@/features/email/editor/composeEmail')
+        .then(({ composeEmailHtml }) => composeEmailHtml(JSON.parse(key)))
         .then((next) => {
           if (cancelled) return;
           setHtml(next);

@@ -1,17 +1,15 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { I18nextProvider } from 'react-i18next';
-import { MemoryRouter } from 'react-router-dom';
-import shellui from '@shellui/sdk';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import i18n from '@/i18n';
 import { EmailTemplatesPage } from '@/features/email/pages/EmailTemplatesPage';
+import type { EmailLibraryTemplate } from '@/lib/emailTypes';
 
 const api = vi.hoisted(() => ({
-  fetchThemes: vi.fn(),
-  fetchSettings: vi.fn(),
-  fetchTemplates: vi.fn(),
-  fetchThemePreview: vi.fn(),
-  saveSettings: vi.fn(),
+  fetchLibrary: vi.fn(),
+  createLibraryTemplate: vi.fn(),
+  deleteLibraryTemplate: vi.fn(),
 }));
 
 vi.mock('@/hooks/useShelluiAccessToken', () => ({
@@ -27,77 +25,123 @@ vi.mock('@/features/email/useEmailApi', () => ({
   }),
 }));
 
-const themes = ['barebone', 'matte', 'protocol', 'arcane', 'studio'].map((key) => ({
-  key,
-  name: key[0]?.toUpperCase() + key.slice(1),
-  previewUrl: `/api/v1/themes/${key}/preview?language=en`,
-}));
+function template(overrides: Partial<EmailLibraryTemplate>): EmailLibraryTemplate {
+  return {
+    id: 1,
+    key: 'barebone.welcome',
+    set: 'barebone',
+    name: 'Welcome',
+    builtIn: true,
+    companyId: null,
+    subject: 'Welcome to {{ company_name }}',
+    preheader: '',
+    updatedAt: null,
+    html: '<img src="{{ system.assets_url }}/logo.png"><p>{{ company_name }}</p>',
+    ...overrides,
+  };
+}
+
+const library = {
+  sets: [
+    { key: 'barebone', name: 'Barebone' },
+    { key: 'studio', name: 'Studio' },
+  ],
+  templates: [
+    template({ id: 1 }),
+    template({ id: 2, key: 'studio.reset', set: 'studio', name: 'Password reset' }),
+    template({ id: 9, key: 'company.a1', name: 'Acme welcome', builtIn: false, companyId: 1 }),
+  ],
+};
 
 function renderPage() {
   return render(
     <I18nextProvider i18n={i18n}>
-      <MemoryRouter>
-        <EmailTemplatesPage />
+      <MemoryRouter initialEntries={['/email/templates']}>
+        <Routes>
+          <Route
+            path="/email/templates"
+            element={<EmailTemplatesPage />}
+          />
+          <Route
+            path="/email/templates/:libraryId"
+            element={<p>Library template</p>}
+          />
+        </Routes>
       </MemoryRouter>
     </I18nextProvider>,
   );
 }
 
+function card(name: string): HTMLElement {
+  return screen.getByText(name).closest('li') as HTMLElement;
+}
+
 describe('EmailTemplatesPage', () => {
   afterEach(async () => {
     cleanup();
-    api.fetchThemes.mockReset();
-    api.fetchSettings.mockReset();
-    api.fetchTemplates.mockReset();
-    api.fetchThemePreview.mockReset();
-    api.saveSettings.mockReset();
+    for (const fn of Object.values(api)) fn.mockReset();
     await i18n.changeLanguage('en');
   });
 
-  it('shows template previews in a scriptless iframe and company emails', async () => {
-    shellui.dialog = vi.fn();
-    api.fetchThemes.mockResolvedValue(themes);
-    api.fetchSettings.mockResolvedValue({ theme: 'matte', templatesUsingOtherTheme: 0 });
-    api.fetchTemplates.mockResolvedValue([
-      {
-        id: 15,
-        templateKey: 'company.abc',
-        name: 'Deploy notice',
-        eventType: 'hosting.deployment.failed',
-        language: 'en',
-        companyId: 1,
-        activeVersion: 1,
-        theme: 'protocol',
-        usesCompanyTheme: false,
-      },
-    ]);
-    api.fetchThemePreview.mockImplementation(async (url: string) => {
-      if (url.includes('protocol')) throw new Error('preview down');
-      return '<p>Preview</p>';
-    });
-    api.saveSettings.mockResolvedValue({ theme: 'protocol', updatedTemplates: 0 });
-
+  it('shows company templates first, then built-ins by set, with scriptless previews', async () => {
+    api.fetchLibrary.mockResolvedValue(library);
     renderPage();
-    expect(await screen.findByText('Deploy notice')).toBeTruthy();
-    expect(screen.getByText('hosting.deployment.failed')).toBeTruthy();
-    expect(screen.getByText('English')).toBeTruthy();
-    expect(screen.getByText('Uses Protocol')).toBeTruthy();
-    expect(screen.queryByText('Suggested')).toBeNull();
-
-    const frame = await screen.findByTitle('Barebone');
+    const sections = await screen.findAllByRole('region');
+    expect(sections.map((section) => section.getAttribute('aria-label'))).toEqual([
+      'Company templates',
+      'Barebone',
+      'Studio',
+    ]);
+    const frame = screen.getByTitle('Welcome');
     expect(frame.getAttribute('sandbox')).toBe('');
-    expect(frame.getAttribute('sandbox')).not.toContain('allow-scripts');
-    expect(await screen.findByText('Preview unavailable.')).toBeTruthy();
-    expect(screen.getByText('Deploy notice')).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: /Protocol/ }));
-    await waitFor(() =>
-      expect(api.saveSettings).toHaveBeenCalledWith({
-        theme: 'protocol',
-        apply_to_existing: false,
-      }),
+    expect(frame.getAttribute('srcdoc')).toContain(
+      'src="https://email.shellui.com/static/library/logo.png"',
     );
-    expect(shellui.dialog).not.toHaveBeenCalled();
-    expect(await screen.findByText('Template updated.')).toBeTruthy();
+    expect(frame.getAttribute('srcdoc')).toContain('<p>Acme</p>');
+
+    expect(within(card('Welcome')).queryByRole('button', { name: 'Delete' })).toBeNull();
+    expect(within(card('Welcome')).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe(
+      '/email/templates/1',
+    );
+    expect(within(card('Acme welcome')).getByRole('link', { name: 'Edit' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Studio' }));
+    expect(screen.queryByText('Welcome')).toBeNull();
+    expect(screen.getByText('Password reset')).toBeTruthy();
+  });
+
+  it('creates a blank template or a duplicate, and opens it', async () => {
+    api.fetchLibrary.mockResolvedValue(library);
+    api.createLibraryTemplate.mockResolvedValue({ ...template({ id: 12, builtIn: false }) });
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'New template' }));
+    expect(await screen.findByText('Library template')).toBeTruthy();
+    expect(api.createLibraryTemplate).toHaveBeenCalledWith({ name: 'Untitled template' });
+
+    cleanup();
+    renderPage();
+    await screen.findByText('Password reset');
+    fireEvent.click(within(card('Password reset')).getByRole('button', { name: 'Duplicate' }));
+    await waitFor(() =>
+      expect(api.createLibraryTemplate).toHaveBeenLastCalledWith({ source_id: 2 }),
+    );
+  });
+
+  it('deletes a company template after confirmation and filters by search', async () => {
+    api.fetchLibrary.mockResolvedValue(library);
+    api.deleteLibraryTemplate.mockResolvedValue(undefined);
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderPage();
+    await screen.findByText('Acme welcome');
+    fireEvent.click(within(card('Acme welcome')).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(api.deleteLibraryTemplate).toHaveBeenCalledWith(9));
+    await waitFor(() => expect(screen.queryByText('Acme welcome')).toBeNull());
+    confirm.mockRestore();
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search templates' }), {
+      target: { value: 'reset' },
+    });
+    expect(screen.queryByText('Welcome')).toBeNull();
+    expect(screen.getByText('Password reset')).toBeTruthy();
   });
 });

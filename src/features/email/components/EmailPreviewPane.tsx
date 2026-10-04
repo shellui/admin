@@ -37,7 +37,7 @@ export function EmailPreviewPane({
           ]}
         />
       </div>
-      <Text className="text-xs">{t('emailPreviewThemed')}</Text>
+      <Text className="text-xs">{t('emailPreviewSample')}</Text>
       <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-3">
         <div
           className={cn(
