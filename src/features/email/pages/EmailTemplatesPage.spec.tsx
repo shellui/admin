@@ -54,7 +54,7 @@ describe('EmailTemplatesPage', () => {
     await i18n.changeLanguage('en');
   });
 
-  it('shows theme previews in a scriptless iframe and company templates', async () => {
+  it('shows template previews in a scriptless iframe and company emails', async () => {
     shellui.dialog = vi.fn();
     api.fetchThemes.mockResolvedValue(themes);
     api.fetchSettings.mockResolvedValue({ theme: 'matte', templatesUsingOtherTheme: 0 });
@@ -98,6 +98,6 @@ describe('EmailTemplatesPage', () => {
       }),
     );
     expect(shellui.dialog).not.toHaveBeenCalled();
-    expect(await screen.findByText('Theme updated.')).toBeTruthy();
+    expect(await screen.findByText('Template updated.')).toBeTruthy();
   });
 });

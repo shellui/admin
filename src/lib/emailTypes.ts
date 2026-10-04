@@ -172,13 +172,6 @@ export type EmailStats = {
   byDay: Array<EmailCountBucket & { day: string }>;
 };
 
-export type EmailRenderResult = {
-  subject: string;
-  html: string;
-  text: string;
-  missingVariables: string[];
-};
-
 export const EMAIL_COUNT_KEYS = [
   'sent',
   'delivered',

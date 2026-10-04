@@ -1,10 +1,10 @@
 import { EmailApiError } from '@/lib/emailApiErrors';
-import type { EmailDocument, EmailVariable } from '@/lib/emailDocument';
-
-/** Same placeholder shape as email-service `substitution.TOKEN_RE`. */
-function tokenPattern(): RegExp {
-  return /\{\{\s*([a-zA-Z_][a-zA-Z0-9_.]*)\s*(?:\|\s*default\s*:\s*"([^"]*)"\s*)?\}\}/g;
-}
+import {
+  documentRuns,
+  emailTokenPattern as tokenPattern,
+  type EmailDocument,
+  type EmailVariable,
+} from '@/lib/emailDocument';
 
 const TAG_RE = /\{%|%\}|\{#|#\}/;
 
@@ -66,8 +66,8 @@ export function requiredAuthLinkTokens(variables: EmailVariable[]): string[] {
 
 /**
  * Auth-lane overrides must keep required link variables.
- * A button href must be one of those variables (or another declared URL variable),
- * or an https address on `authLinkHosts` when that list is known.
+ * A button or inline link href must be one of those variables (or another declared URL
+ * variable), or an https address on `authLinkHosts` when that list is known.
  * Subject, preheader, preview, and block text reject a literal URL (`auth_literal_link`).
  */
 export function validateAuthLaneOverride(input: {
@@ -92,30 +92,17 @@ export function validateAuthLaneOverride(input: {
     return new EmailApiError('auth_link_missing', 400, fieldErrors);
   }
   const allowed = new Set(input.variables.filter(isUrlVariable).map((variable) => variable.token));
-  for (const block of input.document.blocks) {
-    if (block.type !== 'button') continue;
-    const href = block.href ?? '';
-    if (hasTemplateTags(href)) {
-      return new EmailApiError('validation_failed', 400, { document: ['template_tags_forbidden'] });
-    }
-    const hrefTokens = [...findTokens(href)];
-    const unknown = hrefTokens.filter(
-      (token) => !allowed.has(token) && !token.startsWith('system.'),
-    );
-    if (unknown.length) {
-      return new EmailApiError('auth_link_host_not_allowed', 400, { href: ['token_not_allowed'] });
-    }
-    const leftover = leftoverAfterTokens(href);
-    if (!hrefTokens.length && !leftover) {
-      return new EmailApiError('auth_link_host_not_allowed', 400, { href: ['required'] });
-    }
-    if (leftover) {
-      const host = httpsHost(leftover);
-      const allowedHosts = (input.authLinkHosts ?? []).map((item) => item.toLowerCase());
-      if (!host || (allowedHosts.length > 0 && !allowedHosts.includes(host))) {
-        return new EmailApiError('auth_link_host_not_allowed', 400, { href: ['host_not_allowed'] });
-      }
-    }
+  const allowedHosts = (input.authLinkHosts ?? []).map((item) => item.toLowerCase());
+  const runs = documentRuns(input.document);
+  const hrefs = [
+    ...input.document.blocks
+      .filter((block) => block.type === 'button')
+      .map((block) => block.href ?? ''),
+    ...runs.map((run) => run.href ?? '').filter((href) => href.trim()),
+  ];
+  for (const href of hrefs) {
+    const issue = linkIssue(href, allowed, allowedHosts);
+    if (issue) return issue;
   }
   const required = new Set(requiredAuthLinkTokens(input.variables));
   const prose: Array<[string, string]> = [
@@ -128,9 +115,39 @@ export function validateAuthLaneOverride(input: {
       return new EmailApiError('auth_literal_link', 400, { [field]: ['literal_url'] });
     }
   }
-  for (const block of input.document.blocks) {
-    if (LITERAL_LINK.test(withoutRequiredTokens(block.text, required))) {
+  const texts = [
+    ...input.document.blocks.map((block) => block.text ?? ''),
+    ...runs.map((run) => run.text),
+  ];
+  for (const text of texts) {
+    if (LITERAL_LINK.test(withoutRequiredTokens(text, required))) {
       return new EmailApiError('auth_literal_link', 400, { document: ['literal_url'] });
+    }
+  }
+  return null;
+}
+
+function linkIssue(
+  href: string,
+  allowed: Set<string>,
+  allowedHosts: string[],
+): EmailApiError | null {
+  if (hasTemplateTags(href)) {
+    return new EmailApiError('validation_failed', 400, { document: ['template_tags_forbidden'] });
+  }
+  const hrefTokens = [...findTokens(href)];
+  const unknown = hrefTokens.filter((token) => !allowed.has(token) && !token.startsWith('system.'));
+  if (unknown.length) {
+    return new EmailApiError('auth_link_host_not_allowed', 400, { href: ['token_not_allowed'] });
+  }
+  const leftover = leftoverAfterTokens(href);
+  if (!hrefTokens.length && !leftover) {
+    return new EmailApiError('auth_link_host_not_allowed', 400, { href: ['required'] });
+  }
+  if (leftover) {
+    const host = httpsHost(leftover);
+    if (!host || (allowedHosts.length > 0 && !allowedHosts.includes(host))) {
+      return new EmailApiError('auth_link_host_not_allowed', 400, { href: ['host_not_allowed'] });
     }
   }
   return null;

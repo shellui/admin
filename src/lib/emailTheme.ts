@@ -1,69 +1,9 @@
-import type { Appearance, SettingsAvailableTheme, ThemeColorsMode } from '@shellui/sdk';
-import { SHELLUI_EMAIL_PALETTE, type EmailPreviewPalette } from '@/lib/emailDocument';
-
-export function getAppearanceAvailableThemes(
-  appearance: Appearance | null | undefined,
-): SettingsAvailableTheme[] {
-  const list = appearance?.availableThemes;
-  if (!Array.isArray(list)) return [];
-  return list.filter((theme): theme is SettingsAvailableTheme =>
-    Boolean(theme && typeof theme.name === 'string' && typeof theme.displayName === 'string'),
-  );
-}
-
-export function availableThemeNamesKey(themes: SettingsAvailableTheme[]): string {
-  return themes.map((theme) => theme.name).join('\u0001');
-}
-
-/** Stored theme if it is still listed, else the active theme, else `shellui`, else the first theme. */
-export function resolveEmailThemeName(
-  stored: string | undefined,
-  appearance: Appearance | null,
-  catalog?: SettingsAvailableTheme[],
-): string | null {
-  const themes = catalog ?? getAppearanceAvailableThemes(appearance);
-  if (!themes.length) return stored?.trim() ? stored : null;
-
-  const themeNameInCatalog = (name: string) => themes.some((theme) => theme.name === name);
-
-  const normalizeStored = (raw: string | undefined): string | undefined => {
-    if (!raw) return undefined;
-    if (themeNameInCatalog(raw)) return raw;
-    if (raw === 'shellui-light' || raw === 'shellui-dark') {
-      if (themeNameInCatalog('shellui')) return 'shellui';
-    }
-    return undefined;
-  };
-
-  const fromStored = normalizeStored(stored);
-  if (fromStored) return fromStored;
-
-  const activeName = appearance?.name;
-  if (activeName && themeNameInCatalog(activeName)) return activeName;
-  if (themeNameInCatalog('shellui')) return 'shellui';
-  return themes[0]?.name ?? null;
-}
-
-export function paletteForThemeName(
-  themeName: string | null,
-  appearance: Appearance | null,
-  catalog?: SettingsAvailableTheme[],
-): EmailPreviewPalette {
-  const mode = appearance?.mode === 'dark' ? 'dark' : 'light';
-  const themes = catalog ?? getAppearanceAvailableThemes(appearance);
-  const entry = themeName ? themes.find((theme) => theme.name === themeName) : undefined;
-  const colors: ThemeColorsMode | undefined = entry?.colors?.[mode] ?? appearance?.colors?.[mode];
-  if (!colors) return SHELLUI_EMAIL_PALETTE;
-  return {
-    background: colors.background || SHELLUI_EMAIL_PALETTE.background,
-    foreground: colors.foreground || SHELLUI_EMAIL_PALETTE.foreground,
-    muted: colors.muted || SHELLUI_EMAIL_PALETTE.muted,
-    mutedForeground: colors.mutedForeground || SHELLUI_EMAIL_PALETTE.mutedForeground,
-    primary: colors.primary || SHELLUI_EMAIL_PALETTE.primary,
-    primaryForeground: colors.primaryForeground || SHELLUI_EMAIL_PALETTE.primaryForeground,
-    border: colors.border || SHELLUI_EMAIL_PALETTE.border,
-  };
-}
+/**
+ * Email templates and color themes.
+ *
+ * A template is the layout (the service still calls it `theme_name`).
+ * A color theme is the seven-color `theme_palette` applied to that layout.
+ */
 
 export const EMAIL_THEME_KEYS = ['barebone', 'matte', 'protocol', 'arcane', 'studio'] as const;
 
@@ -73,7 +13,7 @@ export function isEmailThemeKey(value: string): value is EmailThemeKey {
   return (EMAIL_THEME_KEYS as readonly string[]).includes(value);
 }
 
-/** `shellui` and unknown names fall back to the company theme, then Barebone. */
+/** `shellui` and unknown names fall back to the company template, then Barebone. */
 export function emailThemeKeyOrDefault(
   value: string | null | undefined,
   fallback: string,
@@ -83,7 +23,7 @@ export function emailThemeKeyOrDefault(
   return 'barebone';
 }
 
-const PALETTE_KEYS = [
+export const PALETTE_KEYS = [
   'background',
   'foreground',
   'muted',
@@ -92,6 +32,10 @@ const PALETTE_KEYS = [
   'primaryForeground',
   'border',
 ] as const;
+
+export type PaletteKey = (typeof PALETTE_KEYS)[number];
+
+export type EmailPalette = Record<PaletteKey, string>;
 
 /** `#RGB` or `#RRGGBB`. The service stores lowercase `#rrggbb` only. */
 export function normalizePaletteColor(value: string): string | null {
@@ -104,16 +48,12 @@ export function normalizePaletteColor(value: string): string | null {
   return `#${hex}`;
 }
 
-/**
- * Palette stored on a template version.
- * Every key is `#rrggbb`. A color the service cannot store falls back to the Shellui palette.
- */
 /** All seven colors, or null when the palette is partial. Partial palettes are rejected. */
 export function completeThemePalette(
   palette: Record<string, string> | null | undefined,
-): Record<string, string> | null {
+): EmailPalette | null {
   if (!palette) return null;
-  const payload: Record<string, string> = {};
+  const payload = {} as EmailPalette;
   for (const key of PALETTE_KEYS) {
     const color = normalizePaletteColor(palette[key] ?? '');
     if (!color) return null;
@@ -122,11 +62,112 @@ export function completeThemePalette(
   return payload;
 }
 
-export function themePalettePayload(palette: EmailPreviewPalette): Record<string, string> {
-  const payload: Record<string, string> = {};
-  for (const key of PALETTE_KEYS) {
-    payload[key] =
-      normalizePaletteColor(palette[key]) ?? normalizePaletteColor(SHELLUI_EMAIL_PALETTE[key])!;
-  }
-  return payload;
+/** Keeps the colors that ship with the template. Stored as `{}`. */
+export const TEMPLATE_COLORS = 'template';
+/** A stored palette that matches no preset. */
+export const CUSTOM_COLORS = 'custom';
+
+/**
+ * Shellui color themes. `background` is the card, `muted` the page around it,
+ * `primary` the button.
+ */
+export const EMAIL_COLOR_THEMES: ReadonlyArray<{ key: string; palette: EmailPalette }> = [
+  {
+    key: 'shellui',
+    palette: {
+      background: '#ffffff',
+      foreground: '#1a1408',
+      muted: '#f6f4ef',
+      mutedForeground: '#6b645b',
+      primary: '#e3a512',
+      primaryForeground: '#1a1408',
+      border: '#e7e0d4',
+    },
+  },
+  {
+    key: 'graphite',
+    palette: {
+      background: '#ffffff',
+      foreground: '#18181b',
+      muted: '#f4f4f5',
+      mutedForeground: '#71717a',
+      primary: '#18181b',
+      primaryForeground: '#fafafa',
+      border: '#e4e4e7',
+    },
+  },
+  {
+    key: 'ocean',
+    palette: {
+      background: '#ffffff',
+      foreground: '#0b2540',
+      muted: '#eef4fb',
+      mutedForeground: '#5b6b7f',
+      primary: '#1d6fd8',
+      primaryForeground: '#ffffff',
+      border: '#d6e2f0',
+    },
+  },
+  {
+    key: 'forest',
+    palette: {
+      background: '#ffffff',
+      foreground: '#10291a',
+      muted: '#f1f6f2',
+      mutedForeground: '#5d6f63',
+      primary: '#1f7a4a',
+      primaryForeground: '#ffffff',
+      border: '#d5e4da',
+    },
+  },
+  {
+    key: 'plum',
+    palette: {
+      background: '#ffffff',
+      foreground: '#2a1430',
+      muted: '#f7f1f8',
+      mutedForeground: '#6f5f73',
+      primary: '#7c3aed',
+      primaryForeground: '#ffffff',
+      border: '#e6dcea',
+    },
+  },
+  {
+    key: 'sunset',
+    palette: {
+      background: '#ffffff',
+      foreground: '#2b1508',
+      muted: '#fbf3ee',
+      mutedForeground: '#7a6457',
+      primary: '#e2582c',
+      primaryForeground: '#ffffff',
+      border: '#f0dfd5',
+    },
+  },
+  {
+    key: 'midnight',
+    palette: {
+      background: '#111827',
+      foreground: '#f9fafb',
+      muted: '#030712',
+      mutedForeground: '#9ca3af',
+      primary: '#6366f1',
+      primaryForeground: '#ffffff',
+      border: '#1f2937',
+    },
+  },
+];
+
+export function colorThemePalette(key: string): EmailPalette | null {
+  return EMAIL_COLOR_THEMES.find((theme) => theme.key === key)?.palette ?? null;
+}
+
+/** Color theme key for a stored palette: a preset, `template` for `{}`, else `custom`. */
+export function matchColorTheme(palette: Record<string, string> | null | undefined): string {
+  const complete = completeThemePalette(palette);
+  if (!complete) return TEMPLATE_COLORS;
+  const match = EMAIL_COLOR_THEMES.find((theme) =>
+    PALETTE_KEYS.every((key) => theme.palette[key] === complete[key]),
+  );
+  return match?.key ?? CUSTOM_COLORS;
 }

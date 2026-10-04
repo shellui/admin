@@ -1,15 +1,14 @@
-import { useMemo, useState } from 'react';
+import { Suspense, lazy, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Braces, Check, Copy, Eye, Pencil, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { useTheme } from '@/contexts/ThemeContext';
 import {
-  EMAIL_BLOCK_TYPES,
   formatEmailPlaceholder,
   insertAtSelection,
-  renderEmailPreviewHtml,
   type EmailBlock,
   type EmailDocument,
   type EmailLang,
@@ -20,17 +19,33 @@ import {
   feedbackFromError,
   type ActionFeedbackState,
 } from '@/features/email/components/ActionFeedback';
+import { EmailColorThemePicker } from '@/features/email/components/EmailColorThemePicker';
+import { EmailPreviewPane } from '@/features/email/components/EmailPreviewPane';
+import { EmailSendDraftAction } from '@/features/email/components/EmailSendDraftAction';
+import { SegmentedControl } from '@/features/email/components/SegmentedControl';
+import type { EmailInlineEditorHandle } from '@/features/email/editor/EmailInlineEditor';
+import { TEMPLATE_CHOICES } from '@/features/email/templates/catalog';
+import { useRenderedEmail } from '@/features/email/templates/useRenderedEmail';
 import { emailErrorText } from '@/lib/emailApiErrors';
 import { requiredAuthLinkTokens, validateAuthLaneOverride } from '@/lib/emailAuthTemplate';
+import { fillSampleData, sampleValues } from '@/lib/emailSampleData';
 import {
-  availableThemeNamesKey,
-  getAppearanceAvailableThemes,
+  CUSTOM_COLORS,
+  TEMPLATE_COLORS,
+  colorThemePalette,
   completeThemePalette,
   emailThemeKeyOrDefault,
-  paletteForThemeName,
-  resolveEmailThemeName,
-  themePalettePayload,
+  matchColorTheme,
+  type EmailThemeKey,
 } from '@/lib/emailTheme';
+import {
+  parseTemplateJson,
+  templateJsonText,
+  type EmailTemplateJsonError,
+} from '@/lib/emailTemplateJson';
+import { cn } from '@/lib/utils';
+
+const EmailInlineEditor = lazy(() => import('@/features/email/editor/EmailInlineEditor'));
 
 export type EmailLangDraft = {
   subject: string;
@@ -39,32 +54,20 @@ export type EmailLangDraft = {
   templateId: number | null;
 };
 
-type FocusTarget = {
-  lang: EmailLang;
-  field: string;
-  start: number;
-  end: number;
-};
+type EditorMode = 'edit' | 'preview' | 'json';
 
-function updateBlock(
-  document: EmailDocument,
-  index: number,
-  patch: Partial<EmailBlock>,
-): EmailDocument {
-  return {
-    ...document,
-    blocks: document.blocks.map((block, i) => (i === index ? { ...block, ...patch } : block)),
-  };
-}
+type InboxField = 'subject' | 'preheader' | 'preview';
+
+type FocusTarget =
+  | { lang: EmailLang; field: InboxField; start: number; end: number }
+  | { lang: EmailLang; field: 'body' };
 
 export function EmailTemplateEditor({
-  templateKey,
   laneClass,
   authLinkHosts,
-  storedThemeName,
+  storedTemplate,
   storedPalette = null,
-  themeChoices = null,
-  companyTheme = 'barebone',
+  companyTemplate = 'barebone',
   languages = ['en', 'fr'],
   draftEn,
   draftFr,
@@ -79,19 +82,14 @@ export function EmailTemplateEditor({
   onPublish,
   onReset,
   onSendDraft,
-  onServicePreview,
-  servicePreviewHtml,
-  servicePreviewNote,
 }: {
-  templateKey: string;
   laneClass: string;
   authLinkHosts: string[];
-  storedThemeName: string | null;
-  /** Stored version palette. Sent only when all seven colors are present. */
+  /** Template key stored on the version (`theme_name` in the API). */
+  storedTemplate: string | null;
+  /** Stored version palette. `{}` or null keeps the template colors. */
   storedPalette?: Record<string, string> | null;
-  /** The five email themes. Appearance themes are used when this is omitted. */
-  themeChoices?: Array<{ key: string; name: string }> | null;
-  companyTheme?: string;
+  companyTemplate?: string;
   languages?: EmailLang[];
   draftEn: EmailLangDraft;
   draftFr: EmailLangDraft;
@@ -103,42 +101,56 @@ export function EmailTemplateEditor({
   isStaff: boolean;
   jwtEmail: string | null;
   onChange: (lang: EmailLang, next: EmailLangDraft) => void;
-  onPublish: (themeName: string | null, themePalette: Record<string, string>) => Promise<void>;
+  onPublish: (template: string, themePalette: Record<string, string>) => Promise<void>;
   onReset: () => Promise<boolean>;
   onSendDraft: (
     lang: EmailLang,
     draft: EmailLangDraft,
+    template: string,
     themePalette: Record<string, string>,
     to?: string,
   ) => Promise<void>;
-  onServicePreview: (
-    lang: EmailLang,
-    draft: EmailLangDraft,
-    themePalette: Record<string, string>,
-  ) => Promise<void>;
-  servicePreviewHtml: string | null;
-  servicePreviewNote: string | null;
 }) {
   const { t } = useTranslation();
-  const appearance = useTheme();
-  const themes = useMemo(() => getAppearanceAvailableThemes(appearance), [appearance]);
-  const themeKey = availableThemeNamesKey(themes);
-  const [themeName, setThemeName] = useState<string | null>(() => {
-    if (themeChoices?.length) {
-      return emailThemeKeyOrDefault(storedThemeName, companyTheme);
-    }
-    return resolveEmailThemeName(storedThemeName ?? undefined, appearance, themes);
-  });
+  const [template, setTemplate] = useState<EmailThemeKey>(() =>
+    emailThemeKeyOrDefault(storedTemplate, companyTemplate),
+  );
+  const [colorTheme, setColorTheme] = useState(() => matchColorTheme(storedPalette));
+  const [customPalette, setCustomPalette] = useState(() =>
+    matchColorTheme(storedPalette) === CUSTOM_COLORS ? completeThemePalette(storedPalette) : null,
+  );
+  const [mode, setMode] = useState<EditorMode>('edit');
   const [lang, setLang] = useState<EmailLang>(languages[0] ?? 'en');
   const [focus, setFocus] = useState<FocusTarget | null>(null);
-  const [showService, setShowService] = useState(false);
+  const [jsonText, setJsonText] = useState('');
+  const [jsonError, setJsonError] = useState<EmailTemplateJsonError | null>(null);
+  const [jsonCopied, setJsonCopied] = useState(false);
+  const jsonRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<EmailInlineEditorHandle>(null);
   const [draftTo, setDraftTo] = useState(jwtEmail ?? '');
   const [draftFeedback, setDraftFeedback] = useState<ActionFeedbackState | null>(null);
   const [publishFeedback, setPublishFeedback] = useState<ActionFeedbackState | null>(null);
   const [resetFeedback, setResetFeedback] = useState<ActionFeedbackState | null>(null);
-  const [previewFeedback, setPreviewFeedback] = useState<ActionFeedbackState | null>(null);
-
   const draft = lang === 'fr' ? draftFr : draftEn;
+  const palette = useMemo<Record<string, string>>(() => {
+    if (colorTheme === TEMPLATE_COLORS) return {};
+    if (colorTheme === CUSTOM_COLORS) return customPalette ?? {};
+    return colorThemePalette(colorTheme) ?? {};
+  }, [colorTheme, customPalette]);
+  const rendered = useRenderedEmail({ template, palette, document: draft.document });
+  const samples = useMemo(() => sampleValues(variables), [variables]);
+  const previewHtml = rendered.html ? fillSampleData(rendered.html, samples, { html: true }) : null;
+
+  // Documents written here keep the editor mounted. Any other document (language
+  // switch, JSON paste, reset, first load) remounts it with that content.
+  const ownDocuments = useRef(new WeakSet<EmailDocument>());
+  const editorRevision = useRef(0);
+  if (!ownDocuments.current.has(draft.document)) {
+    ownDocuments.current.add(draft.document);
+    editorRevision.current += 1;
+  }
+  const editorKey = `${lang}:${editorRevision.current}`;
+
   const authTokens = useMemo(() => requiredAuthLinkTokens(variables), [variables]);
   const authIssue =
     laneClass === 'auth'
@@ -157,25 +169,11 @@ export function EmailTemplateEditor({
       ? t('emailError_auth_literal_link')
       : null;
   }
-  const resolvedTheme = themeChoices?.length
-    ? emailThemeKeyOrDefault(themeName, companyTheme)
-    : resolveEmailThemeName(themeName ?? undefined, appearance, themes);
-  const palette = paletteForThemeName(
-    themeChoices?.length ? null : resolvedTheme,
-    appearance,
-    themes,
-  );
-  const palettePayload = themeChoices?.length
-    ? ((themeName === storedThemeName ? completeThemePalette(storedPalette) : null) ?? {})
-    : themePalettePayload(palette);
-  const themedHtml = renderEmailPreviewHtml(draft.document, palette);
-  const previewHtml = showService && servicePreviewHtml ? servicePreviewHtml : themedHtml;
 
   function clearActionFeedback() {
     setDraftFeedback(null);
     setPublishFeedback(null);
     setResetFeedback(null);
-    setPreviewFeedback(null);
   }
 
   function patch(next: Partial<EmailLangDraft>) {
@@ -183,10 +181,104 @@ export function EmailTemplateEditor({
     onChange(lang, { ...draft, ...next });
   }
 
+  function patchDocument(document: EmailDocument) {
+    ownDocuments.current.add(document);
+    patch({ document });
+  }
+
+  function editBlocks(blocks: EmailBlock[]) {
+    patchDocument({ ...draft.document, blocks });
+  }
+
+  function jsonFor(source: EmailLangDraft): string {
+    return templateJsonText({
+      subject: source.subject,
+      preheader: source.preheader,
+      document: source.document,
+      theme_name: template,
+      theme_palette: palette,
+    });
+  }
+
+  function resetJson(source: EmailLangDraft) {
+    setJsonText(jsonFor(source));
+    setJsonError(null);
+    setJsonCopied(false);
+  }
+
+  function switchMode(next: EditorMode) {
+    if (next === 'json') resetJson(draft);
+    setMode(next);
+  }
+
+  function switchLang(next: EmailLang) {
+    setLang(next);
+    setFocus(null);
+    clearActionFeedback();
+    if (mode === 'json') resetJson(next === 'fr' ? draftFr : draftEn);
+  }
+
+  function pickTemplate(next: string) {
+    clearActionFeedback();
+    setTemplate(emailThemeKeyOrDefault(next, companyTemplate));
+  }
+
+  function pickColorTheme(next: string) {
+    clearActionFeedback();
+    setColorTheme(next);
+  }
+
+  function applyPalette(next: Record<string, string>) {
+    const key = matchColorTheme(next);
+    if (key === CUSTOM_COLORS) setCustomPalette(completeThemePalette(next));
+    setColorTheme(key);
+  }
+
+  function editJson(text: string) {
+    setJsonText(text);
+    setJsonCopied(false);
+    const parsed = parseTemplateJson(text);
+    if (!parsed.ok) {
+      setJsonError(parsed.error);
+      return;
+    }
+    setJsonError(null);
+    const value = parsed.value;
+    patch({
+      subject: value.subject ?? draft.subject,
+      preheader: value.preheader ?? draft.preheader,
+      document: value.document,
+    });
+    if (value.theme_name) setTemplate(emailThemeKeyOrDefault(value.theme_name, companyTemplate));
+    if (value.theme_palette) applyPalette(value.theme_palette);
+  }
+
+  async function copyJson() {
+    try {
+      await navigator.clipboard.writeText(jsonText);
+    } catch {
+      jsonRef.current?.select();
+      document.execCommand('copy');
+    }
+    setJsonCopied(true);
+  }
+
+  function jsonErrorText(error: EmailTemplateJsonError): string {
+    if (error.code === 'invalid_block') {
+      return t('emailJsonError_invalid_block', { index: error.index + 1 });
+    }
+    if (error.code === 'invalid_field')
+      return t('emailJsonError_invalid_field', { field: error.field });
+    if (error.code === 'unknown_template') {
+      return t('emailJsonError_unknown_template', { value: error.value });
+    }
+    return t(`emailJsonError_${error.code}`);
+  }
+
   async function publishTemplate() {
     setPublishFeedback(null);
     try {
-      await onPublish(resolvedTheme, palettePayload);
+      await onPublish(template, palette);
       setPublishFeedback({ tone: 'success', text: t('emailPublished') });
     } catch (err) {
       setPublishFeedback(feedbackFromError(t, err));
@@ -206,155 +298,34 @@ export function EmailTemplateEditor({
   async function sendThisDraft() {
     setDraftFeedback(null);
     try {
-      await onSendDraft(lang, draft, palettePayload, isStaff ? draftTo.trim() : undefined);
+      await onSendDraft(lang, draft, template, palette, isStaff ? draftTo.trim() : undefined);
       setDraftFeedback({ tone: 'success', text: t('emailSendDraftSent') });
     } catch (err) {
       setDraftFeedback(feedbackFromError(t, err));
     }
   }
 
-  async function previewOnService() {
-    setPreviewFeedback(null);
-    setShowService(true);
-    try {
-      await onServicePreview(lang, draft, palettePayload);
-    } catch (err) {
-      setPreviewFeedback(feedbackFromError(t, err));
-    }
-  }
-
-  function rememberFocus(field: string, element: HTMLInputElement | HTMLTextAreaElement) {
+  function rememberFocus(field: InboxField, element: HTMLInputElement) {
     setFocus({ lang, field, start: element.selectionStart ?? 0, end: element.selectionEnd ?? 0 });
   }
 
   function insertVariable(token: string) {
     const placeholder = formatEmailPlaceholder(token);
-    if (!focus || focus.lang !== lang) {
-      patch({ subject: `${draft.subject}${placeholder}` });
+    if (!focus || focus.lang !== lang || focus.field === 'body') {
+      editorRef.current?.insertText(placeholder);
       return;
     }
-    if (focus.field === 'subject') {
-      const next = insertAtSelection(draft.subject, focus.start, focus.end, placeholder);
-      patch({ subject: next.value });
-      setFocus({ ...focus, start: next.caret, end: next.caret });
-      return;
-    }
-    if (focus.field === 'preheader') {
-      const next = insertAtSelection(draft.preheader, focus.start, focus.end, placeholder);
-      patch({ preheader: next.value });
-      setFocus({ ...focus, start: next.caret, end: next.caret });
-      return;
-    }
-    if (focus.field === 'preview') {
-      const next = insertAtSelection(draft.document.preview, focus.start, focus.end, placeholder);
-      patch({ document: { ...draft.document, preview: next.value } });
-      setFocus({ ...focus, start: next.caret, end: next.caret });
-      return;
-    }
-    const match = /^block:(\d+):(text|href)$/.exec(focus.field);
-    if (!match) return;
-    const index = Number(match[1]);
-    const key = match[2] as 'text' | 'href';
-    const block = draft.document.blocks[index];
-    if (!block) return;
-    const current = key === 'href' ? (block.href ?? '') : block.text;
+    const current = focus.field === 'preview' ? draft.document.preview : draft[focus.field];
     const next = insertAtSelection(current, focus.start, focus.end, placeholder);
-    patch({ document: updateBlock(draft.document, index, { [key]: next.value }) });
+    if (focus.field === 'preview') patchDocument({ ...draft.document, preview: next.value });
+    else patch({ [focus.field]: next.value });
     setFocus({ ...focus, start: next.caret, end: next.caret });
   }
 
-  return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-      <div className="min-w-0 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          {languages.length > 1 ? (
-            <div
-              className="flex gap-2"
-              role="tablist"
-              aria-label={t('emailLanguageTabs')}
-            >
-              {languages.map((code) => (
-                <Button
-                  key={code}
-                  type="button"
-                  size="sm"
-                  variant={lang === code ? 'default' : 'outline'}
-                  onClick={() => {
-                    setLang(code);
-                    setShowService(false);
-                    clearActionFeedback();
-                  }}
-                >
-                  {code === 'en' ? t('emailLangEn') : t('emailLangFr')}
-                </Button>
-              ))}
-            </div>
-          ) : null}
-          {themeChoices?.length ? (
-            <label className="flex items-center gap-2 text-sm">
-              <span>{t('emailThemeLabel')}</span>
-              <select
-                className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
-                aria-label={t('emailThemeLabel')}
-                value={resolvedTheme ?? ''}
-                onChange={(event) => {
-                  clearActionFeedback();
-                  setThemeName(event.target.value);
-                }}
-              >
-                {themeChoices.map((theme) => (
-                  <option
-                    key={theme.key}
-                    value={theme.key}
-                  >
-                    {theme.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : themes.length ? (
-            <label className="flex items-center gap-2 text-sm">
-              <span>{t('emailThemeLabel')}</span>
-              <select
-                className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
-                aria-label={t('emailThemeLabel')}
-                value={resolvedTheme ?? ''}
-                data-themes={themeKey}
-                onChange={(event) => {
-                  clearActionFeedback();
-                  setThemeName(event.target.value);
-                }}
-              >
-                {themes.map((theme) => (
-                  <option
-                    key={theme.name}
-                    value={theme.name}
-                  >
-                    {theme.displayName}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-        </div>
-
-        {laneClass === 'auth' ? (
-          <Text>
-            {t('emailAuthLaneNotice', {
-              tokens: authTokens.map((token) => `{{ ${token} }}`).join(', '),
-            })}
-          </Text>
-        ) : null}
-        {laneClass === 'auth' && authLinkHosts.length ? (
-          <Text className="font-mono text-xs">
-            {t('emailAuthLinkHosts', { hosts: authLinkHosts.join(', ') })}
-          </Text>
-        ) : null}
-        {authIssue && authIssue.errorCode !== 'auth_literal_link' ? (
-          <Text className="font-mono text-sm text-destructive">{emailErrorText(t, authIssue)}</Text>
-        ) : null}
-        <Text className="font-mono text-xs">{t('emailEditorThemeNote')}</Text>
-
+  const editPane = (
+    <div className="mx-auto w-full max-w-3xl min-w-0 space-y-5">
+      <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+        <h2 className="text-sm font-semibold tracking-tight">{t('emailInboxSection')}</h2>
         <div className="space-y-2">
           <Label htmlFor="email-subject">{t('emailSubjectLabel')}</Label>
           <Input
@@ -368,173 +339,242 @@ export function EmailTemplateEditor({
             <Text className="font-mono text-xs text-destructive">{literalBeside('subject')}</Text>
           ) : null}
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="email-preheader">{t('emailPreheaderLabel')}</Label>
-          <Input
-            id="email-preheader"
-            value={draft.preheader}
-            onChange={(event) => patch({ preheader: event.target.value })}
-            onSelect={(event) => rememberFocus('preheader', event.currentTarget)}
-            onBlur={(event) => rememberFocus('preheader', event.currentTarget)}
-          />
-          {literalBeside('preheader') ? (
-            <Text className="font-mono text-xs text-destructive">{literalBeside('preheader')}</Text>
-          ) : null}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="email-preview-text">{t('emailPreviewLabel')}</Label>
-          <Input
-            id="email-preview-text"
-            value={draft.document.preview}
-            onChange={(event) =>
-              patch({ document: { ...draft.document, preview: event.target.value } })
-            }
-            onSelect={(event) => rememberFocus('preview', event.currentTarget)}
-            onBlur={(event) => rememberFocus('preview', event.currentTarget)}
-          />
-          {literalBeside('preview') ? (
-            <Text className="font-mono text-xs text-destructive">{literalBeside('preview')}</Text>
-          ) : null}
-        </div>
-
-        {variables.length ? (
+        <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-2">
-            <p className="text-sm font-medium">{t('emailVariablesLabel')}</p>
-            <div className="flex flex-wrap gap-2">
-              {variables.map((variable) => (
-                <button
-                  key={variable.token}
-                  type="button"
-                  className="rounded-md border border-border bg-muted/40 px-2 py-1 font-mono text-xs hover:bg-muted"
-                  title={variable.example}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => insertVariable(variable.token)}
-                >
-                  {variable.token}
-                </button>
-              ))}
-            </div>
+            <Label htmlFor="email-preheader">{t('emailPreheaderLabel')}</Label>
+            <Input
+              id="email-preheader"
+              value={draft.preheader}
+              onChange={(event) => patch({ preheader: event.target.value })}
+              onSelect={(event) => rememberFocus('preheader', event.currentTarget)}
+              onBlur={(event) => rememberFocus('preheader', event.currentTarget)}
+            />
+            {literalBeside('preheader') ? (
+              <Text className="font-mono text-xs text-destructive">
+                {literalBeside('preheader')}
+              </Text>
+            ) : null}
           </div>
-        ) : null}
+          <div className="space-y-2">
+            <Label htmlFor="email-preview-text">{t('emailPreviewLabel')}</Label>
+            <Input
+              id="email-preview-text"
+              value={draft.document.preview}
+              onChange={(event) =>
+                patchDocument({ ...draft.document, preview: event.target.value })
+              }
+              onSelect={(event) => rememberFocus('preview', event.currentTarget)}
+              onBlur={(event) => rememberFocus('preview', event.currentTarget)}
+            />
+            {literalBeside('preview') ? (
+              <Text className="font-mono text-xs text-destructive">{literalBeside('preview')}</Text>
+            ) : null}
+          </div>
+        </div>
+      </section>
 
+      {variables.length ? (
+        <section className="space-y-2.5 rounded-lg border border-border bg-card p-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <h2 className="text-sm font-semibold tracking-tight">
+              {t('emailVariablesLabel')}{' '}
+              <span className="font-normal text-muted-foreground">{variables.length}</span>
+            </h2>
+            <Text className="text-xs">{t('emailVariablesHint')}</Text>
+          </div>
+          <div
+            className="flex flex-wrap items-center gap-1.5"
+            role="group"
+            aria-label={t('emailVariablesLabel')}
+          >
+            {variables.map((variable) => (
+              <button
+                key={variable.token}
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs transition-colors hover:border-foreground/30 hover:bg-muted"
+                aria-label={variable.token}
+                title={
+                  variable.example
+                    ? t('emailVariableExample', { example: variable.example })
+                    : undefined
+                }
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => insertVariable(variable.token)}
+              >
+                <Plus
+                  aria-hidden
+                  className="size-3 text-muted-foreground"
+                />
+                <span className="font-mono">{formatEmailPlaceholder(variable.token)}</span>
+                {variable.required ? (
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {t('emailVariableRequired')}
+                  </span>
+                ) : null}
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 className="text-sm font-semibold tracking-tight">{t('emailContentSection')}</h2>
+          <Text className="text-xs">{t('emailEditorHint')}</Text>
+        </div>
         {literalBeside('document') ? (
           <Text className="font-mono text-xs text-destructive">{literalBeside('document')}</Text>
         ) : null}
-        <ol className="space-y-3">
-          {draft.document.blocks.map((block, index) => (
-            <li
-              key={`${lang}-${index}`}
-              className="space-y-2 rounded-md border border-border/80 p-3"
-            >
-              <div className="flex flex-wrap gap-2">
-                <select
-                  aria-label={t('emailBlockType')}
-                  className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
-                  value={block.type}
-                  onChange={(event) =>
-                    patch({
-                      document: updateBlock(draft.document, index, {
-                        type: event.target.value as EmailBlock['type'],
-                      }),
-                    })
-                  }
-                >
-                  {EMAIL_BLOCK_TYPES.map((type) => (
-                    <option
-                      key={type}
-                      value={type}
-                    >
-                      {t(`emailBlock_${type}`)}
-                    </option>
-                  ))}
-                </select>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    if (index === 0) return;
-                    const blocks = [...draft.document.blocks];
-                    const [item] = blocks.splice(index, 1);
-                    blocks.splice(index - 1, 0, item);
-                    patch({ document: { ...draft.document, blocks } });
-                  }}
-                >
-                  {t('emailMoveUp')}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    if (index >= draft.document.blocks.length - 1) return;
-                    const blocks = [...draft.document.blocks];
-                    const [item] = blocks.splice(index, 1);
-                    blocks.splice(index + 1, 0, item);
-                    patch({ document: { ...draft.document, blocks } });
-                  }}
-                >
-                  {t('emailMoveDown')}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    patch({
-                      document: {
-                        ...draft.document,
-                        blocks: draft.document.blocks.filter((_, i) => i !== index),
-                      },
-                    })
-                  }
-                >
-                  {t('emailRemoveBlock')}
-                </Button>
-              </div>
-              <textarea
-                aria-label={t('emailBlockText')}
-                className="min-h-20 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-                value={block.text}
-                onChange={(event) =>
-                  patch({
-                    document: updateBlock(draft.document, index, { text: event.target.value }),
-                  })
-                }
-                onSelect={(event) => rememberFocus(`block:${index}:text`, event.currentTarget)}
-                onBlur={(event) => rememberFocus(`block:${index}:text`, event.currentTarget)}
-              />
-              {block.type === 'button' ? (
-                <Input
-                  aria-label={t('emailBlockHref')}
-                  value={block.href ?? ''}
-                  onChange={(event) =>
-                    patch({
-                      document: updateBlock(draft.document, index, { href: event.target.value }),
-                    })
-                  }
-                  onSelect={(event) => rememberFocus(`block:${index}:href`, event.currentTarget)}
-                  onBlur={(event) => rememberFocus(`block:${index}:href`, event.currentTarget)}
-                />
-              ) : null}
-            </li>
-          ))}
-        </ol>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() =>
-            patch({
-              document: {
-                ...draft.document,
-                blocks: [...draft.document.blocks, { type: 'text', text: '' }],
-              },
-            })
+        <Suspense
+          fallback={
+            <Skeleton
+              className="h-80 w-full rounded-xl"
+              aria-label={t('emailEditorLoading')}
+            />
           }
         >
-          {t('emailAddBlock')}
-        </Button>
+          <EmailInlineEditor
+            key={editorKey}
+            ref={editorRef}
+            document={draft.document}
+            template={template}
+            palette={palette}
+            variables={variables}
+            label={t('emailContentSection')}
+            onChange={editBlocks}
+            onFocus={() => setFocus({ lang, field: 'body' })}
+          />
+        </Suspense>
+      </section>
+    </div>
+  );
 
+  const jsonPane = (
+    <div className="min-w-0 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Label htmlFor="email-template-json">{t('emailJsonLabel')}</Label>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => void copyJson()}
+        >
+          {jsonCopied ? <Check /> : <Copy />}
+          {jsonCopied ? t('emailJsonCopied') : t('emailJsonCopy')}
+        </Button>
+      </div>
+      <Text className="text-xs">{t('emailJsonHint')}</Text>
+      <textarea
+        id="email-template-json"
+        ref={jsonRef}
+        spellCheck={false}
+        aria-invalid={jsonError ? true : undefined}
+        className={cn(
+          'h-[36rem] w-full resize-y rounded-lg border bg-muted/30 p-3 font-mono text-xs leading-relaxed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+          jsonError ? 'border-destructive' : 'border-input',
+        )}
+        value={jsonText}
+        onChange={(event) => editJson(event.target.value)}
+      />
+      {jsonError ? (
+        <Text className="font-mono text-xs text-destructive">{jsonErrorText(jsonError)}</Text>
+      ) : null}
+    </div>
+  );
+
+  const previewPane = (
+    <EmailPreviewPane
+      html={previewHtml}
+      failed={rendered.failed}
+      subject={fillSampleData(draft.subject, samples, { html: false })}
+      preheader={fillSampleData(draft.preheader, samples, { html: false })}
+      large={mode === 'preview'}
+    />
+  );
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-2 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <SegmentedControl
+            label={t('emailEditorModes')}
+            value={mode}
+            onChange={switchMode}
+            options={[
+              { value: 'edit', label: t('emailModeEdit'), icon: <Pencil /> },
+              { value: 'preview', label: t('emailModePreview'), icon: <Eye /> },
+              { value: 'json', label: t('emailModeJson'), icon: <Braces /> },
+            ]}
+          />
+          {languages.length > 1 ? (
+            <SegmentedControl
+              label={t('emailLanguageTabs')}
+              value={lang}
+              onChange={switchLang}
+              options={languages.map((code) => ({
+                value: code,
+                label: code === 'en' ? t('emailLangEn') : t('emailLangFr'),
+              }))}
+            />
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2 px-1 text-sm">
+            <span className="text-muted-foreground">{t('emailTemplateLabel')}</span>
+            <select
+              className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
+              aria-label={t('emailTemplateLabel')}
+              value={template}
+              onChange={(event) => pickTemplate(event.target.value)}
+            >
+              {TEMPLATE_CHOICES.map((choice) => (
+                <option
+                  key={choice.key}
+                  value={choice.key}
+                >
+                  {choice.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <EmailColorThemePicker
+            template={template}
+            value={colorTheme}
+            customPalette={customPalette}
+            note={t('emailEditorThemeNote')}
+            onChange={pickColorTheme}
+          />
+        </div>
+      </div>
+
+      {laneClass === 'auth' ? (
+        <Text>
+          {t('emailAuthLaneNotice', {
+            tokens: authTokens.map((token) => `{{ ${token} }}`).join(', '),
+          })}
+        </Text>
+      ) : null}
+      {laneClass === 'auth' && authLinkHosts.length ? (
+        <Text className="font-mono text-xs">
+          {t('emailAuthLinkHosts', { hosts: authLinkHosts.join(', ') })}
+        </Text>
+      ) : null}
+      {authIssue && authIssue.errorCode !== 'auth_literal_link' ? (
+        <Text className="font-mono text-sm text-destructive">{emailErrorText(t, authIssue)}</Text>
+      ) : null}
+
+      {mode === 'preview' ? previewPane : null}
+      {mode === 'edit' ? editPane : null}
+      {mode === 'json' ? (
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          {jsonPane}
+          <div className="hidden min-w-0 xl:block">
+            <div className="sticky top-4">{previewPane}</div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="space-y-4 border-t border-border/80 pt-4">
         <div className="flex flex-wrap items-start gap-4">
           <div className="space-y-2">
             <Button
@@ -557,62 +597,21 @@ export function EmailTemplateEditor({
             </Button>
             <ActionFeedback feedback={resetFeedback} />
           </div>
-        </div>
-        <div className="space-y-2 border-t border-border/80 pt-4">
-          <h2 className="text-base font-semibold tracking-tight">{t('emailSendDraft')}</h2>
-          <Text>{isStaff ? t('emailSendDraftStaffHint') : t('emailSendDraftOwnerHint')}</Text>
-          <div className="flex flex-wrap items-end gap-2">
-            {isStaff ? (
-              <div className="min-w-[16rem] flex-1 space-y-2">
-                <Label htmlFor="email-draft-to">{t('emailTestTo')}</Label>
-                <Input
-                  id="email-draft-to"
-                  type="email"
-                  value={draftTo}
-                  onChange={(event) => {
-                    clearActionFeedback();
-                    setDraftTo(event.target.value);
-                  }}
-                />
-              </div>
-            ) : null}
-            <Button
-              type="button"
-              variant="outline"
-              disabled={sendingDraft || (isStaff && !draftTo.trim())}
-              onClick={() => void sendThisDraft()}
-            >
-              {sendingDraft ? t('emailTestSending') : t('emailSendDraft')}
-            </Button>
+          <div className="space-y-2">
+            <EmailSendDraftAction
+              isStaff={isStaff}
+              jwtEmail={jwtEmail}
+              to={draftTo}
+              sending={sendingDraft}
+              onToChange={(value) => {
+                clearActionFeedback();
+                setDraftTo(value);
+              }}
+              onSend={() => void sendThisDraft()}
+            />
+            <ActionFeedback feedback={draftFeedback} />
           </div>
-          <ActionFeedback feedback={draftFeedback} />
         </div>
-        <Text className="font-mono text-xs">{templateKey}</Text>
-      </div>
-
-      <div className="min-w-0 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-semibold tracking-tight">{t('emailPreview')}</h2>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => void previewOnService()}
-          >
-            {t('emailPreviewService')}
-          </Button>
-        </div>
-        <ActionFeedback feedback={previewFeedback} />
-        <Text>{showService ? t('emailPreviewServiceNote') : t('emailPreviewThemed')}</Text>
-        {servicePreviewNote ? (
-          <Text className="font-mono text-xs">{servicePreviewNote}</Text>
-        ) : null}
-        <iframe
-          title={t('emailPreview')}
-          sandbox=""
-          srcDoc={previewHtml}
-          className="h-[32rem] w-full rounded-md border border-border bg-white"
-        />
       </div>
     </div>
   );

@@ -3,7 +3,6 @@ import {
   parseCatalog,
   parseCompanySettings,
   parseProvider,
-  parseRender,
   parseRule,
   parseRules,
   parseSettingsUpdate,
@@ -22,7 +21,6 @@ import type {
   EmailCompanySettings,
   EmailProviderSettings,
   EmailProviderWrite,
-  EmailRenderResult,
   EmailRule,
   EmailRuleCreate,
   EmailRulePatch,
@@ -72,15 +70,6 @@ export type EmailApiClient = {
     number: number,
   ) => Promise<{ number: number; state: string; checksum: string }>;
   fetchDefaults: (templateKey: string) => Promise<EmailTemplateDefaults>;
-  render: (body: {
-    template_key?: string;
-    language?: string;
-    document?: EmailDocument;
-    subject?: string;
-    variables?: Record<string, string>;
-    theme_name?: string;
-    theme_palette?: Record<string, string>;
-  }) => Promise<EmailRenderResult>;
   fetchProvider: () => Promise<EmailProviderSettings>;
   saveProvider: (body: EmailProviderWrite) => Promise<EmailProviderSettings>;
   testProvider: (to: string) => Promise<EmailTestSendResult>;
@@ -90,6 +79,7 @@ export type EmailApiClient = {
       document: EmailDocument;
       subject: string;
       preheader: string;
+      theme_name?: string;
       theme_palette: Record<string, string>;
       to?: string;
     },
@@ -257,11 +247,6 @@ export function createEmailApiClient(
         ),
       );
     },
-    async render(body) {
-      return parseRender(
-        await call('/api/v1/render', { method: 'POST', body: JSON.stringify(body) }),
-      );
-    },
     async fetchProvider() {
       return parseProvider(await call('/api/v1/provider'));
     },
@@ -282,6 +267,7 @@ export function createEmailApiClient(
         preheader: body.preheader,
         theme_palette: body.theme_palette,
       };
+      if (body.theme_name) payload.theme_name = body.theme_name;
       if (body.to) payload.to = body.to;
       return parseTestSend(
         await call(`/api/v1/templates/${id}/send-test`, {

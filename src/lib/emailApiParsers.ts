@@ -6,7 +6,6 @@ import type {
   EmailCompanySettings,
   EmailCountBucket,
   EmailProviderSettings,
-  EmailRenderResult,
   EmailRule,
   EmailSettingsUpdate,
   EmailStats,
@@ -313,19 +312,6 @@ export function parseStats(body: unknown): EmailStats {
     byLane,
     byEvent,
     byDay,
-  };
-}
-
-export function parseRender(body: unknown): EmailRenderResult {
-  const row = record(body);
-  if (!row) throw new EmailApiError('request_failed', 200);
-  return {
-    subject: str(row.subject),
-    html: str(row.html),
-    text: str(row.text),
-    missingVariables: Array.isArray(row.missing_variables)
-      ? row.missing_variables.filter((item): item is string => typeof item === 'string')
-      : [],
   };
 }
 

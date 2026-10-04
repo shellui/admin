@@ -109,6 +109,41 @@ describe('validateAuthLaneOverride', () => {
     expect(issue?.errorCode).toBe('auth_link_host_not_allowed');
   });
 
+  it('checks inline links like buttons and reads the rendered runs', () => {
+    const withRuns = (content: EmailDocument['blocks'][number]['content']): EmailDocument => ({
+      ...document('{{ magic_link_url }}'),
+      blocks: [
+        ...document('{{ magic_link_url }}').blocks,
+        { type: 'footer', text: 'Help', content },
+      ],
+    });
+    const input = {
+      laneClass: 'auth',
+      variables,
+      authLinkHosts: ['id.shellui.com'],
+      subject: 'Sign in',
+      preheader: '',
+    };
+    expect(
+      validateAuthLaneOverride({
+        ...input,
+        document: withRuns([{ text: 'Help', href: 'https://id.shellui.com/help' }]),
+      }),
+    ).toBeNull();
+    expect(
+      validateAuthLaneOverride({
+        ...input,
+        document: withRuns([{ text: 'Help', href: 'https://evil.example' }]),
+      })?.errorCode,
+    ).toBe('auth_link_host_not_allowed');
+    expect(
+      validateAuthLaneOverride({
+        ...input,
+        document: withRuns([{ text: 'Go to https://evil.example' }]),
+      })?.errorCode,
+    ).toBe('auth_literal_link');
+  });
+
   it('does not apply auth rules to other lanes', () => {
     expect(
       validateAuthLaneOverride({

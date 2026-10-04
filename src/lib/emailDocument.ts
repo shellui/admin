@@ -1,11 +1,39 @@
-export const EMAIL_BLOCK_TYPES = ['heading', 'text', 'button', 'footer'] as const;
+export const EMAIL_BLOCK_TYPES = [
+  'heading',
+  'text',
+  'button',
+  'footer',
+  'list',
+  'divider',
+] as const;
 
 export type EmailBlockType = (typeof EMAIL_BLOCK_TYPES)[number];
 
+/** Inline run of a heading, text, footer, or list item. */
+export type EmailRun = {
+  text: string;
+  bold?: true;
+  italic?: true;
+  underline?: true;
+  href?: string;
+};
+
+export type EmailListItem = {
+  text: string;
+  content?: EmailRun[];
+};
+
+/**
+ * One block. `text` is always the plain text. When `content` is present the
+ * service renders it instead of `text`.
+ */
 export type EmailBlock = {
   type: EmailBlockType;
-  text: string;
+  text?: string;
   href?: string;
+  content?: EmailRun[];
+  ordered?: boolean;
+  items?: EmailListItem[];
 };
 
 export type EmailDocument = {
@@ -26,6 +54,9 @@ export type EmailVariable = {
   allowedHostsSetting?: string;
 };
 
+const TEXT_BLOCKS: ReadonlySet<EmailBlockType> = new Set(['heading', 'text', 'footer']);
+const RUN_MARKS = ['bold', 'italic', 'underline'] as const;
+
 export function emptyEmailDocument(): EmailDocument {
   return { preview: '', blocks: [] };
 }
@@ -34,22 +65,121 @@ export function isEmailBlockType(value: string): value is EmailBlockType {
   return (EMAIL_BLOCK_TYPES as readonly string[]).includes(value);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function parseRun(raw: unknown): EmailRun | null {
+  if (!isRecord(raw) || typeof raw.text !== 'string') return null;
+  const run: EmailRun = { text: raw.text };
+  for (const mark of RUN_MARKS) {
+    if (raw[mark] === undefined || raw[mark] === false) continue;
+    if (raw[mark] !== true) return null;
+    run[mark] = true;
+  }
+  if (raw.href !== undefined) {
+    if (typeof raw.href !== 'string') return null;
+    if (raw.href.trim()) run.href = raw.href;
+  }
+  return run;
+}
+
+function parseRuns(raw: unknown): EmailRun[] | null | undefined {
+  if (raw === undefined) return undefined;
+  if (!Array.isArray(raw)) return null;
+  const runs: EmailRun[] = [];
+  for (const item of raw) {
+    const run = parseRun(item);
+    if (!run) return null;
+    runs.push(run);
+  }
+  return runs;
+}
+
+function parseListItem(raw: unknown): EmailListItem | null {
+  if (!isRecord(raw)) return null;
+  if (raw.text !== undefined && typeof raw.text !== 'string') return null;
+  const content = parseRuns(raw.content);
+  if (content === null) return null;
+  const text = typeof raw.text === 'string' ? raw.text : content ? runsPlainText(content) : '';
+  return content ? { text, content } : { text };
+}
+
+/** One block from untrusted JSON, or null when a field has the wrong shape. */
+export function parseEmailBlock(raw: unknown): EmailBlock | null {
+  if (!isRecord(raw) || typeof raw.type !== 'string' || !isEmailBlockType(raw.type)) return null;
+  const type = raw.type;
+  if (raw.text !== undefined && typeof raw.text !== 'string') return null;
+  if (raw.href !== undefined && typeof raw.href !== 'string') return null;
+  const text = typeof raw.text === 'string' ? raw.text : '';
+  if (type === 'divider') return { type };
+  if (type === 'list') {
+    if (raw.ordered !== undefined && typeof raw.ordered !== 'boolean') return null;
+    if (!Array.isArray(raw.items)) return null;
+    const items: EmailListItem[] = [];
+    for (const item of raw.items) {
+      const parsed = parseListItem(item);
+      if (!parsed) return null;
+      items.push(parsed);
+    }
+    return raw.ordered ? { type, ordered: true, items } : { type, items };
+  }
+  if (type === 'button') {
+    return typeof raw.href === 'string' ? { type, text, href: raw.href } : { type, text };
+  }
+  const content = parseRuns(raw.content);
+  if (content === null) return null;
+  if (!content) return { type, text };
+  return { type, text: typeof raw.text === 'string' ? text : runsPlainText(content), content };
+}
+
 export function parseEmailDocument(value: unknown): EmailDocument {
-  if (!value || typeof value !== 'object') return emptyEmailDocument();
-  const record = value as Record<string, unknown>;
-  const preview = typeof record.preview === 'string' ? record.preview : '';
-  const rawBlocks = Array.isArray(record.blocks) ? record.blocks : [];
+  if (!isRecord(value)) return emptyEmailDocument();
+  const preview = typeof value.preview === 'string' ? value.preview : '';
+  const rawBlocks = Array.isArray(value.blocks) ? value.blocks : [];
   const blocks: EmailBlock[] = [];
   for (const item of rawBlocks) {
-    if (!item || typeof item !== 'object') continue;
-    const block = item as Record<string, unknown>;
-    const type = typeof block.type === 'string' ? block.type : '';
-    if (!isEmailBlockType(type)) continue;
-    const text = typeof block.text === 'string' ? block.text : '';
-    const href = typeof block.href === 'string' ? block.href : undefined;
-    blocks.push(href !== undefined ? { type, text, href } : { type, text });
+    const block = parseEmailBlock(item);
+    if (block) blocks.push(block);
   }
   return { preview, blocks };
+}
+
+export function runsPlainText(runs: EmailRun[]): string {
+  return runs.map((run) => run.text).join('');
+}
+
+/** What the service renders for a text-like block. Matches `block_runs` in email-service. */
+export function blockRuns(block: { text?: string; content?: EmailRun[] }): EmailRun[] {
+  if (Array.isArray(block.content)) return block.content;
+  return [{ text: block.text ?? '' }];
+}
+
+/** Every inline run in the document, list items included. */
+export function documentRuns(document: EmailDocument): EmailRun[] {
+  const runs: EmailRun[] = [];
+  for (const block of document.blocks) {
+    if (TEXT_BLOCKS.has(block.type)) runs.push(...blockRuns(block));
+    else if (block.type === 'list') {
+      for (const item of block.items ?? []) runs.push(...blockRuns(item));
+    }
+  }
+  return runs;
+}
+
+const SAFE_HREF = /^(https?:\/\/|mailto:|tel:)/i;
+
+/** A link target the service keeps. Others render as plain text. */
+export function safeHref(value: string | undefined): string | null {
+  const href = (value ?? '').trim();
+  if (!href) return null;
+  if (href.startsWith('{{') || SAFE_HREF.test(href)) return href;
+  return null;
+}
+
+/** Same placeholder shape as email-service `substitution.TOKEN_RE`: group 1 is the token, group 2 the default. */
+export function emailTokenPattern(): RegExp {
+  return /\{\{\s*([a-zA-Z_][a-zA-Z0-9_.]*)\s*(?:\|\s*default\s*:\s*"([^"]*)"\s*)?\}\}/g;
 }
 
 /** Mustache token written by the variable palette. */
@@ -68,57 +198,4 @@ export function insertAtSelection(
   const next = `${value.slice(0, safeStart)}${insert}${value.slice(safeEnd)}`;
   const caret = safeStart + insert.length;
   return { value: next, caret };
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-export type EmailPreviewPalette = {
-  background: string;
-  foreground: string;
-  muted: string;
-  mutedForeground: string;
-  primary: string;
-  primaryForeground: string;
-  border: string;
-};
-
-export const SHELLUI_EMAIL_PALETTE: EmailPreviewPalette = {
-  background: '#ffffff',
-  foreground: '#1a1408',
-  muted: '#f6f4ef',
-  mutedForeground: '#6b645b',
-  primary: '#e3a512',
-  primaryForeground: '#1a1408',
-  border: '#e7e0d4',
-};
-
-/** Local preview. The service applies the same palette when the version is sent. */
-export function renderEmailPreviewHtml(
-  document: EmailDocument,
-  palette: EmailPreviewPalette = SHELLUI_EMAIL_PALETTE,
-): string {
-  const preview = escapeHtml(document.preview);
-  const blocks = document.blocks
-    .map((block) => {
-      const text = escapeHtml(block.text);
-      if (block.type === 'heading') {
-        return `<h1 style="margin:8px 32px 12px;font-size:26px;line-height:1.3;color:${escapeHtml(palette.foreground)};">${text}</h1>`;
-      }
-      if (block.type === 'button') {
-        const href = escapeHtml(block.href ?? '');
-        return `<p style="margin:8px 32px 20px;"><a href="${href}" style="display:inline-block;background:${escapeHtml(palette.primary)};color:${escapeHtml(palette.primaryForeground)};text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;">${text}</a></p>`;
-      }
-      if (block.type === 'footer') {
-        return `<p style="margin:8px 32px 28px;font-size:12px;line-height:1.5;color:${escapeHtml(palette.mutedForeground)};">${text}</p>`;
-      }
-      return `<p style="margin:0 32px 14px;font-size:16px;line-height:1.55;color:${escapeHtml(palette.foreground)};">${text}</p>`;
-    })
-    .join('');
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;background:${escapeHtml(palette.muted)};color:${escapeHtml(palette.foreground)};font-family:Georgia,serif;"><div style="display:none;max-height:0;overflow:hidden;">${preview}</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:${escapeHtml(palette.background)};border:1px solid ${escapeHtml(palette.border)};border-radius:12px;"><tr><td style="padding:28px 32px 8px;font-size:14px;letter-spacing:0.08em;text-transform:uppercase;color:${escapeHtml(palette.primary)};">Shellui</td></tr><tr><td>${blocks}</td></tr></table></td></tr></table></body></html>`;
 }

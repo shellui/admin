@@ -33,7 +33,7 @@ describe('EmailThemeSection', () => {
     await i18n.changeLanguage('en');
   });
 
-  it('sandboxes the theme preview and does not allow scripts', () => {
+  it('sandboxes the template preview and does not allow scripts', () => {
     renderSection(0);
     const frame = screen.getByTitle('Matte');
     expect(frame.tagName).toBe('IFRAME');
@@ -42,7 +42,7 @@ describe('EmailThemeSection', () => {
     expect(frame.getAttribute('srcdoc')).toBe('<p>Hi</p>');
   });
 
-  it('applies the theme to new emails only when none use another theme', async () => {
+  it('applies the template to new emails only when none use another template', async () => {
     shellui.dialog = vi.fn();
     const onApply = renderSection(0);
     fireEvent.click(screen.getByRole('button', { name: 'Matte' }));
@@ -63,8 +63,8 @@ describe('EmailThemeSection', () => {
       onCancel: () => void;
       secondaryButton: { label: string; onClick: () => void };
     };
-    expect(options.title).toBe('Switch theme?');
-    expect(options.description).toBe('3 emails use another theme. Switch them to Matte too?');
+    expect(options.title).toBe('Switch template?');
+    expect(options.description).toBe('3 emails use another template. Switch them to Matte too?');
     expect(options.secondaryButton.label).toBe('Only new emails');
     options.onCancel();
     await waitFor(() => expect(onApply).not.toHaveBeenCalled());

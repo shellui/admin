@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Text } from '@/components/ui/text';
 import {
   EmailTemplateEditor,
@@ -17,6 +18,7 @@ import { preferredTemplateVersion } from '@/lib/emailApiParsers';
 import { emailThemeKeyOrDefault } from '@/lib/emailTheme';
 import { getEmailFromJwt, getIsStaffFromJwt } from '@/lib/jwtCompany';
 import type {
+  EmailCatalogEvent,
   EmailTemplateDefaults,
   EmailTemplateRow,
   EmailTemplateVersion,
@@ -49,19 +51,17 @@ export function EmailTemplateEditorPage() {
   const [variables, setVariables] = useState<EmailVariable[]>([]);
   const [laneClass, setLaneClass] = useState('');
   const [authLinkHosts, setAuthLinkHosts] = useState<string[]>([]);
-  const [storedThemeName, setStoredThemeName] = useState<string | null>(null);
+  const [storedTemplate, setStoredTemplate] = useState<string | null>(null);
   const [draftEn, setDraftEn] = useState<EmailLangDraft>(() => draftFromPack(null, 'en', null));
   const [draftFr, setDraftFr] = useState<EmailLangDraft>(() => draftFromPack(null, 'fr', null));
   const [publishing, setPublishing] = useState(false);
   const [sendingDraft, setSendingDraft] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const [serviceHtml, setServiceHtml] = useState<string | null>(null);
-  const [serviceNote, setServiceNote] = useState<string | null>(null);
-  const [themeChoices, setThemeChoices] = useState<Array<{ key: string; name: string }>>([]);
-  const [companyTheme, setCompanyTheme] = useState('barebone');
+  const [companyTemplate, setCompanyTemplate] = useState('barebone');
   const [storedPalette, setStoredPalette] = useState<Record<string, string> | null>(null);
   const [languages, setLanguages] = useState<EmailLang[]>(['en', 'fr']);
   const [openedRow, setOpenedRow] = useState<EmailTemplateRow | null>(null);
+  const [catalogEvent, setCatalogEvent] = useState<EmailCatalogEvent | null>(null);
 
   const load = useCallback(
     async (opts?: { silent?: boolean }) => {
@@ -72,9 +72,8 @@ export function EmailTemplateEditorPage() {
       if (!opts?.silent) setLoading(true);
       setError(null);
       try {
-        const [themes, settings] = await Promise.all([api.fetchThemes(), api.fetchSettings()]);
-        setThemeChoices(themes.map((theme) => ({ key: theme.key, name: theme.name })));
-        setCompanyTheme(emailThemeKeyOrDefault(settings.theme, 'barebone'));
+        const settings = await api.fetchSettings();
+        setCompanyTemplate(emailThemeKeyOrDefault(settings.theme, 'barebone'));
         if (templateIdParam) {
           const [templates, catalog] = await Promise.all([
             api.fetchTemplates(),
@@ -86,6 +85,7 @@ export function EmailTemplateEditorPage() {
           const lang: EmailLang = row.language === 'fr' ? 'fr' : 'en';
           setLanguages([lang]);
           const event = catalog.events.find((item) => item.eventType === row.eventType);
+          setCatalogEvent(event ?? null);
           setLaneClass(event?.laneClass ?? '');
           setAuthLinkHosts(catalog.authLinkHosts);
           setVariables(event?.variables ?? []);
@@ -101,7 +101,7 @@ export function EmailTemplateEditorPage() {
                 document: version.document,
               }
             : base;
-          setStoredThemeName(
+          setStoredTemplate(
             emailThemeKeyOrDefault(version?.themeName || row.theme, settings.theme),
           );
           setStoredPalette(version?.themePalette ?? null);
@@ -131,9 +131,9 @@ export function EmailTemplateEditorPage() {
           api.fetchCatalog(),
         ]);
         const rows = templates.filter((row) => row.templateKey === templateKey);
-        setLaneClass(
-          catalog.events.find((event) => event.templateKey === templateKey)?.laneClass ?? '',
-        );
+        const event = catalog.events.find((item) => item.templateKey === templateKey) ?? null;
+        setCatalogEvent(event);
+        setLaneClass(event?.laneClass ?? '');
         setAuthLinkHosts(catalog.authLinkHosts);
         const opened = await Promise.all(
           rows.map(async (row) => {
@@ -161,7 +161,7 @@ export function EmailTemplateEditorPage() {
         const enId = rows.find((row) => row.language === 'en')?.id ?? null;
         const frId = rows.find((row) => row.language === 'fr')?.id ?? null;
         const stored = versionFor('en')?.themeName || versionFor('fr')?.themeName || null;
-        setStoredThemeName(stored ? emailThemeKeyOrDefault(stored, settings.theme) : null);
+        setStoredTemplate(stored ? emailThemeKeyOrDefault(stored, settings.theme) : null);
         setStoredPalette(versionFor('en')?.themePalette || versionFor('fr')?.themePalette || null);
         setLanguages(['en', 'fr']);
         setOpenedRow(null);
@@ -182,7 +182,7 @@ export function EmailTemplateEditorPage() {
     void load();
   }, [load]);
 
-  async function publish(themeName: string | null, themePalette: Record<string, string>) {
+  async function publish(template: string, themePalette: Record<string, string>) {
     if (!api) return;
     setPublishing(true);
     try {
@@ -209,7 +209,7 @@ export function EmailTemplateEditorPage() {
           subject: draft.subject,
           preheader: draft.preheader,
           document: draft.document,
-          theme_name: emailThemeKeyOrDefault(themeName, companyTheme),
+          theme_name: emailThemeKeyOrDefault(template, companyTemplate),
           theme_palette: Object.keys(themePalette).length === 7 ? themePalette : {},
         });
         await api.publishVersion(id, version.number);
@@ -245,6 +245,7 @@ export function EmailTemplateEditorPage() {
   async function sendDraft(
     lang: EmailLang,
     draft: EmailLangDraft,
+    template: string,
     themePalette: Record<string, string>,
     to?: string,
   ) {
@@ -272,6 +273,7 @@ export function EmailTemplateEditorPage() {
         document: draft.document,
         subject: draft.subject,
         preheader: draft.preheader,
+        theme_name: emailThemeKeyOrDefault(template, companyTemplate),
         theme_palette: themePalette,
         ...(to ? { to } : {}),
       });
@@ -280,46 +282,31 @@ export function EmailTemplateEditorPage() {
     }
   }
 
-  async function preview(
-    lang: EmailLang,
-    draft: EmailLangDraft,
-    themePalette: Record<string, string>,
-  ) {
-    if (!api) return;
-    setServiceNote(null);
-    const variablesMap: Record<string, string> = {};
-    for (const variable of variables) variablesMap[variable.token] = variable.example;
-    const rendered = await api.render({
-      template_key: openedRow?.templateKey || templateKey,
-      language: lang,
-      theme_name: emailThemeKeyOrDefault(storedThemeName, companyTheme),
-      document: draft.document,
-      subject: draft.subject,
-      variables: variablesMap,
-      theme_palette: themePalette,
-    });
-    setServiceHtml(rendered.html);
-    setServiceNote(
-      rendered.missingVariables.length
-        ? t('emailMissingVariables', { tokens: rendered.missingVariables.join(', ') })
-        : rendered.subject,
-    );
-  }
-
   const hasCompany = Boolean(draftEn.templateId || draftFr.templateId);
+  const loaded = Boolean(defaults);
+  const title = (loaded && (openedRow?.name || catalogEvent?.label)) || t('emailEditorTitle');
+  const eventType = openedRow?.eventType || catalogEvent?.eventType || '';
+  const eventLabel = catalogEvent?.label && catalogEvent.label !== title ? catalogEvent.label : '';
+  const laneLabel = laneClass ? t(`emailLane_${laneClass}`, { defaultValue: '' }) : '';
 
   return (
     <div className="w-full space-y-6">
-      <header className="space-y-1">
+      <header className="space-y-2">
         <Link
           to="/email/templates"
           className="font-mono text-xs text-primary underline-offset-2 hover:underline"
         >
           {t('emailBackToTemplates')}
         </Link>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-          {t('emailEditorTitle')}
-        </h1>
+        <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">{title}</h1>
+        {loaded && eventType ? (
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+            <span className="text-muted-foreground">{t('emailEditorSentFor')}</span>
+            {eventLabel ? <span className="font-medium">{eventLabel}</span> : null}
+            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{eventType}</code>
+            {laneLabel ? <Badge variant="outline">{laneLabel}</Badge> : null}
+          </p>
+        ) : null}
         <Text className="max-w-3xl">{t('emailEditorDescription')}</Text>
       </header>
       {!accessToken ? <Text>{t('dashboardNoSession')}</Text> : null}
@@ -335,13 +322,11 @@ export function EmailTemplateEditorPage() {
       ) : null}
       {!loading && api && canManage && defaults ? (
         <EmailTemplateEditor
-          templateKey={openedRow?.name || openedRow?.templateKey || templateKey}
           laneClass={laneClass}
           authLinkHosts={authLinkHosts}
-          storedThemeName={storedThemeName}
+          storedTemplate={storedTemplate}
           storedPalette={storedPalette}
-          themeChoices={themeChoices}
-          companyTheme={companyTheme}
+          companyTemplate={companyTemplate}
           languages={languages}
           draftEn={draftEn}
           draftFr={draftFr}
@@ -353,12 +338,11 @@ export function EmailTemplateEditorPage() {
           isStaff={Boolean(accessToken && getIsStaffFromJwt(accessToken))}
           jwtEmail={accessToken ? getEmailFromJwt(accessToken) : null}
           onChange={(lang, next) => (lang === 'fr' ? setDraftFr(next) : setDraftEn(next))}
-          onPublish={(themeName, palette) => publish(themeName, palette)}
+          onPublish={(template, palette) => publish(template, palette)}
           onReset={() => reset()}
-          onSendDraft={(lang, draft, palette, to) => sendDraft(lang, draft, palette, to)}
-          onServicePreview={(lang, draft, palette) => preview(lang, draft, palette)}
-          servicePreviewHtml={serviceHtml}
-          servicePreviewNote={serviceNote}
+          onSendDraft={(lang, draft, template, palette, to) =>
+            sendDraft(lang, draft, template, palette, to)
+          }
         />
       ) : null}
     </div>
