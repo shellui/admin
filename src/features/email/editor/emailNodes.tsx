@@ -3,6 +3,7 @@ import { Extension, type Extensions, type NodeConfig } from '@tiptap/core';
 import { Body, Container as EmailContainer, Head, Html, Img, Link, Preview } from 'react-email';
 import { EmailNode } from '@react-email/editor/core';
 import { Container as BaseContainer, StarterKit } from '@react-email/editor/extensions';
+import { TextIdAttribute } from '@/features/email/editor/textIds';
 
 /*
  * Same node set as email-service `renderer/editor.mjs`, so a document composes
@@ -30,6 +31,13 @@ function stringAttr(value: unknown): string | undefined {
 
 function sizeAttr(value: unknown): string | number | undefined {
   return typeof value === 'number' ? value : stringAttr(value);
+}
+
+/** React Email images are blocks, so auto margins place them. */
+export function imageAlignStyle(alignment: unknown): CSSProperties {
+  if (alignment === 'center') return { marginLeft: 'auto', marginRight: 'auto' };
+  if (alignment === 'right') return { marginLeft: 'auto', marginRight: 0 };
+  return {};
 }
 
 export const EmailImage = EmailNode.create({
@@ -61,13 +69,14 @@ export const EmailImage = EmailNode.create({
   },
   renderToReactEmail({ node, style }) {
     const attrs = node.attrs ?? {};
+    if (typeof attrs.src !== 'string' || !attrs.src) return null;
     const img = (
       <Img
         alt={typeof attrs.alt === 'string' ? attrs.alt : ''}
         className={stringAttr(attrs.class)}
         height={sizeAttr(attrs.height)}
-        src={typeof attrs.src === 'string' ? attrs.src : ''}
-        style={{ ...style, ...cssToJs(attrs.style) }}
+        src={attrs.src}
+        style={{ ...style, ...cssToJs(attrs.style), ...imageAlignStyle(attrs.alignment) }}
         width={sizeAttr(attrs.width)}
       />
     );
@@ -168,6 +177,7 @@ export function emailDocumentExtensions(head = ''): Extensions {
     StarterKit.configure({ Container: false }),
     EmailLayoutContainer,
     EmailImage,
+    TextIdAttribute,
     serializer(head),
   ];
 }

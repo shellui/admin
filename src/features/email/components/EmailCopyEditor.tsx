@@ -1,8 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
+import { useLang } from '@/contexts/LangContext';
+import {
+  EmailLanguageTabs,
+  EmailTranslationNotice,
+} from '@/features/email/components/EmailLanguageBar';
 import { EmailLibraryGrid } from '@/features/email/components/EmailLibraryGrid';
 import {
   EmailTemplateEditor,
@@ -11,14 +16,38 @@ import {
 import type { EmailApiClient } from '@/lib/emailApi';
 import { emailErrorText } from '@/lib/emailApiErrors';
 import { validateAuthLaneOverride } from '@/lib/emailAuthTemplate';
-import { emptyEmailDocument } from '@/lib/emailDocument';
+import { emptyEmailDocument, type EmailDocument, type EmailLang } from '@/lib/emailDocument';
 import { emailAssetsUrl } from '@/lib/emailLibrary';
+import {
+  EMAIL_LANGS,
+  applyTranslatedEdit,
+  isEmailLang,
+  localizeDocument,
+  markTranslationCurrent,
+  pruneTranslations,
+  translationStatus,
+  withAllLanguages,
+  withTextIds,
+  type EmailInbox,
+  type EmailTranslationStatus,
+  type EmailTranslations,
+} from '@/lib/emailTranslations';
 import { askShelluiConfirm } from '@/lib/shelluiConfirm';
 import type { EmailCatalogEvent, EmailLibrary, EmailTemplateRow } from '@/lib/emailTypes';
 
-const EMPTY_DRAFT: EmailDraft = { subject: '', preheader: '', document: emptyEmailDocument() };
+const EMPTY_INBOX: EmailInbox = { subject: '', preheader: '' };
 
-/** The editable copy an event email sends: edit, publish, send a draft, or start over. */
+function eventLanguages(event: EmailCatalogEvent | null): EmailLang[] {
+  const offered = Object.keys(event?.suggested ?? {});
+  const languages = EMAIL_LANGS.filter((lang) => offered.includes(lang));
+  return languages.length ? languages : EMAIL_LANGS;
+}
+
+/**
+ * The editable copy an event email sends, in every language: one layout, text
+ * per language. Opens in the Shellui language. Edit, publish, send a draft, or
+ * start over.
+ */
 export function EmailCopyEditor({
   api,
   baseUrl,
@@ -35,12 +64,19 @@ export function EmailCopyEditor({
   onLoaded?: (row: EmailTemplateRow, event: EmailCatalogEvent | null) => void;
 }) {
   const { t } = useTranslation();
+  const shellLang = useLang();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [row, setRow] = useState<EmailTemplateRow | null>(null);
   const [event, setEvent] = useState<EmailCatalogEvent | null>(null);
   const [authLinkHosts, setAuthLinkHosts] = useState<string[]>([]);
-  const [draft, setDraft] = useState<EmailDraft>(EMPTY_DRAFT);
+  const [mainLang, setMainLang] = useState<EmailLang>('en');
+  const [lang, setLang] = useState<EmailLang | null>(null);
+  const [base, setBase] = useState<EmailDocument>(emptyEmailDocument);
+  const [mainInbox, setMainInbox] = useState<EmailInbox>(EMPTY_INBOX);
+  const [translations, setTranslations] = useState<EmailTranslations>({});
+  // The document the editor last wrote in a translation, so typing keeps it mounted.
+  const view = useRef<{ lang: EmailLang; document: EmailDocument } | null>(null);
   const [unpublished, setUnpublished] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [sending, setSending] = useState(false);
@@ -67,14 +103,28 @@ export function EmailCopyEditor({
           (best, version) => (!best || version.number > best.number ? version : best),
           null,
         );
+        const nextMain = isEmailLang(nextRow.language) ? nextRow.language : 'en';
+        const document = withTextIds(latest?.document ?? emptyEmailDocument());
+        const inbox = latest
+          ? { subject: latest.subject, preheader: latest.preheader }
+          : EMPTY_INBOX;
         setRow(nextRow);
         setEvent(nextEvent);
         setAuthLinkHosts(catalog.authLinkHosts);
-        setDraft(
-          latest
-            ? { subject: latest.subject, preheader: latest.preheader, document: latest.document }
-            : EMPTY_DRAFT,
+        setMainLang(nextMain);
+        setBase(document);
+        setMainInbox(inbox);
+        setTranslations(
+          withAllLanguages(
+            pruneTranslations(document, latest?.translations ?? {}),
+            nextMain,
+            inbox,
+            nextEvent?.suggested ?? {},
+          ),
         );
+        view.current = null;
+        const languages = eventLanguages(nextEvent);
+        setLang((current) => current ?? (languages.includes(shellLang) ? shellLang : nextMain));
         setUnpublished(Boolean(latest && latest.state === 'draft'));
         onLoadedRef.current?.(nextRow, nextEvent);
       } catch (err) {
@@ -83,6 +133,7 @@ export function EmailCopyEditor({
         setLoading(false);
       }
     },
+    // The Shellui language only picks the first tab, so it does not reload.
     [api, templateId],
   );
 
@@ -92,24 +143,99 @@ export function EmailCopyEditor({
 
   const laneClass = event?.laneClass ?? '';
   const variables = event?.variables ?? [];
+  const languages = useMemo(() => eventLanguages(event), [event]);
+  const current = lang ?? mainLang;
+  const translation = current === mainLang ? undefined : translations[current];
+  const mainName = t(`emailLangInline_${mainLang}`);
 
-  function checkAuth() {
-    const issue = validateAuthLaneOverride({
-      laneClass,
-      variables,
-      authLinkHosts,
-      subject: draft.subject,
-      preheader: draft.preheader,
-      document: draft.document,
+  let draft: EmailDraft;
+  if (!translation) {
+    view.current = null;
+    draft = { ...mainInbox, document: base };
+  } else {
+    if (view.current?.lang !== current) {
+      view.current = { lang: current, document: localizeDocument(base, translation) };
+    }
+    draft = {
+      subject: translation.subject,
+      preheader: translation.preheader,
+      document: view.current.document,
+    };
+  }
+
+  const status = useMemo(() => {
+    const out: Partial<Record<EmailLang, EmailTranslationStatus>> = {};
+    for (const item of languages) {
+      if (item !== mainLang) out[item] = translationStatus(base, translations[item], mainInbox);
+    }
+    return out;
+  }, [base, translations, mainInbox, mainLang, languages]);
+  const currentStatus = translation ? status[current] : undefined;
+
+  const highlights = useMemo(
+    () =>
+      currentStatus
+        ? {
+            missing: currentStatus.missing,
+            outdated: currentStatus.outdated,
+            missingTitle: t('emailTranslationMissingTitle', { main: mainName }),
+            outdatedTitle: t('emailTranslationOutdatedTitle', { main: mainName }),
+          }
+        : null,
+    [currentStatus, mainName, t],
+  );
+
+  function change(next: EmailDraft) {
+    if (!translation) {
+      setBase(next.document);
+      setMainInbox({ subject: next.subject, preheader: next.preheader });
+      setTranslations((prev) => pruneTranslations(next.document, prev));
+      return;
+    }
+    const result = applyTranslatedEdit(base, translation, next.document);
+    view.current = { lang: current, document: next.document };
+    setBase(result.base);
+    setTranslations((prev) =>
+      pruneTranslations(result.base, {
+        ...prev,
+        [current]: { ...result.translation, subject: next.subject, preheader: next.preheader },
+      }),
+    );
+  }
+
+  /** Each language as it sends: its text, or the main text where it has none. */
+  function variantsToSend(): Array<{ lang: EmailLang; document: EmailDocument } & EmailInbox> {
+    return languages.map((item) => {
+      const entry = item === mainLang ? undefined : translations[item];
+      return {
+        lang: item,
+        document: localizeDocument(base, entry),
+        subject: entry?.subject || mainInbox.subject,
+        preheader: entry?.preheader || mainInbox.preheader,
+      };
     });
-    if (issue) throw issue;
+  }
+
+  /** Opens the language at fault, so the error shows beside it. */
+  function checkAuth() {
+    for (const variant of variantsToSend()) {
+      const issue = validateAuthLaneOverride({ laneClass, variables, authLinkHosts, ...variant });
+      if (issue) {
+        setLang(variant.lang);
+        throw issue;
+      }
+    }
   }
 
   async function publish() {
     checkAuth();
     setPublishing(true);
     try {
-      const version = await api.createVersion(templateId, draft);
+      const version = await api.createVersion(templateId, {
+        ...mainInbox,
+        document: base,
+        translations,
+      });
       await api.publishVersion(templateId, version.number);
       await load({ silent: true });
     } finally {
@@ -121,10 +247,22 @@ export function EmailCopyEditor({
     checkAuth();
     setSending(true);
     try {
-      await api.sendTemplateTest(templateId, { ...draft, ...(to ? { to } : {}) });
+      await api.sendTemplateTest(templateId, {
+        document: draft.document,
+        subject: draft.subject || mainInbox.subject,
+        preheader: draft.preheader || mainInbox.preheader,
+        ...(to ? { to } : {}),
+      });
     } finally {
       setSending(false);
     }
+  }
+
+  function markCurrent() {
+    setTranslations((prev) => {
+      const entry = prev[current];
+      return entry ? { ...prev, [current]: markTranslationCurrent(base, entry) } : prev;
+    });
   }
 
   async function openPicker() {
@@ -220,6 +358,7 @@ export function EmailCopyEditor({
         head={row.head}
         assetsUrl={assetsUrl}
         draft={draft}
+        documentKey={current}
         variables={variables}
         primary={{
           label: publishing ? t('emailPublishing') : t('emailPublish'),
@@ -234,7 +373,34 @@ export function EmailCopyEditor({
           doneText: '',
         }}
         sendDraft={{ isStaff, jwtEmail, sending, run: sendDraft }}
-        onChange={(next) => setDraft(next)}
+        languageBar={
+          languages.length > 1 ? (
+            <EmailLanguageTabs
+              languages={languages}
+              mainLang={mainLang}
+              value={current}
+              status={status}
+              onChange={setLang}
+            />
+          ) : null
+        }
+        languageNotice={
+          currentStatus ? (
+            <EmailTranslationNotice
+              lang={current}
+              mainLang={mainLang}
+              status={currentStatus}
+              onMarkCurrent={markCurrent}
+            />
+          ) : null
+        }
+        inboxFallback={
+          translation
+            ? { ...mainInbox, hint: t('emailInboxFallback', { main: mainName }) }
+            : undefined
+        }
+        highlights={highlights}
+        onChange={change}
       />
     </div>
   );

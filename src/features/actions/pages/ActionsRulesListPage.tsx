@@ -59,15 +59,15 @@ function EnabledSwitch({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'relative inline-flex h-5 w-9 shrink-0 rounded-full border border-border transition-colors',
-        checked ? 'bg-primary' : 'bg-muted',
+        'inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        checked ? 'bg-primary' : 'bg-input',
         disabled && 'cursor-not-allowed opacity-60',
       )}
     >
       <span
         className={cn(
-          'pointer-events-none mt-0.5 block size-4 rounded-full bg-background shadow transition-transform',
-          checked ? 'translate-x-4' : 'translate-x-0.5',
+          'pointer-events-none block size-4 rounded-full bg-background shadow-sm transition-transform',
+          checked ? 'translate-x-4' : 'translate-x-0',
         )}
       />
     </button>
@@ -285,11 +285,6 @@ export function ActionsRulesListPage() {
     }
   }
 
-  function switchLabel(row: MergedServiceRule): string {
-    if (row.builtIn) return `${t('emailRuleBuiltInLocked')} ${row.event}`;
-    return row.kind === 'webhook' ? row.name : row.event;
-  }
-
   const canCreateWebhook = Boolean(serviceConfigured && accessToken && isOwner && api);
   const canCreateEmail = Boolean(accessToken && canManageEmail && emailApi);
   const showList = visible.length > 0 || removed.length > 0;
@@ -430,19 +425,28 @@ export function ActionsRulesListPage() {
                       <Badge variant={row.kind === 'email' ? 'secondary' : 'outline'}>
                         {row.kind === 'email' ? t('emailRuleKindEmail') : t('emailRuleKindWebhook')}
                       </Badge>
-                      {row.builtIn ? <Badge variant="muted">{t('emailRuleBuiltIn')}</Badge> : null}
+                      {row.builtIn ? (
+                        <Badge
+                          variant="muted"
+                          title={t('emailRuleBuiltInLocked')}
+                        >
+                          {t('emailRuleBuiltIn')}
+                        </Badge>
+                      ) : null}
                     </div>
                     <p className="font-mono text-xs">{row.event}</p>
                     <p className="break-all text-sm text-muted-foreground">{row.target}</p>
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <div className="flex flex-wrap items-center justify-end gap-2">
-                      <EnabledSwitch
-                        checked={row.builtIn ? true : row.enabled}
-                        disabled={row.builtIn || busyKey === row.key}
-                        label={switchLabel(row)}
-                        onClick={() => void onToggle(row)}
-                      />
+                      {row.builtIn ? null : (
+                        <EnabledSwitch
+                          checked={row.enabled}
+                          disabled={busyKey === row.key}
+                          label={row.kind === 'webhook' ? row.name : row.event}
+                          onClick={() => void onToggle(row)}
+                        />
+                      )}
                       <Button
                         type="button"
                         size="sm"

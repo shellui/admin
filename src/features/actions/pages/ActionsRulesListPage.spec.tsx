@@ -172,11 +172,10 @@ describe('ActionsRulesListPage action feedback', () => {
       deleteRule: vi.fn(),
     };
     renderPage();
-    const toggle = await screen.findByRole('switch', { name: /Built-in rules stay on/ });
-    expect((toggle as HTMLButtonElement).disabled).toBe(true);
-    expect(toggle.getAttribute('aria-checked')).toBe('true');
-    const row = toggle.closest('li');
-    expect(row?.textContent).toContain('Built in');
+    const badge = await screen.findByText('Built in');
+    expect(badge.getAttribute('title')).toBe('Built-in rules stay on.');
+    const row = badge.closest('li');
+    expect(row ? within(row).queryByRole('switch') : null).toBeNull();
     expect(row ? within(row).queryByRole('button', { name: 'Delete' }) : null).toBeNull();
     expect(emailState.api.patchRule).not.toHaveBeenCalled();
   });

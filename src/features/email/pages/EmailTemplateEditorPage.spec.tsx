@@ -172,7 +172,16 @@ describe('EmailTemplateEditorPage', () => {
     expect(api.createVersion).toHaveBeenCalledWith(7, {
       subject: 'Draft subject',
       preheader: '',
-      document: emptyEmailDocument(),
+      document: {
+        type: 'doc',
+        content: [
+          {
+            type: 'container',
+            content: [{ type: 'paragraph', attrs: { textId: expect.any(String) } }],
+          },
+        ],
+      },
+      translations: { fr: { subject: '', preheader: '', blocks: {} } },
     });
 
     const dialog = vi.fn();

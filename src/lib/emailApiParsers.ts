@@ -15,6 +15,7 @@ import type {
   EmailTestSendResult,
 } from '@/lib/emailTypes';
 import { EMAIL_COUNT_KEYS } from '@/lib/emailTypes';
+import { parseTranslations } from '@/lib/emailTranslations';
 
 function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
@@ -159,6 +160,7 @@ export function parseVersion(body: unknown): EmailTemplateVersion {
     subject: str(row.subject),
     preheader: str(row.preheader),
     document: parseEmailDocument(row.document),
+    translations: parseTranslations(row.translations),
     publishedAt: typeof row.published_at === 'string' ? row.published_at : null,
   };
 }

@@ -38,4 +38,43 @@ describe('composeEmailHtml', () => {
     expect(html).toContain('Your invitation');
     expect(html).toContain('Hi {{ company_name }}');
   }, 30_000);
+
+  it('renders justified text, aligned images, and columns', async () => {
+    const html = await composeEmailHtml({
+      head: '',
+      preheader: '',
+      document: {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            attrs: { alignment: 'justify', style: 'text-align:justify' },
+            content: [{ type: 'text', text: 'Justified' }],
+          },
+          {
+            type: 'image',
+            attrs: { src: 'https://example.com/logo.png', alignment: 'center' },
+          },
+          { type: 'image', attrs: { src: '' } },
+          {
+            type: 'twoColumns',
+            content: [
+              {
+                type: 'columnsColumn',
+                content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Left' }] }],
+              },
+              {
+                type: 'columnsColumn',
+                content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Right' }] }],
+              },
+            ],
+          },
+        ],
+      },
+    });
+    expect(html).toMatch(/<p[^>]+text-align:justify[^>]*>Justified/);
+    expect(html).toMatch(/<img[^>]+margin-left:auto;margin-right:auto/);
+    expect(html.match(/<img/g)).toHaveLength(1);
+    expect(html).toMatch(/<td[^>]*>.*Left.*<\/td>.*<td[^>]*>.*Right/s);
+  }, 30_000);
 });

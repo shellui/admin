@@ -1,14 +1,32 @@
 import '@react-email/editor/themes/default.css';
 import '@/features/email/editor/emailCanvas.css';
-import { forwardRef, useImperativeHandle, useMemo, useRef, type MouseEvent } from 'react';
+import {
+  createElement,
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  type MouseEvent,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Schema } from '@tiptap/pm/model';
-import { EditorContent, EditorContext, useEditor } from '@tiptap/react';
+import { TextSelection } from '@tiptap/pm/state';
+import type { Editor } from '@tiptap/core';
+import { EditorContent, EditorContext, useEditor, useEditorState } from '@tiptap/react';
 import { BubbleMenu, SlashCommand, type SlashCommandItem } from '@react-email/editor/ui';
 import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
   Braces,
+  Columns2,
+  Columns3,
+  Columns4,
   Heading1,
   Heading2,
+  ImageIcon,
   List,
   ListOrdered,
   Minus,
@@ -26,6 +44,19 @@ import {
 } from '@/lib/emailDocument';
 import { scopeHeadCss } from '@/lib/emailHeadCss';
 import { emailEditorExtensions } from '@/features/email/editor/extensions';
+import { SlashPluginReset } from '@/features/email/editor/slashPluginReset';
+import { EmailImageMenu } from '@/features/email/editor/EmailImageMenu';
+import {
+  TEXT_ALIGNS,
+  selectedTextAlign,
+  setTextAlign,
+  type TextAlign,
+} from '@/features/email/editor/textAlign';
+import {
+  TRANSLATION_HIGHLIGHT_KEY,
+  translationHighlight,
+  type TranslationHighlights,
+} from '@/features/email/editor/translationHighlight';
 
 export type EmailInlineEditorHandle = {
   /** Inserts text at the caret, or at the end when the editor never had focus. */
@@ -70,6 +101,46 @@ export function compactDocument(node: EmailNode, schema: Schema): EmailNode {
 const ICON = { size: 18 } as const;
 const CANVAS_SCOPE = '.email-canvas';
 
+const COLUMN_ICONS = { 2: Columns2, 3: Columns3, 4: Columns4 } as const;
+
+const ALIGN_ICONS: Record<TextAlign, typeof AlignLeft> = {
+  left: AlignLeft,
+  center: AlignCenter,
+  right: AlignRight,
+  justify: AlignJustify,
+};
+const ALIGN_LABELS: Record<TextAlign, string> = {
+  left: 'emailAlignLeft',
+  center: 'emailAlignCenter',
+  right: 'emailAlignRight',
+  justify: 'emailAlignJustify',
+};
+
+function TextAlignItems({ editor }: { editor: Editor }) {
+  const { t } = useTranslation();
+  const current = useEditorState({
+    editor,
+    selector: ({ editor: e }) => (e ? selectedTextAlign(e) : 'left'),
+  });
+  return (
+    <BubbleMenu.ItemGroup>
+      {TEXT_ALIGNS.map((align) => {
+        const Icon = ALIGN_ICONS[align];
+        return (
+          <BubbleMenu.Item
+            key={align}
+            name={t(ALIGN_LABELS[align])}
+            isActive={current === align}
+            onCommand={() => setTextAlign(editor, align)}
+          >
+            <Icon size={16} />
+          </BubbleMenu.Item>
+        );
+      })}
+    </BubbleMenu.ItemGroup>
+  );
+}
+
 export const EmailInlineEditor = forwardRef<
   EmailInlineEditorHandle,
   {
@@ -82,11 +153,13 @@ export const EmailInlineEditor = forwardRef<
     variables: EmailVariable[];
     label: string;
     editable?: boolean;
+    /** Blocks a translation still has to cover. */
+    highlights?: TranslationHighlights | null;
     onChange: (document: EmailDocument) => void;
     onFocus?: () => void;
   }
 >(function EmailInlineEditor(
-  { document, head, assetsUrl, variables, label, editable = true, onChange, onFocus },
+  { document, head, assetsUrl, variables, label, editable = true, highlights, onChange, onFocus },
   ref,
 ) {
   const { t } = useTranslation();
@@ -95,9 +168,14 @@ export const EmailInlineEditor = forwardRef<
   const onFocusRef = useRef(onFocus);
   onFocusRef.current = onFocus;
   const focusedOnce = useRef(false);
+  const highlightsRef = useRef(highlights ?? null);
+  highlightsRef.current = highlights ?? null;
 
   const editor = useEditor({
-    extensions: emailEditorExtensions({ head, placeholder: t('emailEditorPlaceholder') }),
+    extensions: [
+      ...emailEditorExtensions({ head, placeholder: t('emailEditorPlaceholder') }),
+      translationHighlight(highlightsRef),
+    ],
     content: withAssetsUrl(document, assetsUrl),
     editable,
     editorProps: {
@@ -116,6 +194,12 @@ export const EmailInlineEditor = forwardRef<
       focusedOnce.current = true;
       onFocusRef.current?.();
     },
+    // Designs often start with a logo, which would otherwise be the initial selection and open its menu.
+    onCreate: ({ editor: created }) => {
+      const start = TextSelection.findFrom(created.state.doc.resolve(0), 1, true);
+      if (start)
+        created.view.dispatch(created.state.tr.setSelection(start).setMeta('addToHistory', false));
+    },
   });
 
   useImperativeHandle(
@@ -133,6 +217,11 @@ export const EmailInlineEditor = forwardRef<
     [editor],
   );
 
+  useEffect(() => {
+    if (editor && !editor.isDestroyed) {
+      editor.view.dispatch(editor.state.tr.setMeta(TRANSLATION_HIGHLIGHT_KEY, true));
+    }
+  }, [editor, highlights]);
   const scopedHead = useMemo(() => scopeHeadCss(head, CANVAS_SCOPE), [head]);
   const contextValue = useMemo(() => ({ editor }), [editor]);
 
@@ -217,6 +306,32 @@ export const EmailInlineEditor = forwardRef<
           e.chain().focus().deleteRange(range).setHorizontalRule().run();
         },
       },
+      {
+        title: t('emailBlock_image'),
+        description: t('emailSlash_image'),
+        icon: <ImageIcon {...ICON} />,
+        category: blocks,
+        searchTerms: ['image', 'img', 'logo', 'picture', 'photo'],
+        command: ({ editor: e, range }) => {
+          e.chain()
+            .focus()
+            .deleteRange(range)
+            .insertContent({ type: 'image', attrs: { src: '' } })
+            .run();
+        },
+      },
+      ...([2, 3, 4] as const).map(
+        (count): SlashCommandItem => ({
+          title: t(`emailBlock_columns${count}`),
+          description: t('emailSlash_columns'),
+          icon: createElement(COLUMN_ICONS[count], ICON),
+          category: blocks,
+          searchTerms: ['columns', 'colonnes', 'layout', 'grid', String(count)],
+          command: ({ editor: e, range }) => {
+            e.chain().focus().deleteRange(range).insertColumns(count).run();
+          },
+        }),
+      ),
     ];
     const variableCategory = t('emailSlashVariables');
     const variableItems: SlashCommandItem[] = variables.map((variable) => ({
@@ -263,12 +378,19 @@ export const EmailInlineEditor = forwardRef<
               <BubbleMenu.Italic />
               <BubbleMenu.Underline />
             </BubbleMenu.ItemGroup>
+            <TextAlignItems editor={editor} />
             <BubbleMenu.ItemGroup>
               <BubbleMenu.LinkSelector validateUrl={normalizeLink} />
             </BubbleMenu.ItemGroup>
           </BubbleMenu.Root>
           <BubbleMenu.LinkDefault validateUrl={normalizeLink} />
           <BubbleMenu.ButtonDefault validateUrl={normalizeLink} />
+          <EmailImageMenu
+            editor={editor}
+            assetsUrl={assetsUrl}
+            validateLink={normalizeLink}
+          />
+          <SlashPluginReset editor={editor} />
           <SlashCommand items={items} />
         </>
       ) : null}

@@ -21,6 +21,8 @@ import { EmailPreviewPane } from '@/features/email/components/EmailPreviewPane';
 import { EmailSendDraftAction } from '@/features/email/components/EmailSendDraftAction';
 import { SegmentedControl } from '@/features/email/components/SegmentedControl';
 import type { EmailInlineEditorHandle } from '@/features/email/editor/EmailInlineEditor';
+import type { TranslationHighlights } from '@/features/email/editor/translationHighlight';
+import type { EmailInbox } from '@/lib/emailTranslations';
 import { useComposedEmail } from '@/features/email/editor/useComposedEmail';
 import { emailErrorText } from '@/lib/emailApiErrors';
 import { requiredAuthLinkTokens, validateAuthLaneOverride } from '@/lib/emailAuthTemplate';
@@ -61,11 +63,16 @@ export function EmailTemplateEditor({
   head,
   assetsUrl,
   draft,
+  documentKey = '',
   variables,
   readOnly = false,
   primary,
   secondary,
   sendDraft,
+  languageBar,
+  languageNotice,
+  inboxFallback,
+  highlights,
   onChange,
 }: {
   laneClass: string;
@@ -75,6 +82,8 @@ export function EmailTemplateEditor({
   /** What `{{ system.assets_url }}` stands for in the canvas and preview. */
   assetsUrl: string;
   draft: EmailDraft;
+  /** Which copy `draft` is, such as its language. A new key always reloads the canvas. */
+  documentKey?: string;
   variables: EmailVariable[];
   /** Built-in library designs open read-only. */
   readOnly?: boolean;
@@ -88,6 +97,13 @@ export function EmailTemplateEditor({
     sending: boolean;
     run: (to?: string) => Promise<void>;
   };
+  /** Language tabs, beside the modes. */
+  languageBar?: ReactNode;
+  /** Shown under the toolbar while a translation is open. */
+  languageNotice?: ReactNode;
+  /** What an empty subject or preheader sends, with the hint that says so. */
+  inboxFallback?: EmailInbox & { hint: string };
+  highlights?: TranslationHighlights | null;
   onChange: (next: EmailDraft) => void;
 }) {
   const { t } = useTranslation();
@@ -100,7 +116,9 @@ export function EmailTemplateEditor({
   const editorRef = useRef<EmailInlineEditorHandle>(null);
   const [draftTo, setDraftTo] = useState(sendDraft?.jwtEmail ?? '');
   const [feedback, setFeedback] = useState<Record<string, ActionFeedbackState | null>>({});
-  const composed = useComposedEmail({ document: draft.document, head, preheader: draft.preheader });
+  const subject = draft.subject || inboxFallback?.subject || '';
+  const preheader = draft.preheader || inboxFallback?.preheader || '';
+  const composed = useComposedEmail({ document: draft.document, head, preheader });
   const samples = useMemo(() => sampleValues(variables, { assetsUrl }), [variables, assetsUrl]);
   const previewHtml = composed.html ? fillSampleData(composed.html, samples, { html: true }) : null;
 
@@ -112,7 +130,7 @@ export function EmailTemplateEditor({
     ownDocuments.current.add(draft.document);
     editorRevision.current += 1;
   }
-  const editorKey = `${editorRevision.current}:${head.length}`;
+  const editorKey = `${editorRevision.current}:${head.length}:${documentKey}`;
 
   const authTokens = useMemo(() => requiredAuthLinkTokens(variables), [variables]);
   const authIssue =
@@ -158,6 +176,12 @@ export function EmailTemplateEditor({
   function switchMode(next: EditorMode) {
     if (next === 'json') resetJson();
     setMode(next);
+  }
+
+  const [shownKey, setShownKey] = useState(documentKey);
+  if (shownKey !== documentKey) {
+    setShownKey(documentKey);
+    if (mode === 'json') resetJson();
   }
 
   function editJson(text: string) {
@@ -218,22 +242,37 @@ export function EmailTemplateEditor({
     setFocus({ ...focus, start: next.caret, end: next.caret });
   }
 
-  const inboxField = (field: InboxField, label: string) => (
-    <div className="space-y-2">
-      <Label htmlFor={`email-${field}`}>{label}</Label>
-      <Input
-        id={`email-${field}`}
-        value={draft[field]}
-        readOnly={readOnly}
-        onChange={(event) => patch({ [field]: event.target.value })}
-        onSelect={(event) => rememberFocus(field, event.currentTarget)}
-        onBlur={(event) => rememberFocus(field, event.currentTarget)}
-      />
-      {literalBeside(field) ? (
-        <Text className="font-mono text-xs text-destructive">{literalBeside(field)}</Text>
-      ) : null}
-    </div>
-  );
+  const inboxField = (field: InboxField, label: string) => {
+    const fallback = inboxFallback?.[field] ?? '';
+    const usesFallback = Boolean(fallback) && !draft[field];
+    return (
+      <div className="space-y-2">
+        <Label htmlFor={`email-${field}`}>{label}</Label>
+        <Input
+          id={`email-${field}`}
+          value={draft[field]}
+          readOnly={readOnly}
+          placeholder={fallback || undefined}
+          aria-describedby={usesFallback ? `email-${field}-fallback` : undefined}
+          className={cn(usesFallback && 'border-dashed border-amber-500/70 bg-amber-500/5')}
+          onChange={(event) => patch({ [field]: event.target.value })}
+          onSelect={(event) => rememberFocus(field, event.currentTarget)}
+          onBlur={(event) => rememberFocus(field, event.currentTarget)}
+        />
+        {usesFallback ? (
+          <Text
+            id={`email-${field}-fallback`}
+            className="text-xs text-amber-700 dark:text-amber-300"
+          >
+            {inboxFallback?.hint}
+          </Text>
+        ) : null}
+        {literalBeside(field) ? (
+          <Text className="font-mono text-xs text-destructive">{literalBeside(field)}</Text>
+        ) : null}
+      </div>
+    );
+  };
 
   const editPane = (
     <div className="mx-auto w-full max-w-3xl min-w-0 space-y-5">
@@ -311,6 +350,7 @@ export function EmailTemplateEditor({
             assetsUrl={assetsUrl}
             variables={variables}
             label={t('emailContentSection')}
+            highlights={highlights}
             onChange={editDocument}
             onFocus={() => setFocus({ field: 'body' })}
           />
@@ -357,8 +397,8 @@ export function EmailTemplateEditor({
     <EmailPreviewPane
       html={previewHtml}
       failed={composed.failed}
-      subject={fillSampleData(draft.subject, samples, { html: false })}
-      preheader={fillSampleData(draft.preheader, samples, { html: false })}
+      subject={fillSampleData(subject, samples, { html: false })}
+      preheader={fillSampleData(preheader, samples, { html: false })}
       large={mode === 'preview'}
     />
   );
@@ -396,7 +436,9 @@ export function EmailTemplateEditor({
           onChange={switchMode}
           options={modes}
         />
+        {languageBar}
       </div>
+      {languageNotice}
 
       {laneClass === 'auth' ? (
         <Text>

@@ -1,4 +1,5 @@
 import type { EmailDocument, EmailLang, EmailVariable } from '@/lib/emailDocument';
+import type { EmailTranslations } from '@/lib/emailTranslations';
 
 export type EmailCatalogEvent = {
   service: string;
@@ -115,6 +116,8 @@ export type EmailTemplateVersion = {
   subject: string;
   preheader: string;
   document: EmailDocument;
+  /** Other languages of a copy: same layout, their own text. */
+  translations: EmailTranslations;
   publishedAt: string | null;
 };
 

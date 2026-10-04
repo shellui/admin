@@ -15,6 +15,7 @@ import {
 } from '@/lib/emailApiParsers';
 import { parseEmailMetrics, type EmailMetricsSnapshot } from '@/lib/emailMetrics';
 import type { EmailDocument } from '@/lib/emailDocument';
+import type { EmailTranslations } from '@/lib/emailTranslations';
 import type {
   EmailCatalog,
   EmailLibrary,
@@ -32,7 +33,13 @@ import type {
 } from '@/lib/emailTypes';
 
 export type EmailVersionCreate =
-  | { subject: string; preheader: string; document: EmailDocument }
+  | {
+      subject: string;
+      preheader: string;
+      document: EmailDocument;
+      /** Other languages. Omitted keeps the latest version's. */
+      translations?: EmailTranslations;
+    }
   | { library_id: number };
 
 export type EmailApiClient = {
