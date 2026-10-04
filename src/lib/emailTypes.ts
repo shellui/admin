@@ -1,5 +1,9 @@
 import type { EmailDocument, EmailLang, EmailVariable } from '@/lib/emailDocument';
 import type { EmailTranslations } from '@/lib/emailTranslations';
+import type { EmailTheme } from '@/lib/emailThemes';
+
+/** A theme as email-service takes it. `{}` keeps the design's own colors. */
+export type EmailThemePayload = EmailTheme | Record<string, never>;
 
 export type EmailCatalogEvent = {
   service: string;
@@ -37,7 +41,11 @@ export type EmailRule = {
   updatedAt: string;
 };
 
-export type EmailRuleContent = { library_id: number };
+export type EmailRuleContent = {
+  library_id: number;
+  /** Used when the library template has none. */
+  theme?: EmailThemePayload;
+};
 
 export type EmailRuleCreate = {
   event_type: string;
@@ -92,6 +100,8 @@ export type EmailLibraryTemplate = {
 
 export type EmailLibraryDetail = EmailLibraryTemplate & {
   document: EmailDocument;
+  /** Copies made from the template start with it. Null keeps the design's colors. */
+  theme: EmailTheme | null;
   text: string;
   head: string;
   variables: EmailVariable[];
@@ -108,6 +118,7 @@ export type EmailLibraryWrite = {
   subject?: string;
   preheader?: string;
   document?: EmailDocument;
+  theme?: EmailThemePayload;
 };
 
 export type EmailTemplateVersion = {
@@ -118,6 +129,8 @@ export type EmailTemplateVersion = {
   document: EmailDocument;
   /** Other languages of a copy: same layout, their own text. */
   translations: EmailTranslations;
+  /** Null keeps the design's own colors. */
+  theme: EmailTheme | null;
   publishedAt: string | null;
 };
 

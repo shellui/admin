@@ -85,13 +85,16 @@ const row = {
   head: '.barebone {}',
 };
 
-function version(number: number, state: string, subject = 'Sign in') {
+const OCEAN = { name: 'ocean', label: 'Ocean', colors: { primary: '#0a66c2' } };
+
+function version(number: number, state: string, subject = 'Sign in', theme: unknown = null) {
   return {
     number,
     state,
     subject,
     preheader: '',
     document: emptyEmailDocument(),
+    theme,
     publishedAt: null,
   };
 }
@@ -141,7 +144,7 @@ describe('EmailTemplateEditorPage', () => {
     api.fetchCatalog.mockResolvedValue({ events: [magicLink], authLinkHosts: [] });
     api.fetchVersions.mockResolvedValue([
       version(1, 'published'),
-      version(2, 'draft', 'Draft subject'),
+      version(2, 'draft', 'Draft subject', OCEAN),
     ]);
     api.createVersion.mockResolvedValue({ number: 3 });
     api.publishVersion.mockResolvedValue({ number: 3, state: 'published' });
@@ -182,6 +185,7 @@ describe('EmailTemplateEditorPage', () => {
         ],
       },
       translations: { fr: { subject: '', preheader: '', blocks: {} } },
+      theme: OCEAN,
     });
 
     const dialog = vi.fn();

@@ -30,6 +30,16 @@ vi.mock('@/features/email/useEmailApi', () => ({
   }),
 }));
 
+const userTheme = vi.hoisted(() => ({
+  name: 'ocean',
+  label: 'Ocean',
+  colors: { primary: '#0a66c2' },
+}));
+
+vi.mock('@/features/email/useEmailThemes', () => ({
+  useEmailThemes: () => ({ themes: [userTheme], current: userTheme }),
+}));
+
 vi.mock('@/features/email/components/EmailCopyEditor', () => ({
   EmailCopyEditor: ({ templateId }: { templateId: number }) => <p>Copy editor {templateId}</p>,
 }));
@@ -194,7 +204,7 @@ describe('EmailRuleFormPage', () => {
         language: 'fr',
         recipient_mode: 'static',
         static_recipients: ['a@example.com', 'b@example.com'],
-        content: { library_id: 7 },
+        content: { library_id: 7, theme: userTheme },
       }),
     );
     expect(await screen.findByText('Copy editor 33')).toBeTruthy();

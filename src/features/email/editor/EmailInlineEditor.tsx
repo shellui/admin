@@ -43,6 +43,7 @@ import {
   type EmailVariable,
 } from '@/lib/emailDocument';
 import { scopeHeadCss } from '@/lib/emailHeadCss';
+import { emailThemeStyle, type EmailThemeColors } from '@/lib/emailThemes';
 import { emailEditorExtensions } from '@/features/email/editor/extensions';
 import { SlashPluginReset } from '@/features/email/editor/slashPluginReset';
 import { EmailImageMenu } from '@/features/email/editor/EmailImageMenu';
@@ -155,11 +156,24 @@ export const EmailInlineEditor = forwardRef<
     editable?: boolean;
     /** Blocks a translation still has to cover. */
     highlights?: TranslationHighlights | null;
+    /** The theme's colors. Changing them repaints the canvas in place. */
+    themeColors?: EmailThemeColors;
     onChange: (document: EmailDocument) => void;
     onFocus?: () => void;
   }
 >(function EmailInlineEditor(
-  { document, head, assetsUrl, variables, label, editable = true, highlights, onChange, onFocus },
+  {
+    document,
+    head,
+    assetsUrl,
+    variables,
+    label,
+    editable = true,
+    highlights,
+    themeColors,
+    onChange,
+    onFocus,
+  },
   ref,
 ) {
   const { t } = useTranslation();
@@ -362,6 +376,7 @@ export const EmailInlineEditor = forwardRef<
       {scopedHead ? <style>{scopedHead}</style> : null}
       <div
         className="email-canvas"
+        style={emailThemeStyle(themeColors)}
         onMouseDown={focusFromPadding}
       >
         <EditorContent editor={editor} />

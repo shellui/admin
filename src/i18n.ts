@@ -992,6 +992,10 @@ const resources = {
       emailTranslationMissingTitle: 'Still in {{main}}. Type over it to translate.',
       emailTranslationOutdatedTitle: 'The {{main}} text changed since this was translated.',
       emailInboxFallback: 'Left empty, the {{main}} text is sent.',
+      emailTheme: 'Email theme',
+      emailThemeTemplate: 'Template colors',
+      emailThemeShellui: 'Shellui themes',
+      emailThemeHint: 'Repaint the design with a Shellui theme. Every language sends with it.',
       emailVariablesLabel: 'Variables',
       emailVariablesHint:
         'Click one to insert it where the cursor is, in the inbox fields or the content.',
@@ -2301,6 +2305,10 @@ const resources = {
       emailTranslationMissingTitle: 'Encore en {{main}}. Écrivez par-dessus pour traduire.',
       emailTranslationOutdatedTitle: 'Le texte en {{main}} a changé depuis cette traduction.',
       emailInboxFallback: 'Laissé vide, le texte en {{main}} est envoyé.',
+      emailTheme: "Thème de l'e-mail",
+      emailThemeTemplate: 'Couleurs du modèle',
+      emailThemeShellui: 'Thèmes Shellui',
+      emailThemeHint: "Repeindre le design avec un thème Shellui. Toutes les langues l'utilisent.",
       emailVariablesLabel: 'Variables',
       emailVariablesHint:
         'Cliquez sur une variable pour l’insérer au curseur, dans les champs de boîte de réception ou le contenu.',

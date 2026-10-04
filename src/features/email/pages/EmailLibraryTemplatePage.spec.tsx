@@ -10,6 +10,9 @@ import type {
 } from '@/features/email/components/EmailTemplateEditor';
 import { emptyEmailDocument } from '@/lib/emailDocument';
 import type { EmailLibraryDetail } from '@/lib/emailTypes';
+import type { EmailTheme } from '@/lib/emailThemes';
+
+const OCEAN: EmailTheme = { name: 'ocean', label: 'Ocean', colors: { primary: '#0a66c2' } };
 
 const api = vi.hoisted(() => ({
   fetchLibraryTemplate: vi.fn(),
@@ -31,10 +34,18 @@ vi.mock('@/features/email/components/EmailTemplateEditor', () => ({
     draft: EmailDraft;
     readOnly?: boolean;
     primary?: EmailEditorAction;
+    theme?: { value: EmailTheme | null; onChange: (theme: EmailTheme | null) => void };
     onChange: (next: EmailDraft) => void;
   }) => (
     <div data-testid="editor">
       <p>{props.readOnly ? 'Read-only' : 'Editable'}</p>
+      <p>Theme: {props.theme?.value?.label ?? 'template'}</p>
+      <button
+        type="button"
+        onClick={() => props.theme?.onChange(OCEAN)}
+      >
+        Pick Ocean
+      </button>
       <button
         type="button"
         onClick={() => props.onChange({ ...props.draft, subject: 'Changed' })}
@@ -65,6 +76,7 @@ function detail(overrides: Partial<EmailLibraryDetail> = {}): EmailLibraryDetail
     updatedAt: null,
     html: '',
     document: emptyEmailDocument(),
+    theme: null,
     text: '',
     head: '',
     variables: [],
@@ -107,9 +119,14 @@ describe('EmailLibraryTemplatePage', () => {
     expect(screen.getByText('Built-in')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
     expect(screen.queryByLabelText('Name')).toBeNull();
+    expect(screen.getByText('Theme: template')).toBeTruthy();
 
+    fireEvent.click(screen.getByRole('button', { name: 'Pick Ocean' }));
+    expect(screen.getByText('Theme: Ocean')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Duplicate to edit' }));
-    await waitFor(() => expect(api.createLibraryTemplate).toHaveBeenCalledWith({ source_id: 4 }));
+    await waitFor(() =>
+      expect(api.createLibraryTemplate).toHaveBeenCalledWith({ source_id: 4, theme: OCEAN }),
+    );
     expect(await screen.findByRole('heading', { level: 1, name: 'Welcome copy' })).toBeTruthy();
     expect(screen.getByText('Editable')).toBeTruthy();
   });
@@ -135,6 +152,7 @@ describe('EmailLibraryTemplatePage', () => {
         subject: 'Changed',
         preheader: '',
         document: emptyEmailDocument(),
+        theme: {},
       }),
     );
     expect(await screen.findByRole('heading', { level: 1, name: 'Acme hello' })).toBeTruthy();

@@ -77,4 +77,32 @@ describe('composeEmailHtml', () => {
     expect(html.match(/<img/g)).toHaveLength(1);
     expect(html).toMatch(/<td[^>]*>.*Left.*<\/td>.*<td[^>]*>.*Right/s);
   }, 30_000);
+
+  it('paints theme roles with the theme, or the design colors without one', async () => {
+    const document = {
+      type: 'doc' as const,
+      content: [
+        {
+          type: 'paragraph',
+          attrs: {
+            style:
+              'color:var(--email-foreground,rgb(20,23,30));background-color:var(--email-muted,rgb(243,244,246))',
+          },
+          content: [{ type: 'text', text: 'Hi' }],
+        },
+      ],
+    };
+    const themed = await composeEmailHtml({
+      head: '',
+      preheader: '',
+      document,
+      colors: { foreground: '#0b1d33' },
+    });
+    expect(themed).toMatch(/color:\s*#0b1d33/);
+    expect(themed).toMatch(/background-color:\s*rgb\(243,\s*244,\s*246\)/);
+    expect(themed).not.toContain('var(');
+    const plain = await composeEmailHtml({ head: '', preheader: '', document });
+    expect(plain).toMatch(/color:\s*rgb\(20,\s*23,\s*30\)/);
+    expect(plain).not.toContain('var(');
+  }, 30_000);
 });

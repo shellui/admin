@@ -16,6 +16,7 @@ import type {
 } from '@/lib/emailTypes';
 import { EMAIL_COUNT_KEYS } from '@/lib/emailTypes';
 import { parseTranslations } from '@/lib/emailTranslations';
+import { parseEmailTheme } from '@/lib/emailThemes';
 
 function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
@@ -161,6 +162,7 @@ export function parseVersion(body: unknown): EmailTemplateVersion {
     preheader: str(row.preheader),
     document: parseEmailDocument(row.document),
     translations: parseTranslations(row.translations),
+    theme: parseEmailTheme(row.theme),
     publishedAt: typeof row.published_at === 'string' ? row.published_at : null,
   };
 }
@@ -219,6 +221,7 @@ export function parseLibraryDetail(body: unknown): EmailLibraryDetail {
   return {
     ...parseLibraryTemplate(row),
     document: parseEmailDocument(row.document),
+    theme: parseEmailTheme(row.theme),
     text: str(row.text),
     head: str(row.head),
     variables: parseVariables(row.variables),

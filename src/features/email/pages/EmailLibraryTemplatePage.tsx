@@ -22,6 +22,8 @@ import { confirmAction } from '@/lib/confirmAction';
 import { emailErrorText } from '@/lib/emailApiErrors';
 import { emailAssetsUrl } from '@/lib/emailLibrary';
 import type { EmailLibraryDetail } from '@/lib/emailTypes';
+import type { EmailTheme } from '@/lib/emailThemes';
+import { useEmailThemes } from '@/features/email/useEmailThemes';
 import { emailLibraryTemplatePath } from '@/lib/webhookRoutePaths';
 
 /** One library design. Built-ins are read-only; company templates are edited and saved here. */
@@ -34,6 +36,8 @@ export function EmailLibraryTemplatePage() {
   const { api, baseUrl, canManage } = useEmailApi(accessToken);
   const [detail, setDetail] = useState<EmailLibraryDetail | null>(null);
   const [draft, setDraft] = useState<EmailDraft | null>(null);
+  const [theme, setTheme] = useState<EmailTheme | null>(null);
+  const emailThemes = useEmailThemes();
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
@@ -52,6 +56,7 @@ export function EmailLibraryTemplatePage() {
       setDetail(next);
       setName(next.name);
       setDraft({ subject: next.subject, preheader: next.preheader, document: next.document });
+      setTheme(next.theme);
     } catch (err) {
       setDetail(null);
       setDraft(null);
@@ -69,7 +74,11 @@ export function EmailLibraryTemplatePage() {
     if (!api || !detail || !draft) return false;
     setBusy('save');
     try {
-      const next = await api.updateLibraryTemplate(detail.id, { name, ...draft });
+      const next = await api.updateLibraryTemplate(detail.id, {
+        name,
+        ...draft,
+        theme: theme ?? {},
+      });
       setDetail(next);
       setName(next.name);
     } finally {
@@ -81,7 +90,10 @@ export function EmailLibraryTemplatePage() {
     if (!api || !detail) return false;
     setBusy('duplicate');
     try {
-      const created = await api.createLibraryTemplate({ source_id: detail.id });
+      const created = await api.createLibraryTemplate({
+        source_id: detail.id,
+        ...(theme ? { theme } : {}),
+      });
       navigate(emailLibraryTemplatePath(created.id));
     } finally {
       setBusy(null);
@@ -199,6 +211,7 @@ export function EmailLibraryTemplatePage() {
                     doneText: t('emailSaved'),
                   }
             }
+            theme={{ value: theme, themes: emailThemes.themes, onChange: setTheme }}
             onChange={setDraft}
           />
         </>

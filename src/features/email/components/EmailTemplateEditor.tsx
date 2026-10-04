@@ -20,6 +20,8 @@ import {
 import { EmailPreviewPane } from '@/features/email/components/EmailPreviewPane';
 import { EmailSendDraftAction } from '@/features/email/components/EmailSendDraftAction';
 import { SegmentedControl } from '@/features/email/components/SegmentedControl';
+import { EmailThemeSelect } from '@/features/email/components/EmailThemeSelect';
+import { emailDesignColors, type EmailTheme } from '@/lib/emailThemes';
 import type { EmailInlineEditorHandle } from '@/features/email/editor/EmailInlineEditor';
 import type { TranslationHighlights } from '@/features/email/editor/translationHighlight';
 import type { EmailInbox } from '@/lib/emailTranslations';
@@ -73,6 +75,7 @@ export function EmailTemplateEditor({
   languageNotice,
   inboxFallback,
   highlights,
+  theme,
   onChange,
 }: {
   laneClass: string;
@@ -104,6 +107,12 @@ export function EmailTemplateEditor({
   /** What an empty subject or preheader sends, with the hint that says so. */
   inboxFallback?: EmailInbox & { hint: string };
   highlights?: TranslationHighlights | null;
+  /** The theme the design shows and sends with. The picker shows when the design has themable colors. */
+  theme?: {
+    value: EmailTheme | null;
+    themes: EmailTheme[];
+    onChange: (theme: EmailTheme | null) => void;
+  };
   onChange: (next: EmailDraft) => void;
 }) {
   const { t } = useTranslation();
@@ -118,7 +127,15 @@ export function EmailTemplateEditor({
   const [feedback, setFeedback] = useState<Record<string, ActionFeedbackState | null>>({});
   const subject = draft.subject || inboxFallback?.subject || '';
   const preheader = draft.preheader || inboxFallback?.preheader || '';
-  const composed = useComposedEmail({ document: draft.document, head, preheader });
+  const themeColors = theme?.value?.colors;
+  const designColors = useMemo(() => emailDesignColors(draft.document), [draft.document]);
+  const themable = Object.keys(designColors).length > 0;
+  const composed = useComposedEmail({
+    document: draft.document,
+    head,
+    preheader,
+    colors: themeColors,
+  });
   const samples = useMemo(() => sampleValues(variables, { assetsUrl }), [variables, assetsUrl]);
   const previewHtml = composed.html ? fillSampleData(composed.html, samples, { html: true }) : null;
 
@@ -351,6 +368,7 @@ export function EmailTemplateEditor({
             variables={variables}
             label={t('emailContentSection')}
             highlights={highlights}
+            themeColors={themeColors}
             onChange={editDocument}
             onFocus={() => setFocus({ field: 'body' })}
           />
@@ -436,7 +454,25 @@ export function EmailTemplateEditor({
           onChange={switchMode}
           options={modes}
         />
-        {languageBar}
+        <div className="flex flex-wrap items-center gap-2">
+          {languageBar}
+          {theme && themable ? (
+            <>
+              {languageBar ? (
+                <span
+                  aria-hidden
+                  className="h-5 w-px bg-border"
+                />
+              ) : null}
+              <EmailThemeSelect
+                value={theme.value}
+                themes={theme.themes}
+                designColors={designColors}
+                onChange={theme.onChange}
+              />
+            </>
+          ) : null}
+        </div>
       </div>
       {languageNotice}
 

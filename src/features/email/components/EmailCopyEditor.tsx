@@ -33,6 +33,8 @@ import {
   type EmailTranslations,
 } from '@/lib/emailTranslations';
 import { askShelluiConfirm } from '@/lib/shelluiConfirm';
+import type { EmailTheme } from '@/lib/emailThemes';
+import { useEmailThemes } from '@/features/email/useEmailThemes';
 import type { EmailCatalogEvent, EmailLibrary, EmailTemplateRow } from '@/lib/emailTypes';
 
 const EMPTY_INBOX: EmailInbox = { subject: '', preheader: '' };
@@ -75,6 +77,8 @@ export function EmailCopyEditor({
   const [base, setBase] = useState<EmailDocument>(emptyEmailDocument);
   const [mainInbox, setMainInbox] = useState<EmailInbox>(EMPTY_INBOX);
   const [translations, setTranslations] = useState<EmailTranslations>({});
+  const [theme, setTheme] = useState<EmailTheme | null>(null);
+  const emailThemes = useEmailThemes();
   // The document the editor last wrote in a translation, so typing keeps it mounted.
   const view = useRef<{ lang: EmailLang; document: EmailDocument } | null>(null);
   const [unpublished, setUnpublished] = useState(false);
@@ -114,6 +118,7 @@ export function EmailCopyEditor({
         setMainLang(nextMain);
         setBase(document);
         setMainInbox(inbox);
+        setTheme(latest?.theme ?? null);
         setTranslations(
           withAllLanguages(
             pruneTranslations(document, latest?.translations ?? {}),
@@ -235,6 +240,7 @@ export function EmailCopyEditor({
         ...mainInbox,
         document: base,
         translations,
+        theme: theme ?? {},
       });
       await api.publishVersion(templateId, version.number);
       await load({ silent: true });
@@ -251,6 +257,7 @@ export function EmailCopyEditor({
         document: draft.document,
         subject: draft.subject || mainInbox.subject,
         preheader: draft.preheader || mainInbox.preheader,
+        ...(theme ? { theme } : {}),
         ...(to ? { to } : {}),
       });
     } finally {
@@ -400,6 +407,7 @@ export function EmailCopyEditor({
             : undefined
         }
         highlights={highlights}
+        theme={{ value: theme, themes: emailThemes.themes, onChange: setTheme }}
         onChange={change}
       />
     </div>

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { EmailDocument } from '@/lib/emailDocument';
+import type { EmailThemeColors } from '@/lib/emailThemes';
 
 /** Composes the email in the browser, debounced. The editor loads on first use. */
 export function useComposedEmail(input: {
   document: EmailDocument;
   head: string;
   preheader: string;
+  colors?: EmailThemeColors;
 }): { html: string | null; failed: boolean } {
   const [html, setHtml] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);

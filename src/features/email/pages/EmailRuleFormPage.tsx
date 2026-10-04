@@ -15,6 +15,7 @@ import { EmailCopyEditor } from '@/features/email/components/EmailCopyEditor';
 import { EmailLibraryGrid } from '@/features/email/components/EmailLibraryGrid';
 import { SearchField } from '@/features/email/components/SearchField';
 import { useEmailApi } from '@/features/email/useEmailApi';
+import { useEmailThemes } from '@/features/email/useEmailThemes';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { getEmailFromJwt, getIsStaffFromJwt } from '@/lib/jwtCompany';
 import { emailErrorText } from '@/lib/emailApiErrors';
@@ -34,6 +35,7 @@ export function EmailRuleFormPage() {
   const { service } = useWebhookPageMeta();
   const accessToken = useShelluiAccessToken();
   const { api, baseUrl, canManage } = useEmailApi(accessToken);
+  const emailThemes = useEmailThemes();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<unknown>(null);
   const [events, setEvents] = useState<EmailCatalogEvent[]>([]);
@@ -133,7 +135,10 @@ export function EmailRuleFormPage() {
         language,
         recipient_mode: recipientMode,
         static_recipients: staticRecipients,
-        content: { library_id: libraryId ?? 0 },
+        content: {
+          library_id: libraryId ?? 0,
+          ...(emailThemes.current ? { theme: emailThemes.current } : {}),
+        },
       });
       navigate(emailRuleEditPath(service.key, created.id), { replace: true });
     } catch (error) {

@@ -30,6 +30,7 @@ import type {
   EmailTemplateRow,
   EmailTemplateVersion,
   EmailTestSendResult,
+  EmailThemePayload,
 } from '@/lib/emailTypes';
 
 export type EmailVersionCreate =
@@ -39,6 +40,8 @@ export type EmailVersionCreate =
       document: EmailDocument;
       /** Other languages. Omitted keeps the latest version's. */
       translations?: EmailTranslations;
+      /** Omitted keeps the latest version's. */
+      theme?: EmailThemePayload;
     }
   | { library_id: number };
 
@@ -73,6 +76,7 @@ export type EmailApiClient = {
       document: EmailDocument;
       subject: string;
       preheader: string;
+      theme?: EmailThemePayload;
       to?: string;
     },
   ) => Promise<EmailTestSendResult>;
@@ -223,6 +227,7 @@ export function createEmailApiClient(
         subject: body.subject,
         preheader: body.preheader,
       };
+      if (body.theme) payload.theme = body.theme;
       if (body.to) payload.to = body.to;
       return parseTestSend(
         await call(`/api/v1/templates/${id}/send-test`, {
