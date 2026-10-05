@@ -34,6 +34,7 @@ import {
   Pilcrow,
 } from 'lucide-react';
 import {
+  ASSETS_TOKEN,
   formatEmailPlaceholder,
   safeHref,
   withAssetsUrl,
@@ -149,7 +150,7 @@ export const EmailInlineEditor = forwardRef<
     document: EmailDocument;
     /** Fonts and mobile rules of the design's set. */
     head: string;
-    /** Service URL that `{{ system.assets_url }}` stands for while editing. */
+    /** Service URL that `{{ system.assets_url }}` stands for in images and font sources while editing. */
     assetsUrl: string;
     variables: EmailVariable[];
     label: string;
@@ -236,7 +237,10 @@ export const EmailInlineEditor = forwardRef<
       editor.view.dispatch(editor.state.tr.setMeta(TRANSLATION_HIGHLIGHT_KEY, true));
     }
   }, [editor, highlights]);
-  const scopedHead = useMemo(() => scopeHeadCss(head, CANVAS_SCOPE), [head]);
+  const scopedHead = useMemo(
+    () => scopeHeadCss(assetsUrl ? head.replaceAll(ASSETS_TOKEN, assetsUrl) : head, CANVAS_SCOPE),
+    [head, assetsUrl],
+  );
   const contextValue = useMemo(() => ({ editor }), [editor]);
 
   const items = useMemo<SlashCommandItem[]>(() => {
