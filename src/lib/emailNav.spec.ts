@@ -45,6 +45,7 @@ describe('email and webhooks route rename', () => {
     ).toContain('identity/webhooks');
     expect(email && 'items' in email ? email.items.map((item) => item.path) : []).toEqual([
       'email/templates',
+      'email/broadcasts',
       'email/provider',
       'email/statistics',
     ]);

@@ -1,5 +1,15 @@
 import { parseEmailApiError } from '@/lib/emailApiErrors';
 import {
+  parseBroadcast,
+  parseBroadcastPreview,
+  parseBroadcasts,
+  type Broadcast,
+  type BroadcastAudience,
+  type BroadcastCreate,
+  type BroadcastPatch,
+  type BroadcastPreview,
+} from '@/lib/emailBroadcasts';
+import {
   parseCatalog,
   parseLibrary,
   parseLibraryDetail,
@@ -87,6 +97,14 @@ export type EmailApiClient = {
     eventType?: string;
   }) => Promise<EmailStats>;
   fetchMetrics: () => Promise<EmailMetricsSnapshot>;
+  fetchBroadcasts: () => Promise<Broadcast[]>;
+  fetchBroadcast: (id: number) => Promise<Broadcast>;
+  createBroadcast: (body: BroadcastCreate) => Promise<Broadcast>;
+  patchBroadcast: (id: number, body: BroadcastPatch) => Promise<Broadcast>;
+  deleteBroadcast: (id: number) => Promise<void>;
+  /** Who would get it now. Omitting `audience` previews the saved one. */
+  previewBroadcast: (id: number, audience?: BroadcastAudience) => Promise<BroadcastPreview>;
+  sendBroadcast: (id: number) => Promise<Broadcast>;
 };
 
 async function readBody(res: Response): Promise<unknown> {
@@ -270,6 +288,36 @@ export function createEmailApiClient(
         throw parseEmailApiError(body, res.status);
       }
       return parseEmailMetrics(text);
+    },
+    async fetchBroadcasts() {
+      return parseBroadcasts(await call('/api/v1/broadcasts'));
+    },
+    async fetchBroadcast(id) {
+      return parseBroadcast(await call(`/api/v1/broadcasts/${id}`));
+    },
+    async createBroadcast(body) {
+      return parseBroadcast(
+        await call('/api/v1/broadcasts', { method: 'POST', body: JSON.stringify(body) }),
+      );
+    },
+    async patchBroadcast(id, body) {
+      return parseBroadcast(
+        await call(`/api/v1/broadcasts/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+      );
+    },
+    async deleteBroadcast(id) {
+      await call(`/api/v1/broadcasts/${id}`, { method: 'DELETE' });
+    },
+    async previewBroadcast(id, audience) {
+      return parseBroadcastPreview(
+        await call(`/api/v1/broadcasts/${id}/preview`, {
+          method: 'POST',
+          body: JSON.stringify(audience ? { audience } : {}),
+        }),
+      );
+    },
+    async sendBroadcast(id) {
+      return parseBroadcast(await call(`/api/v1/broadcasts/${id}/send`, { method: 'POST' }));
     },
   };
 }

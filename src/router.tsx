@@ -22,6 +22,8 @@ import { HostingAppDetailPage } from '@/pages/HostingAppDetailPage';
 import { HostingAppsPage } from '@/pages/HostingAppsPage';
 import { HostingStatisticsPage } from '@/pages/HostingStatisticsPage';
 import { StorageStatisticsPage } from '@/pages/StorageStatisticsPage';
+import { EmailBroadcastPage } from '@/features/email/pages/EmailBroadcastPage';
+import { EmailBroadcastsPage } from '@/features/email/pages/EmailBroadcastsPage';
 import { EmailLibraryTemplatePage } from '@/features/email/pages/EmailLibraryTemplatePage';
 import { EmailProviderPage } from '@/features/email/pages/EmailProviderPage';
 import { EmailStatisticsPage } from '@/features/email/pages/EmailStatisticsPage';
@@ -229,6 +231,8 @@ export const router = createHashRouter([
       { path: 'email/templates/id/:templateId', element: <EmailTemplateEditorPage /> },
       { path: 'email/templates/:libraryId', element: <EmailLibraryTemplatePage /> },
       { path: 'email/templates', element: <EmailTemplatesPage /> },
+      { path: 'email/broadcasts/:broadcastId', element: <EmailBroadcastPage /> },
+      { path: 'email/broadcasts', element: <EmailBroadcastsPage /> },
       { path: 'email/provider', element: <EmailProviderPage /> },
       { path: 'email/statistics', element: <EmailStatisticsPage /> },
       { path: 'storage/swagger', element: null },

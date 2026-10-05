@@ -69,6 +69,8 @@ export type EmailTemplateRow = {
   templateKey: string;
   name: string;
   eventType: string;
+  /** `broadcast`: the content of a broadcast, edited without an event. */
+  kind: 'event' | 'broadcast';
   language: string;
   companyId: number | null;
   activeVersion: number | null;
