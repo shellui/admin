@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,10 +13,13 @@ import { fetchAdminUser, fetchAdminUsers, type AdminUserRow } from '@/lib/adminU
 import {
   BROADCAST_ACCESS,
   BROADCAST_ROLES,
+  emptyAudience,
   parsePastedEmails,
   type BroadcastAudience,
+  type BroadcastAudienceMode,
   type BroadcastRole,
 } from '@/lib/emailBroadcasts';
+import type { Newsletter } from '@/lib/emailNewsletters';
 
 type PickedUser = { id: number; label: string };
 
@@ -33,15 +37,18 @@ const DATE_FIELDS = [
   ['seen_after', 'seen_before', 'emailBroadcastSeen'],
 ] as const;
 
-/** Who gets the broadcast: members matching filters, or chosen people. */
+/** Who gets the broadcast: members matching filters, chosen people, or a newsletter list. */
 export function BroadcastAudienceBuilder({
   accessToken,
   value,
   onChange,
+  newsletters,
 }: {
   accessToken: string;
   value: BroadcastAudience;
   onChange: (next: BroadcastAudience) => void;
+  /** The company's lists. Null while loading. */
+  newsletters: Newsletter[] | null;
 }) {
   const { t } = useTranslation();
   const [groups, setGroups] = useState<AdminGroupRow[] | null>(null);
@@ -114,6 +121,17 @@ export function BroadcastAudienceBuilder({
     set({ emails: parsePastedEmails(text).emails });
   }
 
+  function changeMode(mode: BroadcastAudienceMode) {
+    if (mode === 'newsletter') {
+      const listId = value.list_id ?? newsletters?.[0]?.id;
+      onChange({ ...emptyAudience(), mode, ...(listId ? { list_id: listId } : {}) });
+      return;
+    }
+    const next: BroadcastAudience = { ...value, mode };
+    delete next.list_id;
+    onChange(next);
+  }
+
   return (
     <div className="space-y-5">
       <SegmentedControl
@@ -122,11 +140,51 @@ export function BroadcastAudienceBuilder({
         options={[
           { value: 'filter', label: t('emailBroadcastModeFilter') },
           { value: 'pick', label: t('emailBroadcastModePick') },
+          { value: 'newsletter', label: t('emailBroadcastModeNewsletter') },
         ]}
-        onChange={(mode) => set({ mode })}
+        onChange={changeMode}
       />
 
-      {value.mode === 'filter' ? (
+      {value.mode === 'newsletter' ? (
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium">{t('emailBroadcastNewsletterList')}</legend>
+          <Text className="text-xs">{t('emailBroadcastNewsletterHint')}</Text>
+          {!newsletters ? (
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+          ) : newsletters.length === 0 ? (
+            <Text className="text-sm">
+              {t('emailBroadcastNoNewsletters')}{' '}
+              <Link
+                to="/email/newsletters"
+                className="text-primary underline-offset-2 hover:underline"
+              >
+                {t('emailBroadcastOpenNewsletters')}
+              </Link>
+            </Text>
+          ) : (
+            <div className="space-y-1">
+              {newsletters.map((newsletter) => (
+                <label
+                  key={newsletter.id}
+                  className="flex cursor-pointer items-center gap-2 text-sm"
+                >
+                  <input
+                    type="radio"
+                    name="broadcast-newsletter"
+                    className="size-4"
+                    checked={value.list_id === newsletter.id}
+                    onChange={() => onChange({ ...value, list_id: newsletter.id })}
+                  />
+                  <span>{newsletter.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t('emailNewsletterConfirmedCount', { count: newsletter.counts.confirmed })}
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+        </fieldset>
+      ) : value.mode === 'filter' ? (
         <div className="grid gap-5 lg:grid-cols-2">
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">{t('emailBroadcastGroups')}</legend>

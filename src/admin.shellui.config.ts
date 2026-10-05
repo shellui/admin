@@ -82,6 +82,11 @@ export const adminShellUiConfig: AdminShellUIConfig = {
           url: '#/email/broadcasts',
         },
         {
+          label: { en: 'Newsletters', fr: 'Newsletters' },
+          path: 'email/newsletters',
+          url: '#/email/newsletters',
+        },
+        {
           label: { en: 'Provider', fr: 'Fournisseur' },
           path: 'email/provider',
           url: '#/email/provider',

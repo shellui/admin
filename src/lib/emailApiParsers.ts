@@ -133,7 +133,7 @@ export function parseTemplate(body: unknown): EmailTemplateRow {
     templateKey: str(row.template_key),
     name: str(row.name),
     eventType: str(row.event_type),
-    kind: row.kind === 'broadcast' ? 'broadcast' : 'event',
+    kind: row.kind === 'broadcast' || row.kind === 'newsletter_confirmation' ? row.kind : 'event',
     language: str(row.language),
     companyId: typeof row.company_id === 'number' ? row.company_id : null,
     activeVersion: typeof row.active_version === 'number' ? row.active_version : null,

@@ -59,9 +59,15 @@ export type BroadcastAccess = 'enabled' | 'disabled' | 'any';
 export const BROADCAST_ROLES: BroadcastRole[] = ['owner', 'staff', 'member'];
 export const BROADCAST_ACCESS: BroadcastAccess[] = ['enabled', 'disabled', 'any'];
 
-/** `filter`: members matching every filter. `pick`: chosen users and pasted addresses. */
+export type BroadcastAudienceMode = 'filter' | 'pick' | 'newsletter';
+
+/**
+ * `filter`: members matching every filter. `pick`: chosen users and pasted addresses.
+ * `newsletter`: confirmed subscribers of `list_id`.
+ */
 export type BroadcastAudience = {
-  mode: 'filter' | 'pick';
+  mode: BroadcastAudienceMode;
+  list_id?: number;
   group_ids: number[];
   roles: BroadcastRole[];
   access: BroadcastAccess;
@@ -183,6 +189,9 @@ function delivery(value: unknown): BroadcastDelivery {
 export function parseAudience(value: unknown): BroadcastAudience {
   const row = record(value) ?? {};
   const base = emptyAudience();
+  if (row.mode === 'newsletter' && typeof row.list_id === 'number' && row.list_id > 0) {
+    return { ...base, mode: 'newsletter', list_id: row.list_id };
+  }
   return {
     mode: row.mode === 'pick' ? 'pick' : 'filter',
     group_ids: ids(row.group_ids),

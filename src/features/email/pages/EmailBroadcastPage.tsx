@@ -28,6 +28,7 @@ import {
   type BroadcastAudience,
   type BroadcastPreview,
 } from '@/lib/emailBroadcasts';
+import type { Newsletter } from '@/lib/emailNewsletters';
 import { getEmailFromJwt, getIsStaffFromJwt } from '@/lib/jwtCompany';
 import { askShelluiConfirm } from '@/lib/shelluiConfirm';
 
@@ -108,6 +109,7 @@ export function EmailBroadcastPage() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<unknown>(null);
   const [unpublished, setUnpublished] = useState(false);
+  const [newsletters, setNewsletters] = useState<Newsletter[] | null>(null);
   const [busy, setBusy] = useState<'save' | 'send' | 'delete' | null>(null);
   const [feedback, setFeedback] = useState<ActionFeedbackState | null>(null);
 
@@ -147,7 +149,25 @@ export function EmailBroadcastPage() {
 
   const isDraft = broadcast?.state === 'draft';
   useEffect(() => {
+    if (!api || !isDraft || tab !== 'audience' || newsletters) return;
+    let cancelled = false;
+    api
+      .fetchNewsletters()
+      .then((rows) => !cancelled && setNewsletters(rows))
+      .catch(() => !cancelled && setNewsletters([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [api, isDraft, tab, newsletters]);
+
+  useEffect(() => {
     if (!api || !audience || !isDraft || tab === 'content') return;
+    if (audience.mode === 'newsletter' && !audience.list_id) {
+      setPreview(null);
+      setPreviewError(null);
+      setPreviewLoading(false);
+      return;
+    }
     let cancelled = false;
     setPreviewLoading(true);
     const timer = window.setTimeout(() => {
@@ -359,6 +379,7 @@ export function EmailBroadcastPage() {
                   accessToken={accessToken}
                   value={audience}
                   onChange={setAudience}
+                  newsletters={newsletters}
                 />
                 <div className="flex flex-wrap items-center gap-3">
                   <Button
@@ -380,7 +401,11 @@ export function EmailBroadcastPage() {
                   loading={previewLoading}
                   error={previewError}
                 />
-                <Text className="text-xs">{t('emailBroadcastLanguageHint')}</Text>
+                <Text className="text-xs">
+                  {audience.mode === 'newsletter'
+                    ? t('emailBroadcastNewsletterLanguageHint')
+                    : t('emailBroadcastLanguageHint')}
+                </Text>
               </aside>
             </div>
           ) : null}

@@ -69,8 +69,11 @@ export type EmailTemplateRow = {
   templateKey: string;
   name: string;
   eventType: string;
-  /** `broadcast`: the content of a broadcast, edited without an event. */
-  kind: 'event' | 'broadcast';
+  /**
+   * `broadcast`: the content of a broadcast. `newsletter_confirmation`: a list's double
+   * opt-in email. Both are edited without an event.
+   */
+  kind: 'event' | 'broadcast' | 'newsletter_confirmation';
   language: string;
   companyId: number | null;
   activeVersion: number | null;

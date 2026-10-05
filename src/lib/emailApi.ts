@@ -24,6 +24,22 @@ import {
   parseVersions,
 } from '@/lib/emailApiParsers';
 import { parseEmailMetrics, type EmailMetricsSnapshot } from '@/lib/emailMetrics';
+import {
+  parseImportResult,
+  parseNewsletter,
+  parseNewsletters,
+  parseSubscriberAdded,
+  parseSubscriberPage,
+  type Newsletter,
+  type NewsletterAddMode,
+  type NewsletterAddOutcome,
+  type NewsletterImportResult,
+  type NewsletterSubscriber,
+  type NewsletterSubscriberAdd,
+  type NewsletterSubscriberPage,
+  type NewsletterSubscriberStatus,
+  type NewsletterWrite,
+} from '@/lib/emailNewsletters';
 import type { EmailDocument } from '@/lib/emailDocument';
 import type { EmailTranslations } from '@/lib/emailTranslations';
 import type {
@@ -105,6 +121,27 @@ export type EmailApiClient = {
   /** Who would get it now. Omitting `audience` previews the saved one. */
   previewBroadcast: (id: number, audience?: BroadcastAudience) => Promise<BroadcastPreview>;
   sendBroadcast: (id: number) => Promise<Broadcast>;
+  fetchNewsletters: () => Promise<Newsletter[]>;
+  fetchNewsletter: (id: number) => Promise<Newsletter>;
+  createNewsletter: (body: NewsletterWrite & { name: string }) => Promise<Newsletter>;
+  patchNewsletter: (id: number, body: NewsletterWrite) => Promise<Newsletter>;
+  deleteNewsletter: (id: number) => Promise<void>;
+  rotateNewsletterKey: (id: number) => Promise<Newsletter>;
+  fetchSubscribers: (
+    id: number,
+    query?: { status?: NewsletterSubscriberStatus | ''; email?: string; page?: number },
+  ) => Promise<NewsletterSubscriberPage>;
+  addSubscriber: (
+    id: number,
+    body: NewsletterSubscriberAdd,
+  ) => Promise<{ outcome: NewsletterAddOutcome; subscriber: NewsletterSubscriber }>;
+  deleteSubscriber: (id: number, subscriberId: number) => Promise<void>;
+  importSubscribers: (
+    id: number,
+    body: { csv: string; mode: NewsletterAddMode },
+  ) => Promise<NewsletterImportResult>;
+  /** The CSV text. */
+  exportSubscribers: (id: number, status?: NewsletterSubscriberStatus | '') => Promise<string>;
 };
 
 async function readBody(res: Response): Promise<unknown> {
@@ -141,6 +178,35 @@ async function request(
   const body = await readBody(res);
   if (!res.ok) throw parseEmailApiError(body, res.status);
   return body;
+}
+
+async function requestText(
+  baseUrl: string,
+  path: string,
+  accessToken: string,
+  companyId: number,
+  accept: string,
+  query?: Record<string, string | undefined>,
+): Promise<string> {
+  const url = new URL(`${baseUrl.replace(/\/+$/, '')}${path}`);
+  url.searchParams.set('company_id', String(companyId));
+  for (const [key, value] of Object.entries(query ?? {})) {
+    if (value) url.searchParams.set(key, value);
+  }
+  const res = await fetch(url.toString(), {
+    headers: { Accept: accept, Authorization: `Bearer ${accessToken}` },
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    let body: unknown = null;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = null;
+    }
+    throw parseEmailApiError(body, res.status);
+  }
+  return text;
 }
 
 export function createEmailApiClient(
@@ -269,25 +335,9 @@ export function createEmailApiClient(
       );
     },
     async fetchMetrics() {
-      const url = new URL(`${baseUrl.replace(/\/+$/, '')}/api/v1/metrics`);
-      url.searchParams.set('company_id', String(companyId));
-      const res = await fetch(url.toString(), {
-        headers: {
-          Accept: 'text/plain',
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      const text = await res.text();
-      if (!res.ok) {
-        let body: unknown = null;
-        try {
-          body = JSON.parse(text);
-        } catch {
-          body = null;
-        }
-        throw parseEmailApiError(body, res.status);
-      }
-      return parseEmailMetrics(text);
+      return parseEmailMetrics(
+        await requestText(baseUrl, '/api/v1/metrics', accessToken, companyId, 'text/plain'),
+      );
     },
     async fetchBroadcasts() {
       return parseBroadcasts(await call('/api/v1/broadcasts'));
@@ -318,6 +368,72 @@ export function createEmailApiClient(
     },
     async sendBroadcast(id) {
       return parseBroadcast(await call(`/api/v1/broadcasts/${id}/send`, { method: 'POST' }));
+    },
+    async fetchNewsletters() {
+      return parseNewsletters(await call('/api/v1/newsletters'));
+    },
+    async fetchNewsletter(id) {
+      return parseNewsletter(await call(`/api/v1/newsletters/${id}`));
+    },
+    async createNewsletter(body) {
+      return parseNewsletter(
+        await call('/api/v1/newsletters', { method: 'POST', body: JSON.stringify(body) }),
+      );
+    },
+    async patchNewsletter(id, body) {
+      return parseNewsletter(
+        await call(`/api/v1/newsletters/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+      );
+    },
+    async deleteNewsletter(id) {
+      await call(`/api/v1/newsletters/${id}`, { method: 'DELETE' });
+    },
+    async rotateNewsletterKey(id) {
+      return parseNewsletter(
+        await call(`/api/v1/newsletters/${id}/rotate-key`, { method: 'POST' }),
+      );
+    },
+    async fetchSubscribers(id, query) {
+      return parseSubscriberPage(
+        await call(
+          `/api/v1/newsletters/${id}/subscribers`,
+          {},
+          {
+            status: query?.status || undefined,
+            email: query?.email || undefined,
+            page: query?.page && query.page > 1 ? String(query.page) : undefined,
+          },
+        ),
+      );
+    },
+    async addSubscriber(id, body) {
+      return parseSubscriberAdded(
+        await call(`/api/v1/newsletters/${id}/subscribers`, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        }),
+      );
+    },
+    async deleteSubscriber(id, subscriberId) {
+      await call(`/api/v1/newsletters/${id}/subscribers/${subscriberId}`, { method: 'DELETE' });
+    },
+    async importSubscribers(id, body) {
+      return parseImportResult(
+        await call(`/api/v1/newsletters/${id}/subscribers/import`, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        }),
+      );
+    },
+    async exportSubscribers(id, status) {
+      return requestText(
+        baseUrl,
+        `/api/v1/newsletters/${id}/subscribers.csv`,
+        accessToken,
+        companyId,
+        'text/csv',
+        { status: status || undefined },
+      );
     },
   };
 }

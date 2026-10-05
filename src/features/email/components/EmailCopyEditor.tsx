@@ -17,6 +17,7 @@ import type { EmailApiClient } from '@/lib/emailApi';
 import { emailErrorText } from '@/lib/emailApiErrors';
 import { validateAuthLaneOverride } from '@/lib/emailAuthTemplate';
 import { BROADCAST_EVENT } from '@/lib/emailBroadcasts';
+import { NEWSLETTER_CONFIRMATION_EVENT } from '@/lib/emailNewsletters';
 import { emptyEmailDocument, type EmailDocument, type EmailLang } from '@/lib/emailDocument';
 import { emailAssetsUrl } from '@/lib/emailLibrary';
 import {
@@ -105,7 +106,9 @@ export function EmailCopyEditor({
         const nextEvent =
           nextRow.kind === 'broadcast'
             ? BROADCAST_EVENT
-            : (catalog.events.find((item) => item.eventType === nextRow.eventType) ?? null);
+            : nextRow.kind === 'newsletter_confirmation'
+              ? NEWSLETTER_CONFIRMATION_EVENT
+              : (catalog.events.find((item) => item.eventType === nextRow.eventType) ?? null);
         const latest = versions.reduce<(typeof versions)[number] | null>(
           (best, version) => (!best || version.number > best.number ? version : best),
           null,

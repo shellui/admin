@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import i18n from '@/i18n';
 import { EmailBroadcastPage } from '@/features/email/pages/EmailBroadcastPage';
 import { parseBroadcast } from '@/lib/emailBroadcasts';
+import { parseNewsletter } from '@/lib/emailNewsletters';
 
 const api = vi.hoisted(() => ({
   fetchBroadcast: vi.fn(),
@@ -13,6 +14,7 @@ const api = vi.hoisted(() => ({
   sendBroadcast: vi.fn(),
   deleteBroadcast: vi.fn(),
   fetchVersions: vi.fn(),
+  fetchNewsletters: vi.fn(),
 }));
 const confirm = vi.hoisted(() => vi.fn());
 
@@ -108,9 +110,44 @@ describe('EmailBroadcastPage', () => {
     expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('October news');
   });
 
+  it('targets a newsletter list and saves only that list', async () => {
+    api.fetchBroadcast.mockResolvedValue(draft());
+    api.previewBroadcast.mockResolvedValue(preview);
+    api.fetchNewsletters.mockResolvedValue([
+      parseNewsletter({ id: 4, name: 'Product news', counts: { confirmed: 7 } }),
+      parseNewsletter({ id: 6, name: 'Changelog', counts: { confirmed: 2 } }),
+    ]);
+    api.patchBroadcast.mockImplementation(async (_id, body) => draft({ audience: body.audience }));
+    renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Audience' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Newsletter subscribers' }));
+    await waitFor(() =>
+      expect(api.previewBroadcast).toHaveBeenLastCalledWith(
+        5,
+        expect.objectContaining({ mode: 'newsletter', list_id: 4 }),
+      ),
+    );
+    expect(screen.getByText(/Each subscriber gets the language they signed up in/)).toBeTruthy();
+    fireEvent.click(screen.getByLabelText(/Changelog/));
+    await waitFor(() =>
+      expect(api.previewBroadcast).toHaveBeenLastCalledWith(
+        5,
+        expect.objectContaining({ mode: 'newsletter', list_id: 6 }),
+      ),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save audience' }));
+    await waitFor(() =>
+      expect(api.patchBroadcast).toHaveBeenCalledWith(5, {
+        audience: expect.objectContaining({ mode: 'newsletter', list_id: 6, roles: [] }),
+      }),
+    );
+  });
+
   it('builds the audience with a live preview per language, then saves it', async () => {
     api.fetchBroadcast.mockResolvedValue(draft());
     api.previewBroadcast.mockResolvedValue(preview);
+    api.fetchNewsletters.mockResolvedValue([]);
     api.patchBroadcast.mockImplementation(async (_id, body) => draft({ audience: body.audience }));
     renderPage();
     fireEvent.click(await screen.findByRole('tab', { name: 'Audience' }));
