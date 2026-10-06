@@ -238,6 +238,18 @@ export function ActionsDeliveryDetailPage() {
                             HTTP {attempt.response_status}
                           </span>
                         ) : null}
+                        {attempt.trigger ? (
+                          <span className="ml-2 text-muted-foreground">
+                            {t(`actionsAttemptTrigger_${attempt.trigger}`, {
+                              defaultValue: attempt.trigger,
+                            })}
+                          </span>
+                        ) : null}
+                        {attempt.scheduled_job_run_id != null ? (
+                          <span className="ml-2 text-muted-foreground">
+                            {t('actionsAttemptScheduledRun', { id: attempt.scheduled_job_run_id })}
+                          </span>
+                        ) : null}
                       </p>
                       {attempt.error ? (
                         <p className="font-mono text-[11px] text-destructive">{attempt.error}</p>

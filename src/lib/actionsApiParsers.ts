@@ -189,6 +189,9 @@ function parseAttemptRow(raw: unknown): ActionDeliveryAttempt {
         : typeof o.response_status === 'number'
           ? o.response_status
           : null,
+    trigger: typeof o.trigger === 'string' ? o.trigger : null,
+    scheduled_job_run_id:
+      typeof o.scheduled_job_run_id === 'number' ? o.scheduled_job_run_id : null,
   };
 }
 

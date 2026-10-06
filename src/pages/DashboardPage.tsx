@@ -25,6 +25,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Text } from '@/components/ui/text';
 import { AllServicesRetentionAlerts } from '@/components/EventRetentionAlert';
+import { DashboardScheduledJobsSection } from '@/components/DashboardScheduledJobsSection';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import {
   buildStaffPrometheusMetricsUrl,
@@ -354,6 +355,8 @@ export function DashboardPage() {
           </section>
         </>
       )}
+
+      <DashboardScheduledJobsSection />
 
       {accessToken && storageEnabled && (
         <section className="space-y-4">

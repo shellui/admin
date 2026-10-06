@@ -69,6 +69,10 @@ export type ActionDeliveryAttempt = {
   created_at: string;
   error?: string | null;
   response_status?: number | null;
+  /** identity-service: `dispatch` (first try) or `automatic_retry` (retry_webhooks job). */
+  trigger?: string | null;
+  /** identity-service, staff only: scheduled job run that made this attempt. */
+  scheduled_job_run_id?: number | null;
 };
 
 export type ActionDeliveryDetail = ActionDelivery & {
