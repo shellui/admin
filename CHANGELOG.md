@@ -48,7 +48,7 @@ Requires identity-service 0.7.0, hosting-service 0.6.1, storage-service 0.5.0, a
 
 ### Dependencies
 
-- Uses `@shellui/sdk` 0.6.0-beta.1. Host email settings come from the typed `settings.email` block, and a missing `url` still falls back to `https://email.shellui.com`.
+- Uses `@shellui/sdk` 0.6.0. Host email settings come from the typed `settings.email` block, and a missing `url` still falls back to `https://email.shellui.com`.
 - React 19.3, tailwind-merge 3.7, `@radix-ui/react-slot` 1.3.3, and autoprefixer 10.6.1 are included from `main`.
 
 ### Security

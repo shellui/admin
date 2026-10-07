@@ -1,6 +1,6 @@
 # Security review: admin 0.5.0
 
-Date: 2026-10-07. Scope: everything `develop` ships versus `main` (email service UI, scheduled jobs, SCIM, invitations, delete user, log events, webhooks, OAuth apps wizard, and the dependency bumps folded in from `main`, including `@shellui/sdk` 0.6.0-beta.1).
+Date: 2026-10-07. Scope: everything `develop` ships versus `main` (email service UI, scheduled jobs, SCIM, invitations, delete user, log events, webhooks, OAuth apps wizard, and the dependency bumps folded in from `main`, including `@shellui/sdk` 0.6.0).
 
 Reviewed the admin source, GitHub Pages deploy workflow, and `pnpm audit --prod --audit-level high`. CodeQL runs in CI on this pull request; this document does not replace that job.
 
@@ -44,7 +44,7 @@ The scheduled jobs panel still hides itself unless `useShelluiIsStaff()` is true
 - **Access tokens.** Held in React state from shell settings. API calls send `Authorization: Bearer`. `localStorage` only stores sidebar collapse. Tokens are not placed in query strings.
 - **SCIM.** Create response is the only parser that keeps `token`. List rows are prefix, dates, and revoked state. The secret lives in component state, is shown once, and is not written to storage.
 - **Email provider keys.** Saves omit blank credentials. Responses expose `credentialsHint` only.
-- **postMessage.** Admin listens through `@shellui/sdk`. SDK 0.6.0-beta.1 auto-trusts the parent origin and drops messages from other origins (`init` `allowedMessageOrigins`, `configureMessageSecurity`).
+- **postMessage.** Admin listens through `@shellui/sdk`. SDK 0.6.0 auto-trusts the parent origin and drops messages from other origins (`init` `allowedMessageOrigins`, `configureMessageSecurity`).
 - **Event detail.** Values go through `formatValue` and render as text.
 - **Removed Action email editor.** The old TipTap and DOMPurify editor is gone. Email editing is React Email. Stale changelog lines for that editor are not in 0.5.0.
 

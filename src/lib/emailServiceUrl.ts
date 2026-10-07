@@ -7,7 +7,7 @@ export const DEFAULT_EMAIL_SERVICE_URL = 'https://email.shellui.com';
 
 /**
  * Host `email` block in shellui.config, delivered as `settings.email`
- * (`SettingsEmail` on `@shellui/sdk` 0.6.0-beta.1), the same way as `storage` and
+ * (`SettingsEmail` on `@shellui/sdk` 0.6.0), the same way as `storage` and
  * `hosting`. The shell fills a missing `url` with the production origin; Admin still
  * normalizes it and falls back when the value is absent.
  */
