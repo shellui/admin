@@ -2,7 +2,7 @@
 
 Administration UI for Shellui: a React app embedded in the main shell (route `/admin`). This repo is **only the Vite + React app**—no Shellui shell wrapper.
 
-**Current release:** [0.4.0](./CHANGELOG.md) · production origin **https://admin.shellui.com/**
+**Current release:** [0.5.0](./CHANGELOG.md) · production origin **https://admin.shellui.com/**
 
 ## Architecture
 
@@ -18,7 +18,7 @@ External menus (host custom apps, storage files, Swagger/ReDoc) are opened as ab
 | Area            | When it appears                                         | Highlights                                                                                                                                                                                                         |
 | --------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Dashboard**   | Always                                                  | Company-scoped KPIs from identity (`GET /api/v1/metrics`). Optional storage and hosting Prometheus metrics when those services are configured. Email delivery counts from `GET /api/v1/stats` when Email is shown. |
-| **Identity**    | Always (with `backend.url`)                             | Company (incl. magic link toggle), users, groups, login events, OAuth apps, SCIM, Actions (rules + delivery logs), personal access tokens; staff Django admin link.                                                |
+| **Identity**    | Always (with `backend.url`)                             | Company (incl. magic link toggle), users, groups, login events, OAuth apps, SCIM, webhooks (rules + delivery logs), personal access tokens; staff Django admin link.                                               |
 | **Storage**     | Host `storage.url` set                                  | Statistics (`GET /storage/v1/stats`); optional Files explorer via `storage.filesUrl`; staff Django admin.                                                                                                          |
 | **Hosting**     | Host `hosting.url` set and `showInAdmin` is not `false` | Apps list/detail, statistics, dashboard hosting KPIs (`GET /hosting/v1/metrics`); staff Django admin.                                                                                                              |
 | **Email**       | Always (default `https://email.shellui.com`)            | Last sidebar section: company theme and templates, provider settings, statistics. Identity, Storage, and Hosting each keep an Email and webhooks page that lists that service's webhook and email rules together.  |
@@ -73,7 +73,7 @@ email: {
 },
 ```
 
-Admin reads `email.url` the same way it reads `storage.url` and `hosting.url` (SDK settings from the host `shellui.config`). SDK 0.5.0 has no `email` field, so the shell must forward the block on settings. When `email.url` is missing, Admin calls `https://email.shellui.com`. Set `email.showInAdmin: false` to hide the Email section.
+Admin reads `email.url` the same way it reads `storage.url` and `hosting.url` (SDK settings from the host `shellui.config`). `@shellui/sdk` 0.6.0-beta.1 types `settings.email`. When `email.url` is missing, Admin calls `https://email.shellui.com`. Set `email.showInAdmin: false` to hide the Email section.
 
 ## Identity company admin (SCIM, magic link, webhooks)
 
@@ -95,7 +95,7 @@ Legacy `#/webhooks` and `#/actions/...` redirect to `#/identity/webhooks/...`.
 
 In the Shellui shell, the address bar uses path URLs (for example `/admin/storage/webhooks`); the admin chrome maps those to the same hash routes above.
 
-The Webhooks UI lives in **`src/features/actions/`** with a shared `ActionsApiClient` in `src/lib/actionsApi.ts`. The client takes a service base URL (identity, hosting, or storage) and sends the same Shellui access token (`Authorization: Bearer …`) and `company_id` query parameter identity already uses.
+The webhooks UI lives in **`src/features/actions/`** with a shared `ActionsApiClient` in `src/lib/actionsApi.ts`. The client takes a service base URL (identity, hosting, or storage) and sends the same Shellui access token (`Authorization: Bearer …`) and `company_id` query parameter identity already uses.
 
 If a service does not yet expose webhook endpoints (404), the UI shows a clear “Webhooks API not available on this service version” banner for that tab only.
 
