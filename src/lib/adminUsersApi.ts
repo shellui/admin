@@ -95,12 +95,22 @@ export async function fetchAdminUser(accessToken: string, userId: number): Promi
 export type AdminUserUpdatePayload = {
   first_name?: string;
   last_name?: string;
-  is_staff?: boolean;
   /** Enable/disable access for the current company only. */
   is_active?: boolean;
   group_ids?: number[];
   data?: Record<string, unknown>;
 };
+
+/**
+ * identity-service 0.7.0 rejects `is_staff` and `is_superuser` on this route
+ * (`400 admin_only_field`). Those flags are Django admin only.
+ */
+function withoutStaffFlags(payload: AdminUserUpdatePayload): AdminUserUpdatePayload {
+  const body = { ...(payload as Record<string, unknown>) };
+  delete body.is_staff;
+  delete body.is_superuser;
+  return body as AdminUserUpdatePayload;
+}
 
 export async function updateAdminUser(
   accessToken: string,
@@ -109,7 +119,7 @@ export async function updateAdminUser(
 ): Promise<AdminUserRow> {
   const res = await authFetch(`/api/v1/users/${userId}`, accessToken, {
     method: 'PUT',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(withoutStaffFlags(payload)),
   });
   const body = await res.json().catch(() => null);
   if (!res.ok) {
