@@ -19,6 +19,11 @@ import { WebhookServiceUnavailable } from '@/features/actions/components/Webhook
 import { useWebhookPageMeta } from '@/features/actions/useWebhookPageMeta';
 import type { ActionDeliveryDetail } from '@/features/actions/types';
 import { webhookDeliveriesPath } from '@/lib/webhookRoutePaths';
+import {
+  ActionFeedback,
+  feedbackFromThrown,
+  type ActionFeedbackState,
+} from '@/features/email/components/ActionFeedback';
 
 function statusClassName(status: string) {
   const s = status.toLowerCase();
@@ -41,24 +46,31 @@ export function ActionsDeliveryDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [requeueBusy, setRequeueBusy] = useState(false);
+  const [requeueFeedback, setRequeueFeedback] = useState<ActionFeedbackState | null>(null);
 
-  const load = useCallback(async () => {
-    if (!api || !isOwner || !id) {
-      setDetail(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      setDetail(await api.fetchDelivery(id));
-    } catch (e) {
-      setDetail(null);
-      setError(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [api, id, isOwner]);
+  const load = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!api || !isOwner || !id) {
+        setDetail(null);
+        setLoading(false);
+        return;
+      }
+      if (!opts?.silent) {
+        setLoading(true);
+        setError(null);
+      }
+      try {
+        setDetail(await api.fetchDelivery(id));
+        if (opts?.silent) setError(null);
+      } catch (e) {
+        if (!opts?.silent) setDetail(null);
+        setError(e);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [api, id, isOwner],
+  );
 
   useEffect(() => {
     void load();
@@ -76,12 +88,13 @@ export function ActionsDeliveryDetailPage() {
   async function onRequeue() {
     if (!api || !id) return;
     setRequeueBusy(true);
-    setError(null);
+    setRequeueFeedback(null);
     try {
       await api.requeueDelivery(id);
-      await load();
+      setRequeueFeedback({ tone: 'success', text: t('actionsRequeued') });
+      await load({ silent: true });
     } catch (e) {
-      setError(e);
+      setRequeueFeedback(feedbackFromThrown(e, t('actionsLoadError')));
     } finally {
       setRequeueBusy(false);
     }
@@ -194,7 +207,7 @@ export function ActionsDeliveryDetailPage() {
             </CardContent>
           </Card>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="space-y-2">
             <Button
               type="button"
               size="sm"
@@ -203,6 +216,7 @@ export function ActionsDeliveryDetailPage() {
             >
               {requeueBusy ? t('actionsRequeueLoading') : t('actionsRequeue')}
             </Button>
+            <ActionFeedback feedback={requeueFeedback} />
           </div>
 
           <Card className="border-border/80 shadow-sm">

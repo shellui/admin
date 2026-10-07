@@ -18,6 +18,11 @@ import {
 } from '@/features/actions/components/ApiUnavailableNotice';
 import { useActionsApi } from '@/features/actions/useActionsApi';
 import { WebhookServiceUnavailable } from '@/features/actions/components/WebhookServiceUnavailable';
+import {
+  ActionFeedback,
+  feedbackFromThrown,
+  type ActionFeedbackState,
+} from '@/features/email/components/ActionFeedback';
 import { useWebhookPageMeta } from '@/features/actions/useWebhookPageMeta';
 import type { ActionEventCatalogEntry, ActionRuleWebhookConfig } from '@/features/actions/types';
 import {
@@ -62,11 +67,10 @@ export function ActionsRuleEditorPage() {
   const [saving, setSaving] = useState(false);
   const [rotateLoading, setRotateLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [saveFeedback, setSaveFeedback] = useState<ActionFeedbackState | null>(null);
+  const [rotateFeedback, setRotateFeedback] = useState<ActionFeedbackState | null>(null);
   const [sendTestLoading, setSendTestLoading] = useState(false);
-  const [sendTestFeedback, setSendTestFeedback] = useState<{
-    type: 'success' | 'error';
-    message: string;
-  } | null>(null);
+  const [sendTestFeedback, setSendTestFeedback] = useState<ActionFeedbackState | null>(null);
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
   const [storedSecretHint, setStoredSecretHint] = useState<string | null>(null);
   const [hasStoredSecret, setHasStoredSecret] = useState(false);
@@ -154,10 +158,16 @@ export function ActionsRuleEditorPage() {
     };
   }, [api, applyRuleConfigMeta, isCreate, isOwner, loadCatalog, loadRule, numericId]);
 
+  function clearActionFeedback() {
+    setSaveFeedback(null);
+    setRotateFeedback(null);
+    setSendTestFeedback(null);
+  }
+
   async function onSave() {
     if (!api || !name.trim() || !eventKey) return;
     setSaving(true);
-    setError(null);
+    setSaveFeedback(null);
     try {
       const config: ActionRuleWebhookConfig = {
         url: webhookUrl.trim(),
@@ -189,9 +199,10 @@ export function ActionsRuleEditorPage() {
           config,
         });
         applyRuleConfigMeta(updated.config);
+        setSaveFeedback({ tone: 'success', text: t('actionsRuleSaved') });
       }
     } catch (e) {
-      setError(e);
+      setSaveFeedback(feedbackFromThrown(e, t('actionsSaveError')));
     } finally {
       setSaving(false);
     }
@@ -209,15 +220,16 @@ export function ActionsRuleEditorPage() {
     if (!confirmed) return;
 
     setRotateLoading(true);
-    setError(null);
+    setRotateFeedback(null);
     try {
       const result = await api.rotateRuleSecret(numericId);
       applyRuleConfigMeta(result.rule.config);
       if (result.revealedSecret) {
         setRevealedSecret(result.revealedSecret);
       }
+      setRotateFeedback({ tone: 'success', text: t('webhooksSecretRotated') });
     } catch (e) {
-      setError(e);
+      setRotateFeedback(feedbackFromThrown(e, t('actionsSaveError')));
     } finally {
       setRotateLoading(false);
     }
@@ -230,14 +242,11 @@ export function ActionsRuleEditorPage() {
     try {
       const result = await api.sendRuleTest(numericId);
       setSendTestFeedback({
-        type: 'success',
-        message: t('actionsSendTestSuccess', { webhook_id: result.webhook_id }),
+        tone: 'success',
+        text: t('actionsSendTestSuccess', { webhook_id: result.webhook_id }),
       });
     } catch (e) {
-      setSendTestFeedback({
-        type: 'error',
-        message: e instanceof Error ? e.message : t('actionsSendTestError'),
-      });
+      setSendTestFeedback(feedbackFromThrown(e, t('actionsSendTestError')));
     } finally {
       setSendTestLoading(false);
     }
@@ -291,7 +300,7 @@ export function ActionsRuleEditorPage() {
       ) : null}
       {error && !isApiUnavailableError(error) ? (
         <Text className="font-mono text-sm text-destructive">
-          {error instanceof Error ? error.message : t('actionsSaveError')}
+          {error instanceof Error ? error.message : t('actionsLoadError')}
         </Text>
       ) : null}
 
@@ -305,7 +314,7 @@ export function ActionsRuleEditorPage() {
         </div>
       ) : null}
 
-      {serviceConfigured && accessToken && isOwner && api && !loading ? (
+      {serviceConfigured && accessToken && isOwner && api && !loading && !error ? (
         <div className="space-y-6">
           {revealedSecret ? (
             <WebhookSecretOnceCallout
@@ -328,7 +337,10 @@ export function ActionsRuleEditorPage() {
                 </label>
                 <Input
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    clearActionFeedback();
+                    setName(e.target.value);
+                  }}
                   className="font-mono text-sm"
                 />
               </div>
@@ -339,7 +351,10 @@ export function ActionsRuleEditorPage() {
                 <select
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 font-mono text-sm"
                   value={eventKey}
-                  onChange={(e) => setEventKey(e.target.value)}
+                  onChange={(e) => {
+                    clearActionFeedback();
+                    setEventKey(e.target.value);
+                  }}
                 >
                   {events.map((ev) => (
                     <option
@@ -360,7 +375,10 @@ export function ActionsRuleEditorPage() {
                 <input
                   type="checkbox"
                   checked={enabled}
-                  onChange={(e) => setEnabled(e.target.checked)}
+                  onChange={(e) => {
+                    clearActionFeedback();
+                    setEnabled(e.target.checked);
+                  }}
                 />
                 <span className="font-mono text-xs">{t('actionsRuleEnabledLabel')}</span>
               </label>
@@ -401,7 +419,10 @@ export function ActionsRuleEditorPage() {
                 </label>
                 <Input
                   value={webhookUrl}
-                  onChange={(e) => setWebhookUrl(e.target.value)}
+                  onChange={(e) => {
+                    clearActionFeedback();
+                    setWebhookUrl(e.target.value);
+                  }}
                   className="font-mono text-sm"
                   placeholder="https://hooks.example.com/shellui"
                 />
@@ -414,7 +435,10 @@ export function ActionsRuleEditorPage() {
                   <Input
                     type="password"
                     value={webhookSecret}
-                    onChange={(e) => setWebhookSecret(e.target.value)}
+                    onChange={(e) => {
+                      clearActionFeedback();
+                      setWebhookSecret(e.target.value);
+                    }}
                     className="font-mono text-sm"
                     placeholder="whsec_…"
                     autoComplete="new-password"
@@ -431,15 +455,18 @@ export function ActionsRuleEditorPage() {
                     </p>
                     <p className="font-mono text-xs text-muted-foreground">{secretHintLabel}</p>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="destructive"
-                    disabled={rotateLoading || saving}
-                    onClick={() => void onRotateSecret()}
-                  >
-                    {rotateLoading ? t('webhooksRotateLoading') : t('webhooksRotateSecret')}
-                  </Button>
+                  <div className="space-y-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      disabled={rotateLoading || saving}
+                      onClick={() => void onRotateSecret()}
+                    >
+                      {rotateLoading ? t('webhooksRotateLoading') : t('webhooksRotateSecret')}
+                    </Button>
+                    <ActionFeedback feedback={rotateFeedback} />
+                  </div>
                 </div>
               )}
               <div className="space-y-1">
@@ -448,7 +475,10 @@ export function ActionsRuleEditorPage() {
                 </label>
                 <Input
                   value={authHeaderName}
-                  onChange={(e) => setAuthHeaderName(e.target.value)}
+                  onChange={(e) => {
+                    clearActionFeedback();
+                    setAuthHeaderName(e.target.value);
+                  }}
                   className="font-mono text-sm"
                   placeholder="Authorization"
                 />
@@ -460,7 +490,10 @@ export function ActionsRuleEditorPage() {
                 <Input
                   type="password"
                   value={authHeaderValue}
-                  onChange={(e) => setAuthHeaderValue(e.target.value)}
+                  onChange={(e) => {
+                    clearActionFeedback();
+                    setAuthHeaderValue(e.target.value);
+                  }}
                   className="font-mono text-sm"
                   autoComplete="new-password"
                 />
@@ -468,15 +501,18 @@ export function ActionsRuleEditorPage() {
             </CardContent>
           </Card>
 
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              disabled={saving || !name.trim() || !webhookUrl.trim()}
-              onClick={() => void onSave()}
-            >
-              {saving ? t('actionsSaving') : t('actionsSave')}
-            </Button>
+          <div className="flex flex-wrap items-start gap-4">
+            <div className="space-y-2">
+              <Button
+                type="button"
+                size="sm"
+                disabled={saving || !name.trim() || !webhookUrl.trim()}
+                onClick={() => void onSave()}
+              >
+                {saving ? t('actionsSaving') : t('actionsSave')}
+              </Button>
+              <ActionFeedback feedback={saveFeedback} />
+            </div>
             <Button
               type="button"
               size="sm"
@@ -486,40 +522,29 @@ export function ActionsRuleEditorPage() {
               <Link to={webhookRulesListPath(service.key)}>{t('actionsCancel')}</Link>
             </Button>
             {!isCreate && numericId != null ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                disabled={sendTestLoading || saving || !enabled}
-                title={!enabled ? t('actionsSendTestDisabledRule') : undefined}
-                onClick={() => void onSendTest()}
-              >
-                {sendTestLoading ? t('actionsSendTestLoading') : t('actionsSendTestEvent')}
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={sendTestLoading || saving || !enabled}
+                  title={!enabled ? t('actionsSendTestDisabledRule') : undefined}
+                  onClick={() => void onSendTest()}
+                >
+                  {sendTestLoading ? t('actionsSendTestLoading') : t('actionsSendTestEvent')}
+                </Button>
+                <ActionFeedback feedback={sendTestFeedback} />
+                {sendTestFeedback?.tone === 'success' ? (
+                  <Link
+                    to={deliveryLogHref}
+                    className="font-mono text-xs text-primary underline-offset-2 hover:underline"
+                  >
+                    {t('actionsViewDeliveryLogs')}
+                  </Link>
+                ) : null}
+              </div>
             ) : null}
           </div>
-
-          {sendTestFeedback ? (
-            <div className="space-y-2 font-mono text-xs">
-              <Text
-                className={
-                  sendTestFeedback.type === 'success'
-                    ? 'text-emerald-800 dark:text-emerald-200'
-                    : 'text-destructive'
-                }
-              >
-                {sendTestFeedback.message}
-              </Text>
-              {sendTestFeedback.type === 'success' ? (
-                <Link
-                  to={deliveryLogHref}
-                  className="text-primary underline-offset-2 hover:underline"
-                >
-                  {t('actionsViewDeliveryLogs')}
-                </Link>
-              ) : null}
-            </div>
-          ) : null}
         </div>
       ) : null}
     </div>

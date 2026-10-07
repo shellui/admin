@@ -18,7 +18,7 @@ export const LEGACY_WEBHOOKS_DELIVERIES_PATH = '/webhooks/deliveries';
 export const LEGACY_ACTIONS_RULES_PATH = '/actions/rules';
 export const LEGACY_ACTIONS_DELIVERIES_PATH = '/actions/deliveries';
 
-const WEBHOOKS_TAIL_RESERVED = new Set(['new', 'deliveries']);
+const WEBHOOKS_TAIL_RESERVED = new Set(['new', 'deliveries', 'email']);
 
 function serviceWebhooksRoot(service: WebhookServiceKey): string {
   return `/${service}/webhooks`;
@@ -34,6 +34,22 @@ export function webhookRulesNewPath(service: WebhookServiceKey = DEFAULT_WEBHOOK
 
 export function webhookRuleEditPath(service: WebhookServiceKey, ruleId: string | number): string {
   return `${serviceWebhooksRoot(service)}/${encodeURIComponent(String(ruleId))}`;
+}
+
+export function emailRuleNewPath(service: WebhookServiceKey): string {
+  return `${serviceWebhooksRoot(service)}/email/new`;
+}
+
+export function emailRuleEditPath(service: WebhookServiceKey, ruleId: string | number): string {
+  return `${serviceWebhooksRoot(service)}/email/${encodeURIComponent(String(ruleId))}`;
+}
+
+export function emailTemplateEditorPath(templateId: number): string {
+  return `/email/templates/id/${templateId}`;
+}
+
+export function emailLibraryTemplatePath(libraryId: number): string {
+  return `/email/templates/${libraryId}`;
 }
 
 export function webhookDeliveriesPath(

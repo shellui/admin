@@ -7,3 +7,4 @@ package-lock.json
 *.log
 .DS_Store
 oauth-icons-missing/
+src/features/email/templates/vendor/

@@ -24,6 +24,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Text } from '@/components/ui/text';
+import { DashboardEmailSection } from '@/components/DashboardEmailSection';
 import { AllServicesRetentionAlerts } from '@/components/EventRetentionAlert';
 import { DashboardScheduledJobsSection } from '@/components/DashboardScheduledJobsSection';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
@@ -499,6 +500,8 @@ export function DashboardPage() {
           )}
         </section>
       )}
+
+      <DashboardEmailSection />
 
       {selectedSource && (
         <details className="group rounded-lg border border-border/80 bg-card text-card-foreground shadow-sm">

@@ -15,14 +15,15 @@ External menus (host custom apps, storage files, Swagger/ReDoc) are opened as ab
 
 ## What the panel covers
 
-| Area            | When it appears                                         | Highlights                                                                                                                                                          |
-| --------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Dashboard**   | Always                                                  | Company-scoped KPIs from identity (`GET /api/v1/metrics`). Optional storage and hosting Prometheus metrics when those services are configured.                      |
-| **Identity**    | Always (with `backend.url`)                             | Company (incl. magic link toggle), users, groups, login events, OAuth apps, SCIM, Actions (rules + delivery logs), personal access tokens; staff Django admin link. |
-| **Storage**     | Host `storage.url` set                                  | Statistics (`GET /storage/v1/stats`); optional Files explorer via `storage.filesUrl`; staff Django admin.                                                           |
-| **Hosting**     | Host `hosting.url` set and `showInAdmin` is not `false` | Apps list/detail, statistics, dashboard hosting KPIs (`GET /hosting/v1/metrics`); staff Django admin.                                                               |
-| **Custom apps** | Host `administration` set                               | Extra sidebar links below Dashboard (iframe or external).                                                                                                           |
-| **API docs**    | Shell developer mode                                    | Swagger / ReDoc for identity (and storage / hosting when those sections are on).                                                                                    |
+| Area            | When it appears                                         | Highlights                                                                                                                                                                                                         |
+| --------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Dashboard**   | Always                                                  | Company-scoped KPIs from identity (`GET /api/v1/metrics`). Optional storage and hosting Prometheus metrics when those services are configured. Email delivery counts from `GET /api/v1/stats` when Email is shown. |
+| **Identity**    | Always (with `backend.url`)                             | Company (incl. magic link toggle), users, groups, login events, OAuth apps, SCIM, Actions (rules + delivery logs), personal access tokens; staff Django admin link.                                                |
+| **Storage**     | Host `storage.url` set                                  | Statistics (`GET /storage/v1/stats`); optional Files explorer via `storage.filesUrl`; staff Django admin.                                                                                                          |
+| **Hosting**     | Host `hosting.url` set and `showInAdmin` is not `false` | Apps list/detail, statistics, dashboard hosting KPIs (`GET /hosting/v1/metrics`); staff Django admin.                                                                                                              |
+| **Email**       | Always (default `https://email.shellui.com`)            | Last sidebar section: company theme and templates, provider settings, statistics. Identity, Storage, and Hosting each keep an Email and webhooks page that lists that service's webhook and email rules together.  |
+| **Custom apps** | Host `administration` set                               | Extra sidebar links below Dashboard (iframe or external).                                                                                                                                                          |
+| **API docs**    | Shell developer mode                                    | Swagger / ReDoc for identity (and storage / hosting when those sections are on).                                                                                                                                   |
 
 ## Prerequisites
 
@@ -67,20 +68,28 @@ hosting: {
   url: 'http://localhost:8002',
   // showInAdmin: false, // hide Admin → Hosting while keeping deploy
 },
+email: {
+  url: 'https://email.shellui.com', // default when omitted. Local Compose is http://localhost:8003
+},
 ```
 
-## Identity company admin (SCIM, magic link, Actions)
+Admin reads `email.url` the same way it reads `storage.url` and `hosting.url` (SDK settings from the host `shellui.config`). SDK 0.5.0 has no `email` field, so the shell must forward the block on settings. When `email.url` is missing, Admin calls `https://email.shellui.com`. Set `email.showInAdmin: false` to hide the Email section.
+
+## Identity company admin (SCIM, magic link, webhooks)
 
 Point `backend.url` at a local or deployed **identity-service** (for example `http://localhost:8000`). Sign in through Shellui as a **company owner** so the JWT includes `company_id` and `user_metadata.is_company_owner`.
 
-| Route                            | API                                                                                                                      |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `#/scim`                         | `GET /api/v1/scim`, token CRUD under `/api/v1/scim/tokens`                                                               |
-| `#/company`                      | `GET/PATCH /api/v1/auth-methods` (`enable_magic_link`, read-only global kill switch)                                     |
-| `#/identity/webhooks`            | Identity webhooks (sidebar: Identity → Webhooks). API on **identity-service** (`backend.url` / `authBackendBaseUrl`).    |
-| `#/hosting/webhooks`             | Hosting webhooks when `hosting.url` is set (sidebar: Hosting → Webhooks). Calls **hosting-service** `/api/v1/actions/*`. |
-| `#/storage/webhooks`             | Storage webhooks when `storage.url` is set (sidebar: Storage → Webhooks). Calls **storage-service** `/api/v1/actions/*`. |
-| `#/identity/webhooks/deliveries` | Delivery log for the active service (`GET /api/v1/actions/deliveries`, detail + `POST …/requeue`).                       |
+| Route                            | API                                                                                                                                                                                                                     |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `#/scim`                         | `GET /api/v1/scim`, token CRUD under `/api/v1/scim/tokens`                                                                                                                                                              |
+| `#/company`                      | `GET/PATCH /api/v1/auth-methods` (`enable_magic_link`, read-only global kill switch)                                                                                                                                    |
+| `#/identity/webhooks`            | Identity email and webhooks (sidebar: Identity → Email and webhooks). One list of webhook and email rules, ordered by event then created date. Webhook API on **identity-service**. Email rules call **email-service**. |
+| `#/email/templates`              | Company theme (Barebone, Matte, Protocol, Arcane, Studio) and the company template list. Open a template by id to edit subject, preheader, and blocks.                                                                  |
+| `#/email/provider`               | Company provider (Resend). SMTP stays disabled when `smtp_allowed` is false. Untouched optional fields are omitted on save. The API key is write-only.                                                                  |
+| `#/email/statistics`             | Delivery stats (including skipped events) and Prometheus metrics from email-service.                                                                                                                                    |
+| `#/hosting/webhooks`             | Hosting email and webhooks when `hosting.url` is set. Same combined rule list as identity. Webhooks call **hosting-service** `/api/v1/actions/*`.                                                                       |
+| `#/storage/webhooks`             | Storage email and webhooks when `storage.url` is set. Same combined rule list as identity. Webhooks call **storage-service** `/api/v1/actions/*`.                                                                       |
+| `#/identity/webhooks/deliveries` | Delivery log for the active service (`GET /api/v1/actions/deliveries`, detail + `POST …/requeue`).                                                                                                                      |
 
 Legacy `#/webhooks` and `#/actions/...` redirect to `#/identity/webhooks/...`.
 
