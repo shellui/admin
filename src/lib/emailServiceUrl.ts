@@ -1,19 +1,16 @@
-import type { Settings } from '@shellui/sdk';
+import type { Settings, SettingsEmail } from '@shellui/sdk';
+
+export type { SettingsEmail };
 
 /** Production origin. Callers append `/api/v1/...`. No trailing slash. */
 export const DEFAULT_EMAIL_SERVICE_URL = 'https://email.shellui.com';
 
 /**
- * Host `email` block in shellui.config, delivered on SDK settings the same way as
- * `storage` and `hosting`. `@shellui/sdk` 0.6.0-alpha.1 will type this block, and that
- * release is not on npm yet, so Admin still reads `settings.email` without a type.
+ * Host `email` block in shellui.config, delivered as `settings.email`
+ * (`SettingsEmail` on `@shellui/sdk` 0.6.0-beta.1), the same way as `storage` and
+ * `hosting`. The shell fills a missing `url` with the production origin; Admin still
+ * normalizes it and falls back when the value is absent.
  */
-export interface SettingsEmail {
-  /** Base URL of email-service. Omitted values use `DEFAULT_EMAIL_SERVICE_URL`. */
-  url?: string;
-  /** When false, hide Admin → Email. Default: shown. */
-  showInAdmin?: boolean;
-}
 
 export function normalizeServiceOrigin(raw: string | null | undefined): string | null {
   if (typeof raw !== 'string' || !raw.trim()) return null;
@@ -25,8 +22,7 @@ export function resolveEmailServiceUrl(raw: string | null | undefined): string {
 }
 
 export function readSettingsEmail(settings: Settings | null | undefined): SettingsEmail {
-  const email = (settings as (Settings & { email?: SettingsEmail | null }) | null | undefined)
-    ?.email;
+  const email = settings?.email;
   return {
     url: resolveEmailServiceUrl(email?.url),
     showInAdmin: email?.showInAdmin,
