@@ -24,6 +24,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Text } from '@/components/ui/text';
+import { DashboardEmailSection } from '@/components/DashboardEmailSection';
+import { AllServicesRetentionAlerts } from '@/components/EventRetentionAlert';
+import { DashboardScheduledJobsSection } from '@/components/DashboardScheduledJobsSection';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import {
   buildStaffPrometheusMetricsUrl,
@@ -278,6 +281,8 @@ export function DashboardPage() {
         <Text className="max-w-3xl font-mono text-sm">{t('dashboardDescription')}</Text>
       </header>
 
+      <AllServicesRetentionAlerts />
+
       {!accessToken && (
         <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
       )}
@@ -351,6 +356,8 @@ export function DashboardPage() {
           </section>
         </>
       )}
+
+      <DashboardScheduledJobsSection />
 
       {accessToken && storageEnabled && (
         <section className="space-y-4">
@@ -493,6 +500,8 @@ export function DashboardPage() {
           )}
         </section>
       )}
+
+      <DashboardEmailSection />
 
       {selectedSource && (
         <details className="group rounded-lg border border-border/80 bg-card text-card-foreground shadow-sm">

@@ -1,5 +1,10 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { getAdminHashPath, readSidebarCollapsed, writeSidebarCollapsed } from './adminChromeNav';
+import {
+  getAdminHashPath,
+  placeStandaloneEmailSectionLast,
+  readSidebarCollapsed,
+  writeSidebarCollapsed,
+} from './adminChromeNav';
 
 describe('getAdminHashPath', () => {
   afterEach(() => {
@@ -19,6 +24,38 @@ describe('getAdminHashPath', () => {
   it('normalizes trailing slashes', () => {
     window.location.hash = '#/groups/';
     expect(getAdminHashPath()).toBe('/groups');
+  });
+});
+
+describe('sidebar section order', () => {
+  it('places the standalone Email group after every other section', () => {
+    expect(
+      placeStandaloneEmailSectionLast([
+        { title: 'Identity' },
+        { title: 'Email' },
+        { title: 'Storage' },
+        { title: 'Hosting' },
+      ]).map((section) => section.title),
+    ).toEqual(['Identity', 'Storage', 'Hosting', 'Email']);
+  });
+
+  it('places the French E-mail group last and leaves other sections in place', () => {
+    expect(
+      placeStandaloneEmailSectionLast([
+        { title: 'Identité' },
+        { title: 'E-mail' },
+        { title: 'Stockage' },
+        { title: 'Hébergement' },
+      ]).map((section) => section.title),
+    ).toEqual(['Identité', 'Stockage', 'Hébergement', 'E-mail']);
+  });
+
+  it('keeps the order when the Email group is hidden', () => {
+    expect(
+      placeStandaloneEmailSectionLast([{ title: 'Identity' }, { title: 'Storage' }]).map(
+        (section) => section.title,
+      ),
+    ).toEqual(['Identity', 'Storage']);
   });
 });
 

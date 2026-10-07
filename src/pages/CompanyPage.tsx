@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Text } from '@/components/ui/text';
+import { CompanyAuthMethodsSection } from '@/components/CompanyAuthMethodsSection';
 import { DashboardCompanySection } from '@/components/DashboardCompanySection';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
@@ -37,7 +38,12 @@ export function CompanyPage() {
         </Text>
       )}
 
-      {accessToken && isOwner ? <DashboardCompanySection accessToken={accessToken} /> : null}
+      {accessToken && isOwner ? (
+        <>
+          <DashboardCompanySection accessToken={accessToken} />
+          <CompanyAuthMethodsSection accessToken={accessToken} />
+        </>
+      ) : null}
     </div>
   );
 }

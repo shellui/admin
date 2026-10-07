@@ -1,0 +1,172 @@
+{
+  "23andme": {
+    "source": "23andMe favicon (https://www.23andme.org/favicon.svg); PD mark on Commons",
+    "license": "Trademark / official site asset",
+    "fullColor": true
+  },
+  "agave": {
+    "source": "GitHub org avatar https://avatars.githubusercontent.com/u/30875635",
+    "license": "Trademark, org avatar",
+    "fullColor": true
+  },
+  "authentiq": {
+    "source": "GitHub org avatar https://avatars.githubusercontent.com/u/11684297",
+    "license": "Trademark, org avatar",
+    "fullColor": true
+  },
+  "battlenet": {
+    "source": "simple-icons battledotnet (https://simpleicons.org, CC0-1.0)",
+    "license": "CC0-1.0",
+    "fullColor": true
+  },
+  "cern": {
+    "source": "Commons CERN logo badge (https://commons.wikimedia.org/wiki/File:CERN_logo_badge.svg)",
+    "license": "Public domain (Commons), trademark",
+    "fullColor": true
+  },
+  "cilogon": {
+    "source": "GitHub org avatar https://avatars.githubusercontent.com/u/13756060",
+    "license": "Trademark, org avatar",
+    "fullColor": true
+  },
+  "clever": {
+    "source": "Clever favicon (https://www.clever.com/wp-content/uploads/2023/06/Favicon-512px.png)",
+    "license": "Trademark, official site asset",
+    "fullColor": true
+  },
+  "dataporten": {
+    "source": "Feide horizontal logo (https://www.feide.no/themes/custom/feide_theme/resources/Horisontal_Feide.svg)",
+    "license": "Trademark, official site asset",
+    "fullColor": true
+  },
+  "daum": {
+    "source": "Commons Daum icon 2026 (https://commons.wikimedia.org/wiki/File:Daum_icon_(2026%E2%80%93).svg)",
+    "license": "Public domain (Commons), trademark",
+    "fullColor": true
+  },
+  "dingtalk": {
+    "source": "DingTalk dd-icons DingtalkLogoFilled (MIT)",
+    "license": "MIT (dd-icons), trademark",
+    "fullColor": true
+  },
+  "doximity": {
+    "source": "Doximity official SVG (https://assets.doxcdn.com/image/upload/fl_sanitize/logos/doximity/)",
+    "license": "Trademark, official site asset",
+    "fullColor": true
+  },
+  "drip": {
+    "source": "Inline header SVG on https://www.drip.com/",
+    "license": "Trademark, official site asset",
+    "fullColor": false
+  },
+  "dwolla": {
+    "source": "Dwolla hubfs logo SVG (https://www.dwolla.com/)",
+    "license": "Trademark, official site asset",
+    "fullColor": true
+  },
+  "edmodo": {
+    "source": "logos-download.com Edmodo wordmark (last resort; Edmodo shut down 2022-09-22)",
+    "license": "Unknown (3rd-party vector), trademark",
+    "fullColor": true,
+    "weakPick": true
+  },
+  "eveonline": {
+    "source": "Commons EVE Online wordmark (https://commons.wikimedia.org/wiki/File:Eve_online_logo.svg)",
+    "license": "Public domain (Commons), trademark",
+    "fullColor": true,
+    "weakPick": true
+  },
+  "exist": {
+    "source": "exist.io icon.svg",
+    "license": "Trademark, official site asset",
+    "fullColor": false
+  },
+  "feishu": {
+    "source": "Feishu/Lark favicon (feishu.cn / larksuite CDN)",
+    "license": "Trademark, official site asset",
+    "fullColor": true
+  },
+  "frontier": {
+    "source": "Frontier meta icon.svg (https://www.frontier.co.uk/)",
+    "license": "Trademark, official site asset",
+    "fullColor": false
+  },
+  "jupyterhub": {
+    "source": "jupyterhub/design square color assets (BSD-3-Clause)",
+    "license": "BSD-3-Clause (jupyterhub/design), trademark",
+    "fullColor": true
+  },
+  "klaviyo": {
+    "source": "Inline header SVG on https://www.klaviyo.com/",
+    "license": "Trademark, official site asset",
+    "fullColor": false
+  },
+  "lemonldap": {
+    "source": "lemonldap-ng.org llng_logo_square.png",
+    "license": "Trademark, project asset",
+    "fullColor": true
+  },
+  "mailcow": {
+    "source": "mailcow.email cow_mailcow.svg",
+    "license": "Trademark, official site asset",
+    "fullColor": true
+  },
+  "netiq": {
+    "source": "worldvectorlogo netiq-1.svg (last resort; netiq.com redirects to OpenText)",
+    "license": "Worldvectorlogo (no open licence), trademark",
+    "fullColor": true,
+    "weakPick": true
+  },
+  "questrade": {
+    "source": "Questrade android-chrome 512 icons (light/dark)",
+    "license": "Trademark, official site asset",
+    "fullColor": true
+  },
+  "sharefile": {
+    "source": "sharefile.com nav logo SVG (cropped mark)",
+    "license": "Trademark (Progress Software), official site asset",
+    "fullColor": true,
+    "weakPick": true
+  },
+  "stocktwits": {
+    "source": "Inline SVG on https://stocktwits.com/",
+    "license": "Trademark, official site asset",
+    "fullColor": true
+  },
+  "trainingpeaks": {
+    "source": "TrainingPeaks cropped favicon 192px",
+    "license": "Trademark, official site asset",
+    "fullColor": true
+  },
+  "wahoo": {
+    "source": "Inline header SVG on https://www.wahoofitness.com/",
+    "license": "Trademark, official site asset",
+    "fullColor": false,
+    "weakPick": true
+  },
+  "weibo": {
+    "source": "simple-icons sinaweibo (CC0-1.0)",
+    "license": "CC0-1.0",
+    "fullColor": true
+  },
+  "weixin": {
+    "source": "simple-icons wechat (CC0-1.0)",
+    "license": "CC0-1.0",
+    "fullColor": true
+  },
+  "yahoo": {
+    "source": "Yahoo official icon https://s.yimg.com/cv/apiv2/icons/yahoo.png",
+    "license": "Trademark, official site asset",
+    "fullColor": true
+  },
+  "yandex": {
+    "source": "Commons Yandex icon (https://commons.wikimedia.org/wiki/File:Yandex_icon.svg)",
+    "license": "Public domain (Commons), trademark",
+    "fullColor": true
+  },
+  "ynab": {
+    "source": "YNAB blurple tree SVG (ynab.com website-files CDN)",
+    "license": "Trademark, official site asset",
+    "fullColor": true
+  }
+}

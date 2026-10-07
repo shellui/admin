@@ -5,3 +5,5 @@ dist
 .vscode
 .shellui-config-loader.mjs
 .pnpm-store
+deps/
+oauth-icons-missing/

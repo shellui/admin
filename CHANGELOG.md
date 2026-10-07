@@ -21,6 +21,58 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [0.5.0] - 2026-10-07
+
+Requires identity-service 0.7.0, hosting-service 0.6.1, storage-service 0.5.0, and email-service 0.1.0.
+
+### Webhooks
+
+- Company owners manage webhook rules and delivery logs for identity, storage, and hosting.
+- Legacy `#/actions` paths redirect to the webhooks pages.
+- A signing secret is shown once when it is created or rotated, and later reads return only a hint.
+
+### Email service
+
+- Admin calls email-service with the identity JWT. The default origin is `https://email.shellui.com`, or `email.url` from the host config.
+- The Email section has a template library, provider settings, statistics, broadcasts, and newsletters.
+- An event email is written once, translated in place, and painted with a Shellui theme.
+- Preview and draft send use catalog example values. Auth templates reject a literal sign-in URL.
+- Provider saves omit untouched credentials. The API key is write-only.
+
+### Scheduled jobs
+
+- Staff see identity scheduled job health on the dashboard. Company owners do not.
+- `retry_webhooks` and `purge_expired_data` run on each service's built-in scheduler.
+
+### SCIM
+
+- Company owners create a SCIM token, see the secret once, and revoke it.
+
+### Users and invitations
+
+- Company owners and staff invite people, review pending invitations, and remove a user from the company.
+- Staff and superuser flags are not editable here. They stay in Django admin.
+
+### Log events
+
+- Identity, storage, and hosting each have a log events list and a detail page.
+- The dashboard and the log pages warn when stored events are older than the company retention period.
+
+### OAuth apps
+
+- Company owners set up sign-in providers from the catalog, with the callback URL and the redirect allowlist.
+
+### Dependencies
+
+- Uses `@shellui/sdk` 0.6.0. Host email settings come from the typed `settings.email` block, and a missing `url` still falls back to `https://email.shellui.com`.
+- React 19.3, tailwind-merge 3.7, `@radix-ui/react-slot` 1.3.3, and autoprefixer 10.6.1 are included from `main`.
+
+### Security
+
+- Email HTML preview runs in a sandboxed iframe.
+- Access tokens stay in memory and are sent as `Authorization` headers.
+- `pnpm.overrides` keeps `source-map-js` at 1.2.2 or newer.
+
 ## [0.4.0] - 2026-09-07
 
 ### ✨ Feature

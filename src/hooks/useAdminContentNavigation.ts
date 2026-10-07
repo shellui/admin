@@ -150,6 +150,22 @@ export function useAdminContentNavigation(): AdminContentFrame {
           useHashRouter: false,
         });
       }
+      const storageWebhooksHash = buildAdminHashContentUrl(origin, 'storage/webhooks', '', '');
+      items.push({
+        label: 'Email and webhooks',
+        path: 'storage/webhooks',
+        url: storageWebhooksHash,
+        embedUrl: storageWebhooksHash,
+        useHashRouter: true,
+      });
+      const storageEventsHash = buildAdminHashContentUrl(origin, 'storage/events', '', '');
+      items.push({
+        label: 'Log events',
+        path: 'storage/events',
+        url: storageEventsHash,
+        embedUrl: storageEventsHash,
+        useHashRouter: true,
+      });
       const statsHash = buildAdminHashContentUrl(origin, 'storage/statistics', '', '');
       items.push({
         label: 'Statistics',
@@ -194,12 +210,28 @@ export function useAdminContentNavigation(): AdminContentFrame {
         embedUrl: appsHash,
         useHashRouter: true,
       });
+      const hostingWebhooksHash = buildAdminHashContentUrl(origin, 'hosting/webhooks', '', '');
+      items.push({
+        label: 'Email and webhooks',
+        path: 'hosting/webhooks',
+        url: hostingWebhooksHash,
+        embedUrl: hostingWebhooksHash,
+        useHashRouter: true,
+      });
       const appDetailHash = buildAdminHashContentUrl(origin, 'hosting/apps', '', '');
       items.push({
         label: 'App detail',
         path: 'hosting/apps',
         url: appDetailHash,
         embedUrl: appDetailHash,
+        useHashRouter: true,
+      });
+      const hostingEventsHash = buildAdminHashContentUrl(origin, 'hosting/events', '', '');
+      items.push({
+        label: 'Log events',
+        path: 'hosting/events',
+        url: hostingEventsHash,
+        embedUrl: hostingEventsHash,
         useHashRouter: true,
       });
       const statsHash = buildAdminHashContentUrl(origin, 'hosting/statistics', '', '');

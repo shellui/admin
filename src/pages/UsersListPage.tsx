@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, createSearchParams, useSearchParams } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -35,6 +35,8 @@ import {
   type AdminUserListResponse,
   type AdminUserRow,
 } from '@/lib/adminUsersApi';
+import { openInviteUserModal } from '@/lib/inviteModal';
+import { PendingInvitationsButton } from '@/components/PendingInvitationsButton';
 
 /** Page size for directory fetch; use `page` in URL for additional pages (full directory is all pages together). */
 const PAGE_SIZE = 50;
@@ -106,7 +108,6 @@ export function UsersListPage() {
   useEffect(() => {
     void load();
   }, [load]);
-
   function onSubmit(values: FilterValues) {
     setSearchParams(
       createSearchParams({
@@ -187,19 +188,37 @@ export function UsersListPage() {
 
   return (
     <div className="w-full space-y-6">
-      <header className="space-y-1">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            {t('usersTitle')}
-          </h1>
-          <Badge
-            variant="secondary"
-            className="font-mono text-[10px] uppercase"
-          >
-            {t('usersSchemaBadge')}
-          </Badge>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 space-y-1">
+          <div className="flex flex-wrap items-baseline gap-3">
+            <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
+              {t('usersTitle')}
+            </h1>
+            <Badge
+              variant="secondary"
+              className="font-mono text-[10px] uppercase"
+            >
+              {t('usersSchemaBadge')}
+            </Badge>
+          </div>
+          <Text className="max-w-3xl text-sm text-muted-foreground">{t('usersDescription')}</Text>
         </div>
-        <Text className="max-w-3xl text-sm text-muted-foreground">{t('usersDescription')}</Text>
+        {accessToken ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <PendingInvitationsButton accessToken={accessToken} />
+            <Button
+              type="button"
+              onClick={openInviteUserModal}
+              className="inline-flex shrink-0 items-center gap-2"
+            >
+              <UserPlus
+                className="size-4"
+                aria-hidden
+              />
+              {t('inviteAction')}
+            </Button>
+          </div>
+        ) : null}
       </header>
 
       <Card className="border-border/80 shadow-sm">

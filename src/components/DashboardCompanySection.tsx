@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Building2, Loader2, Shield } from 'lucide-react';
+import { Building2, Loader2, Shield, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,8 @@ import {
   type CompanyAccessMode,
   type CompanyDto,
 } from '@/lib/companiesApi';
+import { openInviteUserModal } from '@/lib/inviteModal';
+import { PendingInvitationsButton } from '@/components/PendingInvitationsButton';
 import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
 
 type Props = {
@@ -247,6 +249,33 @@ export function DashboardCompanySection({ accessToken }: Props) {
               <p className="font-mono text-[10px] text-muted-foreground">
                 {t('dashboardCompanyDomainsHint')}
               </p>
+            </div>
+          ) : null}
+
+          {accessMode === 'invite' ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border/70 bg-muted/20 px-3 py-3">
+              <p className="min-w-0 flex-1 text-sm text-muted-foreground">
+                {t('dashboardCompanyInviteHint')}
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <PendingInvitationsButton
+                  accessToken={accessToken}
+                  size="sm"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={openInviteUserModal}
+                  className="inline-flex shrink-0 items-center gap-2"
+                >
+                  <UserPlus
+                    className="size-4"
+                    aria-hidden
+                  />
+                  {t('inviteAction')}
+                </Button>
+              </div>
             </div>
           ) : null}
 

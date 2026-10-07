@@ -95,12 +95,22 @@ export async function fetchAdminUser(accessToken: string, userId: number): Promi
 export type AdminUserUpdatePayload = {
   first_name?: string;
   last_name?: string;
-  is_staff?: boolean;
   /** Enable/disable access for the current company only. */
   is_active?: boolean;
   group_ids?: number[];
   data?: Record<string, unknown>;
 };
+
+/**
+ * identity-service 0.7.0 rejects `is_staff` and `is_superuser` on this route
+ * (`400 admin_only_field`). Those flags are Django admin only.
+ */
+function withoutStaffFlags(payload: AdminUserUpdatePayload): AdminUserUpdatePayload {
+  const body = { ...(payload as Record<string, unknown>) };
+  delete body.is_staff;
+  delete body.is_superuser;
+  return body as AdminUserUpdatePayload;
+}
 
 export async function updateAdminUser(
   accessToken: string,
@@ -109,7 +119,7 @@ export async function updateAdminUser(
 ): Promise<AdminUserRow> {
   const res = await authFetch(`/api/v1/users/${userId}`, accessToken, {
     method: 'PUT',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(withoutStaffFlags(payload)),
   });
   const body = await res.json().catch(() => null);
   if (!res.ok) {
@@ -118,84 +128,102 @@ export async function updateAdminUser(
   return body as AdminUserRow;
 }
 
-export type AdminLoginEventRow = {
+export type InviteLanguage = 'en' | 'fr';
+
+export type InviteUserPayload = {
+  email: string;
+  language: InviteLanguage;
+  /** Shell URL linked from the email; must be on the company OAuth redirect allowlist. */
+  app_url?: string;
+};
+
+export type AdminInvitation = {
   id: number;
-  company_id: number | null;
+  email: string;
+  language: InviteLanguage;
+  /** `revoked` rows are listed while they still block sign-in for that email. */
+  status: 'pending' | 'revoked';
+  invited_by: { id: number; email: string | null; name: string } | null;
   created_at: string;
-  user_id: number | null;
-  user_email: string | null;
-  outcome: string;
-  provider: string;
-  failure_reason: string;
-  is_staff_at_event: boolean;
-  ip_hash: string;
-  user_agent: string;
-  client_timezone: string;
-  client_device_id_hash: string;
-  client_country: string;
-  client_city: string;
+  revoked_at: string | null;
 };
 
-export type AdminLoginEventListResponse = {
-  count: number;
-  page: number;
-  page_size: number;
-  results: AdminLoginEventRow[];
-};
-
-export type AdminLoginEventListParams = {
-  user_id?: number;
-  page?: number;
-  pageSize?: number;
-  outcome?: 'success' | 'failure';
-  provider?: string;
-  is_staff_at_event?: boolean;
-  created_after?: string;
-  created_before?: string;
-  client_country?: string;
-  client_city?: string;
-  client_timezone?: string;
-  /** Matches `UserPreference.language` for the event user (en / fr); excludes rows without a user. */
-  language?: string;
-};
-
-/** Paginated OAuth login audit rows (`LoginEvent`). */
-export async function fetchAdminLoginEvents(
-  accessToken: string,
-  params: AdminLoginEventListParams = {},
-): Promise<AdminLoginEventListResponse> {
-  const sp = new URLSearchParams();
-  if (params.user_id != null) sp.set('user_id', String(params.user_id));
-  if (params.page != null) sp.set('page', String(params.page));
-  if (params.pageSize != null) sp.set('page_size', String(params.pageSize));
-  if (params.outcome) sp.set('outcome', params.outcome);
-  if (params.provider?.trim()) sp.set('provider', params.provider.trim().toLowerCase());
-  if (params.is_staff_at_event === true) sp.set('is_staff_at_event', 'true');
-  if (params.is_staff_at_event === false) sp.set('is_staff_at_event', 'false');
-  if (params.created_after?.trim()) sp.set('created_after', params.created_after.trim());
-  if (params.created_before?.trim()) sp.set('created_before', params.created_before.trim());
-  if (params.client_country?.trim()) sp.set('client_country', params.client_country.trim());
-  if (params.client_city?.trim()) sp.set('client_city', params.client_city.trim());
-  if (params.client_timezone?.trim()) sp.set('client_timezone', params.client_timezone.trim());
-  if (params.language?.trim()) sp.set('language', params.language.trim().toLowerCase());
-  const q = sp.toString();
-  const path = `/api/v1/login-events${q ? `?${q}` : ''}`;
-  const res = await authFetch(path, accessToken);
-  const body = await res.json().catch(() => null);
-  if (!res.ok) {
-    throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
+export class AdminApiError extends Error {
+  constructor(
+    message: string,
+    readonly code: string | null,
+  ) {
+    super(message);
+    this.name = 'AdminApiError';
   }
-  return body as AdminLoginEventListResponse;
 }
 
-export async function fetchAdminLoginEvent(
-  accessToken: string,
-  eventId: number,
-): Promise<AdminLoginEventRow> {
-  const res = await authFetch(`/api/v1/login-events/${eventId}`, accessToken);
+async function adminApiError(res: Response): Promise<AdminApiError> {
   const body = await res.json().catch(() => null);
+  const code =
+    body && typeof (body as Record<string, unknown>).error_code === 'string'
+      ? ((body as Record<string, unknown>).error_code as string)
+      : null;
+  return new AdminApiError(parseErrorMessage(body) || `Request failed (${res.status})`, code);
+}
+
+/**
+ * Stores a pending invitation and sends the invitation email (or the `identity.user.invited`
+ * webhook). No account is created: the invitee gets access on their first sign-in.
+ */
+export async function inviteAdminUser(
+  accessToken: string,
+  payload: InviteUserPayload,
+): Promise<AdminInvitation> {
+  const res = await authFetch('/api/v1/invitations', accessToken, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw await adminApiError(res);
+  const body = (await res.json()) as { invitation: AdminInvitation };
+  return body.invitation;
+}
+
+/** Pending invitations, plus revoked ones that still block sign-in. */
+export async function fetchAdminInvitations(accessToken: string): Promise<AdminInvitation[]> {
+  const res = await authFetch('/api/v1/invitations', accessToken);
+  if (!res.ok) throw await adminApiError(res);
+  const body = (await res.json()) as { results: AdminInvitation[] };
+  return body.results;
+}
+
+/** Revokes a pending invitation; sign-in with that email is refused until a new invitation. */
+export async function revokeAdminInvitation(
+  accessToken: string,
+  invitationId: number,
+): Promise<AdminInvitation> {
+  const res = await authFetch(`/api/v1/invitations/${invitationId}/revoke`, accessToken, {
+    method: 'POST',
+  });
+  if (!res.ok) throw await adminApiError(res);
+  const body = (await res.json()) as { invitation: AdminInvitation };
+  return body.invitation;
+}
+
+/** Deletes a revoked invitation for good, which also lifts the sign-in block for that email. */
+export async function deleteAdminInvitation(
+  accessToken: string,
+  invitationId: number,
+): Promise<void> {
+  const res = await authFetch(`/api/v1/invitations/${invitationId}`, accessToken, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw await adminApiError(res);
+}
+
+/**
+ * Removes the user from the current company. The server deletes the account itself only when
+ * this was their last company.
+ */
+export async function deleteAdminUser(accessToken: string, userId: number): Promise<void> {
+  const res = await authFetch(`/api/v1/users/${userId}`, accessToken, { method: 'DELETE' });
   if (!res.ok) {
+    const body = await res.json().catch(() => null);
     throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
   }
-  return body as AdminLoginEventRow;
 }

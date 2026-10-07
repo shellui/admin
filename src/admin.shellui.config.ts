@@ -38,11 +38,17 @@ export const adminShellUiConfig: AdminShellUIConfig = {
         { label: { en: 'Users', fr: 'Utilisateurs' }, path: 'users', url: '#/users' },
         { label: { en: 'Groups', fr: 'Groupes' }, path: 'groups', url: '#/groups' },
         {
-          label: { en: 'Log events', fr: 'Événements de connexion' },
-          path: 'login-events',
-          url: '#/login-events',
+          label: { en: 'Log events', fr: 'Journal des événements' },
+          path: 'events',
+          url: '#/events',
         },
         { label: { en: 'OAuth apps', fr: 'Apps OAuth' }, path: 'oauth', url: '#/oauth' },
+        { label: { en: 'SCIM', fr: 'SCIM' }, path: 'scim', url: '#/scim' },
+        {
+          label: { en: 'Email and webhooks', fr: 'E-mail et webhooks' },
+          path: 'identity/webhooks',
+          url: '#/identity/webhooks',
+        },
         {
           label: { en: 'Access tokens', fr: 'Jetons d’accès' },
           path: 'personal-access-tokens',
@@ -59,6 +65,36 @@ export const adminShellUiConfig: AdminShellUIConfig = {
           path: 'redoc',
           url: '#/redoc',
           requiresDevMode: true,
+        },
+      ],
+    },
+    {
+      title: { en: 'Email', fr: 'E-mail' },
+      items: [
+        {
+          label: { en: 'Templates', fr: 'Modèles' },
+          path: 'email/templates',
+          url: '#/email/templates',
+        },
+        {
+          label: { en: 'Broadcasts', fr: 'Diffusions' },
+          path: 'email/broadcasts',
+          url: '#/email/broadcasts',
+        },
+        {
+          label: { en: 'Newsletters', fr: 'Newsletters' },
+          path: 'email/newsletters',
+          url: '#/email/newsletters',
+        },
+        {
+          label: { en: 'Provider', fr: 'Fournisseur' },
+          path: 'email/provider',
+          url: '#/email/provider',
+        },
+        {
+          label: { en: 'Statistics', fr: 'Statistiques' },
+          path: 'email/statistics',
+          url: '#/email/statistics',
         },
       ],
     },

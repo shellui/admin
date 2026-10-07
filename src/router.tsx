@@ -1,19 +1,110 @@
-import { createHashRouter, Navigate } from 'react-router-dom';
+import { createHashRouter, Navigate, useParams } from 'react-router-dom';
 import { AdminShellLayout } from '@/layouts/AdminShellLayout';
 import { CompanyPage } from '@/pages/CompanyPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { GroupsListPage } from '@/pages/GroupsListPage';
-import { LoginEventDetailPage } from '@/pages/LoginEventDetailPage';
-import { LoginEventsListPage } from '@/pages/LoginEventsListPage';
+import { EventDetailPage } from '@/pages/EventDetailPage';
+import { EventsListPage } from '@/pages/EventsListPage';
+import { ActionsDeliveriesListPage } from '@/features/actions/pages/ActionsDeliveriesListPage';
+import { ActionsDeliveryDetailPage } from '@/features/actions/pages/ActionsDeliveryDetailPage';
+import { ActionsRuleEditorPage } from '@/features/actions/pages/ActionsRuleEditorPage';
+import { ActionsRulesListPage } from '@/features/actions/pages/ActionsRulesListPage';
 import { OAuthSetupPage } from '@/pages/OAuthSetupPage';
+import { ScimSetupPage } from '@/pages/ScimSetupPage';
 import { RouteErrorPage } from '@/pages/RouteErrorPage';
 import { AccessTokensPage } from '@/pages/AccessTokensPage';
+import { InviteUserPage } from '@/pages/InviteUserPage';
+import { INVITATIONS_ROUTE, INVITE_ROUTE } from '@/lib/inviteModal';
+import { PendingInvitationsPage } from '@/pages/PendingInvitationsPage';
 import { UserDetailPage } from '@/pages/UserDetailPage';
 import { UsersListPage } from '@/pages/UsersListPage';
 import { HostingAppDetailPage } from '@/pages/HostingAppDetailPage';
 import { HostingAppsPage } from '@/pages/HostingAppsPage';
 import { HostingStatisticsPage } from '@/pages/HostingStatisticsPage';
 import { StorageStatisticsPage } from '@/pages/StorageStatisticsPage';
+import { EmailBroadcastPage } from '@/features/email/pages/EmailBroadcastPage';
+import { EmailBroadcastsPage } from '@/features/email/pages/EmailBroadcastsPage';
+import { EmailNewsletterPage } from '@/features/email/pages/EmailNewsletterPage';
+import { EmailNewslettersPage } from '@/features/email/pages/EmailNewslettersPage';
+import { EmailLibraryTemplatePage } from '@/features/email/pages/EmailLibraryTemplatePage';
+import { EmailProviderPage } from '@/features/email/pages/EmailProviderPage';
+import { EmailStatisticsPage } from '@/features/email/pages/EmailStatisticsPage';
+import { EmailTemplateEditorPage } from '@/features/email/pages/EmailTemplateEditorPage';
+import { EmailRuleFormPage } from '@/features/email/pages/EmailRuleFormPage';
+import { EmailTemplatesPage } from '@/features/email/pages/EmailTemplatesPage';
+import {
+  legacyWebhooksRedirectTarget,
+  webhookDeliveriesPath,
+  webhookDeliveryDetailPath,
+  webhookRuleEditPath,
+  webhookRulesListPath,
+  webhookRulesNewPath,
+} from '@/lib/webhookRoutePaths';
+
+function LegacyWebhooksCatchAll() {
+  const { '*': rest } = useParams();
+  const pathname = rest?.trim() ? `/webhooks/${rest.trim()}` : '/webhooks';
+  return (
+    <Navigate
+      to={legacyWebhooksRedirectTarget(pathname)}
+      replace
+    />
+  );
+}
+
+function LegacyActionsRuleRedirect() {
+  const { ruleId } = useParams();
+  return (
+    <Navigate
+      to={ruleId ? webhookRuleEditPath('identity', ruleId) : webhookRulesListPath('identity')}
+      replace
+    />
+  );
+}
+
+function LegacyActionsDeliveryRedirect() {
+  const { deliveryId } = useParams();
+  return (
+    <Navigate
+      to={
+        deliveryId
+          ? webhookDeliveryDetailPath('identity', deliveryId)
+          : webhookDeliveriesPath('identity')
+      }
+      replace
+    />
+  );
+}
+
+const identityWebhookRoutes = [
+  { path: 'identity/webhooks/deliveries/:deliveryId', element: <ActionsDeliveryDetailPage /> },
+  { path: 'identity/webhooks/deliveries', element: <ActionsDeliveriesListPage /> },
+  { path: 'identity/webhooks/email/new', element: <EmailRuleFormPage /> },
+  { path: 'identity/webhooks/email/:emailRuleId', element: <EmailRuleFormPage /> },
+  { path: 'identity/webhooks/new', element: <ActionsRuleEditorPage /> },
+  { path: 'identity/webhooks/:ruleId', element: <ActionsRuleEditorPage /> },
+  { path: 'identity/webhooks', element: <ActionsRulesListPage /> },
+] as const;
+
+const hostingWebhookRoutes = [
+  { path: 'hosting/webhooks/deliveries/:deliveryId', element: <ActionsDeliveryDetailPage /> },
+  { path: 'hosting/webhooks/deliveries', element: <ActionsDeliveriesListPage /> },
+  { path: 'hosting/webhooks/email/new', element: <EmailRuleFormPage /> },
+  { path: 'hosting/webhooks/email/:emailRuleId', element: <EmailRuleFormPage /> },
+  { path: 'hosting/webhooks/new', element: <ActionsRuleEditorPage /> },
+  { path: 'hosting/webhooks/:ruleId', element: <ActionsRuleEditorPage /> },
+  { path: 'hosting/webhooks', element: <ActionsRulesListPage /> },
+] as const;
+
+const storageWebhookRoutes = [
+  { path: 'storage/webhooks/deliveries/:deliveryId', element: <ActionsDeliveryDetailPage /> },
+  { path: 'storage/webhooks/deliveries', element: <ActionsDeliveriesListPage /> },
+  { path: 'storage/webhooks/email/new', element: <EmailRuleFormPage /> },
+  { path: 'storage/webhooks/email/:emailRuleId', element: <EmailRuleFormPage /> },
+  { path: 'storage/webhooks/new', element: <ActionsRuleEditorPage /> },
+  { path: 'storage/webhooks/:ruleId', element: <ActionsRuleEditorPage /> },
+  { path: 'storage/webhooks', element: <ActionsRulesListPage /> },
+] as const;
 
 /**
  * Hash routes: `#/`, `#/company`, `#/users`, …
@@ -22,6 +113,12 @@ import { StorageStatisticsPage } from '@/pages/StorageStatisticsPage';
  * their routes exist only so the chrome hash location stays bookmarkable.
  */
 export const router = createHashRouter([
+  { path: INVITE_ROUTE, element: <InviteUserPage />, errorElement: <RouteErrorPage /> },
+  {
+    path: INVITATIONS_ROUTE,
+    element: <PendingInvitationsPage />,
+    errorElement: <RouteErrorPage />,
+  },
   {
     path: '/',
     element: <AdminShellLayout />,
@@ -30,7 +127,65 @@ export const router = createHashRouter([
       { index: true, element: <DashboardPage /> },
       { path: 'company', element: <CompanyPage /> },
       { path: 'groups', element: <GroupsListPage /> },
-      { path: 'oauth', element: <OAuthSetupPage /> },
+      { path: 'oauth/*', element: <OAuthSetupPage /> },
+      { path: 'scim', element: <ScimSetupPage /> },
+      ...identityWebhookRoutes,
+      ...hostingWebhookRoutes,
+      ...storageWebhookRoutes,
+      {
+        path: 'webhooks/*',
+        element: <LegacyWebhooksCatchAll />,
+      },
+      {
+        path: 'webhooks',
+        element: (
+          <Navigate
+            to={webhookRulesListPath('identity')}
+            replace
+          />
+        ),
+      },
+      {
+        path: 'actions/rules/new',
+        element: (
+          <Navigate
+            to={webhookRulesNewPath('identity')}
+            replace
+          />
+        ),
+      },
+      { path: 'actions/rules/:ruleId', element: <LegacyActionsRuleRedirect /> },
+      {
+        path: 'actions/rules',
+        element: (
+          <Navigate
+            to={webhookRulesListPath('identity')}
+            replace
+          />
+        ),
+      },
+      {
+        path: 'actions/deliveries/:deliveryId',
+        element: <LegacyActionsDeliveryRedirect />,
+      },
+      {
+        path: 'actions/deliveries',
+        element: (
+          <Navigate
+            to={webhookDeliveriesPath('identity')}
+            replace
+          />
+        ),
+      },
+      {
+        path: 'actions',
+        element: (
+          <Navigate
+            to={webhookRulesListPath('identity')}
+            replace
+          />
+        ),
+      },
       { path: 'swagger', element: null },
       { path: 'redoc', element: null },
       { path: 'users/:userId', element: <UserDetailPage /> },
@@ -45,13 +200,67 @@ export const router = createHashRouter([
           />
         ),
       },
-      { path: 'login-events/:eventId', element: <LoginEventDetailPage /> },
-      { path: 'login-events', element: <LoginEventsListPage /> },
+      { path: 'events/:eventId', element: <EventDetailPage key="identity" /> },
+      { path: 'events', element: <EventsListPage key="identity" /> },
+      {
+        path: 'login-events/*',
+        element: (
+          <Navigate
+            to="/events"
+            replace
+          />
+        ),
+      },
+      {
+        path: 'storage/events/:eventId',
+        element: (
+          <EventDetailPage
+            key="storage"
+            service="storage"
+          />
+        ),
+      },
+      {
+        path: 'storage/events',
+        element: (
+          <EventsListPage
+            key="storage"
+            service="storage"
+          />
+        ),
+      },
       { path: 'storage/statistics', element: <StorageStatisticsPage /> },
+      { path: 'email/templates/id/:templateId', element: <EmailTemplateEditorPage /> },
+      { path: 'email/templates/:libraryId', element: <EmailLibraryTemplatePage /> },
+      { path: 'email/templates', element: <EmailTemplatesPage /> },
+      { path: 'email/broadcasts/:broadcastId', element: <EmailBroadcastPage /> },
+      { path: 'email/broadcasts', element: <EmailBroadcastsPage /> },
+      { path: 'email/newsletters/:newsletterId', element: <EmailNewsletterPage /> },
+      { path: 'email/newsletters', element: <EmailNewslettersPage /> },
+      { path: 'email/provider', element: <EmailProviderPage /> },
+      { path: 'email/statistics', element: <EmailStatisticsPage /> },
       { path: 'storage/swagger', element: null },
       { path: 'storage/redoc', element: null },
       { path: 'storage', element: null },
       { path: 'hosting/apps/:name', element: <HostingAppDetailPage /> },
+      {
+        path: 'hosting/events/:eventId',
+        element: (
+          <EventDetailPage
+            key="hosting"
+            service="hosting"
+          />
+        ),
+      },
+      {
+        path: 'hosting/events',
+        element: (
+          <EventsListPage
+            key="hosting"
+            service="hosting"
+          />
+        ),
+      },
       { path: 'hosting/statistics', element: <HostingStatisticsPage /> },
       { path: 'hosting/swagger', element: null },
       { path: 'hosting/redoc', element: null },
