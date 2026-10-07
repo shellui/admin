@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - 2026-09-26
 
+### 🛠 Improvements
+
+- Uses `@shellui/sdk` 0.6.0-beta.1. Host `email` settings are read from the typed `settings.email` block (`SettingsEmail`); a missing `url` still falls back to `https://email.shellui.com`.
+
 ### ✨ Feature
 
 - **Email:** Admin calls email-service with the identity JWT. Default origin `https://email.shellui.com`, or `email.url` in the host `shellui.config` (same discovery as `storage.url` and `hosting.url`). Local Compose is `http://localhost:8003`. The Email section has the template library, provider settings, and statistics. Published versions reopen from `GET /templates/{id}/versions/{number}` with their document. Company SMTP is disabled when `smtp_allowed` is false. Provider saves omit untouched `from_name`, `sending_domain`, `bulk_from_email`, credentials, and webhook secrets. Draft send-test posts the editor copy. Staff choose the recipient. A company owner sends only to the session address. Auth templates show the read-only sign-in host list. Button results on the email pages (save, test send, publish, reset, preview, draft send, event toggles, and statistics refresh) and on Email and webhooks (enable, disable, delete, save, secret rotation, test event, and requeue) appear beside that button. The top of the page is reserved for load failures. The dashboard shows a compact email block (sent, delivered, bounced, failed, complaints, suppressed) for the default 30-day window, with a link to Email. The block is hidden when `email.showInAdmin` is false. An unreachable email-service or a company with no provider shows a quiet empty state and does not affect the other dashboard cards. The Email sidebar group is last, after every other section. Identity, Storage, and Hosting keep **Email and webhooks**. Routes such as `#/hosting/webhooks` stay, and `#/webhooks` still opens identity. Email and webhooks lists webhook and email rules together, ordered by event then created date. API errors use `error_code`.
