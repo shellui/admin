@@ -4,8 +4,8 @@ import { useEffect, type RefObject } from 'react';
 export function usePopoverDismiss(
   open: boolean,
   close: () => void,
-  root: RefObject<HTMLElement>,
-  trigger: RefObject<HTMLElement>,
+  root: RefObject<HTMLElement | null>,
+  trigger: RefObject<HTMLElement | null>,
 ) {
   useEffect(() => {
     if (!open) return;
