@@ -21,16 +21,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
-## [Unreleased]
+## [0.6.0] - 2026-10-12
 
-### ✨ Feature
+### Identity statistics
 
-- Identity has a Statistics page with company user counts, active users, and successful sign-ins by provider since the identity-service process started.
-- Allowed link hosts, under Email, lists the hostnames auth mail may use and lets you add or remove extra hostnames for the company. Application hosts synced from identity stay read-only.
+- Identity Statistics shows company user counts, active users, and successful sign-ins by provider since the identity-service process started.
 
-### 🚨 Changed
+### Allowed link hosts
 
-- Staff scheduled-job health is on the Identity, Hosting, Storage, and Email statistics pages. It is no longer on the dashboard. Email shows `retry_webhooks`, `sweep_email_queue`, and `purge_expired_data`.
+- Allowed link hosts, under Email, lists auth-mail hostnames and lets you add or remove extra hostnames for the company.
+- Application hosts synced from identity stay read-only.
+
+### Scheduled jobs
+
+- Staff see scheduled-job health on the Identity, Hosting, Storage, and Email statistics pages.
+- The dashboard no longer shows scheduled-job health.
+- Email shows `retry_webhooks`, `sweep_email_queue`, and `purge_expired_data`.
 
 ## [0.5.0] - 2026-10-07
 
