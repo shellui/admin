@@ -23,6 +23,8 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ## [0.6.0] - 2026-10-12
 
+Requires identity-service 0.7.0, hosting-service 0.6.1, storage-service 0.5.0, and email-service 0.2.0.
+
 ### Identity statistics
 
 - Identity Statistics shows company user counts, active users, and successful sign-ins by provider since the identity-service process started.
