@@ -141,6 +141,16 @@ export type EmailTemplateVersion = {
 
 export type EmailCatalog = {
   events: EmailCatalogEvent[];
+  /** Effective hosts for this company: platform, application, and extra. */
+  authLinkHosts: string[];
+};
+
+/** `GET` / `PUT /api/v1/auth-link-hosts`. `hosts` is the editable extra list. */
+export type AuthLinkHosts = {
+  companyId: number | null;
+  hosts: string[];
+  applicationHosts: string[];
+  platformHosts: string[];
   authLinkHosts: string[];
 };
 
@@ -159,7 +169,7 @@ export type EmailProviderSettings = {
   fallbackConfigured: boolean;
   /** `EMAIL_ALLOW_COMPANY_SMTP`. False hides company SMTP. */
   smtpAllowed: boolean;
-  /** Read-only `EMAIL_AUTH_LINK_HOSTS`. */
+  /** Effective hosts for this company: platform, application, and extra. */
   authLinkHosts: string[];
 };
 

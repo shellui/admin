@@ -85,6 +85,7 @@ describe('label keys', () => {
     expect(errorLabelKey('redis_error')).toBe('scheduledJobsError_redis_error');
     expect(errorLabelKey('new_key')).toBe('scheduledJobsError_unexpected_error');
     expect(jobLabelKey('purge_expired_data')).toBe('scheduledJobsJob_purge_expired_data');
+    expect(jobLabelKey('sweep_email_queue')).toBe('scheduledJobsJob_sweep_email_queue');
     expect(jobLabelKey('other')).toBe('scheduledJobsJob_unknown');
   });
 

@@ -7,8 +7,15 @@ import { parseErrorMessage, serviceAuthFetch } from '@/lib/serviceAuthFetch';
  * `GET /api/v1/scheduled-jobs/runs/<id>`. Responses carry keys only; the UI translates them.
  */
 
-export const SCHEDULED_JOB_NAMES = ['retry_webhooks', 'purge_expired_data'] as const;
+export const SCHEDULED_JOB_NAMES = [
+  'retry_webhooks',
+  'sweep_email_queue',
+  'purge_expired_data',
+] as const;
 export type ScheduledJobName = (typeof SCHEDULED_JOB_NAMES)[number];
+
+/** Services that expose `GET /api/v1/scheduled-jobs`. Email is staff-only, like the others. */
+export type ScheduledJobsService = 'identity' | 'hosting' | 'storage' | 'email';
 
 export const SCHEDULED_JOB_HEALTH = ['healthy', 'overdue', 'failing', 'disabled'] as const;
 export type ScheduledJobHealth = (typeof SCHEDULED_JOB_HEALTH)[number];
@@ -42,12 +49,17 @@ export const SCHEDULED_JOB_COUNT_KEYS: Record<ScheduledJobName, readonly string[
     'email_events_failed',
     'email_events_given_up',
   ],
+  sweep_email_queue: ['expired', 'released', 'broadcasts'],
   purge_expired_data: [
     'events',
     'webhook_deliveries',
     'email_events',
     'scim_provisioning_events',
     'scheduled_job_runs',
+    'messages',
+    'send_requests',
+    'newsletter_pending',
+    'newsletter_cleared',
   ],
 };
 

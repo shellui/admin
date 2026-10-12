@@ -98,10 +98,11 @@ export function EmailCopyEditor({
       if (!opts?.silent) setLoading(true);
       setError(null);
       try {
-        const [nextRow, catalog, versions] = await Promise.all([
+        const [nextRow, catalog, versions, companyHosts] = await Promise.all([
           api.fetchTemplate(templateId),
           api.fetchCatalog(),
           api.fetchVersions(templateId),
+          api.fetchAuthLinkHosts().catch(() => null),
         ]);
         const nextEvent =
           nextRow.kind === 'broadcast'
@@ -120,7 +121,7 @@ export function EmailCopyEditor({
           : EMPTY_INBOX;
         setRow(nextRow);
         setEvent(nextEvent);
-        setAuthLinkHosts(catalog.authLinkHosts);
+        setAuthLinkHosts(companyHosts ? companyHosts.authLinkHosts : catalog.authLinkHosts);
         setMainLang(nextMain);
         setBase(document);
         setMainInbox(inbox);

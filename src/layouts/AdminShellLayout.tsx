@@ -31,6 +31,7 @@ import {
   HardDrive,
   KeyRound,
   LayoutDashboard,
+  Link2,
   Lock,
   Mail,
   Megaphone,
@@ -118,6 +119,7 @@ const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
   'personal-access-tokens': Fingerprint,
   groups: Tags,
   events: ScrollText,
+  'identity/statistics': BarChart3,
   oauth: KeyRound,
   scim: Network,
   webhooks: SendHorizonal,
@@ -128,6 +130,7 @@ const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
   'email/broadcasts': Megaphone,
   'email/newsletters': Newspaper,
   'email/provider': KeyRound,
+  'email/link-hosts': Link2,
   'email/statistics': BarChart3,
   actions: SendHorizonal,
   swagger: BookOpen,
@@ -149,7 +152,8 @@ function resolveLocalized(label: AdminLocalizedString, language: string): string
   return label[language] || label.en || label.fr || Object.values(label)[0] || '';
 }
 
-const mapLabelToTranslationKey = (label: string): string => {
+const mapLabelToTranslationKey = (label: string, path = ''): string => {
+  if (path === 'identity/statistics') return 'navIdentityStatistics';
   const normalized = label.toLowerCase();
   if (normalized === 'dashboard' || normalized === 'tableau de bord') return 'navDashboard';
   if (normalized === 'company' || normalized === 'entreprise') return 'navCompany';
@@ -166,6 +170,7 @@ const mapLabelToTranslationKey = (label: string): string => {
   if (normalized === 'templates' || normalized === 'modèles' || normalized === 'modeles') {
     return 'navEmailTemplates';
   }
+  if (path === 'email/link-hosts') return 'navEmailLinkHosts';
   if (normalized === 'provider' || normalized === 'fournisseur') return 'navEmailProvider';
   if (
     normalized === 'access tokens' ||
@@ -206,7 +211,7 @@ const buildNavSections = (
       for (const item of entry.items) {
         if (item.requiresDevMode && !includeDevModeItems) continue;
         const label = resolveLocalized(item.label, language);
-        const key = mapLabelToTranslationKey(label);
+        const key = mapLabelToTranslationKey(label, item.path);
         items.push({
           to: toRoutePath(item.path),
           key,
@@ -223,7 +228,7 @@ const buildNavSections = (
     const item = entry;
     if (item.requiresDevMode && !includeDevModeItems) continue;
     const label = resolveLocalized(item.label, language);
-    const key = mapLabelToTranslationKey(label);
+    const key = mapLabelToTranslationKey(label, item.path);
     top.push({ to: toRoutePath(item.path), key, icon: NAV_ICONS[item.path] ?? LayoutDashboard });
   }
 

@@ -5,6 +5,7 @@ import { AppWindow, BarChart3, HardDrive, Loader2, RefreshCw, Rocket } from 'luc
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
+import { DashboardScheduledJobsSection } from '@/components/DashboardScheduledJobsSection';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { fetchHostingStats, useHostingBaseUrl, type HostingStatsSnapshot } from '@/lib/hostingApi';
 
@@ -231,6 +232,11 @@ export function HostingStatisticsPage() {
           </div>
         </>
       )}
+
+      <DashboardScheduledJobsSection
+        baseUrl={hostingBaseUrl}
+        service="hosting"
+      />
     </div>
   );
 }

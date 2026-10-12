@@ -13,6 +13,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
+import { DashboardScheduledJobsSection } from '@/components/DashboardScheduledJobsSection';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import {
   fetchStorageStats,
@@ -362,6 +363,11 @@ export function StorageStatisticsPage() {
           ) : null}
         </>
       )}
+
+      <DashboardScheduledJobsSection
+        baseUrl={storageBaseUrl}
+        service="storage"
+      />
     </div>
   );
 }

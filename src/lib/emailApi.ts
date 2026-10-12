@@ -10,6 +10,7 @@ import {
   type BroadcastPreview,
 } from '@/lib/emailBroadcasts';
 import {
+  parseAuthLinkHosts,
   parseCatalog,
   parseLibrary,
   parseLibraryDetail,
@@ -43,6 +44,7 @@ import {
 import type { EmailDocument } from '@/lib/emailDocument';
 import type { EmailTranslations } from '@/lib/emailTranslations';
 import type {
+  AuthLinkHosts,
   EmailCatalog,
   EmailLibrary,
   EmailLibraryDetail,
@@ -95,6 +97,10 @@ export type EmailApiClient = {
   ) => Promise<{ number: number; state: string; checksum: string }>;
   fetchProvider: () => Promise<EmailProviderSettings>;
   saveProvider: (body: EmailProviderWrite) => Promise<EmailProviderSettings>;
+  /** Effective list, read-only application hosts, and the editable extra hosts. */
+  fetchAuthLinkHosts: () => Promise<AuthLinkHosts>;
+  /** Replaces the extra hostnames. Does not change platform or application hosts. */
+  saveAuthLinkHosts: (hosts: string[]) => Promise<AuthLinkHosts>;
   testProvider: (to: string) => Promise<EmailTestSendResult>;
   sendTemplateTest: (
     id: number,
@@ -303,6 +309,17 @@ export function createEmailApiClient(
     async testProvider(to) {
       return parseTestSend(
         await call('/api/v1/provider/test-send', { method: 'POST', body: JSON.stringify({ to }) }),
+      );
+    },
+    async fetchAuthLinkHosts() {
+      return parseAuthLinkHosts(await call('/api/v1/auth-link-hosts'));
+    },
+    async saveAuthLinkHosts(hosts) {
+      return parseAuthLinkHosts(
+        await call('/api/v1/auth-link-hosts', {
+          method: 'PUT',
+          body: JSON.stringify({ hosts }),
+        }),
       );
     },
     async sendTemplateTest(id, body) {

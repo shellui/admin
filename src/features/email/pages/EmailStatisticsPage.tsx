@@ -12,6 +12,7 @@ import {
 } from '@/features/email/components/ActionFeedback';
 import { SearchField } from '@/features/email/components/SearchField';
 import { useEmailApi } from '@/features/email/useEmailApi';
+import { DashboardScheduledJobsSection } from '@/components/DashboardScheduledJobsSection';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { emailErrorText } from '@/lib/emailApiErrors';
 import { filterByQuery, listNeedsSearch, sectionTitle } from '@/lib/emailList';
@@ -397,6 +398,11 @@ export function EmailStatisticsPage() {
           </Card>
         </section>
       ) : null}
+
+      <DashboardScheduledJobsSection
+        baseUrl={baseUrl}
+        service="email"
+      />
     </div>
   );
 }

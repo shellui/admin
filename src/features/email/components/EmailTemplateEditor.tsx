@@ -483,9 +483,17 @@ export function EmailTemplateEditor({
           })}
         </Text>
       ) : null}
-      {laneClass === 'auth' && authLinkHosts.length ? (
+      {laneClass === 'auth' ? (
         <Text className="font-mono text-xs">
-          {t('emailAuthLinkHosts', { hosts: authLinkHosts.join(', ') })}
+          {authLinkHosts.length
+            ? t('emailAuthLinkHosts', { hosts: authLinkHosts.join(', ') })
+            : null}{' '}
+          <a
+            className="underline underline-offset-4"
+            href="#/email/link-hosts"
+          >
+            {t('navEmailLinkHosts')}
+          </a>
         </Text>
       ) : null}
       {authIssue && authIssue.errorCode !== 'auth_literal_link' ? (

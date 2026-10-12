@@ -42,6 +42,11 @@ export const adminShellUiConfig: AdminShellUIConfig = {
           path: 'events',
           url: '#/events',
         },
+        {
+          label: { en: 'Statistics', fr: 'Statistiques' },
+          path: 'identity/statistics',
+          url: '#/identity/statistics',
+        },
         { label: { en: 'OAuth apps', fr: 'Apps OAuth' }, path: 'oauth', url: '#/oauth' },
         { label: { en: 'SCIM', fr: 'SCIM' }, path: 'scim', url: '#/scim' },
         {
@@ -90,6 +95,11 @@ export const adminShellUiConfig: AdminShellUIConfig = {
           label: { en: 'Provider', fr: 'Fournisseur' },
           path: 'email/provider',
           url: '#/email/provider',
+        },
+        {
+          label: { en: 'Allowed link hosts', fr: 'Hôtes autorisés' },
+          path: 'email/link-hosts',
+          url: '#/email/link-hosts',
         },
         {
           label: { en: 'Statistics', fr: 'Statistiques' },
