@@ -97,6 +97,11 @@ export const adminShellUiConfig: AdminShellUIConfig = {
           url: '#/email/provider',
         },
         {
+          label: { en: 'Allowed link hosts', fr: 'Hôtes autorisés' },
+          path: 'email/link-hosts',
+          url: '#/email/link-hosts',
+        },
+        {
           label: { en: 'Statistics', fr: 'Statistiques' },
           path: 'email/statistics',
           url: '#/email/statistics',

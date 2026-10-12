@@ -31,6 +31,7 @@ import {
   HardDrive,
   KeyRound,
   LayoutDashboard,
+  Link2,
   Lock,
   Mail,
   Megaphone,
@@ -129,6 +130,7 @@ const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
   'email/broadcasts': Megaphone,
   'email/newsletters': Newspaper,
   'email/provider': KeyRound,
+  'email/link-hosts': Link2,
   'email/statistics': BarChart3,
   actions: SendHorizonal,
   swagger: BookOpen,
@@ -168,6 +170,7 @@ const mapLabelToTranslationKey = (label: string, path = ''): string => {
   if (normalized === 'templates' || normalized === 'modèles' || normalized === 'modeles') {
     return 'navEmailTemplates';
   }
+  if (path === 'email/link-hosts') return 'navEmailLinkHosts';
   if (normalized === 'provider' || normalized === 'fournisseur') return 'navEmailProvider';
   if (
     normalized === 'access tokens' ||

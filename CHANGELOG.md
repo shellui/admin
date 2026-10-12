@@ -26,10 +26,11 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 ### ✨ Feature
 
 - Identity has a Statistics page with company user counts, active users, and successful sign-ins by provider since the identity-service process started.
+- Allowed link hosts, under Email, lists the hostnames auth mail may use and lets you add or remove extra hostnames for the company. Application hosts synced from identity stay read-only.
 
 ### 🚨 Changed
 
-- Staff scheduled-job health is on the Identity, Hosting, and Storage statistics pages. It is no longer on the dashboard. Email has no scheduled-job API, so that page has no section.
+- Staff scheduled-job health is on the Identity, Hosting, Storage, and Email statistics pages. It is no longer on the dashboard. Email shows `retry_webhooks`, `sweep_email_queue`, and `purge_expired_data`.
 
 ## [0.5.0] - 2026-10-07
 

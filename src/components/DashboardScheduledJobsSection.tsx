@@ -33,10 +33,10 @@ import {
   type ScheduledJobRunDetail,
   type ScheduledJobStatus,
   type ScheduledJobsOverview,
+  type ScheduledJobsService,
 } from '@/lib/scheduledJobsApi';
 import { cn } from '@/lib/utils';
 import { webhookDeliveryDetailPath } from '@/lib/webhookRoutePaths';
-import type { WebhookServiceKey } from '@/lib/webhookServices';
 
 const RECENT_RUNS = 10;
 
@@ -123,7 +123,7 @@ function RunCorrelation({
   run: ScheduledJobRun;
   companyId: number | null;
   baseUrl?: string;
-  service: WebhookServiceKey;
+  service: ScheduledJobsService;
 }) {
   const { t } = useTranslation();
   const accessToken = useShelluiAccessToken();
@@ -209,13 +209,15 @@ function RunCorrelation({
                 {a.http_status != null && (
                   <span className="text-muted-foreground">HTTP {a.http_status}</span>
                 )}
-                {companyId != null && a.company_id === companyId ? (
+                {companyId != null && a.company_id === companyId && service !== 'email' ? (
                   <Link
                     to={webhookDeliveryDetailPath(service, a.delivery_id)}
                     className="text-primary underline-offset-4 hover:underline"
                   >
                     {t('scheduledJobsOpenDelivery')}
                   </Link>
+                ) : companyId != null && a.company_id === companyId ? (
+                  <span className="text-muted-foreground">{t('scheduledJobsThisCompany')}</span>
                 ) : (
                   <span className="text-muted-foreground">
                     {t('scheduledJobsOtherCompany', { id: a.company_id })}
@@ -283,7 +285,7 @@ function RunsTable({
   runs: ScheduledJobRun[];
   companyId: number | null;
   baseUrl?: string;
-  service: WebhookServiceKey;
+  service: ScheduledJobsService;
 }) {
   const { t } = useTranslation();
   const fmt = useDateFormatters();
@@ -405,11 +407,14 @@ function JobCard({
   runs: ScheduledJobRun[];
   companyId: number | null;
   baseUrl?: string;
-  service: WebhookServiceKey;
+  service: ScheduledJobsService;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const fmt = useDateFormatters();
   const last = status.last_run;
+  const genericKey = `scheduledJobsJobDescription_${status.job}`;
+  const emailKey = `scheduledJobsJobDescriptionEmail_${status.job}`;
+  const descriptionKeyForJob = service === 'email' && i18n.exists(emailKey) ? emailKey : genericKey;
   return (
     <Card
       className="border-border/80 shadow-sm"
@@ -427,7 +432,7 @@ function JobCard({
           )}
         </div>
         <CardDescription className="font-mono text-xs">
-          {t(`scheduledJobsJobDescription_${status.job}`, {
+          {t(descriptionKeyForJob, {
             defaultValue: '',
             minutes: Math.round(status.overdue_after_seconds / 60),
           })}
@@ -545,14 +550,16 @@ function SchedulerBadges({ overview }: { overview: ScheduledJobsOverview }) {
   );
 }
 
-function descriptionKey(service: WebhookServiceKey): string {
+function descriptionKey(service: ScheduledJobsService): string {
   if (service === 'hosting') return 'scheduledJobsDescriptionHosting';
   if (service === 'storage') return 'scheduledJobsDescriptionStorage';
+  if (service === 'email') return 'scheduledJobsDescriptionEmail';
   return 'scheduledJobsDescription';
 }
 
 /**
- * Scheduled jobs for one service (`retry_webhooks`, `purge_expired_data`) for Django staff.
+ * Scheduled jobs for one service for Django staff.
+ * Email also includes `sweep_email_queue`.
  * Hidden for everyone else; each API answers 403 to non-staff, including company owners.
  * Scheduler health is platform-wide, so it stays inside this staff-only section.
  */
@@ -562,7 +569,7 @@ export function DashboardScheduledJobsSection({
 }: {
   /** Service origin. Omit it to use the identity-service base URL. */
   baseUrl?: string;
-  service?: WebhookServiceKey;
+  service?: ScheduledJobsService;
 } = {}) {
   const { t } = useTranslation();
   const accessToken = useShelluiAccessToken();

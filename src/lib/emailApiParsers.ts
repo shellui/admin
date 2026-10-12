@@ -1,6 +1,7 @@
 import { parseEmailDocument, type EmailLang, type EmailVariable } from '@/lib/emailDocument';
 import { EmailApiError } from '@/lib/emailApiErrors';
 import type {
+  AuthLinkHosts,
   EmailCatalog,
   EmailCatalogEvent,
   EmailCountBucket,
@@ -226,6 +227,18 @@ export function parseLibraryDetail(body: unknown): EmailLibraryDetail {
     text: str(row.text),
     head: str(row.head),
     variables: parseVariables(row.variables),
+  };
+}
+
+export function parseAuthLinkHosts(body: unknown): AuthLinkHosts {
+  const row = record(body);
+  if (!row) throw new EmailApiError('request_failed', 200);
+  return {
+    companyId: typeof row.company_id === 'number' ? row.company_id : null,
+    hosts: stringList(row.hosts),
+    applicationHosts: stringList(row.application_hosts),
+    platformHosts: stringList(row.platform_hosts),
+    authLinkHosts: stringList(row.auth_link_hosts),
   };
 }
 

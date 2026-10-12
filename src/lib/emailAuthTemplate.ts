@@ -65,7 +65,8 @@ export function requiredAuthLinkTokens(variables: EmailVariable[]): string[] {
 
 /**
  * Same checks as email-service `validate_auth_template`. Every link must be a
- * declared URL variable, or an https address on `authLinkHosts` when that list
+ * declared URL variable, or an https address on the company's `authLinkHosts`
+ * (platform hosts, identity application hosts, and extra hosts) when that list
  * is known. Subject, preheader, and body text reject a literal URL.
  */
 export function validateAuthLaneOverride(input: {

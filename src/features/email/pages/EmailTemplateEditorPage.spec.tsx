@@ -15,6 +15,7 @@ import type { EmailCatalogEvent } from '@/lib/emailTypes';
 const api = vi.hoisted(() => ({
   fetchTemplate: vi.fn(),
   fetchCatalog: vi.fn(),
+  fetchAuthLinkHosts: vi.fn(),
   fetchVersions: vi.fn(),
   fetchLibrary: vi.fn(),
   createVersion: vi.fn(),
@@ -34,12 +35,14 @@ vi.mock('@/features/email/components/EmailTemplateEditor', () => ({
   EmailTemplateEditor: (props: {
     draft: EmailDraft;
     head: string;
+    authLinkHosts?: string[];
     primary?: EmailEditorAction;
     secondary?: EmailEditorAction;
   }) => (
     <div data-testid="editor">
       <p>Subject: {props.draft.subject}</p>
       <p>Head: {props.head}</p>
+      <p>Hosts: {(props.authLinkHosts ?? []).join(',')}</p>
       <button
         type="button"
         onClick={() => void props.primary?.run()}
@@ -122,7 +125,14 @@ describe('EmailTemplateEditorPage', () => {
 
   it('names the email, the event it is sent for, and links back to the rules', async () => {
     api.fetchTemplate.mockResolvedValue(row);
-    api.fetchCatalog.mockResolvedValue({ events: [magicLink], authLinkHosts: [] });
+    api.fetchCatalog.mockResolvedValue({ events: [magicLink], authLinkHosts: ['id.shellui.com'] });
+    api.fetchAuthLinkHosts.mockResolvedValue({
+      companyId: 1,
+      hosts: ['playground.shellui.com'],
+      applicationHosts: ['app.acme.com'],
+      platformHosts: ['id.shellui.com'],
+      authLinkHosts: ['app.acme.com', 'id.shellui.com', 'playground.shellui.com'],
+    });
     api.fetchVersions.mockResolvedValue([version(1, 'published')]);
 
     renderAt('/email/templates/id/7');
@@ -135,13 +145,19 @@ describe('EmailTemplateEditorPage', () => {
       '/identity/webhooks',
     );
     expect(screen.getByText('Subject: Sign in')).toBeTruthy();
+    expect(
+      screen.getByText('Hosts: app.acme.com,id.shellui.com,playground.shellui.com'),
+    ).toBeTruthy();
     expect(screen.getByText('Head: .barebone {}')).toBeTruthy();
     expect(screen.queryByText(/Unpublished changes/)).toBeNull();
   });
 
   it('opens the latest draft, publishes it, and starts over from a library template', async () => {
     api.fetchTemplate.mockResolvedValue(row);
-    api.fetchCatalog.mockResolvedValue({ events: [magicLink], authLinkHosts: [] });
+    api.fetchCatalog.mockResolvedValue({ events: [magicLink], authLinkHosts: ['id.shellui.com'] });
+    api.fetchAuthLinkHosts.mockResolvedValue({
+      authLinkHosts: ['app.acme.com', 'id.shellui.com'],
+    });
     api.fetchVersions.mockResolvedValue([
       version(1, 'published'),
       version(2, 'draft', 'Draft subject', OCEAN),

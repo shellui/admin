@@ -69,6 +69,17 @@ describe('validateAuthLaneOverride', () => {
     ).toBeNull();
   });
 
+  it('accepts a company host that is not on the platform list', () => {
+    expect(
+      validateAuthLaneOverride({
+        ...auth,
+        authLinkHosts: ['app.acme.com', 'id.shellui.com', 'playground.shellui.com'],
+        subject: 'Sign in',
+        document: document('https://playground.shellui.com/home'),
+      }),
+    ).toBeNull();
+  });
+
   it('rejects a button host that is not on auth_link_hosts', () => {
     const issue = validateAuthLaneOverride({
       ...auth,
