@@ -10,7 +10,13 @@ export const SHELLUI_AUTH_METRIC_NAMES = {
   dailyActiveUsers: 'shellui_auth_company_daily_active_users',
   weeklyActiveUsers: 'shellui_auth_company_weekly_active_users',
   monthlyActiveUsers: 'shellui_auth_company_monthly_active_users',
+  successfulLogins: 'shellui_auth_successful_logins_total',
 } as const;
+
+export type AuthSuccessfulLogin = {
+  provider: string;
+  total: number;
+};
 
 export type AuthMetricsSnapshot = {
   rawText: string;
@@ -21,6 +27,8 @@ export type AuthMetricsSnapshot = {
   dailyActiveUsers: number;
   weeklyActiveUsers: number;
   monthlyActiveUsers: number;
+  /** Process-local counter. A restart sets these back to zero. */
+  successfulLogins: AuthSuccessfulLogin[];
 };
 
 function readCompanySeries(
@@ -34,6 +42,71 @@ function readCompanySeries(
     throw new Error(`Missing metric ${key} in exposition`);
   }
   return v;
+}
+
+function parsePrometheusLabels(body: string): Record<string, string> {
+  const labels: Record<string, string> = {};
+  const re = /([a-zA-Z_][a-zA-Z0-9_]*)="((?:\\.|[^"\\])*)"/g;
+  for (const match of body.matchAll(re)) {
+    labels[match[1]] = match[2].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+  }
+  return labels;
+}
+
+/**
+ * Successful sign-ins for this company only.
+ * The counter lives on the company scrape and resets when the process restarts.
+ * Series for any other company are ignored.
+ */
+export function readSuccessfulLogins(
+  samples: Map<string, number>,
+  companyId: number,
+): AuthSuccessfulLogin[] {
+  const name = SHELLUI_AUTH_METRIC_NAMES.successfulLogins;
+  const prefix = `${name}{`;
+  const byProvider = new Map<string, number>();
+  for (const [lhs, value] of samples) {
+    if (!lhs.startsWith(prefix) || !lhs.endsWith('}')) continue;
+    const labels = parsePrometheusLabels(lhs.slice(prefix.length, -1));
+    if (labels.company_id !== String(companyId)) continue;
+    const provider = labels.provider?.trim();
+    if (!provider || !Number.isFinite(value)) continue;
+    byProvider.set(provider, (byProvider.get(provider) ?? 0) + value);
+  }
+  return [...byProvider.entries()]
+    .map(([provider, total]) => ({ provider, total }))
+    .sort((a, b) => b.total - a.total || a.provider.localeCompare(b.provider));
+}
+
+export function parseAuthMetricsText(rawText: string, companyId: number): AuthMetricsSnapshot {
+  const samples = parsePrometheusSamples(rawText);
+  return {
+    rawText,
+    usersTotal: readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.usersTotal, companyId),
+    usersActive: readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.usersActive, companyId),
+    usersStaff: readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.usersStaff, companyId),
+    socialAccountsTotal: readCompanySeries(
+      samples,
+      SHELLUI_AUTH_METRIC_NAMES.socialAccountsTotal,
+      companyId,
+    ),
+    dailyActiveUsers: readCompanySeries(
+      samples,
+      SHELLUI_AUTH_METRIC_NAMES.dailyActiveUsers,
+      companyId,
+    ),
+    weeklyActiveUsers: readCompanySeries(
+      samples,
+      SHELLUI_AUTH_METRIC_NAMES.weeklyActiveUsers,
+      companyId,
+    ),
+    monthlyActiveUsers: readCompanySeries(
+      samples,
+      SHELLUI_AUTH_METRIC_NAMES.monthlyActiveUsers,
+      companyId,
+    ),
+    successfulLogins: readSuccessfulLogins(samples, companyId),
+  };
 }
 
 function parseErrorMessage(body: unknown): string | null {
@@ -93,39 +166,5 @@ export async function fetchAuthMetricsSnapshot(accessToken: string): Promise<Aut
     throw new Error('Missing company_id in access token.');
   }
   const rawText = await fetchStaffPrometheusMetrics(accessToken);
-  const samples = parsePrometheusSamples(rawText);
-  const usersTotal = readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.usersTotal, companyId);
-  const usersActive = readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.usersActive, companyId);
-  const usersStaff = readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.usersStaff, companyId);
-  const socialAccountsTotal = readCompanySeries(
-    samples,
-    SHELLUI_AUTH_METRIC_NAMES.socialAccountsTotal,
-    companyId,
-  );
-  const dailyActiveUsers = readCompanySeries(
-    samples,
-    SHELLUI_AUTH_METRIC_NAMES.dailyActiveUsers,
-    companyId,
-  );
-  const weeklyActiveUsers = readCompanySeries(
-    samples,
-    SHELLUI_AUTH_METRIC_NAMES.weeklyActiveUsers,
-    companyId,
-  );
-  const monthlyActiveUsers = readCompanySeries(
-    samples,
-    SHELLUI_AUTH_METRIC_NAMES.monthlyActiveUsers,
-    companyId,
-  );
-
-  return {
-    rawText,
-    usersTotal,
-    usersActive,
-    usersStaff,
-    socialAccountsTotal,
-    dailyActiveUsers,
-    weeklyActiveUsers,
-    monthlyActiveUsers,
-  };
+  return parseAuthMetricsText(rawText, companyId);
 }

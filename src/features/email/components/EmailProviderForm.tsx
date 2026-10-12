@@ -190,7 +190,13 @@ export function EmailProviderForm({
           ) : null}
           {settings.authLinkHosts.length ? (
             <Text className="font-mono text-xs">
-              {t('emailAuthLinkHosts', { hosts: settings.authLinkHosts.join(', ') })}
+              {t('emailAuthLinkHosts', { hosts: settings.authLinkHosts.join(', ') })}{' '}
+              <a
+                className="underline underline-offset-4"
+                href="#/email/link-hosts"
+              >
+                {t('navEmailLinkHosts')}
+              </a>
             </Text>
           ) : null}
         </div>

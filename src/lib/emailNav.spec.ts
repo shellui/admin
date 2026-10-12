@@ -48,6 +48,7 @@ describe('email and webhooks route rename', () => {
       'email/broadcasts',
       'email/newsletters',
       'email/provider',
+      'email/link-hosts',
       'email/statistics',
     ]);
   });

@@ -21,12 +21,14 @@ import { UsersListPage } from '@/pages/UsersListPage';
 import { HostingAppDetailPage } from '@/pages/HostingAppDetailPage';
 import { HostingAppsPage } from '@/pages/HostingAppsPage';
 import { HostingStatisticsPage } from '@/pages/HostingStatisticsPage';
+import { IdentityStatisticsPage } from '@/pages/IdentityStatisticsPage';
 import { StorageStatisticsPage } from '@/pages/StorageStatisticsPage';
 import { EmailBroadcastPage } from '@/features/email/pages/EmailBroadcastPage';
 import { EmailBroadcastsPage } from '@/features/email/pages/EmailBroadcastsPage';
 import { EmailNewsletterPage } from '@/features/email/pages/EmailNewsletterPage';
 import { EmailNewslettersPage } from '@/features/email/pages/EmailNewslettersPage';
 import { EmailLibraryTemplatePage } from '@/features/email/pages/EmailLibraryTemplatePage';
+import { EmailLinkHostsPage } from '@/features/email/pages/EmailLinkHostsPage';
 import { EmailProviderPage } from '@/features/email/pages/EmailProviderPage';
 import { EmailStatisticsPage } from '@/features/email/pages/EmailStatisticsPage';
 import { EmailTemplateEditorPage } from '@/features/email/pages/EmailTemplateEditorPage';
@@ -200,6 +202,7 @@ export const router = createHashRouter([
           />
         ),
       },
+      { path: 'identity/statistics', element: <IdentityStatisticsPage /> },
       { path: 'events/:eventId', element: <EventDetailPage key="identity" /> },
       { path: 'events', element: <EventsListPage key="identity" /> },
       {
@@ -238,6 +241,7 @@ export const router = createHashRouter([
       { path: 'email/newsletters/:newsletterId', element: <EmailNewsletterPage /> },
       { path: 'email/newsletters', element: <EmailNewslettersPage /> },
       { path: 'email/provider', element: <EmailProviderPage /> },
+      { path: 'email/link-hosts', element: <EmailLinkHostsPage /> },
       { path: 'email/statistics', element: <EmailStatisticsPage /> },
       { path: 'storage/swagger', element: null },
       { path: 'storage/redoc', element: null },

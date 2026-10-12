@@ -21,6 +21,25 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [0.6.0] - 2026-10-12
+
+Requires identity-service 0.7.0, hosting-service 0.6.1, storage-service 0.5.0, and email-service 0.2.0.
+
+### Identity statistics
+
+- Identity Statistics shows company user counts, active users, and successful sign-ins by provider since the identity-service process started.
+
+### Allowed link hosts
+
+- Allowed link hosts, under Email, lists auth-mail hostnames and lets you add or remove extra hostnames for the company.
+- Application hosts synced from identity stay read-only.
+
+### Scheduled jobs
+
+- Staff see scheduled-job health on the Identity, Hosting, Storage, and Email statistics pages.
+- The dashboard no longer shows scheduled-job health.
+- Email shows `retry_webhooks`, `sweep_email_queue`, and `purge_expired_data`.
+
 ## [0.5.0] - 2026-10-07
 
 Requires identity-service 0.7.0, hosting-service 0.6.1, storage-service 0.5.0, and email-service 0.1.0.

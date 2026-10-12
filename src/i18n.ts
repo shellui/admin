@@ -32,6 +32,7 @@ const resources = {
       navHostingGroup: 'Hosting',
       navHostingApps: 'Apps',
       navHostingStatistics: 'Statistics',
+      navIdentityStatistics: 'Statistics',
       navHostingDjangoAdmin: 'Django admin',
       hostingMissingTitle: 'Hosting URL not configured',
       hostingMissingDescription:
@@ -106,6 +107,37 @@ const resources = {
       hostingRollback: 'Rollback',
       hostingOpenVersion: 'Open',
       hostingRollbackError: 'Rollback failed.',
+      identityStatsTitle: 'Identity statistics',
+      identityStatsBadge: 'identity-service',
+      identityStatsDescription:
+        'Users, linked social accounts, and active users for this company. Staff and company owners can open this page.',
+      identityStatsRefresh: 'Refresh',
+      identityStatsLoading: 'Loading statistics…',
+      identityStatsError: 'Could not load identity statistics.',
+      identityStatsForbidden:
+        'Could not load identity statistics. You need staff or company-owner access for this company.',
+      identityStatsNoSession: 'Waiting for shell session… Open Admin from Shellui while signed in.',
+      identityStatsUsers: 'Users',
+      identityStatsUsersHint: 'Accounts in this company.',
+      identityStatsActive: 'Active',
+      identityStatsActiveHint: '{{inactive}} cannot sign in.',
+      identityStatsStaff: 'Staff',
+      identityStatsStaffHint: 'Accounts allowed to call staff APIs.',
+      identityStatsSocial: 'Social accounts',
+      identityStatsSocialHint: 'Linked provider accounts.',
+      identityStatsDaily: 'Daily active',
+      identityStatsDailyHint: 'Seen since midnight, server time.',
+      identityStatsWeekly: 'Weekly active',
+      identityStatsWeeklyHint: 'Seen since Monday 00:00, server time.',
+      identityStatsMonthly: 'Monthly active',
+      identityStatsMonthlyHint: 'Seen during this calendar month.',
+      identityStatsLoginsTitle: 'Successful sign-ins',
+      identityStatsLoginsDescription:
+        'Counts by provider since this identity-service process started. A restart sets them back to zero.',
+      identityStatsLoginsEmpty: 'No successful sign-in since this process started.',
+      identityStatsColProvider: 'Provider',
+      identityStatsColCount: 'Sign-ins',
+      identityStatsOpenEvents: 'Open the event log',
       hostingStatsTitle: 'Hosting statistics',
       hostingStatsBadge: 'hosting-service',
       hostingStatsDescription:
@@ -172,6 +204,7 @@ const resources = {
       navEmailGroup: 'Email',
       navEmailTemplates: 'Templates',
       navEmailProvider: 'Provider',
+      navEmailLinkHosts: 'Allowed link hosts',
       navGroups: 'Groups',
       navUsers: 'Users',
       navEvents: 'Log events',
@@ -349,6 +382,12 @@ const resources = {
       scheduledJobsStaffBadge: 'Staff only',
       scheduledJobsDescription:
         'Runs of the identity-service maintenance jobs, from the built-in scheduler or your own cron. Company owners do not see this section.',
+      scheduledJobsDescriptionHosting:
+        'Runs of the hosting-service maintenance jobs, from the built-in scheduler or your own cron. Company owners do not see this section.',
+      scheduledJobsDescriptionStorage:
+        'Runs of the storage-service maintenance jobs, from the built-in scheduler or your own cron. Company owners do not see this section.',
+      scheduledJobsDescriptionEmail:
+        'Runs of the email-service maintenance jobs, from the built-in scheduler or your own cron. Company owners do not see this section.',
       scheduledJobsSchedulerStatus: 'Scheduler status',
       scheduledJobsSchedulerEnabled: 'Built-in scheduler on',
       scheduledJobsSchedulerDisabled: 'Built-in scheduler off (external cron)',
@@ -362,12 +401,19 @@ const resources = {
       scheduledJobsLoading: 'Loading scheduled jobs…',
       scheduledJobsError: 'Could not load scheduled jobs.',
       scheduledJobsJob_retry_webhooks: 'Retry webhooks',
+      scheduledJobsJob_sweep_email_queue: 'Sweep the email queue',
       scheduledJobsJob_purge_expired_data: 'Purge expired data',
       scheduledJobsJob_unknown: 'Scheduled job',
       scheduledJobsJobDescription_retry_webhooks:
         'Every minute: retries failed webhook deliveries and email-service event posts. Overdue after {{minutes}} minutes without a successful run.',
+      scheduledJobsJobDescription_sweep_email_queue:
+        'Every minute: expires overdue messages, releases stale send leases, and moves broadcasts forward. Overdue after {{minutes}} minutes without a successful run.',
       scheduledJobsJobDescription_purge_expired_data:
         'Every hour: deletes event log rows, finished deliveries and old runs past retention. Overdue after {{minutes}} minutes without a successful run.',
+      scheduledJobsJobDescriptionEmail_retry_webhooks:
+        'Every minute: retries failed webhook deliveries. Overdue after {{minutes}} minutes without a successful run.',
+      scheduledJobsJobDescriptionEmail_purge_expired_data:
+        'Every hour: deletes expired messages, send requests, event log rows, finished webhook deliveries, newsletter rows, and old runs past retention. Overdue after {{minutes}} minutes without a successful run.',
       scheduledJobsHealth_healthy: 'Healthy',
       scheduledJobsHealth_overdue: 'Overdue',
       scheduledJobsHealth_failing: 'Failing',
@@ -399,6 +445,13 @@ const resources = {
       scheduledJobsCount_email_events: 'Email events purged',
       scheduledJobsCount_scim_provisioning_events: 'SCIM events purged',
       scheduledJobsCount_scheduled_job_runs: 'Job runs purged',
+      scheduledJobsCount_expired: 'Messages expired',
+      scheduledJobsCount_released: 'Send leases released',
+      scheduledJobsCount_broadcasts: 'Broadcasts moved forward',
+      scheduledJobsCount_messages: 'Messages purged',
+      scheduledJobsCount_send_requests: 'Send requests purged',
+      scheduledJobsCount_newsletter_pending: 'Pending newsletter rows purged',
+      scheduledJobsCount_newsletter_cleared: 'Newsletter rows cleared',
       scheduledJobsLastRun: 'Last run',
       scheduledJobsLastSuccess: 'Last success',
       scheduledJobsDuration: 'Duration',
@@ -1620,9 +1673,39 @@ const resources = {
         'uses a variable that is not a link variable as a link',
       emailFieldError_library_id_required: 'choose a design',
       emailAuthLaneNotice:
-        'This template is on the auth lane. Keep each required link variable in the copy: {{tokens}}. A button link must be one of those variables, or an https address on the email service allowlist.',
-      emailAuthLinkHosts:
-        'Sign-in link hosts: {{hosts}}. The email service sets this list. It cannot be edited here.',
+        "This template is on the auth lane. Keep each required link variable in the copy: {{tokens}}. A button link must be one of those variables, or an https address on this company's link hosts.",
+      emailAuthLinkHosts: 'Sign-in link hosts: {{hosts}}.',
+      emailLinkHostsTitle: 'Allowed link hosts',
+      emailLinkHostsDescription:
+        'Auth mail for this company may link only to these hostnames. Add extra hostnames here. Application hosts come from identity and you cannot edit them here.',
+      emailLinkHostsEffectiveTitle: 'Hosts auth mail can use',
+      emailLinkHostsEffectiveDescription:
+        'Platform hosts, application hosts, and extra hosts for this company.',
+      emailLinkHostsApplicationTitle: 'Application hosts',
+      emailLinkHostsApplicationDescription:
+        'Synced from identity application URLs. You cannot edit them here.',
+      emailLinkHostsPlatformTitle: 'Platform hosts',
+      emailLinkHostsPlatformDescription: 'Hostnames the email service allows for every company.',
+      emailLinkHostsExtraTitle: 'Extra hosts',
+      emailLinkHostsExtraDescription:
+        'Hostnames you add for this company. Exact names only: no scheme, path, port, wildcard, or IP address.',
+      emailLinkHostsNone: 'None.',
+      emailLinkHostsField: 'Hostname',
+      emailLinkHostsAdd: 'Add hostname',
+      emailLinkHostsRemove: 'Remove',
+      emailLinkHostsRemoveNamed: 'Remove {{host}}',
+      emailLinkHostsAdded: 'Hostname added.',
+      emailLinkHostsRemoved: 'Hostname removed.',
+      emailLinkHostError_invalid: 'Enter a list of hostnames.',
+      emailLinkHostError_invalid_hostname: 'Enter an exact hostname, such as app.example.com.',
+      emailLinkHostError_wildcard_not_allowed: 'Wildcards are not allowed.',
+      emailLinkHostError_ip_not_allowed: 'IP addresses are not allowed.',
+      emailLinkHostError_port_not_allowed: 'Ports are not allowed. Enter the hostname only.',
+      emailLinkHostError_path_not_allowed: 'Paths are not allowed. Enter the hostname only.',
+      emailLinkHostError_scheme_not_allowed: 'Do not include a scheme. Enter the hostname only.',
+      emailLinkHostError_localhost_not_allowed: 'localhost is not allowed in production.',
+      emailLinkHostError_too_many: 'At most 32 hostnames.',
+      emailLinkHostError_duplicate: 'That hostname is already on the list.',
       emailSendDraft: 'Send this draft',
       emailSendDraftSent: 'Draft sent.',
       emailSendDraftConfirm: 'Send',
@@ -1666,6 +1749,7 @@ const resources = {
       navHostingGroup: 'Hébergement',
       navHostingApps: 'Applications',
       navHostingStatistics: 'Statistiques',
+      navIdentityStatistics: 'Statistiques',
       navHostingDjangoAdmin: 'Admin Django',
       hostingMissingTitle: 'URL d’hébergement non configurée',
       hostingMissingDescription:
@@ -1741,6 +1825,38 @@ const resources = {
       hostingRollback: 'Restaurer',
       hostingOpenVersion: 'Ouvrir',
       hostingRollbackError: 'Échec de la restauration.',
+      identityStatsTitle: 'Statistiques d’identité',
+      identityStatsBadge: 'identity-service',
+      identityStatsDescription:
+        'Utilisateurs, comptes sociaux liés et utilisateurs actifs de cette entreprise. Le staff et les propriétaires d’entreprise peuvent ouvrir cette page.',
+      identityStatsRefresh: 'Actualiser',
+      identityStatsLoading: 'Chargement des statistiques…',
+      identityStatsError: 'Impossible de charger les statistiques d’identité.',
+      identityStatsForbidden:
+        'Impossible de charger les statistiques d’identité. Il faut un accès staff ou propriétaire pour cette entreprise.',
+      identityStatsNoSession:
+        'En attente de la session… Ouvrez Admin depuis Shellui en étant connecté.',
+      identityStatsUsers: 'Utilisateurs',
+      identityStatsUsersHint: 'Comptes de cette entreprise.',
+      identityStatsActive: 'Actifs',
+      identityStatsActiveHint: '{{inactive}} ne peuvent pas se connecter.',
+      identityStatsStaff: 'Staff',
+      identityStatsStaffHint: 'Comptes autorisés à appeler les API staff.',
+      identityStatsSocial: 'Comptes sociaux',
+      identityStatsSocialHint: 'Comptes fournisseur liés.',
+      identityStatsDaily: 'Actifs du jour',
+      identityStatsDailyHint: 'Vus depuis minuit, heure du serveur.',
+      identityStatsWeekly: 'Actifs de la semaine',
+      identityStatsWeeklyHint: 'Vus depuis lundi 00:00, heure du serveur.',
+      identityStatsMonthly: 'Actifs du mois',
+      identityStatsMonthlyHint: 'Vus pendant ce mois calendaire.',
+      identityStatsLoginsTitle: 'Connexions réussies',
+      identityStatsLoginsDescription:
+        'Comptes par fournisseur depuis le démarrage de ce processus identity-service. Un redémarrage les remet à zéro.',
+      identityStatsLoginsEmpty: 'Aucune connexion réussie depuis le démarrage de ce processus.',
+      identityStatsColProvider: 'Fournisseur',
+      identityStatsColCount: 'Connexions',
+      identityStatsOpenEvents: 'Ouvrir le journal des événements',
       hostingStatsTitle: 'Statistiques d’hébergement',
       hostingStatsBadge: 'hosting-service',
       hostingStatsDescription:
@@ -1808,6 +1924,7 @@ const resources = {
       navEmailGroup: 'E-mail',
       navEmailTemplates: 'Modèles',
       navEmailProvider: 'Fournisseur',
+      navEmailLinkHosts: 'Hôtes autorisés',
       navGroups: 'Groupes',
       navUsers: 'Utilisateurs',
       navEvents: 'Journal des événements',
@@ -1987,6 +2104,12 @@ const resources = {
       scheduledJobsStaffBadge: 'Staff uniquement',
       scheduledJobsDescription:
         'Exécutions des tâches de maintenance d’identity-service, lancées par le planificateur intégré ou par votre cron. Les propriétaires d’entreprise ne voient pas cette section.',
+      scheduledJobsDescriptionHosting:
+        'Exécutions des tâches de maintenance de hosting-service, lancées par le planificateur intégré ou par votre cron. Les propriétaires d’entreprise ne voient pas cette section.',
+      scheduledJobsDescriptionStorage:
+        'Exécutions des tâches de maintenance de storage-service, lancées par le planificateur intégré ou par votre cron. Les propriétaires d’entreprise ne voient pas cette section.',
+      scheduledJobsDescriptionEmail:
+        'Exécutions des tâches de maintenance d’email-service, lancées par le planificateur intégré ou par votre cron. Les propriétaires d’entreprise ne voient pas cette section.',
       scheduledJobsSchedulerStatus: 'État du planificateur',
       scheduledJobsSchedulerEnabled: 'Planificateur intégré actif',
       scheduledJobsSchedulerDisabled: 'Planificateur intégré désactivé (cron externe)',
@@ -2000,12 +2123,19 @@ const resources = {
       scheduledJobsLoading: 'Chargement des tâches planifiées…',
       scheduledJobsError: 'Impossible de charger les tâches planifiées.',
       scheduledJobsJob_retry_webhooks: 'Relance des webhooks',
+      scheduledJobsJob_sweep_email_queue: 'Balayage de la file d’e-mail',
       scheduledJobsJob_purge_expired_data: 'Purge des données expirées',
       scheduledJobsJob_unknown: 'Tâche planifiée',
       scheduledJobsJobDescription_retry_webhooks:
         'Chaque minute : relance les webhooks en échec et les envois d’événements vers email-service. En retard après {{minutes}} minutes sans exécution réussie.',
+      scheduledJobsJobDescription_sweep_email_queue:
+        'Chaque minute : expire les messages en retard, libère les baux d’envoi périmés et fait avancer les diffusions. En retard après {{minutes}} minutes sans exécution réussie.',
       scheduledJobsJobDescription_purge_expired_data:
         'Chaque heure : supprime les événements, les livraisons terminées et les anciennes exécutions au-delà de la rétention. En retard après {{minutes}} minutes sans exécution réussie.',
+      scheduledJobsJobDescriptionEmail_retry_webhooks:
+        'Chaque minute : relance les livraisons de webhooks en échec. En retard après {{minutes}} minutes sans exécution réussie.',
+      scheduledJobsJobDescriptionEmail_purge_expired_data:
+        'Chaque heure : supprime les messages expirés, les demandes d’envoi, les événements, les livraisons de webhooks terminées, les lignes de newsletter et les anciennes exécutions au-delà de la rétention. En retard après {{minutes}} minutes sans exécution réussie.',
       scheduledJobsHealth_healthy: 'OK',
       scheduledJobsHealth_overdue: 'En retard',
       scheduledJobsHealth_failing: 'En échec',
@@ -2037,6 +2167,13 @@ const resources = {
       scheduledJobsCount_email_events: 'Événements e-mail purgés',
       scheduledJobsCount_scim_provisioning_events: 'Événements SCIM purgés',
       scheduledJobsCount_scheduled_job_runs: 'Exécutions purgées',
+      scheduledJobsCount_expired: 'Messages expirés',
+      scheduledJobsCount_released: 'Baux d’envoi libérés',
+      scheduledJobsCount_broadcasts: 'Diffusions avancées',
+      scheduledJobsCount_messages: 'Messages purgés',
+      scheduledJobsCount_send_requests: 'Demandes d’envoi purgées',
+      scheduledJobsCount_newsletter_pending: 'Inscriptions en attente purgées',
+      scheduledJobsCount_newsletter_cleared: 'Lignes de newsletter effacées',
       scheduledJobsLastRun: 'Dernière exécution',
       scheduledJobsLastSuccess: 'Dernier succès',
       scheduledJobsDuration: 'Durée',
@@ -3297,9 +3434,44 @@ const resources = {
         'utilise comme lien une variable qui n’est pas une variable de lien',
       emailFieldError_library_id_required: 'choisissez un modèle',
       emailAuthLaneNotice:
-        'Ce modèle est sur la voie auth. Conservez chaque variable de lien requise dans le texte : {{tokens}}. Le lien d’un bouton doit être l’une de ces variables, ou une adresse https de la liste autorisée du service d’e-mail.',
-      emailAuthLinkHosts:
-        'Hôtes de lien de connexion : {{hosts}}. Le service d’e-mail définit cette liste. Elle ne se modifie pas ici.',
+        'Ce modèle est sur la voie auth. Conservez chaque variable de lien requise dans le texte : {{tokens}}. Le lien d’un bouton doit être l’une de ces variables, ou une adresse https des hôtes de liens de cette entreprise.',
+      emailAuthLinkHosts: 'Hôtes de lien de connexion : {{hosts}}.',
+      emailLinkHostsTitle: 'Hôtes de liens autorisés',
+      emailLinkHostsDescription:
+        'L’e-mail d’auth de cette entreprise ne peut lier que ces noms d’hôte. Ajoutez des noms d’hôte ici. Les hôtes d’application viennent d’identity et vous ne pouvez pas les modifier ici.',
+      emailLinkHostsEffectiveTitle: 'Hôtes utilisables dans l’e-mail d’auth',
+      emailLinkHostsEffectiveDescription:
+        'Hôtes de la plateforme, hôtes d’application et hôtes supplémentaires de cette entreprise.',
+      emailLinkHostsApplicationTitle: 'Hôtes d’application',
+      emailLinkHostsApplicationDescription:
+        'Synchronisés depuis les URL d’application identity. Vous ne pouvez pas les modifier ici.',
+      emailLinkHostsPlatformTitle: 'Hôtes de la plateforme',
+      emailLinkHostsPlatformDescription:
+        'Noms d’hôte que le service d’e-mail autorise pour chaque entreprise.',
+      emailLinkHostsExtraTitle: 'Hôtes supplémentaires',
+      emailLinkHostsExtraDescription:
+        'Noms d’hôte que vous ajoutez pour cette entreprise. Noms exacts seulement : pas de schéma, de chemin, de port, de joker, ni d’adresse IP.',
+      emailLinkHostsNone: 'Aucun.',
+      emailLinkHostsField: 'Nom d’hôte',
+      emailLinkHostsAdd: 'Ajouter un hôte',
+      emailLinkHostsRemove: 'Retirer',
+      emailLinkHostsRemoveNamed: 'Retirer {{host}}',
+      emailLinkHostsAdded: 'Hôte ajouté.',
+      emailLinkHostsRemoved: 'Hôte retiré.',
+      emailLinkHostError_invalid: 'Saisissez une liste de noms d’hôte.',
+      emailLinkHostError_invalid_hostname:
+        'Saisissez un nom d’hôte exact, par exemple app.example.com.',
+      emailLinkHostError_wildcard_not_allowed: 'Les jokers ne sont pas autorisés.',
+      emailLinkHostError_ip_not_allowed: 'Les adresses IP ne sont pas autorisées.',
+      emailLinkHostError_port_not_allowed:
+        'Les ports ne sont pas autorisés. Saisissez seulement le nom d’hôte.',
+      emailLinkHostError_path_not_allowed:
+        'Les chemins ne sont pas autorisés. Saisissez seulement le nom d’hôte.',
+      emailLinkHostError_scheme_not_allowed:
+        'N’incluez pas de schéma. Saisissez seulement le nom d’hôte.',
+      emailLinkHostError_localhost_not_allowed: 'localhost n’est pas autorisé en production.',
+      emailLinkHostError_too_many: '32 noms d’hôte au maximum.',
+      emailLinkHostError_duplicate: 'Ce nom d’hôte est déjà dans la liste.',
       emailSendDraft: 'Envoyer ce brouillon',
       emailSendDraftSent: 'Brouillon envoyé.',
       emailSendDraftConfirm: 'Envoyer',

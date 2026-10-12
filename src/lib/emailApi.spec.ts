@@ -117,6 +117,37 @@ describe('createEmailApiClient', () => {
     });
   });
 
+  it('reads and replaces per-company auth link hosts', async () => {
+    const payload = {
+      company_id: 42,
+      hosts: ['playground.shellui.com'],
+      application_hosts: ['app.acme.com'],
+      platform_hosts: ['id.shellui.com'],
+      auth_link_hosts: ['app.acme.com', 'id.shellui.com', 'playground.shellui.com'],
+    };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      expect(url).toContain('/api/v1/auth-link-hosts');
+      expect(url).toContain('company_id=42');
+      if (init?.method === 'PUT') {
+        expect(JSON.parse(String(init.body))).toEqual({ hosts: ['playground.shellui.com'] });
+      }
+      return new Response(JSON.stringify(payload), { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const client = createEmailApiClient('https://email.shellui.com', 'jwt-token', 42);
+    const loaded = await client.fetchAuthLinkHosts();
+    expect(loaded).toEqual({
+      companyId: 42,
+      hosts: ['playground.shellui.com'],
+      applicationHosts: ['app.acme.com'],
+      platformHosts: ['id.shellui.com'],
+      authLinkHosts: ['app.acme.com', 'id.shellui.com', 'playground.shellui.com'],
+    });
+    await client.saveAuthLinkHosts(['playground.shellui.com']);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('reads auth_link_hosts and each event link token from the catalog', async () => {
     vi.stubGlobal(
       'fetch',
