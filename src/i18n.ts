@@ -32,6 +32,7 @@ const resources = {
       navHostingGroup: 'Hosting',
       navHostingApps: 'Apps',
       navHostingStatistics: 'Statistics',
+      navIdentityStatistics: 'Statistics',
       navHostingDjangoAdmin: 'Django admin',
       hostingMissingTitle: 'Hosting URL not configured',
       hostingMissingDescription:
@@ -106,6 +107,37 @@ const resources = {
       hostingRollback: 'Rollback',
       hostingOpenVersion: 'Open',
       hostingRollbackError: 'Rollback failed.',
+      identityStatsTitle: 'Identity statistics',
+      identityStatsBadge: 'identity-service',
+      identityStatsDescription:
+        'Users, linked social accounts, and active users for this company. Staff and company owners can open this page.',
+      identityStatsRefresh: 'Refresh',
+      identityStatsLoading: 'Loading statistics…',
+      identityStatsError: 'Could not load identity statistics.',
+      identityStatsForbidden:
+        'Could not load identity statistics. You need staff or company-owner access for this company.',
+      identityStatsNoSession: 'Waiting for shell session… Open Admin from Shellui while signed in.',
+      identityStatsUsers: 'Users',
+      identityStatsUsersHint: 'Accounts in this company.',
+      identityStatsActive: 'Active',
+      identityStatsActiveHint: '{{inactive}} cannot sign in.',
+      identityStatsStaff: 'Staff',
+      identityStatsStaffHint: 'Accounts allowed to call staff APIs.',
+      identityStatsSocial: 'Social accounts',
+      identityStatsSocialHint: 'Linked provider accounts.',
+      identityStatsDaily: 'Daily active',
+      identityStatsDailyHint: 'Seen since midnight, server time.',
+      identityStatsWeekly: 'Weekly active',
+      identityStatsWeeklyHint: 'Seen since Monday 00:00, server time.',
+      identityStatsMonthly: 'Monthly active',
+      identityStatsMonthlyHint: 'Seen during this calendar month.',
+      identityStatsLoginsTitle: 'Successful sign-ins',
+      identityStatsLoginsDescription:
+        'Counts by provider since this identity-service process started. A restart sets them back to zero.',
+      identityStatsLoginsEmpty: 'No successful sign-in since this process started.',
+      identityStatsColProvider: 'Provider',
+      identityStatsColCount: 'Sign-ins',
+      identityStatsOpenEvents: 'Open the event log',
       hostingStatsTitle: 'Hosting statistics',
       hostingStatsBadge: 'hosting-service',
       hostingStatsDescription:
@@ -349,6 +381,10 @@ const resources = {
       scheduledJobsStaffBadge: 'Staff only',
       scheduledJobsDescription:
         'Runs of the identity-service maintenance jobs, from the built-in scheduler or your own cron. Company owners do not see this section.',
+      scheduledJobsDescriptionHosting:
+        'Runs of the hosting-service maintenance jobs, from the built-in scheduler or your own cron. Company owners do not see this section.',
+      scheduledJobsDescriptionStorage:
+        'Runs of the storage-service maintenance jobs, from the built-in scheduler or your own cron. Company owners do not see this section.',
       scheduledJobsSchedulerStatus: 'Scheduler status',
       scheduledJobsSchedulerEnabled: 'Built-in scheduler on',
       scheduledJobsSchedulerDisabled: 'Built-in scheduler off (external cron)',
@@ -1666,6 +1702,7 @@ const resources = {
       navHostingGroup: 'Hébergement',
       navHostingApps: 'Applications',
       navHostingStatistics: 'Statistiques',
+      navIdentityStatistics: 'Statistiques',
       navHostingDjangoAdmin: 'Admin Django',
       hostingMissingTitle: 'URL d’hébergement non configurée',
       hostingMissingDescription:
@@ -1741,6 +1778,38 @@ const resources = {
       hostingRollback: 'Restaurer',
       hostingOpenVersion: 'Ouvrir',
       hostingRollbackError: 'Échec de la restauration.',
+      identityStatsTitle: 'Statistiques d’identité',
+      identityStatsBadge: 'identity-service',
+      identityStatsDescription:
+        'Utilisateurs, comptes sociaux liés et utilisateurs actifs de cette entreprise. Le staff et les propriétaires d’entreprise peuvent ouvrir cette page.',
+      identityStatsRefresh: 'Actualiser',
+      identityStatsLoading: 'Chargement des statistiques…',
+      identityStatsError: 'Impossible de charger les statistiques d’identité.',
+      identityStatsForbidden:
+        'Impossible de charger les statistiques d’identité. Il faut un accès staff ou propriétaire pour cette entreprise.',
+      identityStatsNoSession:
+        'En attente de la session… Ouvrez Admin depuis Shellui en étant connecté.',
+      identityStatsUsers: 'Utilisateurs',
+      identityStatsUsersHint: 'Comptes de cette entreprise.',
+      identityStatsActive: 'Actifs',
+      identityStatsActiveHint: '{{inactive}} ne peuvent pas se connecter.',
+      identityStatsStaff: 'Staff',
+      identityStatsStaffHint: 'Comptes autorisés à appeler les API staff.',
+      identityStatsSocial: 'Comptes sociaux',
+      identityStatsSocialHint: 'Comptes fournisseur liés.',
+      identityStatsDaily: 'Actifs du jour',
+      identityStatsDailyHint: 'Vus depuis minuit, heure du serveur.',
+      identityStatsWeekly: 'Actifs de la semaine',
+      identityStatsWeeklyHint: 'Vus depuis lundi 00:00, heure du serveur.',
+      identityStatsMonthly: 'Actifs du mois',
+      identityStatsMonthlyHint: 'Vus pendant ce mois calendaire.',
+      identityStatsLoginsTitle: 'Connexions réussies',
+      identityStatsLoginsDescription:
+        'Comptes par fournisseur depuis le démarrage de ce processus identity-service. Un redémarrage les remet à zéro.',
+      identityStatsLoginsEmpty: 'Aucune connexion réussie depuis le démarrage de ce processus.',
+      identityStatsColProvider: 'Fournisseur',
+      identityStatsColCount: 'Connexions',
+      identityStatsOpenEvents: 'Ouvrir le journal des événements',
       hostingStatsTitle: 'Statistiques d’hébergement',
       hostingStatsBadge: 'hosting-service',
       hostingStatsDescription:
@@ -1987,6 +2056,10 @@ const resources = {
       scheduledJobsStaffBadge: 'Staff uniquement',
       scheduledJobsDescription:
         'Exécutions des tâches de maintenance d’identity-service, lancées par le planificateur intégré ou par votre cron. Les propriétaires d’entreprise ne voient pas cette section.',
+      scheduledJobsDescriptionHosting:
+        'Exécutions des tâches de maintenance de hosting-service, lancées par le planificateur intégré ou par votre cron. Les propriétaires d’entreprise ne voient pas cette section.',
+      scheduledJobsDescriptionStorage:
+        'Exécutions des tâches de maintenance de storage-service, lancées par le planificateur intégré ou par votre cron. Les propriétaires d’entreprise ne voient pas cette section.',
       scheduledJobsSchedulerStatus: 'État du planificateur',
       scheduledJobsSchedulerEnabled: 'Planificateur intégré actif',
       scheduledJobsSchedulerDisabled: 'Planificateur intégré désactivé (cron externe)',

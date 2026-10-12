@@ -246,6 +246,52 @@ describe('DashboardScheduledJobsSection', () => {
     expect(within(retry).getByText('This company')).toBeTruthy();
   });
 
+  it('loads hosting jobs from that service and links its deliveries', async () => {
+    api.fetchScheduledJobRun.mockResolvedValue({
+      ...run(),
+      webhook_delivery_attempts: [
+        {
+          id: 1,
+          delivery_id: 'd-own',
+          company_id: 7,
+          event_type: 'hosting.app.created',
+          status: 'success',
+          http_status: 200,
+          attempt_number: 2,
+          duration_ms: 30,
+          trigger: 'automatic_retry',
+          created_at: minutesAgo(1),
+        },
+      ],
+      webhook_delivery_attempts_truncated: false,
+      email_events: [],
+      email_events_truncated: false,
+    });
+    render(
+      <I18nextProvider i18n={i18n}>
+        <MemoryRouter>
+          <DashboardScheduledJobsSection
+            baseUrl="https://hosting.test"
+            service="hosting"
+          />
+        </MemoryRouter>
+      </I18nextProvider>,
+    );
+    expect(await screen.findByText(/hosting-service maintenance jobs/)).toBeTruthy();
+    expect(api.fetchScheduledJobs).toHaveBeenCalledWith('tok', 'https://hosting.test');
+    expect(api.fetchScheduledJobRuns).toHaveBeenCalledWith(
+      'tok',
+      'retry_webhooks',
+      10,
+      'https://hosting.test',
+    );
+    const retry = await screen.findByTestId('scheduled-job-retry_webhooks');
+    fireEvent.click(within(retry).getByRole('button', { name: /Details/ }));
+    const link = await within(retry).findByRole('link', { name: 'Open delivery' });
+    expect(link.getAttribute('href')).toContain('/hosting/webhooks/deliveries/');
+    expect(api.fetchScheduledJobRun).toHaveBeenCalledWith('tok', 11, 'https://hosting.test');
+  });
+
   it('is translated in French', async () => {
     await i18n.changeLanguage('fr');
     renderSection();

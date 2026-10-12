@@ -21,6 +21,7 @@ import { UsersListPage } from '@/pages/UsersListPage';
 import { HostingAppDetailPage } from '@/pages/HostingAppDetailPage';
 import { HostingAppsPage } from '@/pages/HostingAppsPage';
 import { HostingStatisticsPage } from '@/pages/HostingStatisticsPage';
+import { IdentityStatisticsPage } from '@/pages/IdentityStatisticsPage';
 import { StorageStatisticsPage } from '@/pages/StorageStatisticsPage';
 import { EmailBroadcastPage } from '@/features/email/pages/EmailBroadcastPage';
 import { EmailBroadcastsPage } from '@/features/email/pages/EmailBroadcastsPage';
@@ -200,6 +201,7 @@ export const router = createHashRouter([
           />
         ),
       },
+      { path: 'identity/statistics', element: <IdentityStatisticsPage /> },
       { path: 'events/:eventId', element: <EventDetailPage key="identity" /> },
       { path: 'events', element: <EventsListPage key="identity" /> },
       {

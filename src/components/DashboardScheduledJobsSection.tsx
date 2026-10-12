@@ -36,6 +36,7 @@ import {
 } from '@/lib/scheduledJobsApi';
 import { cn } from '@/lib/utils';
 import { webhookDeliveryDetailPath } from '@/lib/webhookRoutePaths';
+import type { WebhookServiceKey } from '@/lib/webhookServices';
 
 const RECENT_RUNS = 10;
 
@@ -113,7 +114,17 @@ function CountsList({ job, counts }: { job: string; counts: ScheduledJobRun['cou
   );
 }
 
-function RunCorrelation({ run, companyId }: { run: ScheduledJobRun; companyId: number | null }) {
+function RunCorrelation({
+  run,
+  companyId,
+  baseUrl,
+  service,
+}: {
+  run: ScheduledJobRun;
+  companyId: number | null;
+  baseUrl?: string;
+  service: WebhookServiceKey;
+}) {
   const { t } = useTranslation();
   const accessToken = useShelluiAccessToken();
   const [detail, setDetail] = useState<ScheduledJobRunDetail | null>(null);
@@ -123,7 +134,10 @@ function RunCorrelation({ run, companyId }: { run: ScheduledJobRun; companyId: n
     if (!accessToken) return;
     let cancelled = false;
     setError(null);
-    fetchScheduledJobRun(accessToken, run.id)
+    const request = baseUrl
+      ? fetchScheduledJobRun(accessToken, run.id, baseUrl)
+      : fetchScheduledJobRun(accessToken, run.id);
+    request
       .then((d) => {
         if (!cancelled) setDetail(d);
       })
@@ -134,7 +148,7 @@ function RunCorrelation({ run, companyId }: { run: ScheduledJobRun; companyId: n
     return () => {
       cancelled = true;
     };
-  }, [accessToken, run.id, t]);
+  }, [accessToken, baseUrl, run.id, t]);
 
   if (error) {
     return (
@@ -197,7 +211,7 @@ function RunCorrelation({ run, companyId }: { run: ScheduledJobRun; companyId: n
                 )}
                 {companyId != null && a.company_id === companyId ? (
                   <Link
-                    to={webhookDeliveryDetailPath('identity', a.delivery_id)}
+                    to={webhookDeliveryDetailPath(service, a.delivery_id)}
                     className="text-primary underline-offset-4 hover:underline"
                   >
                     {t('scheduledJobsOpenDelivery')}
@@ -262,10 +276,14 @@ function RunsTable({
   job,
   runs,
   companyId,
+  baseUrl,
+  service,
 }: {
   job: string;
   runs: ScheduledJobRun[];
   companyId: number | null;
+  baseUrl?: string;
+  service: WebhookServiceKey;
 }) {
   const { t } = useTranslation();
   const fmt = useDateFormatters();
@@ -363,6 +381,8 @@ function RunsTable({
                   <RunCorrelation
                     run={run}
                     companyId={companyId}
+                    baseUrl={baseUrl}
+                    service={service}
                   />
                 </TableCell>
               </TableRow>
@@ -378,10 +398,14 @@ function JobCard({
   status,
   runs,
   companyId,
+  baseUrl,
+  service,
 }: {
   status: ScheduledJobStatus;
   runs: ScheduledJobRun[];
   companyId: number | null;
+  baseUrl?: string;
+  service: WebhookServiceKey;
 }) {
   const { t } = useTranslation();
   const fmt = useDateFormatters();
@@ -464,6 +488,8 @@ function JobCard({
             job={status.job}
             runs={runs}
             companyId={companyId}
+            baseUrl={baseUrl}
+            service={service}
           />
         </div>
       </CardContent>
@@ -519,11 +545,25 @@ function SchedulerBadges({ overview }: { overview: ScheduledJobsOverview }) {
   );
 }
 
+function descriptionKey(service: WebhookServiceKey): string {
+  if (service === 'hosting') return 'scheduledJobsDescriptionHosting';
+  if (service === 'storage') return 'scheduledJobsDescriptionStorage';
+  return 'scheduledJobsDescription';
+}
+
 /**
- * identity-service scheduled jobs (`retry_webhooks`, `purge_expired_data`) for Django staff.
- * Hidden for everyone else; the API also answers 403 to non-staff, including company owners.
+ * Scheduled jobs for one service (`retry_webhooks`, `purge_expired_data`) for Django staff.
+ * Hidden for everyone else; each API answers 403 to non-staff, including company owners.
+ * Scheduler health is platform-wide, so it stays inside this staff-only section.
  */
-export function DashboardScheduledJobsSection() {
+export function DashboardScheduledJobsSection({
+  baseUrl,
+  service = 'identity',
+}: {
+  /** Service origin. Omit it to use the identity-service base URL. */
+  baseUrl?: string;
+  service?: WebhookServiceKey;
+} = {}) {
   const { t } = useTranslation();
   const accessToken = useShelluiAccessToken();
   const isStaff = useShelluiIsStaff();
@@ -540,9 +580,15 @@ export function DashboardScheduledJobsSection() {
     setLoading(true);
     setError(null);
     try {
-      const next = await fetchScheduledJobs(accessToken);
+      const next = baseUrl
+        ? await fetchScheduledJobs(accessToken, baseUrl)
+        : await fetchScheduledJobs(accessToken);
       const runLists = await Promise.all(
-        next.jobs.map((j) => fetchScheduledJobRuns(accessToken, j.job, RECENT_RUNS)),
+        next.jobs.map((j) =>
+          baseUrl
+            ? fetchScheduledJobRuns(accessToken, j.job, RECENT_RUNS, baseUrl)
+            : fetchScheduledJobRuns(accessToken, j.job, RECENT_RUNS),
+        ),
       );
       setOverview(next);
       setRuns(Object.fromEntries(next.jobs.map((j, i) => [j.job, runLists[i]])));
@@ -555,12 +601,12 @@ export function DashboardScheduledJobsSection() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, isStaff, t]);
+  }, [accessToken, baseUrl, isStaff, t]);
 
   useEffect(() => {
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload on session or staff change only
-  }, [accessToken, isStaff]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload on session, staff, or service URL
+  }, [accessToken, baseUrl, isStaff]);
 
   if (!accessToken || !isStaff || forbidden) return null;
 
@@ -583,7 +629,7 @@ export function DashboardScheduledJobsSection() {
           {t('scheduledJobsStaffBadge')}
         </Badge>
       </div>
-      <Text className="max-w-3xl font-mono text-sm">{t('scheduledJobsDescription')}</Text>
+      <Text className="max-w-3xl font-mono text-sm">{t(descriptionKey(service))}</Text>
 
       <div className="flex flex-wrap items-center gap-3">
         {overview && <SchedulerBadges overview={overview} />}
@@ -635,6 +681,8 @@ export function DashboardScheduledJobsSection() {
               status={job}
               runs={runs[job.job] ?? []}
               companyId={companyId}
+              baseUrl={baseUrl}
+              service={service}
             />
           ))}
         </div>

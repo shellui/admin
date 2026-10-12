@@ -42,6 +42,11 @@ export const adminShellUiConfig: AdminShellUIConfig = {
           path: 'events',
           url: '#/events',
         },
+        {
+          label: { en: 'Statistics', fr: 'Statistiques' },
+          path: 'identity/statistics',
+          url: '#/identity/statistics',
+        },
         { label: { en: 'OAuth apps', fr: 'Apps OAuth' }, path: 'oauth', url: '#/oauth' },
         { label: { en: 'SCIM', fr: 'SCIM' }, path: 'scim', url: '#/scim' },
         {
