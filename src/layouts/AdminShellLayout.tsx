@@ -24,11 +24,9 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Cloud,
   ExternalLink,
   Fingerprint,
   FolderOpen,
-  HardDrive,
   KeyRound,
   LayoutDashboard,
   Link2,
@@ -1082,7 +1080,7 @@ export function AdminShellLayout() {
           if (isStaff && emailDjangoAdminHref) {
             items.push({
               key: 'navEmailDjangoAdmin',
-              icon: Mail,
+              icon: Lock,
               label: t('navEmailDjangoAdmin'),
               openIn: 'external',
               href: emailDjangoAdminHref,
@@ -1146,7 +1144,7 @@ export function AdminShellLayout() {
       if (isStaff && storageDjangoAdminHref) {
         storageItems.push({
           key: 'navStorageDjangoAdmin',
-          icon: HardDrive,
+          icon: Lock,
           label: t('navStorageDjangoAdmin'),
           openIn: 'external',
           href: storageDjangoAdminHref,
@@ -1206,7 +1204,7 @@ export function AdminShellLayout() {
       if (isStaff && hostingDjangoAdminHref) {
         hostingItems.push({
           key: 'navHostingDjangoAdmin',
-          icon: Cloud,
+          icon: Lock,
           label: t('navHostingDjangoAdmin'),
           openIn: 'external',
           href: hostingDjangoAdminHref,
