@@ -71,6 +71,7 @@ import type {
   AdminNavigationGroup,
 } from '@/admin.shellui.config';
 import type { SettingsAdministrationNavigationItem } from '@shellui/sdk';
+import { appVersionLabel } from '@/lib/appVersion';
 import { cn } from '@/lib/utils';
 
 const navLinkBase =
@@ -596,6 +597,19 @@ function AdminNavBody({
   );
 }
 
+function AppVersionFooter({ collapsed = false }: { collapsed?: boolean }) {
+  return (
+    <footer
+      className={cn(
+        'shrink-0 py-2 text-center text-xs leading-none text-muted-foreground',
+        collapsed ? 'px-0.5' : 'px-2',
+      )}
+    >
+      {appVersionLabel}
+    </footer>
+  );
+}
+
 function AdminMobileMenu({
   topNavItems,
   customNavItems,
@@ -629,7 +643,7 @@ function AdminMobileMenu({
       <header className="flex h-14 shrink-0 items-center justify-center border-b border-border px-4">
         <h1 className="text-lg font-semibold tracking-tight">{t('navMobileMenuTitle')}</h1>
       </header>
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-4">
         {topNavItems.length > 0 ? renderCard(topNavItems) : null}
         {customNavItems.length > 0 ? (
           <div className="flex flex-col gap-2">
@@ -660,6 +674,7 @@ function AdminMobileMenu({
           ),
         )}
       </div>
+      <AppVersionFooter />
     </div>
   );
 }
@@ -1017,6 +1032,10 @@ export function AdminShellLayout() {
     : null;
   const storageDjangoAdminHref = storageUrl ? `${storageUrl}/admin/` : null;
   const hostingDjangoAdminHref = hostingUrl ? `${hostingUrl}/admin/` : null;
+  const emailUrl = isEmailAdminEnabled(emailSettings)
+    ? emailSettings.url?.trim().replace(/\/+$/, '') || null
+    : null;
+  const emailDjangoAdminHref = emailUrl ? `${emailUrl}/admin/` : null;
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed());
   const [mobilePane, setMobilePane] = useState<'menu' | 'content'>(() =>
@@ -1059,10 +1078,21 @@ export function AdminShellLayout() {
         }
         if (isStandaloneEmailGroupTitle(group.title)) {
           if (!isEmailAdminEnabled(emailSettings)) return null;
+          const items = [...group.items];
+          if (isStaff && emailDjangoAdminHref) {
+            items.push({
+              key: 'navEmailDjangoAdmin',
+              icon: Mail,
+              label: t('navEmailDjangoAdmin'),
+              openIn: 'external',
+              href: emailDjangoAdminHref,
+            });
+          }
           return {
             ...group,
             title: t('navEmailGroup'),
             subtitle: emailSettings.url,
+            items,
           };
         }
         return group;
@@ -1194,6 +1224,7 @@ export function AdminShellLayout() {
   }, [
     authBackendBaseUrl,
     djangoAdminHref,
+    emailDjangoAdminHref,
     filesUrl,
     groups,
     hostingDjangoAdminHref,
@@ -1235,7 +1266,7 @@ export function AdminShellLayout() {
         <aside
           data-collapsed={sidebarCollapsed ? 'true' : 'false'}
           className={cn(
-            'hidden shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-linear md:flex',
+            'hidden h-full min-h-0 shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-linear md:flex',
             sidebarCollapsed ? 'w-[3.25rem]' : 'w-64',
           )}
         >
@@ -1274,7 +1305,7 @@ export function AdminShellLayout() {
           </div>
           <nav
             className={cn(
-              'flex flex-1 flex-col gap-1 overflow-auto py-3',
+              'flex min-h-0 flex-1 flex-col gap-1 overflow-auto py-3',
               sidebarCollapsed ? 'px-1.5' : 'px-3',
             )}
             aria-label="Admin"
@@ -1287,6 +1318,7 @@ export function AdminShellLayout() {
               collapsed={sidebarCollapsed}
             />
           </nav>
+          <AppVersionFooter collapsed={sidebarCollapsed} />
         </aside>
       </TooltipProvider>
 

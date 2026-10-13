@@ -3,9 +3,11 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n';
+import { OAuthAppsTable } from '@/components/oauth/OAuthAppsTable';
 import { OAuthCallbackUrlCopy } from '@/components/oauth/OAuthCallbackUrlCopy';
 import { OAuthConsoleUrlList } from '@/components/oauth/OAuthConsoleUrlList';
 import { OAuthCredentialsForm } from '@/components/oauth/OAuthCredentialsForm';
+import { IDENTITY_DESKTOP_APPS_DOCS_URL } from '@/lib/desktopRedirectScheme';
 import type { OAuthCatalogProvider } from '@/lib/oauthProviderCatalogTypes';
 import { OAuthProviderPicker } from '@/components/oauth/OAuthProviderPicker';
 import { visibleCatalogProviders } from '@/lib/oauthCatalogDisplay';
@@ -79,6 +81,7 @@ describe('OAuth wizard UI', () => {
               client_secret: '',
               tenant: '',
               extra_settings: { ORG: 'acme' },
+              desktop_redirect_scheme: '',
             }}
             onChange={() => {}}
             onSubmit={() => {}}
@@ -272,5 +275,104 @@ describe('OAuth wizard UI', () => {
     expect(screen.getByText(/configured \(2\)/i)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /^add another$/i }));
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ docs_slug: 'openid_connect' }));
+  });
+
+  it('explains the desktop sign-in deep link and rejects a denied scheme', () => {
+    const onSubmit = vi.fn();
+    const onChange = vi.fn();
+    render(
+      <I18nextProvider i18n={i18n}>
+        <MemoryRouter>
+          <OAuthCredentialsForm
+            provider={github}
+            mode="edit"
+            values={{
+              client_id: 'id',
+              client_secret: '',
+              tenant: '',
+              extra_settings: {},
+              desktop_redirect_scheme: 'https',
+            }}
+            onChange={onChange}
+            onSubmit={onSubmit}
+          />
+        </MemoryRouter>
+      </I18nextProvider>,
+    );
+
+    expect(screen.getByLabelText(/desktop sign-in scheme/i)).toBeTruthy();
+    expect(screen.getByText('<scheme>://callback')).toBeTruthy();
+    expect(screen.getByText('This scheme is not allowed.')).toBeTruthy();
+    const docs = screen.getByRole('link', { name: 'Desktop apps' });
+    expect(docs.getAttribute('href')).toBe(IDENTITY_DESKTOP_APPS_DOCS_URL);
+    expect(screen.getByRole('button', { name: /save changes/i }).hasAttribute('disabled')).toBe(
+      true,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('shows a valid desktop deep link and a server field error', () => {
+    render(
+      <I18nextProvider i18n={i18n}>
+        <MemoryRouter>
+          <OAuthCredentialsForm
+            provider={github}
+            mode="create"
+            values={{
+              client_id: 'id',
+              client_secret: 'secret',
+              tenant: '',
+              extra_settings: {},
+              desktop_redirect_scheme: 'shellui-playground',
+            }}
+            fieldErrors={{ desktop_redirect_scheme: 'Scheme must be lowercase.' }}
+            onChange={() => {}}
+            onSubmit={() => {}}
+          />
+        </MemoryRouter>
+      </I18nextProvider>,
+    );
+
+    expect(screen.getByText('shellui-playground://callback')).toBeTruthy();
+    expect(screen.getByText('Scheme must be lowercase.')).toBeTruthy();
+  });
+
+  it('lists the desktop scheme on each OAuth application', () => {
+    render(
+      <I18nextProvider i18n={i18n}>
+        <MemoryRouter>
+          <OAuthAppsTable
+            rows={[
+              {
+                id: 1,
+                provider: 'github',
+                name: 'GitHub',
+                client_id: 'cid',
+                is_linked: true,
+                mapping_id: 2,
+                mapping_is_active: true,
+                desktop_redirect_scheme: 'shellui-playground',
+              },
+              {
+                id: 2,
+                provider: 'google',
+                name: 'Google',
+                client_id: 'gid',
+                is_linked: true,
+                mapping_id: 3,
+                mapping_is_active: true,
+                desktop_redirect_scheme: '',
+              },
+            ]}
+            catalogProviders={[github]}
+          />
+        </MemoryRouter>
+      </I18nextProvider>,
+    );
+
+    expect(screen.getByRole('columnheader', { name: /desktop scheme/i })).toBeTruthy();
+    expect(screen.getByText('shellui-playground')).toBeTruthy();
+    expect(screen.getByText('off')).toBeTruthy();
   });
 });

@@ -2,7 +2,7 @@
 
 Administration UI for Shellui: a React app embedded in the main shell (route `/admin`). This repo is **only the Vite + React app**—no Shellui shell wrapper.
 
-**Current release:** [0.6.0](./CHANGELOG.md) · production origin **https://admin.shellui.com/**
+**Current release:** [0.6.1](./CHANGELOG.md) · production origin **https://admin.shellui.com/**
 
 ## Architecture
 
@@ -15,15 +15,15 @@ External menus (host custom apps, storage files, Swagger/ReDoc) are opened as ab
 
 ## What the panel covers
 
-| Area            | When it appears                                         | Highlights                                                                                                                                                                                                         |
-| --------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Dashboard**   | Always                                                  | Company-scoped KPIs from identity (`GET /api/v1/metrics`). Optional storage and hosting Prometheus metrics when those services are configured. Email delivery counts from `GET /api/v1/stats` when Email is shown. |
-| **Identity**    | Always (with `backend.url`)                             | Company (incl. magic link toggle), users, groups, login events, OAuth apps, SCIM, webhooks (rules + delivery logs), personal access tokens; staff Django admin link.                                               |
-| **Storage**     | Host `storage.url` set                                  | Statistics (`GET /storage/v1/stats`); optional Files explorer via `storage.filesUrl`; staff Django admin.                                                                                                          |
-| **Hosting**     | Host `hosting.url` set and `showInAdmin` is not `false` | Apps list/detail, statistics, dashboard hosting KPIs (`GET /hosting/v1/metrics`); staff Django admin.                                                                                                              |
-| **Email**       | Always (default `https://email.shellui.com`)            | Last sidebar section: company theme and templates, provider settings, statistics. Identity, Storage, and Hosting each keep an Email and webhooks page that lists that service's webhook and email rules together.  |
-| **Custom apps** | Host `administration` set                               | Extra sidebar links below Dashboard (iframe or external).                                                                                                                                                          |
-| **API docs**    | Shell developer mode                                    | Swagger / ReDoc for identity (and storage / hosting when those sections are on).                                                                                                                                   |
+| Area            | When it appears                                         | Highlights                                                                                                                                                                                                                            |
+| --------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Dashboard**   | Always                                                  | Company-scoped KPIs from identity (`GET /api/v1/metrics`). Optional storage and hosting Prometheus metrics when those services are configured. Email delivery counts from `GET /api/v1/stats` when Email is shown.                    |
+| **Identity**    | Always (with `backend.url`)                             | Company (incl. magic link toggle), users, groups, login events, OAuth apps, SCIM, webhooks (rules + delivery logs), personal access tokens, statistics; staff Django admin link.                                                      |
+| **Storage**     | Host `storage.url` set                                  | Statistics (`GET /storage/v1/stats`); optional Files explorer via `storage.filesUrl`; staff Django admin.                                                                                                                             |
+| **Hosting**     | Host `hosting.url` set and `showInAdmin` is not `false` | Apps list/detail, statistics, dashboard hosting KPIs (`GET /hosting/v1/metrics`); staff Django admin.                                                                                                                                 |
+| **Email**       | Always (default `https://email.shellui.com`)            | Last sidebar section: company theme and templates, provider settings, statistics; staff Django admin. Identity, Storage, and Hosting each keep an Email and webhooks page that lists that service's webhook and email rules together. |
+| **Custom apps** | Host `administration` set                               | Extra sidebar links below Dashboard (iframe or external).                                                                                                                                                                             |
+| **API docs**    | Shell developer mode                                    | Swagger / ReDoc for identity (and storage / hosting when those sections are on).                                                                                                                                                      |
 
 ## Prerequisites
 
@@ -74,6 +74,8 @@ email: {
 ```
 
 Admin reads `email.url` the same way it reads `storage.url` and `hosting.url` (SDK settings from the host `shellui.config`). `@shellui/sdk` 0.6.0 types `settings.email`. When `email.url` is missing, Admin calls `https://email.shellui.com`. Set `email.showInAdmin: false` to hide the Email section.
+
+Staff open Django admin for Email at the `email.url` origin plus `/admin/`.
 
 ## Identity company admin (SCIM, magic link, webhooks)
 
