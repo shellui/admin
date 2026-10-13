@@ -39,10 +39,17 @@ import {
   linkedSocialAppsByDocsSlug,
   oauthWizardStepFromParam,
 } from '@/lib/oauthSetupView';
-import { getCompanyIdFromJwt, getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
+import { desktopRedirectSchemeIssue, desktopSignInDeepLink } from '@/lib/desktopRedirectScheme';
+import { getCompanyIdFromJwt, getIsCompanyOwnerFromJwt, getIsStaffFromJwt } from '@/lib/jwtCompany';
 
 function emptyCredentials(): OAuthCredentialsFormValues {
-  return { client_id: '', client_secret: '', tenant: '', extra_settings: {} };
+  return {
+    client_id: '',
+    client_secret: '',
+    tenant: '',
+    extra_settings: {},
+    desktop_redirect_scheme: '',
+  };
 }
 
 function credentialsFromApp(
@@ -61,6 +68,7 @@ function credentialsFromApp(
     client_secret: '',
     tenant: app.tenant ?? '',
     extra_settings: extra,
+    desktop_redirect_scheme: app.desktop_redirect_scheme ?? '',
   };
 }
 
@@ -72,6 +80,8 @@ export function OAuthWizardRoute() {
   const accessToken = useShelluiAccessToken();
   const companyId = accessToken ? getCompanyIdFromJwt(accessToken) : null;
   const isOwner = Boolean(accessToken && getIsCompanyOwnerFromJwt(accessToken));
+  const isStaff = Boolean(accessToken && getIsStaffFromJwt(accessToken));
+  const canManage = isOwner || isStaff;
   const colorScheme = useDocumentColorScheme();
 
   const routeDocsSlug = params.docsSlug?.trim().toLowerCase() || null;
@@ -95,7 +105,7 @@ export function OAuthWizardRoute() {
   const [savedSummary, setSavedSummary] = useState<OAuthSocialAppRow | null>(null);
 
   const load = useCallback(async () => {
-    if (!accessToken || !isOwner || companyId == null) {
+    if (!accessToken || !canManage || companyId == null) {
       setLoading(false);
       return;
     }
@@ -114,7 +124,7 @@ export function OAuthWizardRoute() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, companyId, isOwner, t]);
+  }, [accessToken, canManage, companyId, t]);
 
   useEffect(() => {
     void load();
@@ -156,7 +166,7 @@ export function OAuthWizardRoute() {
       <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
     );
   }
-  if (!isOwner || companyId == null) {
+  if (!canManage || companyId == null) {
     return (
       <Text className="font-mono text-sm text-muted-foreground">
         {t('oauthSetupPageForbidden')}
@@ -184,6 +194,9 @@ export function OAuthWizardRoute() {
 
   async function onSave() {
     if (!accessToken || companyId == null || !selectedProvider) return;
+    if (desktopRedirectSchemeIssue(credentials.desktop_redirect_scheme)) {
+      return;
+    }
     setBusy(true);
     setFormError(null);
     setFormErrorExistingAppId(null);
@@ -199,6 +212,7 @@ export function OAuthWizardRoute() {
           client_secret?: string;
           tenant?: string;
           extra_settings?: Record<string, unknown>;
+          desktop_redirect_scheme?: string;
         } = {};
         if (credentials.client_id.trim() !== editingApp.client_id) {
           payload.client_id = credentials.client_id.trim();
@@ -212,6 +226,10 @@ export function OAuthWizardRoute() {
         if (Object.keys(extraPayload).length > 0) {
           payload.extra_settings = extraPayload;
         }
+        const nextScheme = credentials.desktop_redirect_scheme.trim();
+        if (nextScheme !== (editingApp.desktop_redirect_scheme ?? '').trim()) {
+          payload.desktop_redirect_scheme = nextScheme;
+        }
         if (Object.keys(payload).length === 0) {
           setFormError(t('oauthWizardNoChanges'));
           setBusy(false);
@@ -221,12 +239,14 @@ export function OAuthWizardRoute() {
         shellui.toast({ title: t('oauthWizardSavedToast'), type: 'success' });
         navigate('/oauth');
       } else {
+        const scheme = credentials.desktop_redirect_scheme.trim();
         const created = await createOAuthSocialApp(accessToken, companyId, {
           docs_slug: selectedProvider.docs_slug,
           client_id: credentials.client_id.trim(),
           client_secret: credentials.client_secret.trim(),
           tenant: credentials.tenant.trim() || undefined,
           extra_settings: extraPayload,
+          desktop_redirect_scheme: scheme || undefined,
         });
         setSavedSummary(created);
         setSearchParams({ step: 'summary' });
@@ -348,7 +368,19 @@ export function OAuthWizardRoute() {
             provider={selectedProvider}
             mode={isEdit ? 'edit' : 'create'}
             values={credentials}
-            onChange={setCredentials}
+            onChange={(next) => {
+              setCredentials(next);
+              if (
+                next.desktop_redirect_scheme !== credentials.desktop_redirect_scheme &&
+                fieldErrors.desktop_redirect_scheme
+              ) {
+                setFieldErrors((prev) => {
+                  const next = { ...prev };
+                  delete next.desktop_redirect_scheme;
+                  return next;
+                });
+              }
+            }}
             fieldErrors={fieldErrors}
             formError={formError}
             formErrorExistingAppId={formErrorExistingAppId}
@@ -383,6 +415,14 @@ export function OAuthWizardRoute() {
                 <dt className="text-muted-foreground">{t('oauthClientsClientId')}</dt>
                 <dd className="break-all">{savedSummary.client_id}</dd>
               </div>
+              {savedSummary.desktop_redirect_scheme ? (
+                <div>
+                  <dt className="text-muted-foreground">{t('oauthDesktopSchemeLabel')}</dt>
+                  <dd className="break-all">
+                    {desktopSignInDeepLink(savedSummary.desktop_redirect_scheme)}
+                  </dd>
+                </div>
+              ) : null}
             </dl>
             <OAuthWizardStepActions
               backLabel={t('oauthWizardBackToList')}

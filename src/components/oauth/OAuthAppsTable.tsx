@@ -44,6 +44,7 @@ export function OAuthAppsTable({ rows, catalogProviders, colorScheme = 'light' }
         <TableRow>
           <TableHead>{t('oauthClientsColProvider')}</TableHead>
           <TableHead>{t('oauthSetupColClientId')}</TableHead>
+          <TableHead>{t('oauthDesktopSchemeColumn')}</TableHead>
           <TableHead>{t('oauthSetupColStatus')}</TableHead>
           <TableHead className="text-right">{t('oauthWizardActions')}</TableHead>
         </TableRow>
@@ -70,6 +71,13 @@ export function OAuthAppsTable({ rows, catalogProviders, colorScheme = 'light' }
               </TableCell>
               <TableCell className="max-w-[14rem] truncate font-mono text-xs">
                 {row.client_id}
+              </TableCell>
+              <TableCell className="font-mono text-xs">
+                {row.desktop_redirect_scheme ? (
+                  row.desktop_redirect_scheme
+                ) : (
+                  <span className="text-muted-foreground">{t('oauthDesktopSchemeOff')}</span>
+                )}
               </TableCell>
               <TableCell>
                 <Badge variant={row.mapping_is_active ? 'default' : 'outline'}>
