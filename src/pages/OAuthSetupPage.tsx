@@ -14,7 +14,7 @@ import {
   type OAuthSocialAppRow,
 } from '@/lib/adminOauthClientsApi';
 import type { OAuthCatalogProvider } from '@/lib/oauthProviderCatalogTypes';
-import { getCompanyIdFromJwt, getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
+import { getCompanyIdFromJwt, getIsCompanyOwnerFromJwt, getIsStaffFromJwt } from '@/lib/jwtCompany';
 import { OAuthRedirectsSection } from '@/pages/oauth/OAuthRedirectsSection';
 import { OAuthWizardRoute } from '@/pages/oauth/OAuthWizardRoute';
 
@@ -23,6 +23,8 @@ function OAuthAppsListPanel() {
   const accessToken = useShelluiAccessToken();
   const companyId = accessToken ? getCompanyIdFromJwt(accessToken) : null;
   const isOwner = Boolean(accessToken && getIsCompanyOwnerFromJwt(accessToken));
+  const isStaff = Boolean(accessToken && getIsStaffFromJwt(accessToken));
+  const canManage = isOwner || isStaff;
   const colorScheme = useDocumentColorScheme();
 
   const [rows, setRows] = useState<OAuthSocialAppRow[]>([]);
@@ -31,7 +33,7 @@ function OAuthAppsListPanel() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!accessToken || !isOwner || companyId == null) {
+    if (!accessToken || !canManage || companyId == null) {
       setRows([]);
       setCatalogProviders([]);
       setLoading(false);
@@ -53,7 +55,7 @@ function OAuthAppsListPanel() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, companyId, isOwner, t]);
+  }, [accessToken, canManage, companyId, t]);
 
   useEffect(() => {
     void load();
@@ -64,7 +66,7 @@ function OAuthAppsListPanel() {
       <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
     );
   }
-  if (!isOwner || companyId == null) {
+  if (!canManage || companyId == null) {
     return (
       <Text className="font-mono text-sm text-muted-foreground">
         {t('oauthSetupPageForbidden')}

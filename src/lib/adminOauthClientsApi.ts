@@ -13,6 +13,7 @@ export type OAuthClientRow = {
   client_id: string;
   social_app_id?: number;
   tenant: string;
+  desktop_redirect_scheme: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -35,6 +36,8 @@ export type OAuthSocialAppRow = {
   is_linked: boolean;
   mapping_id: number | null;
   mapping_is_active: boolean;
+  /** Empty until desktop sign-in is turned on for this application. */
+  desktop_redirect_scheme?: string;
 };
 
 export type OAuthSocialAppsCatalog = {
@@ -113,7 +116,7 @@ export async function fetchOAuthClients(accessToken: string): Promise<OAuthClien
   if (!Array.isArray(body)) {
     throw new Error('Unexpected oauth-clients response.');
   }
-  return body as OAuthClientRow[];
+  return body.map(parseOAuthClientRow);
 }
 
 export async function createOAuthClient(
@@ -131,7 +134,7 @@ export async function createOAuthClient(
   if (!res.ok) {
     throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
   }
-  return body as OAuthClientRow;
+  return parseOAuthClientRow(body);
 }
 
 export async function updateOAuthClient(
@@ -140,6 +143,7 @@ export async function updateOAuthClient(
   payload: {
     social_app_id?: number;
     is_active?: boolean;
+    desktop_redirect_scheme?: string;
   },
 ): Promise<OAuthClientRow> {
   const res = await authFetch(`/api/v1/oauth-clients/${id}`, accessToken, {
@@ -150,7 +154,7 @@ export async function updateOAuthClient(
   if (!res.ok) {
     throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
   }
-  return body as OAuthClientRow;
+  return parseOAuthClientRow(body);
 }
 
 export async function deleteOAuthClient(accessToken: string, id: number): Promise<void> {
@@ -160,6 +164,20 @@ export async function deleteOAuthClient(accessToken: string, id: number): Promis
   if (res.status === 204) return;
   const body = await res.json().catch(() => null);
   throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
+}
+
+function readDesktopRedirectScheme(raw: unknown): string {
+  return typeof raw === 'string' ? raw : '';
+}
+
+function parseOAuthClientRow(raw: unknown): OAuthClientRow {
+  const row = (raw && typeof raw === 'object' ? raw : {}) as OAuthClientRow;
+  return {
+    ...row,
+    desktop_redirect_scheme: readDesktopRedirectScheme(
+      (raw as { desktop_redirect_scheme?: unknown } | null)?.desktop_redirect_scheme,
+    ),
+  };
 }
 
 function parseSocialAppRow(raw: unknown): OAuthSocialAppRow | null {
@@ -194,6 +212,7 @@ function parseSocialAppRow(raw: unknown): OAuthSocialAppRow | null {
     is_linked: o.is_linked !== false,
     mapping_id: typeof o.mapping_id === 'number' ? o.mapping_id : null,
     mapping_is_active: o.mapping_is_active === true,
+    desktop_redirect_scheme: readDesktopRedirectScheme(o.desktop_redirect_scheme),
   };
 }
 
@@ -233,6 +252,7 @@ export async function createOAuthSocialApp(
     client_secret: string;
     tenant?: string;
     extra_settings?: Record<string, unknown>;
+    desktop_redirect_scheme?: string;
   },
 ): Promise<OAuthSocialAppRow> {
   const res = await authFetchWithQuery(
@@ -295,6 +315,7 @@ export async function updateOAuthSocialApp(
     client_secret?: string;
     tenant?: string;
     extra_settings?: Record<string, unknown>;
+    desktop_redirect_scheme?: string;
   },
 ): Promise<OAuthSocialAppRow> {
   const res = await authFetchWithQuery(

@@ -584,7 +584,18 @@ const resources = {
       oauthSetupPageDescription:
         'Let people in this company sign in with an outside account. Pick a provider, create an app there, then paste its credentials here.',
       oauthSetupPageForbidden:
-        'You need company-owner access to initialize OAuth apps for this company.',
+        'You need company-owner or staff access to manage OAuth apps for this company.',
+      oauthDesktopSchemeLabel: 'Desktop sign-in scheme',
+      oauthDesktopSchemeColumn: 'Desktop scheme',
+      oauthDesktopSchemeOff: 'off',
+      oauthDesktopSchemeHelp:
+        'Set a lowercase scheme to turn on desktop sign-in for this application. Leave it empty to keep desktop sign-in off. The deep link is',
+      oauthDesktopSchemeDocsLead: 'See',
+      oauthDesktopSchemeDocs: 'Desktop apps',
+      oauthDesktopSchemeLowercase: 'Scheme must be lowercase.',
+      oauthDesktopSchemeRfc:
+        'Scheme must be an RFC 3986 scheme: a letter, then letters, digits, plus, hyphen, or dot.',
+      oauthDesktopSchemeDenied: 'This scheme is not allowed.',
       oauthSetupCatalogTitle: 'Configured providers',
       oauthSetupCatalogDescription:
         'Sign-in providers set up for this company. Add one or edit credentials.',
@@ -2307,7 +2318,18 @@ const resources = {
       oauthSetupPageDescription:
         'Permettez aux personnes de cette entreprise de se connecter avec un compte externe. Choisissez un fournisseur, créez une application chez lui, puis collez les identifiants ici.',
       oauthSetupPageForbidden:
-        'Il faut être propriétaire de l’entreprise pour initialiser les apps OAuth de cette société.',
+        'Il faut être propriétaire ou staff pour gérer les apps OAuth de cette société.',
+      oauthDesktopSchemeLabel: 'Schéma de connexion bureau',
+      oauthDesktopSchemeColumn: 'Schéma bureau',
+      oauthDesktopSchemeOff: 'inactif',
+      oauthDesktopSchemeHelp:
+        'Définissez un schéma en minuscules pour activer la connexion bureau de cette application. Laissez vide pour la garder inactive. Le lien profond est',
+      oauthDesktopSchemeDocsLead: 'Voir',
+      oauthDesktopSchemeDocs: 'Applications de bureau',
+      oauthDesktopSchemeLowercase: 'Le schéma doit être en minuscules.',
+      oauthDesktopSchemeRfc:
+        'Le schéma doit être un schéma RFC 3986 : une lettre, puis des lettres, des chiffres, un plus, un trait d’union ou un point.',
+      oauthDesktopSchemeDenied: 'Ce schéma n’est pas autorisé.',
       oauthSetupCatalogTitle: 'Fournisseurs configurés',
       oauthSetupCatalogDescription:
         'Fournisseurs de connexion configurés pour cette entreprise. Ajoutez-en un ou modifiez les identifiants.',

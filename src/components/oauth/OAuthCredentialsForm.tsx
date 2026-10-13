@@ -1,12 +1,18 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import type { OAuthCatalogProvider } from '@/lib/oauthProviderCatalogTypes';
 import type { OAuthFieldErrors } from '@/lib/oauthApiErrors';
+import {
+  IDENTITY_DESKTOP_APPS_DOCS_URL,
+  desktopRedirectSchemeIssue,
+  desktopSchemeIssueMessageKey,
+  desktopSignInDeepLink,
+} from '@/lib/desktopRedirectScheme';
 import { extraSettingHelp, extraSettingLabel } from '@/lib/oauthExtraSettingCopy';
 import { OAuthCallbackUrlCopy } from '@/components/oauth/OAuthCallbackUrlCopy';
 import { OAuthProviderIconFromCatalog } from '@/components/oauth/OAuthProviderIcon';
@@ -17,6 +23,7 @@ export type OAuthCredentialsFormValues = {
   client_secret: string;
   tenant: string;
   extra_settings: Record<string, string>;
+  desktop_redirect_scheme: string;
 };
 
 type Props = {
@@ -73,6 +80,11 @@ export function OAuthCredentialsForm({
   const canSubmitCreate =
     mode === 'create' && values.client_id.trim() && values.client_secret.trim();
   const canSubmitEdit = mode === 'edit' && values.client_id.trim();
+  const scheme = values.desktop_redirect_scheme ?? '';
+  const schemeIssue = desktopRedirectSchemeIssue(scheme);
+  const schemeError =
+    fieldErrors.desktop_redirect_scheme ||
+    (schemeIssue ? t(desktopSchemeIssueMessageKey(schemeIssue)) : '');
 
   return (
     <div className="space-y-6">
@@ -204,6 +216,50 @@ export function OAuthCredentialsForm({
             </div>
           );
         })}
+        <div className="space-y-1 sm:col-span-2">
+          <label
+            htmlFor="desktop-redirect-scheme"
+            className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground"
+          >
+            {t('oauthDesktopSchemeLabel')}
+          </label>
+          <Input
+            id="desktop-redirect-scheme"
+            value={scheme}
+            onChange={(e) => onChange({ ...values, desktop_redirect_scheme: e.target.value })}
+            className="font-mono text-sm"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            aria-invalid={Boolean(schemeError)}
+            aria-describedby="desktop-redirect-scheme-help"
+          />
+          <Text
+            id="desktop-redirect-scheme-help"
+            className="font-mono text-[10px] text-muted-foreground"
+          >
+            {t('oauthDesktopSchemeHelp')}{' '}
+            <code className="text-foreground">{desktopSignInDeepLink(scheme)}</code>
+            {'. '}
+            {t('oauthDesktopSchemeDocsLead')}{' '}
+            <a
+              href={IDENTITY_DESKTOP_APPS_DOCS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline-offset-2 hover:underline"
+            >
+              {t('oauthDesktopSchemeDocs')}
+              <ExternalLink
+                className="ml-0.5 inline h-3 w-3"
+                aria-hidden
+              />
+            </a>
+            {'.'}
+          </Text>
+          {schemeError ? (
+            <Text className="font-mono text-xs text-destructive">{schemeError}</Text>
+          ) : null}
+        </div>
       </div>
 
       <OAuthWizardStepActions
@@ -219,7 +275,9 @@ export function OAuthCredentialsForm({
               : t('oauthSetupSaveAction')
         }
         onPrimary={onSubmit}
-        primaryDisabled={mode === 'create' ? !canSubmitCreate : !canSubmitEdit}
+        primaryDisabled={
+          (mode === 'create' ? !canSubmitCreate : !canSubmitEdit) || Boolean(schemeIssue)
+        }
         busy={busy}
         extraActions={
           mode === 'edit' && onDelete ? (

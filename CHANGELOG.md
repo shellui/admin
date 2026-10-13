@@ -23,6 +23,7 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ## [Unreleased]
 
+- Company owners and staff set a desktop sign-in scheme on an OAuth application.
 - Staff see a Django admin link for Email, and Identity Statistics moves to the end of Identity, before Django admin.
 
 ## [0.6.0] - 2026-10-12
