@@ -7,6 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@shellui/core/ContentView': path.resolve(__dirname, './src/test/contentViewStub.tsx'),
     },
   },
   test: {
