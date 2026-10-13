@@ -497,7 +497,7 @@ const resources = {
       actionsAttemptScheduledRun: 'Scheduled job run #{{id}}',
       companyPageTitle: 'Organization',
       companyPageDescription:
-        'Edit your company record for this tenant. Requires company-owner access (JWT `user_metadata.is_company_owner`).',
+        'Company owners edit the record and how people join. Owners and staff set desktop sign-in schemes.',
       companyPageForbidden:
         'You need to be a company owner to change these settings. Ask an owner to grant access, or use the Dashboard if you have staff privileges.',
       dashboardCompanySectionLabel: 'Company settings',
@@ -531,6 +531,17 @@ const resources = {
       dashboardCompanyLoadError: 'Could not load company.',
       dashboardCompanySaveError: 'Could not save company.',
       dashboardCompanyMissing: 'No company matched your session tenant.',
+      companyDesktopSchemesLabel: 'Desktop sign-in schemes',
+      companyDesktopSchemeAdd: 'Add scheme',
+      companyDesktopSchemeRemove: 'Remove scheme',
+      companyDesktopSchemesHelp:
+        'Add a lowercase scheme for each desktop app. An empty list turns desktop sign-in off. The deep link is',
+      companyDesktopSchemesDocsLead: 'See',
+      companyDesktopSchemesDocs: 'Desktop apps',
+      companyDesktopSchemeLowercase: 'Scheme must be lowercase.',
+      companyDesktopSchemeRfc:
+        'Scheme must be an RFC 3986 scheme: a letter, then letters, digits, plus, hyphen, or dot.',
+      companyDesktopSchemeDenied: 'This scheme is not allowed.',
       loginRedirectsSectionLabel: 'OAuth redirect allow list',
       loginRedirectsTitle: 'Login redirect URLs',
       loginRedirectsDescription:
@@ -585,17 +596,6 @@ const resources = {
         'Let people in this company sign in with an outside account. Pick a provider, create an app there, then paste its credentials here.',
       oauthSetupPageForbidden:
         'You need company-owner or staff access to manage OAuth apps for this company.',
-      oauthDesktopSchemeLabel: 'Desktop sign-in scheme',
-      oauthDesktopSchemeColumn: 'Desktop scheme',
-      oauthDesktopSchemeOff: 'off',
-      oauthDesktopSchemeHelp:
-        'Set a lowercase scheme to turn on desktop sign-in for this application. Leave it empty to keep desktop sign-in off. The deep link is',
-      oauthDesktopSchemeDocsLead: 'See',
-      oauthDesktopSchemeDocs: 'Desktop apps',
-      oauthDesktopSchemeLowercase: 'Scheme must be lowercase.',
-      oauthDesktopSchemeRfc:
-        'Scheme must be an RFC 3986 scheme: a letter, then letters, digits, plus, hyphen, or dot.',
-      oauthDesktopSchemeDenied: 'This scheme is not allowed.',
       oauthSetupCatalogTitle: 'Configured providers',
       oauthSetupCatalogDescription:
         'Sign-in providers set up for this company. Add one or edit credentials.',
@@ -2231,7 +2231,7 @@ const resources = {
       actionsAttemptScheduledRun: 'Exécution de tâche planifiée n° {{id}}',
       companyPageTitle: 'Organisation',
       companyPageDescription:
-        'Modifiez la fiche entreprise pour ce tenant. Accès réservé aux propriétaires (`user_metadata.is_company_owner` dans le JWT).',
+        'Les propriétaires modifient la fiche et les règles d’accès. Les propriétaires et le staff définissent les schémas de connexion bureau.',
       companyPageForbidden:
         'Il faut être propriétaire de l’entreprise pour modifier ces paramètres. Demandez à un propriétaire, ou utilisez le tableau de bord si vous avez le statut staff.',
       dashboardCompanySectionLabel: 'Paramètres entreprise',
@@ -2265,6 +2265,17 @@ const resources = {
       dashboardCompanyLoadError: 'Impossible de charger l’entreprise.',
       dashboardCompanySaveError: 'Impossible d’enregistrer l’entreprise.',
       dashboardCompanyMissing: 'Aucune entreprise ne correspond au tenant de votre session.',
+      companyDesktopSchemesLabel: 'Schémas de connexion bureau',
+      companyDesktopSchemeAdd: 'Ajouter un schéma',
+      companyDesktopSchemeRemove: 'Retirer le schéma',
+      companyDesktopSchemesHelp:
+        'Ajoutez un schéma en minuscules pour chaque application de bureau. Une liste vide désactive la connexion bureau. Le lien profond est',
+      companyDesktopSchemesDocsLead: 'Voir',
+      companyDesktopSchemesDocs: 'Applications de bureau',
+      companyDesktopSchemeLowercase: 'Le schéma doit être en minuscules.',
+      companyDesktopSchemeRfc:
+        'Le schéma doit être un schéma RFC 3986 : une lettre, puis des lettres, des chiffres, un plus, un trait d’union ou un point.',
+      companyDesktopSchemeDenied: 'Ce schéma n’est pas autorisé.',
       loginRedirectsSectionLabel: 'Liste blanche des redirections OAuth',
       loginRedirectsTitle: 'URL de retour de connexion',
       loginRedirectsDescription:
@@ -2319,17 +2330,6 @@ const resources = {
         'Permettez aux personnes de cette entreprise de se connecter avec un compte externe. Choisissez un fournisseur, créez une application chez lui, puis collez les identifiants ici.',
       oauthSetupPageForbidden:
         'Il faut être propriétaire ou staff pour gérer les apps OAuth de cette société.',
-      oauthDesktopSchemeLabel: 'Schéma de connexion bureau',
-      oauthDesktopSchemeColumn: 'Schéma bureau',
-      oauthDesktopSchemeOff: 'inactif',
-      oauthDesktopSchemeHelp:
-        'Définissez un schéma en minuscules pour activer la connexion bureau de cette application. Laissez vide pour la garder inactive. Le lien profond est',
-      oauthDesktopSchemeDocsLead: 'Voir',
-      oauthDesktopSchemeDocs: 'Applications de bureau',
-      oauthDesktopSchemeLowercase: 'Le schéma doit être en minuscules.',
-      oauthDesktopSchemeRfc:
-        'Le schéma doit être un schéma RFC 3986 : une lettre, puis des lettres, des chiffres, un plus, un trait d’union ou un point.',
-      oauthDesktopSchemeDenied: 'Ce schéma n’est pas autorisé.',
       oauthSetupCatalogTitle: 'Fournisseurs configurés',
       oauthSetupCatalogDescription:
         'Fournisseurs de connexion configurés pour cette entreprise. Ajoutez-en un ou modifiez les identifiants.',

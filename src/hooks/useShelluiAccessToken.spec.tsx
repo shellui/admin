@@ -1,0 +1,148 @@
+import { act, cleanup, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  reconcileShellAccessToken,
+  shellAccessTokenRefreshDue,
+  useShelluiAccessToken,
+} from '@/hooks/useShelluiAccessToken';
+
+const sdk = vi.hoisted(() => {
+  const listeners: { type: string; fn: (message: { payload?: unknown }) => void }[] = [];
+  return {
+    listeners,
+    sendMessageToParent: vi.fn(),
+    initialSettings: {
+      accessToken: null as string | null,
+      user: { id: '1' } as { id: string } | null,
+    },
+  };
+});
+
+vi.mock('@shellui/sdk', () => ({
+  default: {
+    get initialSettings() {
+      return sdk.initialSettings;
+    },
+  },
+  addMessageListener: (type: string, fn: (message: { payload?: unknown }) => void) => {
+    const entry = { type, fn };
+    sdk.listeners.push(entry);
+    return () => {
+      const index = sdk.listeners.indexOf(entry);
+      if (index >= 0) sdk.listeners.splice(index, 1);
+    };
+  },
+  sendMessageToParent: (message: unknown) => {
+    sdk.sendMessageToParent(message);
+    return true;
+  },
+}));
+
+function jwtWithExp(exp: number): string {
+  const body = btoa(JSON.stringify({ exp }))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+  return `h.${body}.s`;
+}
+
+function emit(type: string, settings: Record<string, unknown>) {
+  for (const entry of sdk.listeners) {
+    if (entry.type === type) entry.fn({ payload: { settings } });
+  }
+}
+
+const REQUEST = { type: 'SHELLUI_SETTINGS_REQUESTED', payload: {} };
+
+describe('shellAccessTokenRefreshDue', () => {
+  const now = 1_700_000_000;
+
+  it('is due when the token is missing or exp is within 90s', () => {
+    expect(shellAccessTokenRefreshDue(null, now)).toBe(true);
+    expect(shellAccessTokenRefreshDue('', now)).toBe(true);
+    expect(shellAccessTokenRefreshDue(jwtWithExp(now + 90), now)).toBe(true);
+    expect(shellAccessTokenRefreshDue(jwtWithExp(now + 91), now)).toBe(false);
+    expect(shellAccessTokenRefreshDue('opaque-token', now)).toBe(false);
+  });
+});
+
+describe('reconcileShellAccessToken', () => {
+  it('keeps the previous token until a payload with user null', () => {
+    const prev = 'previous-token';
+    expect(reconcileShellAccessToken(prev, { user: { id: '1' } } as never)).toBe(prev);
+    expect(reconcileShellAccessToken(prev, { user: null } as never)).toBeNull();
+    expect(
+      reconcileShellAccessToken(prev, { user: { id: '1' }, accessToken: 'next' } as never),
+    ).toBe('next');
+  });
+});
+
+describe('useShelluiAccessToken', () => {
+  beforeEach(() => {
+    sdk.listeners.splice(0, sdk.listeners.length);
+    sdk.sendMessageToParent.mockClear();
+    sdk.initialSettings = { accessToken: jwtWithExp(Date.now() / 1000 + 3600), user: { id: '1' } };
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('posts SHELLUI_SETTINGS_REQUESTED once after subscribing', () => {
+    renderHook(() => useShelluiAccessToken());
+    expect(sdk.listeners.map((entry) => entry.type).sort()).toEqual([
+      'SHELLUI_SETTINGS',
+      'SHELLUI_SETTINGS_UPDATED',
+    ]);
+    expect(sdk.sendMessageToParent).toHaveBeenCalledTimes(1);
+    expect(sdk.sendMessageToParent).toHaveBeenCalledWith(REQUEST);
+  });
+
+  it('asks again on show when the token is missing or exp is within 90s', () => {
+    sdk.initialSettings = { accessToken: null, user: null };
+    const { result, rerender } = renderHook(() => useShelluiAccessToken());
+    sdk.sendMessageToParent.mockClear();
+
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.dispatchEvent(new Event('focus'));
+    window.dispatchEvent(new Event('pageshow'));
+    expect(sdk.sendMessageToParent).toHaveBeenCalledTimes(3);
+
+    act(() => {
+      emit('SHELLUI_SETTINGS', {
+        user: { id: '1' },
+        accessToken: jwtWithExp(Date.now() / 1000 + 30),
+      });
+    });
+    rerender();
+    sdk.sendMessageToParent.mockClear();
+    window.dispatchEvent(new Event('focus'));
+    expect(sdk.sendMessageToParent).toHaveBeenCalledTimes(1);
+    expect(result.current).toContain('.');
+  });
+
+  it('does not ask again when the token expires later than 90s', () => {
+    renderHook(() => useShelluiAccessToken());
+    sdk.sendMessageToParent.mockClear();
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.dispatchEvent(new Event('focus'));
+    window.dispatchEvent(new Event('pageshow'));
+    expect(sdk.sendMessageToParent).not.toHaveBeenCalled();
+  });
+
+  it('keeps an omitted access token while user is set, then clears on user null', () => {
+    const token = jwtWithExp(Date.now() / 1000 + 3600);
+    sdk.initialSettings = { accessToken: token, user: { id: '1' } };
+    const { result } = renderHook(() => useShelluiAccessToken());
+
+    act(() => {
+      emit('SHELLUI_SETTINGS', { user: { id: '1' } });
+    });
+    expect(result.current).toBe(token);
+
+    act(() => {
+      emit('SHELLUI_SETTINGS_UPDATED', { user: null });
+    });
+    expect(result.current).toBeNull();
+  });
+});

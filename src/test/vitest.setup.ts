@@ -7,4 +7,5 @@ vi.mock('@shellui/sdk', () => ({
     },
   },
   addMessageListener: () => () => {},
+  sendMessageToParent: () => false,
 }));

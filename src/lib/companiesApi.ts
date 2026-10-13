@@ -9,7 +9,19 @@ export type CompanyDto = {
   owners: number[];
   access_mode: CompanyAccessMode;
   allowed_email_domains: string[];
+  /** Empty list means desktop sign-in is off for every method. */
+  desktop_redirect_schemes: string[];
 };
+
+export class CompanyFieldError extends Error {
+  readonly fieldErrors: Record<string, string>;
+
+  constructor(message: string, fieldErrors: Record<string, string>) {
+    super(message);
+    this.name = 'CompanyFieldError';
+    this.fieldErrors = fieldErrors;
+  }
+}
 
 function parseErrorMessage(body: unknown): string | null {
   if (!body || typeof body !== 'object') return null;
@@ -21,6 +33,50 @@ function parseErrorMessage(body: unknown): string | null {
   if (Array.isArray(v) && typeof v[0] === 'string') return `${firstKey}: ${v[0]}`;
   if (typeof v === 'string') return v;
   return null;
+}
+
+function firstFieldMessage(value: unknown): string | null {
+  if (typeof value === 'string' && value.trim()) return value.trim();
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const nested = firstFieldMessage(item);
+      if (nested) return nested;
+    }
+    return null;
+  }
+  if (value && typeof value === 'object') {
+    for (const item of Object.values(value as Record<string, unknown>)) {
+      const nested = firstFieldMessage(item);
+      if (nested) return nested;
+    }
+  }
+  return null;
+}
+
+function readFieldErrors(body: unknown): Record<string, string> {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return {};
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(body as Record<string, unknown>)) {
+    if (key === 'error' || key === 'detail' || key === 'error_code') continue;
+    const message = firstFieldMessage(value);
+    if (message) out[key] = message;
+  }
+  return out;
+}
+
+function readSchemes(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((value): value is string => typeof value === 'string');
+}
+
+function parseCompany(raw: unknown): CompanyDto {
+  const row = (raw && typeof raw === 'object' ? raw : {}) as CompanyDto;
+  return {
+    ...row,
+    desktop_redirect_schemes: readSchemes(
+      (raw as { desktop_redirect_schemes?: unknown } | null)?.desktop_redirect_schemes,
+    ),
+  };
 }
 
 async function companiesAuthFetch(
@@ -48,7 +104,7 @@ export async function fetchMemberCompanies(accessToken: string): Promise<Company
   if (!Array.isArray(body)) {
     throw new Error('Unexpected companies response.');
   }
-  return body as CompanyDto[];
+  return body.map(parseCompany);
 }
 
 export async function patchCompany(
@@ -58,6 +114,7 @@ export async function patchCompany(
     name?: string;
     access_mode?: CompanyAccessMode;
     allowed_email_domains?: string[];
+    desktop_redirect_schemes?: string[];
   },
 ): Promise<CompanyDto> {
   const res = await companiesAuthFetch(`/api/v1/companies/${companyId}/`, accessToken, {
@@ -66,7 +123,12 @@ export async function patchCompany(
   });
   const body = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new Error(parseErrorMessage(body) ?? `HTTP ${res.status}`);
+    const message = parseErrorMessage(body) ?? `HTTP ${res.status}`;
+    const fieldErrors = readFieldErrors(body);
+    if (Object.keys(fieldErrors).length > 0) {
+      throw new CompanyFieldError(message, fieldErrors);
+    }
+    throw new Error(message);
   }
-  return body as CompanyDto;
+  return parseCompany(body);
 }

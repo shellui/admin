@@ -2,14 +2,17 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Text } from '@/components/ui/text';
 import { CompanyAuthMethodsSection } from '@/components/CompanyAuthMethodsSection';
+import { CompanyDesktopSchemesSection } from '@/components/CompanyDesktopSchemesSection';
 import { DashboardCompanySection } from '@/components/DashboardCompanySection';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
-import { getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
+import { getIsCompanyOwnerFromJwt, getIsStaffFromJwt } from '@/lib/jwtCompany';
 
 export function CompanyPage() {
   const { t } = useTranslation();
   const accessToken = useShelluiAccessToken();
   const isOwner = Boolean(accessToken && getIsCompanyOwnerFromJwt(accessToken));
+  const isStaff = Boolean(accessToken && getIsStaffFromJwt(accessToken));
+  const canEditSchemes = isOwner || isStaff;
 
   return (
     <div className="w-full space-y-8">
@@ -32,7 +35,7 @@ export function CompanyPage() {
         <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
       )}
 
-      {accessToken && !isOwner && (
+      {accessToken && !isOwner && !isStaff && (
         <Text className="max-w-3xl font-mono text-sm text-muted-foreground">
           {t('companyPageForbidden')}
         </Text>
@@ -43,6 +46,10 @@ export function CompanyPage() {
           <DashboardCompanySection accessToken={accessToken} />
           <CompanyAuthMethodsSection accessToken={accessToken} />
         </>
+      ) : null}
+
+      {accessToken && canEditSchemes ? (
+        <CompanyDesktopSchemesSection accessToken={accessToken} />
       ) : null}
     </div>
   );
