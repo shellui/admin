@@ -4,6 +4,7 @@ import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter } from 'react-router-dom';
 import shellui from '@shellui/sdk';
 import i18n from '@/i18n';
+import { appVersionLabel } from '@/lib/appVersion';
 import { AdminShellLayout } from '@/layouts/AdminShellLayout';
 
 const hooks = vi.hoisted(() => ({
@@ -99,5 +100,22 @@ describe('service Django admin links', () => {
     expect(screen.getByRole('link', { name: /Django admin/ }).getAttribute('href')).toBe(
       'http://localhost:8000/admin/',
     );
+  });
+});
+
+describe('sidebar version', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('pins the package version at the bottom of the sidebar', () => {
+    renderShell();
+    const version = screen.getByText(appVersionLabel);
+    const aside = version.closest('aside');
+    expect(aside?.lastElementChild).toBe(version);
+    expect(version.className).toContain('text-center');
+    expect(version.className).toContain('text-xs');
+    expect(version.className).toContain('text-muted-foreground');
+    expect(appVersionLabel).toMatch(/^v\d+\.\d+\.\d+/);
   });
 });
