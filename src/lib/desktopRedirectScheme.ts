@@ -99,11 +99,11 @@ export type DesktopSchemeIssue = 'lowercase' | 'shape' | 'denied';
 export function desktopSchemeIssueMessageKey(issue: DesktopSchemeIssue): string {
   switch (issue) {
     case 'lowercase':
-      return 'oauthDesktopSchemeLowercase';
+      return 'companyDesktopSchemeLowercase';
     case 'shape':
-      return 'oauthDesktopSchemeRfc';
+      return 'companyDesktopSchemeRfc';
     case 'denied':
-      return 'oauthDesktopSchemeDenied';
+      return 'companyDesktopSchemeDenied';
   }
 }
 

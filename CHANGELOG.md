@@ -21,6 +21,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [0.6.2] - 2026-10-13
+
+Requires identity-service 0.8.1.
+
+### Desktop sign-in schemes
+
+- Desktop sign-in schemes move onto the company. Owners and staff edit the list, and an empty list turns desktop sign-in off.
+
+### Shell session
+
+- Admin asks the shell for a session again when the tab is shown and the access token is missing or expires within 90s.
+
+### Sidebar
+
+- Every Django admin link in the sidebar uses the same icon.
+
 ## [0.6.1] - 2026-10-13
 
 Requires identity-service 0.8.0 for the desktop scheme field.
