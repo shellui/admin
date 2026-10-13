@@ -21,10 +21,25 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
-## [Unreleased]
+## [0.6.1] - 2026-10-13
+
+Requires identity-service 0.8.0 for the desktop scheme field.
+
+### Desktop sign-in scheme
 
 - Company owners and staff set a desktop sign-in scheme on an OAuth application.
-- Staff see a Django admin link for Email, and Identity Statistics moves to the end of Identity, before Django admin.
+
+### Email Django admin
+
+- Staff see a Django admin link for Email.
+
+### Identity statistics
+
+- Identity Statistics moves to the end of Identity, before Django admin.
+
+### Sidebar
+
+- The admin version number shows at the bottom of the sidebar.
 
 ## [0.6.0] - 2026-10-12
 
