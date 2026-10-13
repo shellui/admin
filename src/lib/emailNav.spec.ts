@@ -51,6 +51,9 @@ describe('email and webhooks route rename', () => {
       'email/link-hosts',
       'email/statistics',
     ]);
+    const identityPaths =
+      identity && 'items' in identity ? identity.items.map((item) => item.path) : [];
+    expect(identityPaths.slice(-3)).toEqual(['identity/statistics', 'swagger', 'redoc']);
   });
 
   it('translates the shared sidebar label in English and French', async () => {

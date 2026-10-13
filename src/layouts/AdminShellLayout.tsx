@@ -1017,6 +1017,10 @@ export function AdminShellLayout() {
     : null;
   const storageDjangoAdminHref = storageUrl ? `${storageUrl}/admin/` : null;
   const hostingDjangoAdminHref = hostingUrl ? `${hostingUrl}/admin/` : null;
+  const emailUrl = isEmailAdminEnabled(emailSettings)
+    ? emailSettings.url?.trim().replace(/\/+$/, '') || null
+    : null;
+  const emailDjangoAdminHref = emailUrl ? `${emailUrl}/admin/` : null;
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed());
   const [mobilePane, setMobilePane] = useState<'menu' | 'content'>(() =>
@@ -1059,10 +1063,21 @@ export function AdminShellLayout() {
         }
         if (isStandaloneEmailGroupTitle(group.title)) {
           if (!isEmailAdminEnabled(emailSettings)) return null;
+          const items = [...group.items];
+          if (isStaff && emailDjangoAdminHref) {
+            items.push({
+              key: 'navEmailDjangoAdmin',
+              icon: Mail,
+              label: t('navEmailDjangoAdmin'),
+              openIn: 'external',
+              href: emailDjangoAdminHref,
+            });
+          }
           return {
             ...group,
             title: t('navEmailGroup'),
             subtitle: emailSettings.url,
+            items,
           };
         }
         return group;
@@ -1194,6 +1209,7 @@ export function AdminShellLayout() {
   }, [
     authBackendBaseUrl,
     djangoAdminHref,
+    emailDjangoAdminHref,
     filesUrl,
     groups,
     hostingDjangoAdminHref,

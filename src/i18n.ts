@@ -34,6 +34,7 @@ const resources = {
       navHostingStatistics: 'Statistics',
       navIdentityStatistics: 'Statistics',
       navHostingDjangoAdmin: 'Django admin',
+      navEmailDjangoAdmin: 'Django admin',
       hostingMissingTitle: 'Hosting URL not configured',
       hostingMissingDescription:
         'Set hosting.url in shellui.config.json (or .ts) (for example http://localhost:8002). Hide Admin → Hosting with hosting.showInAdmin: false.',
@@ -1751,6 +1752,7 @@ const resources = {
       navHostingStatistics: 'Statistiques',
       navIdentityStatistics: 'Statistiques',
       navHostingDjangoAdmin: 'Admin Django',
+      navEmailDjangoAdmin: 'Admin Django',
       hostingMissingTitle: 'URL d’hébergement non configurée',
       hostingMissingDescription:
         'Définissez hosting.url dans shellui.config.json (ou .ts) (par ex. http://localhost:8002). Masquez Admin → Hébergement avec hosting.showInAdmin: false.',

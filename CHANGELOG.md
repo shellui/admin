@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [Unreleased]
+
+- Staff see a Django admin link for Email, and Identity Statistics moves to the end of Identity, before Django admin.
+
 ## [0.6.0] - 2026-10-12
 
 Requires identity-service 0.7.0, hosting-service 0.6.1, storage-service 0.5.0, and email-service 0.2.0.
