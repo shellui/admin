@@ -130,6 +130,21 @@ describe('useShelluiAccessToken', () => {
     expect(sdk.sendMessageToParent).not.toHaveBeenCalled();
   });
 
+  it('stores the token the shell sends after a resume request', () => {
+    const stale = jwtWithExp(Date.now() / 1000 + 30);
+    sdk.initialSettings = { accessToken: stale, user: { id: '1' } };
+    const { result } = renderHook(() => useShelluiAccessToken());
+    expect(result.current).toBe(stale);
+
+    const fresh = jwtWithExp(Date.now() / 1000 + 3600);
+    act(() => {
+      window.dispatchEvent(new Event('focus'));
+      emit('SHELLUI_SETTINGS', { user: { id: '1' }, accessToken: fresh });
+    });
+    expect(sdk.sendMessageToParent).toHaveBeenCalledWith(REQUEST);
+    expect(result.current).toBe(fresh);
+  });
+
   it('keeps an omitted access token while user is set, then clears on user null', () => {
     const token = jwtWithExp(Date.now() / 1000 + 3600);
     sdk.initialSettings = { accessToken: token, user: { id: '1' } };

@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [Unreleased]
+
+### 🔒 Security
+
+- Admin chrome omits `accessToken` when it forwards shell settings to a nested frame, unless that frame is a same-origin admin page or its URL is marked `safeForAuthToken`.
+
 ## [0.6.2] - 2026-10-13
 
 Requires identity-service 0.8.1.
