@@ -927,8 +927,16 @@ function AdminExternalContentFrame({
           : `${baseUrl.replace(/\/+$/, '')}/#/`
         : baseUrl,
       useHashRouter: currentItem.useHashRouter === true,
+      ...(currentItem.safeForAuthToken ? { safeForAuthToken: true as const } : {}),
     }),
-    [baseUrl, currentItem.label, currentItem.url, currentItem.useHashRouter, pathPrefix],
+    [
+      baseUrl,
+      currentItem.label,
+      currentItem.safeForAuthToken,
+      currentItem.url,
+      currentItem.useHashRouter,
+      pathPrefix,
+    ],
   );
 
   return (
