@@ -4,8 +4,10 @@ import { AppWindow, ExternalLink, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { CompanyFieldError, fetchMemberCompanies, patchCompany } from '@/lib/companiesApi';
+import { cn } from '@/lib/utils';
 import {
   DESKTOP_SIGN_IN_DEEP_LINK_PLACEHOLDER,
   IDENTITY_DESKTOP_APPS_DOCS_URL,
@@ -17,6 +19,8 @@ import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
 
 type Props = {
   accessToken: string;
+  /** Owners and staff can change schemes and the dev-scheme flag. */
+  canEdit?: boolean;
 };
 
 function committedSchemes(list: string[]): string[] {
@@ -36,11 +40,13 @@ function deepLinkText(list: string[]): string {
   return [...new Set(list.map((scheme) => desktopSignInDeepLink(scheme)))].join(', ');
 }
 
-export function CompanyDesktopSchemesSection({ accessToken }: Props) {
+export function CompanyDesktopSchemesSection({ accessToken, canEdit = true }: Props) {
   const { t } = useTranslation();
   const companyId = getCompanyIdFromJwt(accessToken);
   const [saved, setSaved] = useState<string[]>([]);
   const [schemes, setSchemes] = useState<string[]>([]);
+  const [savedAllowDev, setSavedAllowDev] = useState(false);
+  const [allowDev, setAllowDev] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,9 +69,12 @@ export function CompanyDesktopSchemesSection({ accessToken }: Props) {
       const rows = await fetchMemberCompanies(accessToken);
       const row = rows.find((company) => company.id === companyId) ?? null;
       const next = row?.desktop_redirect_schemes ?? [];
+      const nextAllowDev = row?.allow_desktop_dev_scheme === true;
       setFound(Boolean(row));
       setSaved(next);
       setSchemes(next);
+      setSavedAllowDev(nextAllowDev);
+      setAllowDev(nextAllowDev);
     } catch (e) {
       setFound(false);
       setError(e instanceof Error ? e.message : t('dashboardCompanyLoadError'));
@@ -83,7 +92,10 @@ export function CompanyDesktopSchemesSection({ accessToken }: Props) {
   );
   const hasIssue = issues.some(Boolean);
   const nextList = committedSchemes(schemes);
-  const dirty = nextList.join('\n') !== saved.join('\n') || hasIssue;
+  const listEmpty = nextList.length === 0;
+  const dirty = nextList.join('\n') !== saved.join('\n') || allowDev !== savedAllowDev || hasIssue;
+  const devSchemeReadOnly = !canEdit;
+  const devSchemeDisabled = devSchemeReadOnly || saving || listEmpty;
 
   const updateScheme = (index: number, value: string) => {
     setSchemes((prev) => prev.map((scheme, i) => (i === index ? value : scheme)));
@@ -91,8 +103,16 @@ export function CompanyDesktopSchemesSection({ accessToken }: Props) {
     setSaveMessage(null);
   };
 
+  const toggleDevScheme = () => {
+    if (devSchemeDisabled) return;
+    setAllowDev((prev) => !prev);
+    setFieldError(null);
+    setError(null);
+    setSaveMessage(null);
+  };
+
   const handleSave = useCallback(async () => {
-    if (!companyId || hasIssue) return;
+    if (!canEdit || !companyId || hasIssue) return;
     setSaving(true);
     setError(null);
     setFieldError(null);
@@ -100,10 +120,14 @@ export function CompanyDesktopSchemesSection({ accessToken }: Props) {
     try {
       const updated = await patchCompany(accessToken, companyId, {
         desktop_redirect_schemes: nextList,
+        allow_desktop_dev_scheme: allowDev,
       });
       const stored = updated.desktop_redirect_schemes ?? [];
+      const storedAllowDev = updated.allow_desktop_dev_scheme === true;
       setSaved(stored);
       setSchemes(stored);
+      setSavedAllowDev(storedAllowDev);
+      setAllowDev(storedAllowDev);
       setFound(true);
       setSaveMessage(t('dashboardCompanySaved'));
     } catch (e) {
@@ -116,7 +140,7 @@ export function CompanyDesktopSchemesSection({ accessToken }: Props) {
     } finally {
       setSaving(false);
     }
-  }, [accessToken, companyId, hasIssue, nextList, t]);
+  }, [accessToken, allowDev, canEdit, companyId, hasIssue, nextList, t]);
 
   if (loading) {
     return (
@@ -185,6 +209,8 @@ export function CompanyDesktopSchemesSection({ accessToken }: Props) {
                       autoCapitalize="none"
                       autoCorrect="off"
                       spellCheck={false}
+                      readOnly={!canEdit}
+                      disabled={!canEdit}
                       aria-invalid={Boolean(rowError || fieldError)}
                       aria-describedby="company-desktop-schemes-help"
                     />
@@ -192,33 +218,76 @@ export function CompanyDesktopSchemesSection({ accessToken }: Props) {
                       <Text className="font-mono text-xs text-destructive">{rowError}</Text>
                     ) : null}
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => {
-                      setSchemes((prev) => prev.filter((_, i) => i !== index));
-                      setFieldError(null);
-                      setSaveMessage(null);
-                    }}
-                  >
-                    {t('companyDesktopSchemeRemove')}
-                  </Button>
+                  {canEdit ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setSchemes((prev) => prev.filter((_, i) => i !== index));
+                        setFieldError(null);
+                        setSaveMessage(null);
+                      }}
+                    >
+                      {t('companyDesktopSchemeRemove')}
+                    </Button>
+                  ) : null}
                 </div>
               );
             })}
-            <Button
+            {canEdit ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  setSchemes((prev) => [...prev, '']);
+                  setFieldError(null);
+                  setSaveMessage(null);
+                }}
+              >
+                {t('companyDesktopSchemeAdd')}
+              </Button>
+            ) : null}
+          </div>
+          <div className="flex items-start justify-between gap-3 rounded-md border border-border/70 px-3 py-3">
+            <div className="min-w-0 space-y-1">
+              <Label
+                id="company-desktop-dev-scheme-label"
+                htmlFor="company-desktop-dev-scheme"
+              >
+                {t('companyDesktopDevSchemeLabel')}
+              </Label>
+              <Text
+                id="company-desktop-dev-scheme-help"
+                className="font-mono text-[10px] text-muted-foreground"
+              >
+                {t('companyDesktopDevSchemeHelp')}
+              </Text>
+            </div>
+            <button
+              id="company-desktop-dev-scheme"
               type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                setSchemes((prev) => [...prev, '']);
-                setFieldError(null);
-                setSaveMessage(null);
-              }}
+              role="switch"
+              aria-checked={allowDev}
+              aria-labelledby="company-desktop-dev-scheme-label"
+              aria-describedby="company-desktop-dev-scheme-help"
+              aria-readonly={devSchemeReadOnly || undefined}
+              disabled={devSchemeDisabled}
+              onClick={toggleDevScheme}
+              className={cn(
+                'inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                allowDev ? 'bg-primary' : 'bg-input',
+                devSchemeDisabled && 'cursor-not-allowed opacity-60',
+              )}
             >
-              {t('companyDesktopSchemeAdd')}
-            </Button>
+              <span
+                className={cn(
+                  'pointer-events-none block size-4 rounded-full bg-background shadow-sm transition-transform',
+                  allowDev ? 'translate-x-4' : 'translate-x-0',
+                )}
+              />
+            </button>
           </div>
           <Text
             id="company-desktop-schemes-help"
@@ -249,24 +318,26 @@ export function CompanyDesktopSchemesSection({ accessToken }: Props) {
           {saveMessage ? (
             <Text className="font-mono text-sm text-muted-foreground">{saveMessage}</Text>
           ) : null}
-          <Button
-            type="button"
-            size="sm"
-            disabled={saving || !dirty || hasIssue}
-            onClick={() => void handleSave()}
-          >
-            {saving ? (
-              <>
-                <Loader2
-                  className="size-4 animate-spin"
-                  aria-hidden
-                />
-                {t('dashboardCompanySaving')}
-              </>
-            ) : (
-              t('dashboardCompanySave')
-            )}
-          </Button>
+          {canEdit ? (
+            <Button
+              type="button"
+              size="sm"
+              disabled={saving || !dirty || hasIssue}
+              onClick={() => void handleSave()}
+            >
+              {saving ? (
+                <>
+                  <Loader2
+                    className="size-4 animate-spin"
+                    aria-hidden
+                  />
+                  {t('dashboardCompanySaving')}
+                </>
+              ) : (
+                t('dashboardCompanySave')
+              )}
+            </Button>
+          ) : null}
         </CardContent>
       </Card>
     </section>
