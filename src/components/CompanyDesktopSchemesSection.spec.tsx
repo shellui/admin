@@ -155,7 +155,9 @@ describe('CompanyDesktopSchemesSection', () => {
     expect(i18n.getFixedT('fr')('companyDesktopDevSchemeLabel')).toBe(
       'Autoriser les builds de dev (schémas -dev)',
     );
-    expect(i18n.getFixedT('fr')('companyDesktopDevSchemeHelp')).toContain('-dev');
+    expect(i18n.getFixedT('fr')('companyDesktopDevSchemeHelp')).toBe(
+      'Les builds de dev de vos applications listées peuvent se connecter à cette entreprise. Désactivez l’option une fois le débogage terminé.',
+    );
   });
 
   it('shows a 403 from the dev-scheme save with the company error text', async () => {
@@ -174,7 +176,7 @@ describe('CompanyDesktopSchemesSection', () => {
   });
 
   it('keeps the dev-scheme switch read-only when the viewer cannot edit', async () => {
-    const fetchMock = vi.fn(async () =>
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
       jsonResponse([{ ...company, allow_desktop_dev_scheme: true }]),
     );
     vi.stubGlobal('fetch', fetchMock);
