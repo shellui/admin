@@ -32,6 +32,7 @@ Requires identity-service 0.8.2.
 ### Dependencies
 
 - Uses `@shellui/sdk` 0.6.2.
+- Bumps react-router-dom, @radix-ui/react-slot, svgo, jsdom and lint-staged.
 
 ## [0.6.2] - 2026-10-13
 
