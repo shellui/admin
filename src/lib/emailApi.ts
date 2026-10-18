@@ -1,4 +1,5 @@
 import { parseEmailApiError } from '@/lib/emailApiErrors';
+import { requireAbsoluteServiceUrl } from '@/lib/serviceAuthFetch';
 import {
   parseBroadcast,
   parseBroadcastPreview,
@@ -169,7 +170,8 @@ async function request(
   init: RequestInit = {},
   query?: Record<string, string | undefined>,
 ): Promise<unknown> {
-  const url = new URL(`${baseUrl.replace(/\/+$/, '')}${path.startsWith('/') ? path : `/${path}`}`);
+  const origin = requireAbsoluteServiceUrl(baseUrl);
+  const url = new URL(`${origin}${path.startsWith('/') ? path : `/${path}`}`);
   url.searchParams.set('company_id', String(companyId));
   if (query) {
     for (const [key, value] of Object.entries(query)) {
@@ -194,7 +196,8 @@ async function requestText(
   accept: string,
   query?: Record<string, string | undefined>,
 ): Promise<string> {
-  const url = new URL(`${baseUrl.replace(/\/+$/, '')}${path}`);
+  const origin = requireAbsoluteServiceUrl(baseUrl);
+  const url = new URL(`${origin}${path}`);
   url.searchParams.set('company_id', String(companyId));
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value) url.searchParams.set(key, value);

@@ -1,4 +1,4 @@
-import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
+import { AuthBackendNotConfiguredError, getAuthBackendBaseUrl } from '@/lib/backendUrl';
 import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
 import { parsePrometheusSamples } from '@/lib/prometheusText';
 
@@ -117,15 +117,17 @@ function parseErrorMessage(body: unknown): string | null {
   return null;
 }
 
-/** Full URL for `GET /api/v1/metrics` (Bearer token required). */
-export function buildStaffPrometheusMetricsUrl(): string {
+/** Full URL for `GET /api/v1/metrics` (Bearer token required). Null when identity URL is unset. */
+export function buildStaffPrometheusMetricsUrl(): string | null {
   const base = getAuthBackendBaseUrl();
-  return `${base}/api/v1/metrics`;
+  return base ? `${base}/api/v1/metrics` : null;
 }
 
 /** Prometheus text from shellui-auth `GET /api/v1/metrics` (staff or company owner). */
 export async function fetchStaffPrometheusMetrics(accessToken: string): Promise<string> {
-  const res = await fetch(buildStaffPrometheusMetricsUrl(), {
+  const url = buildStaffPrometheusMetricsUrl();
+  if (!url) throw new AuthBackendNotConfiguredError();
+  const res = await fetch(url, {
     headers: {
       Accept: 'text/plain',
       Authorization: `Bearer ${accessToken}`,
@@ -148,6 +150,7 @@ export async function fetchStaffPrometheusMetrics(accessToken: string): Promise<
 
 export async function fetchGlobalStaffPrometheusMetrics(accessToken: string): Promise<string> {
   const base = getAuthBackendBaseUrl();
+  if (!base) throw new AuthBackendNotConfiguredError();
   const res = await fetch(`${base}/api/v1/metrics/all`, {
     headers: {
       Accept: 'text/plain',

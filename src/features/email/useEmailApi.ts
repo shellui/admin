@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 import { useShelluiEmail } from '@/hooks/useShelluiEmail';
-import { isEmailAdminEnabled, resolveEmailServiceUrl } from '@/lib/emailServiceUrl';
+import { isEmailAdminEnabled } from '@/lib/emailServiceUrl';
 import { createEmailApiClient, type EmailApiClient } from '@/lib/emailApi';
 import { getCompanyIdFromJwt, getIsCompanyOwnerFromJwt, getIsStaffFromJwt } from '@/lib/jwtCompany';
 
-export function useEmailBaseUrl(): string {
+export function useEmailBaseUrl(): string | null {
   const email = useShelluiEmail();
-  return resolveEmailServiceUrl(email.url);
+  return email.url;
 }
 
 export function useEmailAdminEnabled(): boolean {
@@ -17,7 +17,7 @@ export function useEmailAdminEnabled(): boolean {
 export function useEmailApi(accessToken: string | null): {
   api: EmailApiClient | null;
   companyId: number | null;
-  baseUrl: string;
+  baseUrl: string | null;
   canManage: boolean;
 } {
   const baseUrl = useEmailBaseUrl();
@@ -26,7 +26,7 @@ export function useEmailApi(accessToken: string | null): {
     accessToken && (getIsStaffFromJwt(accessToken) || getIsCompanyOwnerFromJwt(accessToken)),
   );
   const api = useMemo(() => {
-    if (!accessToken || companyId == null) return null;
+    if (!accessToken || companyId == null || !baseUrl) return null;
     return createEmailApiClient(baseUrl, accessToken, companyId);
   }, [accessToken, baseUrl, companyId]);
   return { api, companyId, baseUrl, canManage };

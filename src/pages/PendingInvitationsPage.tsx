@@ -4,7 +4,9 @@ import { Loader2, Trash2 } from 'lucide-react';
 import shellui from '@shellui/sdk';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { IdentityBackendMissing } from '@/components/ServiceUrlMissing';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
+import { useShelluiAuthBackendBaseUrl } from '@/hooks/useShelluiAuthBackendBaseUrl';
 import {
   deleteAdminInvitation,
   fetchAdminInvitations,
@@ -19,6 +21,7 @@ import { notifyInvitationsChanged, resolveShellAppUrl } from '@/lib/inviteModal'
 export function PendingInvitationsPage() {
   const { t, i18n } = useTranslation();
   const accessToken = useShelluiAccessToken();
+  const authBackendBaseUrl = useShelluiAuthBackendBaseUrl();
   const rootRef = useRef<HTMLDivElement>(null);
   const [invitations, setInvitations] = useState<AdminInvitation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -27,14 +30,14 @@ export function PendingInvitationsPage() {
   useEffect(() => shellui.overlay.autoSize({ target: rootRef.current }), []);
 
   const load = useCallback(async () => {
-    if (!accessToken) return;
+    if (!accessToken || !authBackendBaseUrl) return;
     try {
       setInvitations(await fetchAdminInvitations(accessToken));
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : t('usersErrorUnknown'));
     }
-  }, [accessToken, t]);
+  }, [accessToken, authBackendBaseUrl, t]);
 
   useEffect(() => {
     void load();
@@ -130,7 +133,11 @@ export function PendingInvitationsPage() {
         <p className="text-sm text-muted-foreground">{t('invitationsDescription')}</p>
       </header>
 
-      {!accessToken ? <p className="text-sm text-muted-foreground">{t('usersNoSession')}</p> : null}
+      {!authBackendBaseUrl ? <IdentityBackendMissing /> : null}
+
+      {authBackendBaseUrl && !accessToken ? (
+        <p className="text-sm text-muted-foreground">{t('usersNoSession')}</p>
+      ) : null}
 
       {error ? (
         <p
