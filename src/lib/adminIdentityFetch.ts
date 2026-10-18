@@ -1,4 +1,4 @@
-import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
+import { requireAuthBackendBaseUrl } from '@/lib/backendUrl';
 import {
   ApiUnavailableError,
   parseErrorMessage,
@@ -14,7 +14,7 @@ export async function identityAuthFetch(
   init: RequestInit = {},
   options?: { companyId?: number | null; query?: Record<string, string | number | undefined> },
 ): Promise<Response> {
-  return serviceAuthFetch(getAuthBackendBaseUrl(), path, accessToken, init, options);
+  return serviceAuthFetch(requireAuthBackendBaseUrl(), path, accessToken, init, options);
 }
 
 export async function readJsonOrThrow(res: Response, unavailableMessage: string): Promise<unknown> {

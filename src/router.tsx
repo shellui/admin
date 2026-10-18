@@ -23,6 +23,7 @@ import { HostingAppsPage } from '@/pages/HostingAppsPage';
 import { HostingStatisticsPage } from '@/pages/HostingStatisticsPage';
 import { IdentityStatisticsPage } from '@/pages/IdentityStatisticsPage';
 import { StorageStatisticsPage } from '@/pages/StorageStatisticsPage';
+import { EmailServiceGate } from '@/features/email/EmailServiceGate';
 import { EmailBroadcastPage } from '@/features/email/pages/EmailBroadcastPage';
 import { EmailBroadcastsPage } from '@/features/email/pages/EmailBroadcastsPage';
 import { EmailNewsletterPage } from '@/features/email/pages/EmailNewsletterPage';
@@ -233,16 +234,21 @@ export const router = createHashRouter([
         ),
       },
       { path: 'storage/statistics', element: <StorageStatisticsPage /> },
-      { path: 'email/templates/id/:templateId', element: <EmailTemplateEditorPage /> },
-      { path: 'email/templates/:libraryId', element: <EmailLibraryTemplatePage /> },
-      { path: 'email/templates', element: <EmailTemplatesPage /> },
-      { path: 'email/broadcasts/:broadcastId', element: <EmailBroadcastPage /> },
-      { path: 'email/broadcasts', element: <EmailBroadcastsPage /> },
-      { path: 'email/newsletters/:newsletterId', element: <EmailNewsletterPage /> },
-      { path: 'email/newsletters', element: <EmailNewslettersPage /> },
-      { path: 'email/provider', element: <EmailProviderPage /> },
-      { path: 'email/link-hosts', element: <EmailLinkHostsPage /> },
-      { path: 'email/statistics', element: <EmailStatisticsPage /> },
+      {
+        element: <EmailServiceGate />,
+        children: [
+          { path: 'email/templates/id/:templateId', element: <EmailTemplateEditorPage /> },
+          { path: 'email/templates/:libraryId', element: <EmailLibraryTemplatePage /> },
+          { path: 'email/templates', element: <EmailTemplatesPage /> },
+          { path: 'email/broadcasts/:broadcastId', element: <EmailBroadcastPage /> },
+          { path: 'email/broadcasts', element: <EmailBroadcastsPage /> },
+          { path: 'email/newsletters/:newsletterId', element: <EmailNewsletterPage /> },
+          { path: 'email/newsletters', element: <EmailNewslettersPage /> },
+          { path: 'email/provider', element: <EmailProviderPage /> },
+          { path: 'email/link-hosts', element: <EmailLinkHostsPage /> },
+          { path: 'email/statistics', element: <EmailStatisticsPage /> },
+        ],
+      },
       { path: 'storage/swagger', element: null },
       { path: 'storage/redoc', element: null },
       { path: 'storage', element: null },

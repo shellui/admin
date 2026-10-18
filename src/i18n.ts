@@ -35,6 +35,12 @@ const resources = {
       navIdentityStatistics: 'Statistics',
       navHostingDjangoAdmin: 'Django admin',
       navEmailDjangoAdmin: 'Django admin',
+      identityBackendMissingTitle: 'Identity URL not configured',
+      identityBackendMissingDescription:
+        'Set backend.url in the host shell config (shellui.config.json or shellui.config.ts). Shellui Admin does not call identity-service until that URL is set.',
+      emailMissingTitle: 'Email URL not configured',
+      emailMissingDescription:
+        'Set email.url in shellui.config.json (or .ts) (for example http://localhost:8003).',
       hostingMissingTitle: 'Hosting URL not configured',
       hostingMissingDescription:
         'Set hosting.url in shellui.config.json (or .ts) (for example http://localhost:8002). Hide Admin → Hosting with hosting.showInAdmin: false.',
@@ -1764,6 +1770,12 @@ const resources = {
       navIdentityStatistics: 'Statistiques',
       navHostingDjangoAdmin: 'Admin Django',
       navEmailDjangoAdmin: 'Admin Django',
+      identityBackendMissingTitle: 'URL d’identité non configurée',
+      identityBackendMissingDescription:
+        'Définissez backend.url dans la configuration du shell (shellui.config.json ou shellui.config.ts). Shellui Admin n’appelle pas identity-service tant que cette URL est absente.',
+      emailMissingTitle: 'URL e-mail non configurée',
+      emailMissingDescription:
+        'Définissez email.url dans shellui.config.json (ou .ts) (par ex. http://localhost:8003).',
       hostingMissingTitle: 'URL d’hébergement non configurée',
       hostingMissingDescription:
         'Définissez hosting.url dans shellui.config.json (ou .ts) (par ex. http://localhost:8002). Masquez Admin → Hébergement avec hosting.showInAdmin: false.',

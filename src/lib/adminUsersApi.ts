@@ -1,4 +1,4 @@
-import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
+import { requireAuthBackendBaseUrl } from '@/lib/backendUrl';
 
 export type AdminUserGroupRef = {
   id: number;
@@ -54,7 +54,7 @@ async function authFetch(
   accessToken: string,
   init: RequestInit = {},
 ): Promise<Response> {
-  const base = getAuthBackendBaseUrl();
+  const base = requireAuthBackendBaseUrl();
   const url = new URL(`${base}${path}`);
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');

@@ -8,14 +8,31 @@ export class ApiUnavailableError extends Error {
   }
 }
 
+/** Thrown when a bearer request has no absolute http(s) service URL. */
+export class ServiceUrlNotConfiguredError extends Error {
+  constructor() {
+    super('Service URL is not configured.');
+    this.name = 'ServiceUrlNotConfiguredError';
+  }
+}
+
+/** Absolute http(s) origin. Rejects a missing, relative, or non-http URL before any request. */
+export function requireAbsoluteServiceUrl(baseUrl: string | null | undefined): string {
+  const normalized = typeof baseUrl === 'string' ? baseUrl.trim().replace(/\/+$/, '') : '';
+  if (!/^https?:\/\//i.test(normalized)) {
+    throw new ServiceUrlNotConfiguredError();
+  }
+  return normalized;
+}
+
 export async function serviceAuthFetch(
-  baseUrl: string,
+  baseUrl: string | null | undefined,
   path: string,
   accessToken: string,
   init: RequestInit = {},
   options?: { companyId?: number | null; query?: Record<string, string | number | undefined> },
 ): Promise<Response> {
-  const normalizedBase = baseUrl.trim().replace(/\/+$/, '');
+  const normalizedBase = requireAbsoluteServiceUrl(baseUrl);
   const url = new URL(`${normalizedBase}${path.startsWith('/') ? path : `/${path}`}`);
   if (options?.companyId != null) {
     url.searchParams.set('company_id', String(options.companyId));

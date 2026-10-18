@@ -21,6 +21,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [Unreleased]
+
+### Embedded shell
+
+- A production build reads this frame's identity URL and session token from shell settings, and shows an error instead of calling `http://localhost:8000` when `backend.url` is missing.
+
+### Email
+
+- A production build does not call email-service when `email.url` is missing. The dev server defaults that URL to `http://localhost:8003`.
+
 ## [0.6.2] - 2026-10-13
 
 Requires identity-service 0.8.1.
