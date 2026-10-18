@@ -69,11 +69,11 @@ hosting: {
   // showInAdmin: false, // hide Admin → Hosting while keeping deploy
 },
 email: {
-  url: 'https://email.shellui.com', // dev server default when omitted. Local Compose is http://localhost:8003
+  url: 'http://localhost:8003', // dev server default when omitted
 },
 ```
 
-Admin reads `email.url` the same way it reads `storage.url` and `hosting.url` (SDK settings from the host `shellui.config`). `@shellui/sdk` 0.6.0 types `settings.email`. The dev server calls `https://email.shellui.com` when `email.url` is missing. A production build does not. Set `email.showInAdmin: false` to hide the Email section.
+Admin reads `email.url` the same way it reads `storage.url` and `hosting.url` (SDK settings from the host `shellui.config`). `@shellui/sdk` 0.6.0 types `settings.email`. The dev server calls `http://localhost:8003` when `email.url` is missing. A production build does not. Set `email.showInAdmin: false` to hide the Email section.
 
 Staff open Django admin for Email at the `email.url` origin plus `/admin/`.
 
@@ -88,7 +88,7 @@ Admin calls identity-service at that URL and sends the token as `Authorization: 
 
 A production build shows an error when `backend.url` is missing, and it does not send the token. `pnpm start` still uses `http://localhost:8000` when the shell omits the URL, so local work keeps that default.
 
-Storage, hosting, and email use the same rule when a request sends the token: the URL comes from shell settings. Storage and hosting stay hidden until `storage.url` or `hosting.url` is set. Email uses `email.url`. A production build leaves Email hidden when `email.url` is missing. The dev server still calls `https://email.shellui.com` in that case. Set `email.url` to `http://localhost:8003` for local Compose.
+Storage, hosting, and email use the same rule when a request sends the token: the URL comes from shell settings. Storage and hosting stay hidden until `storage.url` or `hosting.url` is set. Email uses `email.url`. A production build leaves Email hidden when `email.url` is missing. The dev server calls `http://localhost:8003` in that case.
 
 ## Identity company admin (SCIM, magic link, webhooks)
 

@@ -6,7 +6,7 @@ import { readSettingsEmail, type ResolvedEmailSettings } from '@/lib/emailServic
 /**
  * email-service origin from this frame's shell settings (`email` in shellui.config),
  * delivered via `SHELLUI_SETTINGS` / `SHELLUI_SETTINGS_UPDATED`.
- * The dev server fills a missing `email.url`. A production build leaves it empty.
+ * The dev server fills a missing `email.url` with `http://localhost:8003`. A production build leaves it empty.
  */
 export function useShelluiEmail(): ResolvedEmailSettings {
   const [email, setEmail] = useState<ResolvedEmailSettings>(() =>

@@ -3,8 +3,8 @@ import type { ServiceUrlEnv } from '@/lib/backendUrl';
 
 export type { SettingsEmail };
 
-/** Dev-server origin when the shell omits `email.url`. No trailing slash. */
-export const DEFAULT_EMAIL_SERVICE_URL = 'https://email.shellui.com';
+/** Local email-service origin when the dev server has no `email.url`. No trailing slash. */
+export const DEFAULT_EMAIL_SERVICE_URL = 'http://localhost:8003';
 
 /** Email block after Admin resolves a missing URL. Production leaves `url` null. */
 export type ResolvedEmailSettings = {
@@ -16,7 +16,7 @@ export type ResolvedEmailSettings = {
  * Host `email` block in shellui.config, delivered as `settings.email`
  * (`SettingsEmail` on `@shellui/sdk` 0.6.0), the same way as `storage` and
  * `hosting`. An explicit `url` is used as sent. The dev server fills a missing
- * URL with `https://email.shellui.com`. A production build leaves it empty so
+ * URL with `http://localhost:8003`. A production build leaves it empty so
  * the session token is not sent to a guessed origin.
  */
 

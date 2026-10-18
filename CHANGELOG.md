@@ -29,7 +29,7 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ### Email
 
-- A production build does not call email-service when `email.url` is missing.
+- A production build does not call email-service when `email.url` is missing. The dev server defaults that URL to `http://localhost:8003`.
 
 ## [0.6.2] - 2026-10-13
 

@@ -15,9 +15,10 @@ describe('resolveEmailServiceUrl', () => {
     expect(resolveEmailServiceUrl('https://email.example/', prod)).toBe('https://email.example');
   });
 
-  it('keeps the dev default only when the shell omits email.url', () => {
-    expect(resolveEmailServiceUrl(undefined, dev)).toBe(DEFAULT_EMAIL_SERVICE_URL);
-    expect(resolveEmailServiceUrl('  ', dev)).toBe('https://email.shellui.com');
+  it('keeps the local dev default only when the shell omits email.url', () => {
+    expect(DEFAULT_EMAIL_SERVICE_URL).toBe('http://localhost:8003');
+    expect(resolveEmailServiceUrl(undefined, dev)).toBe('http://localhost:8003');
+    expect(resolveEmailServiceUrl('  ', dev)).toBe(DEFAULT_EMAIL_SERVICE_URL);
   });
 
   it('returns null in production when the shell omits email.url', () => {
