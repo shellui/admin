@@ -21,6 +21,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [0.6.3] - 2026-10-18
+
+Requires identity-service 0.8.2.
+
+### Desktop sign-in schemes
+
+- Owners and staff can allow dev builds (`-dev` schemes) for listed desktop apps.
+
+### Dependencies
+
+- Uses `@shellui/sdk` 0.6.2.
+
 ## [0.6.2] - 2026-10-13
 
 Requires identity-service 0.8.1.
