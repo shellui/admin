@@ -542,6 +542,9 @@ const resources = {
       companyDesktopSchemeRfc:
         'Scheme must be an RFC 3986 scheme: a letter, then letters, digits, plus, hyphen, or dot.',
       companyDesktopSchemeDenied: 'This scheme is not allowed.',
+      companyDesktopDevSchemeLabel: 'Allow dev builds (-dev schemes)',
+      companyDesktopDevSchemeHelp:
+        "Dev builds of your listed apps can sign in to this company. Turn it off when you're done debugging.",
       loginRedirectsSectionLabel: 'OAuth redirect allow list',
       loginRedirectsTitle: 'Login redirect URLs',
       loginRedirectsDescription:
@@ -2276,6 +2279,9 @@ const resources = {
       companyDesktopSchemeRfc:
         'Le schéma doit être un schéma RFC 3986 : une lettre, puis des lettres, des chiffres, un plus, un trait d’union ou un point.',
       companyDesktopSchemeDenied: 'Ce schéma n’est pas autorisé.',
+      companyDesktopDevSchemeLabel: 'Autoriser les builds de dev (schémas -dev)',
+      companyDesktopDevSchemeHelp:
+        'Les builds de dev de vos applications listées peuvent se connecter à cette entreprise. Désactivez l’option une fois le débogage terminé.',
       loginRedirectsSectionLabel: 'Liste blanche des redirections OAuth',
       loginRedirectsTitle: 'URL de retour de connexion',
       loginRedirectsDescription:
