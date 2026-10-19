@@ -21,6 +21,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [0.6.4] - 2026-10-19
+
+### 🐛 Bug Fixes
+
+- **Files:** The Files app loads inside admin again.
+
+### 🔒 Security
+
+- **Embedded apps:** Admin trusts messages only from the Files app and custom admin apps it embeds.
+
 ## [0.6.3] - 2026-10-18
 
 Requires identity-service 0.8.2.
