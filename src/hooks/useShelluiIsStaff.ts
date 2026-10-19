@@ -3,7 +3,7 @@ import shellui, { addMessageListener } from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
 import { getIsStaffFromJwt } from '@/lib/jwtCompany';
 
-function readIsStaff(settings: Settings | null | undefined): boolean {
+export function readIsStaff(settings: Settings | null | undefined): boolean {
   if (settings?.user?.isStaff === true) return true;
   const token = settings?.accessToken;
   if (token) return getIsStaffFromJwt(token);
