@@ -30,8 +30,8 @@ importers:
         specifier: 1.7.3
         version: 1.7.3(@floating-ui/dom@1.8.0)(@tiptap/extension-list@3.31.4(@tiptap/core@3.31.4(@tiptap/pm@3.31.4))(@tiptap/pm@3.31.4))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(happy-dom@20.14.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@shellui/sdk':
-        specifier: 0.6.2
-        version: 0.6.2
+        specifier: 0.7.0-alpha.1
+        version: 0.7.0-alpha.1
       '@tiptap/core':
         specifier: 3.31.4
         version: 3.31.4(@tiptap/pm@3.31.4)
@@ -1067,8 +1067,8 @@ packages:
   '@selderee/plugin-htmlparser2@0.11.0':
     resolution: {integrity: sha512-P33hHGdldxGabLFjPPpaTxVolMrzrcegejx+0GxjrIb9Zv48D8yAIA/QTDR2dFl7Uz7urX8aX6+5bCZslr+gWQ==}
 
-  '@shellui/sdk@0.6.2':
-    resolution: {integrity: sha512-SV/cLcEyPDkhXE+bv9loibkQjl4Dd8cpr3GOlE+zW4VaVT02ISaYIZnGbSaqhG13B1cYTiap3yHKLgvqFxbOvA==}
+  '@shellui/sdk@0.7.0-alpha.1':
+    resolution: {integrity: sha512-IgrcvyfdWYFfFyiQhBTA2d3ELKTqIkFFm2zM6Qljj7LAGbwvt+vz7SDwdgrHslS43JXPzScp1P8+RVZXDZNOXQ==}
 
   '@socket.io/component-emitter@3.1.2':
     resolution: {integrity: sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA==}
@@ -3647,7 +3647,7 @@ snapshots:
       domhandler: 5.0.3
       selderee: 0.11.0
 
-  '@shellui/sdk@0.6.2':
+  '@shellui/sdk@0.7.0-alpha.1':
     dependencies:
       roarr: 7.21.4
 
