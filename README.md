@@ -2,9 +2,9 @@
 
 Administration UI for Shellui: a React app embedded in the main shell (route `/admin`). This repo is **only the Vite + React app**—no Shellui shell wrapper.
 
-**Current release:** [0.7.0](./CHANGELOG.md) · production origin **https://admin.shellui.com/**
+**Current release:** [0.6.5](./CHANGELOG.md) · production origin **https://admin.shellui.com/**
 
-**Compatibility:** Admin 0.7.0 requires identity-service 0.9.0 and Shellui 0.7.0-alpha.1. Sign-in uses PKCE. Tokens never travel in the URL.
+**Compatibility:** Admin 0.6.5 requires identity-service 0.9.0 and Shellui 0.7.0-alpha.1. Sign-in uses PKCE. Tokens never travel in the URL.
 
 ## Architecture
 
