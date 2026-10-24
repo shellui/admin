@@ -21,6 +21,24 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [0.6.6] - 2026-10-24
+
+Requires an explicit `email.url` in the host shell config, and shellui 0.7.0-alpha.6 when admin runs inside the dashboard frame.
+
+### 🐛 Bug Fixes
+
+- **Embedded shell:** Admin reads identity URL and session token per frame, and a production build errors instead of calling localhost when `backend.url` is missing.
+
+### 🔒 Security
+
+- **Embedded apps:** Admin no longer forwards `accessToken` to nested frames unless they are same-origin admin pages or marked `safeForAuthToken`.
+- **Email:** No built-in `email.shellui.com` fallback; Email is hidden when the shell sends no `email.url`.
+- **Dependencies:** zod 4.6 (with `@hookform/resolvers` 5) and happy-dom 21.0.4 fix high advisories.
+
+### 🏗 Chore
+
+- **Dependencies:** Bumps react-router-dom, @radix-ui/react-slot, svgo, jsdom and lint-staged.
+
 ## [0.6.5] - 2026-10-21
 
 ### 🏗 Chore

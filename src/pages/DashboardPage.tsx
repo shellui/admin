@@ -26,7 +26,9 @@ import { Badge } from '@/components/ui/badge';
 import { Text } from '@/components/ui/text';
 import { DashboardEmailSection } from '@/components/DashboardEmailSection';
 import { AllServicesRetentionAlerts } from '@/components/EventRetentionAlert';
+import { IdentityBackendMissing } from '@/components/ServiceUrlMissing';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
+import { useShelluiAuthBackendBaseUrl } from '@/hooks/useShelluiAuthBackendBaseUrl';
 import {
   buildStaffPrometheusMetricsUrl,
   fetchAuthMetricsSnapshot,
@@ -86,6 +88,7 @@ type MetricsSourceId = 'identity' | 'storage' | 'hosting';
 export function DashboardPage() {
   const { t } = useTranslation();
   const accessToken = useShelluiAccessToken();
+  const authBackendBaseUrl = useShelluiAuthBackendBaseUrl();
   const storageBaseUrl = useStorageBaseUrl();
   const storageEnabled = Boolean(storageBaseUrl);
   const hostingBaseUrl = useHostingBaseUrl();
@@ -107,7 +110,7 @@ export function DashboardPage() {
 
   const loadIdentity = useCallback(
     async (opts?: { showLoading?: boolean }) => {
-      if (!accessToken) {
+      if (!accessToken || !authBackendBaseUrl) {
         setLoading(false);
         setSnapshot(null);
         setError(null);
@@ -129,7 +132,7 @@ export function DashboardPage() {
         setLoading(false);
       }
     },
-    [accessToken, t],
+    [accessToken, authBackendBaseUrl, t],
   );
 
   const loadStorage = useCallback(
@@ -190,8 +193,8 @@ export function DashboardPage() {
   useEffect(() => {
     void loadIdentity({ showLoading: true });
     // intentionally omit loadIdentity: recreate on `t` must not blank KPIs
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- accessToken only
-  }, [accessToken]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- session and identity URL only
+  }, [accessToken, authBackendBaseUrl]);
 
   useEffect(() => {
     void loadStorage({ showLoading: true });
@@ -282,11 +285,13 @@ export function DashboardPage() {
 
       <AllServicesRetentionAlerts />
 
-      {!accessToken && (
+      {!authBackendBaseUrl ? <IdentityBackendMissing heading="h2" /> : null}
+
+      {authBackendBaseUrl && !accessToken && (
         <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
       )}
 
-      {accessToken && loading && (
+      {authBackendBaseUrl && accessToken && loading && (
         <div className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
           <Loader2
             className="size-4 animate-spin"
@@ -296,9 +301,11 @@ export function DashboardPage() {
         </div>
       )}
 
-      {accessToken && error && <Text className="font-mono text-sm text-destructive">{error}</Text>}
+      {authBackendBaseUrl && accessToken && error && (
+        <Text className="font-mono text-sm text-destructive">{error}</Text>
+      )}
 
-      {accessToken && !loading && !error && snapshot && (
+      {authBackendBaseUrl && accessToken && !loading && !error && snapshot && (
         <>
           <section
             className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"

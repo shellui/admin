@@ -10,7 +10,7 @@ Administration UI for Shellui: a React app embedded in the main shell (route `/a
 
 The admin app runs in two modes:
 
-1. **Chrome** (direct child of the shell `/admin` iframe): sidebar navigation stays in this frame; the main panel is Shellui core [`ContentView`](https://github.com/shellui/shellui) for every menu item (loading overlay + `SHELLUI_URL_CHANGED` sync toward the root shell). Chrome also re-broadcasts parent `SHELLUI_SETTINGS` / `SHELLUI_SETTINGS_UPDATED` into those ContentView frames so nested apps keep theme and settings in sync live. Desktop sidebar collapses to icons; on small viewports the menu is a full-page list and each destination opens with a back control (same idea as Shellui Settings on mobile).
+1. **Chrome** (direct child of the shell `/admin` iframe): sidebar navigation stays in this frame; the main panel is Shellui core [`ContentView`](https://github.com/shellui/shellui) for every menu item (loading overlay + `SHELLUI_URL_CHANGED` sync toward the root shell). Chrome also re-broadcasts parent `SHELLUI_SETTINGS` and `SHELLUI_SETTINGS_UPDATED` into those ContentView frames so theme and language stay in sync. `accessToken` is included only for same-origin admin pages and for URLs marked `safeForAuthToken` (the files explorer and Swagger). Desktop sidebar collapses to icons; on small viewports the menu is a full-page list and each destination opens with a back control (same idea as Shellui Settings on mobile).
 2. **Content** (nested same-origin iframe loaded by chrome ContentView): no sidebar; built-in Identity / statistics pages render as normal React routes.
 
 External menus (host custom apps, storage files, Swagger/ReDoc) are opened as absolute URLs inside chrome ContentView. Django admin links remain `target="_blank"`.
@@ -71,11 +71,11 @@ hosting: {
   // showInAdmin: false, // hide Admin → Hosting while keeping deploy
 },
 email: {
-  url: 'https://email.shellui.com', // default when omitted. Local Compose is http://localhost:8003
+  url: 'http://localhost:8003', // required, no default
 },
 ```
 
-Admin reads `email.url` the same way it reads `storage.url` and `hosting.url` (SDK settings from the host `shellui.config`). `@shellui/sdk` 0.7.0-alpha.1 types `settings.email`. When `email.url` is missing, Admin calls `https://email.shellui.com`. Set `email.showInAdmin: false` to hide the Email section.
+Admin reads `email.url` the same way it reads `storage.url` and `hosting.url` (SDK settings from the host `shellui.config`). `@shellui/sdk` 0.7.0-alpha.1 types `settings.email`. When `email.url` is missing, Admin hides Email; there is no default URL. Set `email.showInAdmin: false` to hide the Email section.
 
 Staff open Django admin for Email at the `email.url` origin plus `/admin/`.
 
@@ -125,6 +125,8 @@ Production deploy (GitHub Pages) outputs the site at the **root** of the domain 
 ## Custom navigation from the host shell
 
 The host app can inject extra sidebar links via top-level `administration` in config (title + flat `navigation` items). The shell propagates them through SDK settings; this admin app renders them **below Dashboard**. See the Shellui docs page **Administration panel**.
+
+Set `safeForAuthToken: true` on an administration item to share the session access token with that iframe. The shell must copy that flag onto `settings.administration.navigation[]`. Without the flag, the iframe still receives theme and language, and `accessToken` is null.
 
 ## Company access
 
