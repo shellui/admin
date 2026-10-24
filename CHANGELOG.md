@@ -29,6 +29,7 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ### 🔒 Security
 
+- **Embedded apps:** Admin no longer forwards `accessToken` to nested frames unless they are same-origin admin pages or marked `safeForAuthToken`.
 - **Email:** No built-in `email.shellui.com` fallback; Email is hidden when the shell sends no `email.url`.
 - **Dependencies:** zod 4.6 (with `@hookform/resolvers` 5) and happy-dom 21.0.4 fix high advisories.
 

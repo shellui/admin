@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
+import type { SettingsAdministrationNavigationItem } from '@shellui/sdk';
 import { adminShellUiConfig } from '@/admin.shellui.config';
 import type { AdminNavigationItem, AdminNavigationGroup } from '@/admin.shellui.config';
 import { useShelluiAdministration } from '@/hooks/useShelluiAdministration';
@@ -8,6 +9,7 @@ import { useShelluiDeveloperMode } from '@/hooks/useShelluiDeveloperMode';
 import { useShelluiIsStaff } from '@/hooks/useShelluiIsStaff';
 import { useShelluiHosting, isHostingAdminEnabled } from '@/hooks/useShelluiHosting';
 import { useShelluiStorage } from '@/hooks/useShelluiStorage';
+import { contentFrameAuthRulesFromEmbeds, setContentFrameAuthRules } from '@/lib/contentFrameAuth';
 import { resolveAdminAppUrl } from '@/lib/resolveAdminAppUrl';
 import {
   type AdminContentNavItem,
@@ -22,7 +24,20 @@ export type AdminEmbedNavItem = AdminContentNavItem & {
   /** Absolute URL loaded in the chrome ContentView iframe. */
   embedUrl: string;
   ignoreMessages?: boolean;
+  /**
+   * When true, chrome may include `accessToken` in settings posted to this iframe.
+   * Files and Swagger set this. Custom apps set it only when the host does.
+   */
+  safeForAuthToken?: boolean;
 };
+
+type AdministrationNavItem = SettingsAdministrationNavigationItem & {
+  safeForAuthToken?: boolean;
+};
+
+function administrationAllowsAuthToken(item: AdministrationNavItem): boolean {
+  return item.safeForAuthToken === true;
+}
 
 export type AdminContentFrame =
   | {
@@ -110,6 +125,8 @@ export function useAdminContentNavigation(): AdminContentFrame {
           url: docsUrl,
           embedUrl: docsUrl,
           ignoreMessages: true,
+          // Swagger Try it out reads settings.accessToken. ReDoc only needs appearance.
+          safeForAuthToken: path === 'swagger',
           useHashRouter: false,
         });
         continue;
@@ -124,7 +141,7 @@ export function useAdminContentNavigation(): AdminContentFrame {
       });
     }
 
-    for (const item of administration?.navigation ?? []) {
+    for (const item of (administration?.navigation ?? []) as AdministrationNavItem[]) {
       if (item.requiresStaff && !isStaff) continue;
       if (item.openIn === 'external') continue;
       const path = `app/${item.path.replace(/^\/+/, '')}`;
@@ -137,6 +154,7 @@ export function useAdminContentNavigation(): AdminContentFrame {
         url: hashRouter ? embedUrl : `${embedUrl.replace(/\/+$/, '')}/#/`,
         embedUrl,
         useHashRouter: true,
+        safeForAuthToken: administrationAllowsAuthToken(item),
       });
     }
 
@@ -150,6 +168,8 @@ export function useAdminContentNavigation(): AdminContentFrame {
           url: filesUrl,
           embedUrl: filesUrl,
           useHashRouter: false,
+          // The files explorer calls storage-service with this bearer token.
+          safeForAuthToken: true,
         });
       }
       const storageWebhooksHash = buildAdminHashContentUrl(origin, 'storage/webhooks', '', '');
@@ -186,6 +206,7 @@ export function useAdminContentNavigation(): AdminContentFrame {
             url: swaggerUrl,
             embedUrl: swaggerUrl,
             ignoreMessages: true,
+            safeForAuthToken: true,
             useHashRouter: false,
           },
           {
@@ -254,6 +275,7 @@ export function useAdminContentNavigation(): AdminContentFrame {
             url: swaggerUrl,
             embedUrl: swaggerUrl,
             ignoreMessages: true,
+            safeForAuthToken: true,
             useHashRouter: false,
           },
           {
@@ -268,6 +290,7 @@ export function useAdminContentNavigation(): AdminContentFrame {
       }
     }
 
+    setContentFrameAuthRules(contentFrameAuthRulesFromEmbeds(items));
     return items;
   }, [
     administration?.navigation,
