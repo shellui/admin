@@ -2,7 +2,9 @@
 
 Administration UI for Shellui: a React app embedded in the main shell (route `/admin`). This repo is **only the Vite + React app**—no Shellui shell wrapper.
 
-**Current release:** [0.6.2](./CHANGELOG.md) · production origin **https://admin.shellui.com/**
+**Current release:** [0.6.5](./CHANGELOG.md) · production origin **https://admin.shellui.com/**
+
+**Compatibility:** Admin 0.6.5 requires identity-service 0.9.0 and Shellui 0.7.0-alpha.1. Sign-in uses PKCE. Tokens never travel in the URL.
 
 ## Architecture
 
@@ -21,7 +23,7 @@ External menus (host custom apps, storage files, Swagger/ReDoc) are opened as ab
 | **Identity**    | Always (with `backend.url`)                             | Company (incl. magic link toggle), users, groups, login events, OAuth apps, SCIM, webhooks (rules + delivery logs), personal access tokens, statistics; staff Django admin link.                                                      |
 | **Storage**     | Host `storage.url` set                                  | Statistics (`GET /storage/v1/stats`); optional Files explorer via `storage.filesUrl`; staff Django admin.                                                                                                                             |
 | **Hosting**     | Host `hosting.url` set and `showInAdmin` is not `false` | Apps list/detail, statistics, dashboard hosting KPIs (`GET /hosting/v1/metrics`); staff Django admin.                                                                                                                                 |
-| **Email**       | Host `email.url` set (dev server defaults the URL)      | Last sidebar section: company theme and templates, provider settings, statistics; staff Django admin. Identity, Storage, and Hosting each keep an Email and webhooks page that lists that service's webhook and email rules together. |
+| **Email**       | Always (default `https://email.shellui.com`)            | Last sidebar section: company theme and templates, provider settings, statistics; staff Django admin. Identity, Storage, and Hosting each keep an Email and webhooks page that lists that service's webhook and email rules together. |
 | **Custom apps** | Host `administration` set                               | Extra sidebar links below Dashboard (iframe or external).                                                                                                                                                                             |
 | **API docs**    | Shell developer mode                                    | Swagger / ReDoc for identity (and storage / hosting when those sections are on).                                                                                                                                                      |
 
@@ -69,26 +71,13 @@ hosting: {
   // showInAdmin: false, // hide Admin → Hosting while keeping deploy
 },
 email: {
-  url: 'http://localhost:8003', // dev server default when omitted
+  url: 'http://localhost:8003', // required, no default
 },
 ```
 
-Admin reads `email.url` the same way it reads `storage.url` and `hosting.url` (SDK settings from the host `shellui.config`). `@shellui/sdk` 0.6.0 types `settings.email`. The dev server calls `http://localhost:8003` when `email.url` is missing. A production build does not. Set `email.showInAdmin: false` to hide the Email section.
+Admin reads `email.url` the same way it reads `storage.url` and `hosting.url` (SDK settings from the host `shellui.config`). `@shellui/sdk` 0.7.0-alpha.1 types `settings.email`. When `email.url` is missing, Admin hides Email; there is no default URL. Set `email.showInAdmin: false` to hide the Email section.
 
 Staff open Django admin for Email at the `email.url` origin plus `/admin/`.
-
-## Embedding admin in another Shellui app
-
-Point the host `backend.adminUrl` at this app and open `/admin` in that shell. The shell sends this frame its settings. Admin reads these fields from that message:
-
-- `authBackendBaseUrl`, the identity-service URL (`backend.url` for this frame)
-- `accessToken`, the session token for this frame
-
-Admin calls identity-service at that URL and sends the token as `Authorization: Bearer`.
-
-A production build shows an error when `backend.url` is missing, and it does not send the token. `pnpm start` still uses `http://localhost:8000` when the shell omits the URL, so local work keeps that default.
-
-Storage, hosting, and email use the same rule when a request sends the token: the URL comes from shell settings. Storage and hosting stay hidden until `storage.url` or `hosting.url` is set. Email uses `email.url`. A production build leaves Email hidden when `email.url` is missing. The dev server calls `http://localhost:8003` in that case.
 
 ## Identity company admin (SCIM, magic link, webhooks)
 

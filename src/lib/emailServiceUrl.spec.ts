@@ -1,40 +1,44 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_EMAIL_SERVICE_URL,
+  isEmailAdminEnabled,
   readSettingsEmail,
   resolveEmailServiceUrl,
 } from '@/lib/emailServiceUrl';
 import type { Settings } from '@shellui/sdk';
 
-const prod = { dev: false };
-const dev = { dev: true };
-
 describe('resolveEmailServiceUrl', () => {
-  it('uses an explicit URL from shell settings', () => {
-    expect(resolveEmailServiceUrl('http://localhost:8010/', dev)).toBe('http://localhost:8010');
-    expect(resolveEmailServiceUrl('https://email.example/', prod)).toBe('https://email.example');
+  it('has no default origin', () => {
+    expect(resolveEmailServiceUrl(undefined)).toBeNull();
+    expect(resolveEmailServiceUrl('  ')).toBeNull();
+    expect(resolveEmailServiceUrl('http://localhost:8010/')).toBe('http://localhost:8010');
   });
+});
 
-  it('keeps the local dev default only when the shell omits email.url', () => {
-    expect(DEFAULT_EMAIL_SERVICE_URL).toBe('http://localhost:8003');
-    expect(resolveEmailServiceUrl(undefined, dev)).toBe('http://localhost:8003');
-    expect(resolveEmailServiceUrl('  ', dev)).toBe(DEFAULT_EMAIL_SERVICE_URL);
-  });
-
-  it('returns null in production when the shell omits email.url', () => {
-    expect(resolveEmailServiceUrl(undefined, prod)).toBeNull();
-    expect(resolveEmailServiceUrl('  ', prod)).toBeNull();
-    expect(readSettingsEmail(undefined, prod).url).toBeNull();
-  });
-
+describe('readSettingsEmail', () => {
   it('reads email.url from host settings the same way as storage and hosting', () => {
     const settings = {
       email: { url: 'http://localhost:8010/', showInAdmin: false },
     } as unknown as Settings;
-    expect(readSettingsEmail(settings, prod)).toEqual({
+    expect(readSettingsEmail(settings)).toEqual({
       url: 'http://localhost:8010',
       showInAdmin: false,
     });
-    expect(readSettingsEmail(undefined, dev).url).toBe(DEFAULT_EMAIL_SERVICE_URL);
+  });
+
+  it('returns null when the shell sends no email url', () => {
+    expect(readSettingsEmail(undefined)).toBeNull();
+    expect(readSettingsEmail({ email: null } as unknown as Settings)).toBeNull();
+    expect(readSettingsEmail({ email: {} } as unknown as Settings)).toBeNull();
+  });
+});
+
+describe('isEmailAdminEnabled', () => {
+  it('requires a url', () => {
+    expect(isEmailAdminEnabled(null)).toBe(false);
+    expect(isEmailAdminEnabled({ url: '' } as never)).toBe(false);
+    expect(isEmailAdminEnabled({ url: 'https://email.eu.shellui.com' })).toBe(true);
+    expect(isEmailAdminEnabled({ url: 'https://email.eu.shellui.com', showInAdmin: false })).toBe(
+      false,
+    );
   });
 });

@@ -23,13 +23,43 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ## [Unreleased]
 
-### Embedded shell
+### 🐛 Bug Fixes
 
-- A production build reads this frame's identity URL and session token from shell settings, and shows an error instead of calling `http://localhost:8000` when `backend.url` is missing.
+- **Embedded shell:** Admin reads identity URL and session token per frame, and a production build errors instead of calling localhost when `backend.url` is missing.
 
-### Email
+### 🔒 Security
 
-- A production build does not call email-service when `email.url` is missing. The dev server defaults that URL to `http://localhost:8003`.
+- **Email:** No built-in `email.shellui.com` fallback; Email is hidden when the shell sends no `email.url`.
+- **Dependencies:** zod 4.6 (with `@hookform/resolvers` 5) and happy-dom 21.0.4 fix high advisories.
+
+## [0.6.5] - 2026-10-21
+
+### 🏗 Chore
+
+- **Shellui SDK:** Uses `@shellui/sdk` 0.7.0-alpha.1, pinned exactly.
+- Requires identity-service 0.9.0 and shellui 0.7.0-alpha.1.
+
+## [0.6.4] - 2026-10-19
+
+### 🐛 Bug Fixes
+
+- **Files:** The Files app loads inside admin again.
+
+### 🔒 Security
+
+- **Embedded apps:** Admin trusts messages only from the Files app and custom admin apps it embeds.
+
+## [0.6.3] - 2026-10-18
+
+Requires identity-service 0.8.2.
+
+### Desktop sign-in schemes
+
+- Owners and staff can allow dev builds (`-dev` schemes) for listed desktop apps.
+
+### Dependencies
+
+- Uses `@shellui/sdk` 0.6.2.
 
 ## [0.6.2] - 2026-10-13
 

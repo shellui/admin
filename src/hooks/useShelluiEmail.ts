@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
 import shellui, { addMessageListener } from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
-import { readSettingsEmail, type ResolvedEmailSettings } from '@/lib/emailServiceUrl';
+import { readSettingsEmail, type SettingsEmail } from '@/lib/emailServiceUrl';
 
 /**
- * email-service origin from this frame's shell settings (`email` in shellui.config),
+ * email-service origin from the host shell (`email` in shellui.config),
  * delivered via `SHELLUI_SETTINGS` / `SHELLUI_SETTINGS_UPDATED`.
- * The dev server fills a missing `email.url` with `http://localhost:8003`. A production build leaves it empty.
+ * `null` when the shell sends no `email.url`. There is no default.
  */
-export function useShelluiEmail(): ResolvedEmailSettings {
-  const [email, setEmail] = useState<ResolvedEmailSettings>(() =>
+export function useShelluiEmail(): SettingsEmail | null {
+  const [email, setEmail] = useState<SettingsEmail | null>(() =>
     readSettingsEmail(shellui.initialSettings),
   );
 
@@ -19,7 +19,7 @@ export function useShelluiEmail(): ResolvedEmailSettings {
       if (!settings) return;
       const next = readSettingsEmail(settings);
       setEmail((prev) => {
-        if (prev.url === next.url && prev.showInAdmin === next.showInAdmin) return prev;
+        if (prev?.url === next?.url && prev?.showInAdmin === next?.showInAdmin) return prev;
         return next;
       });
     };
