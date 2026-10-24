@@ -1,4 +1,4 @@
-import { bearerAuthorization } from './shellAccessToken';
+import { bearerFetch } from './shellAccessToken';
 import { parsePrometheusSamples } from '@/lib/prometheusText';
 import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
 import { formatBytes } from '@/lib/storageMetricsApi';
@@ -65,12 +65,15 @@ export async function fetchHostingPrometheusMetrics(
   hostingBaseUrl: string,
   accessToken: string,
 ): Promise<string> {
-  const res = await fetch(buildHostingPrometheusMetricsUrl(hostingBaseUrl), {
-    headers: {
-      Accept: 'text/plain',
-      Authorization: bearerAuthorization(accessToken),
+  const res = await bearerFetch(
+    buildHostingPrometheusMetricsUrl(hostingBaseUrl),
+    {
+      headers: {
+        Accept: 'text/plain',
+      },
     },
-  });
+    accessToken,
+  );
   const ct = res.headers.get('Content-Type') || '';
   if (!res.ok) {
     let msg: string | null = null;

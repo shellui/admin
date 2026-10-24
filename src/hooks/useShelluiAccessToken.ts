@@ -68,7 +68,7 @@ function requestShellSettings(): void {
  *
  * A renewal for the same user, company and roles keeps the returned value, so pages do not
  * reload and remount their forms every few minutes. Requests send the newest token through
- * `bearerAuthorization`. A different identity or a logout changes the value.
+ * `bearerFetch`. A different identity or a logout changes the value.
  */
 export function useShelluiAccessToken(): string | null {
   const [token, setToken] = useState<string | null>(() => {

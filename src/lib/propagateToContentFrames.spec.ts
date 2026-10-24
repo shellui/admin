@@ -136,6 +136,26 @@ describe('setupContentFrameMessagePropagation', () => {
     ]);
   });
 
+  it('gives the Files frame (exact storage.filesUrl origin) admin storage settings', async () => {
+    const storage = { url: 'https://storage.example', filesUrl: 'https://files.example/' };
+    getLiveIframes.mockReturnValue([]);
+    await forwardInChrome({ type: 'SHELLUI_SETTINGS', payload: { settings: { storage } } });
+    getLiveIframes.mockReturnValue([
+      ['files', iframe('https://files.example/company')],
+      ['lookalike', iframe('https://files.example.evil/')],
+      ['custom', iframe('https://custom.example/#/')],
+    ]);
+    const forward = addMessageListener.mock.calls[0][1] as (message: unknown) => void;
+    forward({ type: 'SHELLUI_SETTINGS', payload: { settings: { ...settings } }, to: ['files'] });
+
+    const byUuid = Object.fromEntries(
+      sendMessage.mock.calls.map((call) => [call[0].to[0], call[0].payload.settings.storage]),
+    );
+    expect(byUuid.files).toEqual(storage);
+    expect(byUuid.lookalike).toBeUndefined();
+    expect(byUuid.custom).toBeUndefined();
+  });
+
   it('does not fan settings out to ReDoc unless the reply is addressed to that frame', async () => {
     getLiveIframes.mockReturnValue([['redoc', iframe('https://id.example/api/docs/redoc/')]]);
     await forwardInChrome({

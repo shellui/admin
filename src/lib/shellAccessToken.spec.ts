@@ -1,6 +1,10 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const sendMessageToParent = vi.hoisted(() => vi.fn());
+vi.mock('@shellui/sdk', () => ({ sendMessageToParent }));
 import {
-  bearerAuthorization,
+  SessionExpiredError,
+  bearerFetch,
   freshShellAccessToken,
   isSameShellSession,
   setLatestShellAccessToken,
@@ -40,13 +44,64 @@ describe('shellAccessToken', () => {
     const old = jwt({ sub: '1', company_id: 7, exp: 10 });
     const renewed = jwt({ sub: '1', company_id: 7, exp: 20 });
     const stranger = jwt({ sub: '2', company_id: 7, exp: 10 });
-    expect(bearerAuthorization(old)).toBe(`Bearer ${old}`);
+    expect(freshShellAccessToken(old)).toBe(old);
 
     setLatestShellAccessToken(renewed);
-    expect(bearerAuthorization(old)).toBe(`Bearer ${renewed}`);
+    expect(freshShellAccessToken(old)).toBe(renewed);
     expect(freshShellAccessToken(stranger)).toBe(stranger);
 
     setLatestShellAccessToken(null);
     expect(freshShellAccessToken(old)).toBe(old);
+  });
+});
+
+describe('bearerFetch', () => {
+  afterEach(() => {
+    setLatestShellAccessToken(null);
+    vi.unstubAllGlobals();
+  });
+
+  function stubFetch(statuses: number[]) {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: RequestInit) => {
+        calls.push(new Headers(init.headers).get('Authorization') ?? '');
+        return new Response(null, { status: statuses.shift() ?? 200 });
+      }),
+    );
+    return calls;
+  }
+
+  it('asks the shell for a fresh token on 401 and retries once with it', async () => {
+    const old = jwt({ sub: '1', exp: 10 });
+    const renewed = jwt({ sub: '1', exp: 20 });
+    setLatestShellAccessToken(old);
+    sendMessageToParent.mockImplementation(() => setLatestShellAccessToken(renewed));
+    const calls = stubFetch([401, 200]);
+
+    const res = await bearerFetch('https://api.example/x', {}, old);
+
+    expect(res.status).toBe(200);
+    expect(calls).toEqual([`Bearer ${old}`, `Bearer ${renewed}`]);
+    expect(sendMessageToParent).toHaveBeenCalledWith({
+      type: 'SHELLUI_SETTINGS_REQUESTED',
+      payload: {},
+    });
+  });
+
+  it('throws SessionExpiredError when no newer token arrives', async () => {
+    vi.useFakeTimers();
+    const old = jwt({ sub: '1', exp: 10 });
+    sendMessageToParent.mockImplementation(() => {});
+    const calls = stubFetch([401]);
+
+    const done = expect(bearerFetch('https://api.example/x', {}, old)).rejects.toBeInstanceOf(
+      SessionExpiredError,
+    );
+    await vi.advanceTimersByTimeAsync(5000);
+    await done;
+    expect(calls).toHaveLength(1);
+    vi.useRealTimers();
   });
 });
