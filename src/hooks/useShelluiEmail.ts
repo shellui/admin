@@ -6,10 +6,10 @@ import { readSettingsEmail, type SettingsEmail } from '@/lib/emailServiceUrl';
 /**
  * email-service origin from the host shell (`email` in shellui.config),
  * delivered via `SHELLUI_SETTINGS` / `SHELLUI_SETTINGS_UPDATED`.
- * Missing `email.url` uses https://email.shellui.com.
+ * `null` when the shell sends no `email.url`. There is no default.
  */
-export function useShelluiEmail(): SettingsEmail {
-  const [email, setEmail] = useState<SettingsEmail>(() =>
+export function useShelluiEmail(): SettingsEmail | null {
+  const [email, setEmail] = useState<SettingsEmail | null>(() =>
     readSettingsEmail(shellui.initialSettings),
   );
 
@@ -19,7 +19,7 @@ export function useShelluiEmail(): SettingsEmail {
       if (!settings) return;
       const next = readSettingsEmail(settings);
       setEmail((prev) => {
-        if (prev.url === next.url && prev.showInAdmin === next.showInAdmin) return prev;
+        if (prev?.url === next?.url && prev?.showInAdmin === next?.showInAdmin) return prev;
         return next;
       });
     };

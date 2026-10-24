@@ -2,7 +2,9 @@
 
 Administration UI for Shellui: a React app embedded in the main shell (route `/admin`). This repo is **only the Vite + React app**—no Shellui shell wrapper.
 
-**Current release:** [0.6.3](./CHANGELOG.md) · production origin **https://admin.shellui.com/**
+**Current release:** [0.6.5](./CHANGELOG.md) · production origin **https://admin.shellui.com/**
+
+**Compatibility:** Admin 0.6.5 requires identity-service 0.9.0 and Shellui 0.7.0-alpha.1. Sign-in uses PKCE. Tokens never travel in the URL.
 
 ## Architecture
 
@@ -69,11 +71,11 @@ hosting: {
   // showInAdmin: false, // hide Admin → Hosting while keeping deploy
 },
 email: {
-  url: 'https://email.shellui.com', // default when omitted. Local Compose is http://localhost:8003
+  url: 'http://localhost:8003', // required, no default
 },
 ```
 
-Admin reads `email.url` the same way it reads `storage.url` and `hosting.url` (SDK settings from the host `shellui.config`). `@shellui/sdk` 0.6.2 types `settings.email`. When `email.url` is missing, Admin calls `https://email.shellui.com`. Set `email.showInAdmin: false` to hide the Email section.
+Admin reads `email.url` the same way it reads `storage.url` and `hosting.url` (SDK settings from the host `shellui.config`). `@shellui/sdk` 0.7.0-alpha.1 types `settings.email`. When `email.url` is missing, Admin hides Email; there is no default URL. Set `email.showInAdmin: false` to hide the Email section.
 
 Staff open Django admin for Email at the `email.url` origin plus `/admin/`.
 
