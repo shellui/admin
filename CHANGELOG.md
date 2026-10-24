@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [0.6.7] - 2026-10-24
+
+### ✨ Feature
+
+- **Docker:** Publishes a `shellui/admin` image to Docker Hub on each release, configured at runtime with `FRAME_ANCESTORS`.
+
 ## [0.6.6] - 2026-10-24
 
 Requires an explicit `email.url` in the host shell config, and shellui 0.7.0-alpha.6 when admin runs inside the dashboard frame.
