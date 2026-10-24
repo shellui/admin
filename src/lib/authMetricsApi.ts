@@ -1,3 +1,4 @@
+import { bearerAuthorization } from './shellAccessToken';
 import { AuthBackendNotConfiguredError, getAuthBackendBaseUrl } from '@/lib/backendUrl';
 import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
 import { parsePrometheusSamples } from '@/lib/prometheusText';
@@ -130,7 +131,7 @@ export async function fetchStaffPrometheusMetrics(accessToken: string): Promise<
   const res = await fetch(url, {
     headers: {
       Accept: 'text/plain',
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: bearerAuthorization(accessToken),
     },
   });
   const ct = res.headers.get('Content-Type') || '';
@@ -154,7 +155,7 @@ export async function fetchGlobalStaffPrometheusMetrics(accessToken: string): Pr
   const res = await fetch(`${base}/api/v1/metrics/all`, {
     headers: {
       Accept: 'text/plain',
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: bearerAuthorization(accessToken),
     },
   });
   if (!res.ok) {

@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [0.6.8] - 2026-10-24
+
+### 🐛 Bug Fixes
+
+- **Token refresh:** A token renewal for the same user no longer reloads pages and remounts their forms, which made password managers like 1Password pop up every few minutes.
+
 ## [0.6.7] - 2026-10-24
 
 ### ✨ Feature

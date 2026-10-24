@@ -5,6 +5,7 @@ import {
   shellAccessTokenRefreshDue,
   useShelluiAccessToken,
 } from '@/hooks/useShelluiAccessToken';
+import { bearerAuthorization } from '@/lib/shellAccessToken';
 
 const sdk = vi.hoisted(() => {
   const listeners: { type: string; fn: (message: { payload?: unknown }) => void }[] = [];
@@ -38,8 +39,8 @@ vi.mock('@shellui/sdk', () => ({
   },
 }));
 
-function jwtWithExp(exp: number): string {
-  const body = btoa(JSON.stringify({ exp }))
+function jwtWithExp(exp: number, claims: Record<string, unknown> = {}): string {
+  const body = btoa(JSON.stringify({ ...claims, exp }))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/, '');
@@ -130,19 +131,75 @@ describe('useShelluiAccessToken', () => {
     expect(sdk.sendMessageToParent).not.toHaveBeenCalled();
   });
 
-  it('stores the token the shell sends after a resume request', () => {
-    const stale = jwtWithExp(Date.now() / 1000 + 30);
+  it('sends the renewed token after a resume request without a new hook value', () => {
+    const stale = jwtWithExp(Date.now() / 1000 + 30, { sub: '1', company_id: 7 });
     sdk.initialSettings = { accessToken: stale, user: { id: '1' } };
     const { result } = renderHook(() => useShelluiAccessToken());
     expect(result.current).toBe(stale);
 
-    const fresh = jwtWithExp(Date.now() / 1000 + 3600);
+    const fresh = jwtWithExp(Date.now() / 1000 + 3600, { sub: '1', company_id: 7 });
     act(() => {
       window.dispatchEvent(new Event('focus'));
       emit('SHELLUI_SETTINGS', { user: { id: '1' }, accessToken: fresh });
     });
     expect(sdk.sendMessageToParent).toHaveBeenCalledWith(REQUEST);
-    expect(result.current).toBe(fresh);
+    expect(result.current).toBe(stale);
+    expect(bearerAuthorization(stale)).toBe(`Bearer ${fresh}`);
+
+    // The newest token is not due, so a later focus does not ask again.
+    sdk.sendMessageToParent.mockClear();
+    act(() => {
+      window.dispatchEvent(new Event('focus'));
+    });
+    expect(sdk.sendMessageToParent).not.toHaveBeenCalled();
+  });
+
+  it('does not re-render consumers on a renewal for the same session', () => {
+    const first = jwtWithExp(Date.now() / 1000 + 300, { sub: '1', company_id: 7, iat: 1 });
+    sdk.initialSettings = { accessToken: first, user: { id: '1' } };
+    let renders = 0;
+    const { result } = renderHook(() => {
+      renders += 1;
+      return useShelluiAccessToken();
+    });
+    const before = renders;
+
+    for (let i = 0; i < 3; i += 1) {
+      const renewed = jwtWithExp(Date.now() / 1000 + 600 + i, {
+        sub: '1',
+        company_id: 7,
+        iat: 2 + i,
+      });
+      act(() => {
+        emit('SHELLUI_SETTINGS_UPDATED', { user: { id: '1' }, accessToken: renewed });
+      });
+      expect(bearerAuthorization(first)).toBe(`Bearer ${renewed}`);
+    }
+    expect(result.current).toBe(first);
+    expect(renders).toBe(before);
+  });
+
+  it('changes the value when the user, company or roles change', () => {
+    const first = jwtWithExp(Date.now() / 1000 + 300, { sub: '1', company_id: 7 });
+    sdk.initialSettings = { accessToken: first, user: { id: '1' } };
+    const { result } = renderHook(() => useShelluiAccessToken());
+
+    const otherCompany = jwtWithExp(Date.now() / 1000 + 300, { sub: '1', company_id: 8 });
+    act(() => {
+      emit('SHELLUI_SETTINGS_UPDATED', { user: { id: '1' }, accessToken: otherCompany });
+    });
+    expect(result.current).toBe(otherCompany);
+    expect(bearerAuthorization(first)).toBe(`Bearer ${first}`);
+
+    const owner = jwtWithExp(Date.now() / 1000 + 300, {
+      sub: '1',
+      company_id: 8,
+      is_company_owner: true,
+    });
+    act(() => {
+      emit('SHELLUI_SETTINGS_UPDATED', { user: { id: '1' }, accessToken: owner });
+    });
+    expect(result.current).toBe(owner);
   });
 
   it('keeps an omitted access token while user is set, then clears on user null', () => {

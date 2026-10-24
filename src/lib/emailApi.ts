@@ -1,3 +1,4 @@
+import { bearerAuthorization } from './shellAccessToken';
 import { parseEmailApiError } from '@/lib/emailApiErrors';
 import { requireAbsoluteServiceUrl } from '@/lib/serviceAuthFetch';
 import {
@@ -180,7 +181,7 @@ async function request(
   }
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
-  headers.set('Authorization', `Bearer ${accessToken}`);
+  headers.set('Authorization', bearerAuthorization(accessToken));
   if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
   const res = await fetch(url.toString(), { ...init, headers });
   const body = await readBody(res);
@@ -203,7 +204,7 @@ async function requestText(
     if (value) url.searchParams.set(key, value);
   }
   const res = await fetch(url.toString(), {
-    headers: { Accept: accept, Authorization: `Bearer ${accessToken}` },
+    headers: { Accept: accept, Authorization: bearerAuthorization(accessToken) },
   });
   const text = await res.text();
   if (!res.ok) {
