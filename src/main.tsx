@@ -8,6 +8,7 @@ import { getAppearanceFromSettings, applyThemeToDocument } from '@/lib/theme';
 import { isEmbeddedInShell } from '@/lib/embed';
 import { hydrateAuthBackendBaseUrlFromSdk } from '@/lib/backendUrl';
 import { setupContentFrameMessagePropagation } from '@/lib/propagateToContentFrames';
+import { setupEmbeddedAppMessageSecurity } from '@/lib/embeddedAppOrigins';
 import { StandaloneNotice } from '@/components/StandaloneNotice';
 import i18n, { i18nInit } from '@/i18n';
 import { router } from '@/router';
@@ -27,6 +28,7 @@ async function bootstrap() {
   }
 
   await shellui.init();
+  setupEmbeddedAppMessageSecurity();
   hydrateAuthBackendBaseUrlFromSdk();
   setupContentFrameMessagePropagation();
   const initialLang = getLangFromSettings(shellui.initialSettings);

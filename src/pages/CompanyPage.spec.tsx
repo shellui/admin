@@ -72,18 +72,28 @@ describe('CompanyPage desktop sign-in schemes', () => {
     const owner = renderPage();
     expect(await screen.findByRole('heading', { name: /desktop sign-in schemes/i })).toBeTruthy();
     expect(screen.getByLabelText(/company name/i)).toBeTruthy();
+    expect(screen.getByRole('switch', { name: /allow dev builds/i }).hasAttribute('disabled')).toBe(
+      false,
+    );
     owner.unmount();
 
     session.token = token({ is_staff: true });
     renderPage();
     expect(await screen.findByRole('heading', { name: /desktop sign-in schemes/i })).toBeTruthy();
     expect(screen.queryByLabelText(/company name/i)).toBeNull();
+    expect(screen.getByRole('switch', { name: /allow dev builds/i }).hasAttribute('disabled')).toBe(
+      false,
+    );
   });
 
-  it('hides company settings from members who are not owners or staff', () => {
+  it('shows desktop schemes read-only to members who are not owners or staff', async () => {
     session.token = token({ is_company_owner: false, is_staff: false });
     renderPage();
     expect(screen.getByText(/you need to be a company owner/i)).toBeTruthy();
-    expect(screen.queryByRole('heading', { name: /desktop sign-in schemes/i })).toBeNull();
+    const devScheme = await screen.findByRole('switch', { name: /allow dev builds/i });
+    expect(devScheme.hasAttribute('disabled')).toBe(true);
+    expect(devScheme.getAttribute('aria-readonly')).toBe('true');
+    expect(screen.queryByLabelText(/company name/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: /^save$/i })).toBeNull();
   });
 });

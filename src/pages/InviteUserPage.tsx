@@ -5,7 +5,9 @@ import shellui from '@shellui/sdk';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { IdentityBackendMissing } from '@/components/ServiceUrlMissing';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
+import { useShelluiAuthBackendBaseUrl } from '@/hooks/useShelluiAuthBackendBaseUrl';
 import { AdminApiError, inviteAdminUser, type InviteLanguage } from '@/lib/adminUsersApi';
 import { notifyInvitationsChanged, resolveShellAppUrl } from '@/lib/inviteModal';
 
@@ -19,6 +21,7 @@ function defaultLanguage(uiLanguage: string | undefined): InviteLanguage {
 export function InviteUserPage() {
   const { t, i18n } = useTranslation();
   const accessToken = useShelluiAccessToken();
+  const authBackendBaseUrl = useShelluiAuthBackendBaseUrl();
   const rootRef = useRef<HTMLFormElement>(null);
   const [email, setEmail] = useState('');
   const [language, setLanguage] = useState<InviteLanguage>(() => defaultLanguage(i18n.language));
@@ -30,7 +33,7 @@ export function InviteUserPage() {
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     const address = email.trim();
-    if (!accessToken || !address || sending) return;
+    if (!authBackendBaseUrl || !accessToken || !address || sending) return;
     setSending(true);
     setError(null);
     try {
@@ -66,7 +69,9 @@ export function InviteUserPage() {
         <p className="text-sm text-muted-foreground">{t('inviteDescription')}</p>
       </header>
 
-      {!accessToken ? (
+      {!authBackendBaseUrl ? (
+        <IdentityBackendMissing />
+      ) : !accessToken ? (
         <p className="text-sm text-muted-foreground">{t('usersNoSession')}</p>
       ) : (
         <>
@@ -124,7 +129,7 @@ export function InviteUserPage() {
         </Button>
         <Button
           type="submit"
-          disabled={!accessToken || !email.trim() || sending}
+          disabled={!authBackendBaseUrl || !accessToken || !email.trim() || sending}
           className="inline-flex items-center gap-2"
         >
           {sending ? (

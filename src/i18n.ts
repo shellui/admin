@@ -35,6 +35,12 @@ const resources = {
       navIdentityStatistics: 'Statistics',
       navHostingDjangoAdmin: 'Django admin',
       navEmailDjangoAdmin: 'Django admin',
+      identityBackendMissingTitle: 'Identity URL not configured',
+      identityBackendMissingDescription:
+        'Set backend.url in the host shell config (shellui.config.json or shellui.config.ts). Shellui Admin does not call identity-service until that URL is set.',
+      emailMissingTitle: 'Email URL not configured',
+      emailMissingDescription:
+        'Set email.url in shellui.config.json (or .ts) (for example http://localhost:8003).',
       hostingMissingTitle: 'Hosting URL not configured',
       hostingMissingDescription:
         'Set hosting.url in shellui.config.json (or .ts) (for example http://localhost:8002). Hide Admin → Hosting with hosting.showInAdmin: false.',
@@ -542,6 +548,9 @@ const resources = {
       companyDesktopSchemeRfc:
         'Scheme must be an RFC 3986 scheme: a letter, then letters, digits, plus, hyphen, or dot.',
       companyDesktopSchemeDenied: 'This scheme is not allowed.',
+      companyDesktopDevSchemeLabel: 'Allow dev builds (-dev schemes)',
+      companyDesktopDevSchemeHelp:
+        "Dev builds of your listed apps can sign in to this company. Turn it off when you're done debugging.",
       loginRedirectsSectionLabel: 'OAuth redirect allow list',
       loginRedirectsTitle: 'Login redirect URLs',
       loginRedirectsDescription:
@@ -1764,6 +1773,12 @@ const resources = {
       navIdentityStatistics: 'Statistiques',
       navHostingDjangoAdmin: 'Admin Django',
       navEmailDjangoAdmin: 'Admin Django',
+      identityBackendMissingTitle: 'URL d’identité non configurée',
+      identityBackendMissingDescription:
+        'Définissez backend.url dans la configuration du shell (shellui.config.json ou shellui.config.ts). Shellui Admin n’appelle pas identity-service tant que cette URL est absente.',
+      emailMissingTitle: 'URL e-mail non configurée',
+      emailMissingDescription:
+        'Définissez email.url dans shellui.config.json (ou .ts) (par ex. http://localhost:8003).',
       hostingMissingTitle: 'URL d’hébergement non configurée',
       hostingMissingDescription:
         'Définissez hosting.url dans shellui.config.json (ou .ts) (par ex. http://localhost:8002). Masquez Admin → Hébergement avec hosting.showInAdmin: false.',
@@ -2276,6 +2291,9 @@ const resources = {
       companyDesktopSchemeRfc:
         'Le schéma doit être un schéma RFC 3986 : une lettre, puis des lettres, des chiffres, un plus, un trait d’union ou un point.',
       companyDesktopSchemeDenied: 'Ce schéma n’est pas autorisé.',
+      companyDesktopDevSchemeLabel: 'Autoriser les builds de dev (schémas -dev)',
+      companyDesktopDevSchemeHelp:
+        'Les builds de dev de vos applications listées peuvent se connecter à cette entreprise. Désactivez l’option une fois le débogage terminé.',
       loginRedirectsSectionLabel: 'Liste blanche des redirections OAuth',
       loginRedirectsTitle: 'URL de retour de connexion',
       loginRedirectsDescription:

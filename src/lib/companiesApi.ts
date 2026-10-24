@@ -1,4 +1,4 @@
-import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
+import { requireAuthBackendBaseUrl } from '@/lib/backendUrl';
 
 export type CompanyAccessMode = 'public' | 'domain' | 'invite';
 
@@ -11,6 +11,8 @@ export type CompanyDto = {
   allowed_email_domains: string[];
   /** Empty list means desktop sign-in is off for every method. */
   desktop_redirect_schemes: string[];
+  /** When true, each listed scheme also accepts its `-dev` variant. */
+  allow_desktop_dev_scheme: boolean;
 };
 
 export class CompanyFieldError extends Error {
@@ -69,13 +71,20 @@ function readSchemes(raw: unknown): string[] {
   return raw.filter((value): value is string => typeof value === 'string');
 }
 
+function readBool(raw: unknown): boolean {
+  return raw === true;
+}
+
 function parseCompany(raw: unknown): CompanyDto {
   const row = (raw && typeof raw === 'object' ? raw : {}) as CompanyDto;
+  const source = raw as {
+    desktop_redirect_schemes?: unknown;
+    allow_desktop_dev_scheme?: unknown;
+  } | null;
   return {
     ...row,
-    desktop_redirect_schemes: readSchemes(
-      (raw as { desktop_redirect_schemes?: unknown } | null)?.desktop_redirect_schemes,
-    ),
+    desktop_redirect_schemes: readSchemes(source?.desktop_redirect_schemes),
+    allow_desktop_dev_scheme: readBool(source?.allow_desktop_dev_scheme),
   };
 }
 
@@ -84,7 +93,7 @@ async function companiesAuthFetch(
   accessToken: string,
   init: RequestInit = {},
 ): Promise<Response> {
-  const base = getAuthBackendBaseUrl();
+  const base = requireAuthBackendBaseUrl();
   const url = new URL(`${base}${path}`);
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
@@ -115,6 +124,7 @@ export async function patchCompany(
     access_mode?: CompanyAccessMode;
     allowed_email_domains?: string[];
     desktop_redirect_schemes?: string[];
+    allow_desktop_dev_scheme?: boolean;
   },
 ): Promise<CompanyDto> {
   const res = await companiesAuthFetch(`/api/v1/companies/${companyId}/`, accessToken, {

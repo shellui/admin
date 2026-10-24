@@ -1,9 +1,10 @@
 import { fillSampleData, sampleValues } from '@/lib/emailSampleData';
 import type { EmailLibrarySet, EmailLibraryTemplate } from '@/lib/emailTypes';
 
-/** Where email-service serves the library images. */
-export function emailAssetsUrl(baseUrl: string): string {
-  return `${baseUrl.replace(/\/+$/, '')}/static/library`;
+/** Where email-service serves the library images. Empty when the service URL is unset. */
+export function emailAssetsUrl(baseUrl: string | null | undefined): string {
+  if (!baseUrl?.trim()) return '';
+  return `${baseUrl.trim().replace(/\/+$/, '')}/static/library`;
 }
 
 /** Samples for the two tokens a library design uses before it is copied onto an event. */

@@ -49,10 +49,10 @@ function requestShellSettings(): void {
 }
 
 /**
- * Returns the **JWT access token** from Shellui `Settings.accessToken`.
+ * Returns the **JWT access token** from this frame's Shellui `Settings.accessToken`.
  *
- * The parent shell copies the signed-in session token into settings for trusted iframes (see
- * `buildSettingsForPropagation`); sub-apps must send it as `Authorization: Bearer <token>`.
+ * The shell copies that frame's session token into settings. Admin sends it as
+ * `Authorization: Bearer` and does not read a token from any other source.
  * Value is updated when `SHELLUI_SETTINGS` / `SHELLUI_SETTINGS_UPDATED` arrives (e.g. refresh).
  * After subscribe, and again when the tab is shown with a missing or soon-expiring token, this
  * posts `SHELLUI_SETTINGS_REQUESTED` so a dropped shell push can be replaced.

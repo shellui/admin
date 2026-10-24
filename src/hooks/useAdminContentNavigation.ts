@@ -9,7 +9,6 @@ import { useShelluiDeveloperMode } from '@/hooks/useShelluiDeveloperMode';
 import { useShelluiIsStaff } from '@/hooks/useShelluiIsStaff';
 import { useShelluiHosting, isHostingAdminEnabled } from '@/hooks/useShelluiHosting';
 import { useShelluiStorage } from '@/hooks/useShelluiStorage';
-import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
 import { contentFrameAuthRulesFromEmbeds, setContentFrameAuthRules } from '@/lib/contentFrameAuth';
 import { resolveAdminAppUrl } from '@/lib/resolveAdminAppUrl';
 import {
@@ -115,8 +114,11 @@ export function useAdminContentNavigation(): AdminContentFrame {
     for (const item of flattenBuiltInItems(adminShellUiConfig.navigation ?? [], isDeveloperMode)) {
       const path = item.path.replace(/^\/+/, '');
       if (path === 'swagger' || path === 'redoc') {
-        const base = getAuthBackendBaseUrl();
-        const docsUrl = path === 'swagger' ? `${base}/api/docs/` : `${base}/api/docs/redoc/`;
+        if (!authBackendBaseUrl) continue;
+        const docsUrl =
+          path === 'swagger'
+            ? `${authBackendBaseUrl}/api/docs/`
+            : `${authBackendBaseUrl}/api/docs/redoc/`;
         items.push({
           label: typeof item.label === 'string' ? item.label : item.label.en,
           path,

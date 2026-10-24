@@ -399,10 +399,12 @@ export function EmailStatisticsPage() {
         </section>
       ) : null}
 
-      <DashboardScheduledJobsSection
-        baseUrl={baseUrl}
-        service="email"
-      />
+      {baseUrl ? (
+        <DashboardScheduledJobsSection
+          baseUrl={baseUrl}
+          service="email"
+        />
+      ) : null}
     </div>
   );
 }

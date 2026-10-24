@@ -48,8 +48,11 @@ export function CompanyPage() {
         </>
       ) : null}
 
-      {accessToken && canEditSchemes ? (
-        <CompanyDesktopSchemesSection accessToken={accessToken} />
+      {accessToken ? (
+        <CompanyDesktopSchemesSection
+          accessToken={accessToken}
+          canEdit={canEditSchemes}
+        />
       ) : null}
     </div>
   );
