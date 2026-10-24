@@ -23,6 +23,10 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ## [Unreleased]
 
+## [0.6.6] - 2026-10-24
+
+Requires shellui 0.7.0-alpha.6 so the host passes `email.url` to admin.
+
 ### 🐛 Bug Fixes
 
 - **Embedded shell:** Admin reads identity URL and session token per frame, and a production build errors instead of calling localhost when `backend.url` is missing.
