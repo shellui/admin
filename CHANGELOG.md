@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [Unreleased]
+
+### 🔒 Security
+
+- **Email:** No built-in `email.shellui.com` fallback; Email is hidden when the shell sends no `email.url`.
+
 ## [0.6.5] - 2026-10-21
 
 ### 🏗 Chore
