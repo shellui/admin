@@ -145,6 +145,8 @@ export function NewsletterSettingsPanel({
             <Input
               id="newsletter-secret"
               type="password"
+              data-1p-ignore
+              data-lpignore="true"
               autoComplete="off"
               value={secret}
               className="font-mono text-xs"

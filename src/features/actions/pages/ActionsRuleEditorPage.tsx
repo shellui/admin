@@ -434,6 +434,8 @@ export function ActionsRuleEditorPage() {
                   </label>
                   <Input
                     type="password"
+                    data-1p-ignore
+                    data-lpignore="true"
                     value={webhookSecret}
                     onChange={(e) => {
                       clearActionFeedback();
@@ -489,6 +491,8 @@ export function ActionsRuleEditorPage() {
                 </label>
                 <Input
                   type="password"
+                  data-1p-ignore
+                  data-lpignore="true"
                   value={authHeaderValue}
                   onChange={(e) => {
                     clearActionFeedback();

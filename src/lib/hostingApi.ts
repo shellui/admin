@@ -1,3 +1,4 @@
+import { bearerAuthorization } from './shellAccessToken';
 import { useShelluiHosting, isHostingAdminEnabled } from '@/hooks/useShelluiHosting';
 
 /** hosting-service base URL from host `hosting.url` (via SDK). */
@@ -83,7 +84,7 @@ async function hostingFetch<T>(
   if (!headers.has('Content-Type') && init.body) {
     headers.set('Content-Type', 'application/json');
   }
-  headers.set('Authorization', `Bearer ${accessToken}`);
+  headers.set('Authorization', bearerAuthorization(accessToken));
   const response = await fetch(url, { ...init, headers });
   const body = await response.json().catch(() => null);
   if (!response.ok) {
@@ -171,7 +172,7 @@ export async function deleteHostingApp(
     method: 'DELETE',
     headers: {
       Accept: 'application/json',
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: bearerAuthorization(accessToken),
     },
   });
   if (response.status === 204) return;

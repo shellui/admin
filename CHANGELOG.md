@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [Unreleased]
+
+### 🐛 Bug Fixes
+
+- **Token refresh:** A token renewal for the same user no longer reloads pages and remounts their forms, which made password managers like 1Password pop up every few minutes.
+
 ## [0.6.6] - 2026-10-24
 
 Requires an explicit `email.url` in the host shell config, and shellui 0.7.0-alpha.6 when admin runs inside the dashboard frame.

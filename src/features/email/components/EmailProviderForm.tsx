@@ -272,6 +272,8 @@ export function EmailProviderForm({
               id="email-smtp-password"
               name="smtpPassword"
               type="password"
+              data-1p-ignore
+              data-lpignore="true"
               autoComplete="new-password"
               value={smtpPassword}
               placeholder={t('emailSecretPlaceholder')}
@@ -302,6 +304,8 @@ export function EmailProviderForm({
             id="email-api-key"
             name="apiKey"
             type="password"
+            data-1p-ignore
+            data-lpignore="true"
             autoComplete="new-password"
             value={apiKey}
             placeholder={t('emailSecretPlaceholder')}

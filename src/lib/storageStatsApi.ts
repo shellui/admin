@@ -1,3 +1,4 @@
+import { bearerAuthorization } from './shellAccessToken';
 import { useShelluiStorage } from '@/hooks/useShelluiStorage';
 
 /** storage-service base URL from host `storage.url` (via SDK). */
@@ -16,7 +17,7 @@ export async function fetchStorageStats(
     `${storageBaseUrl.replace(/\/+$/, '')}/storage/v1/stats?days=${days}`,
     {
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: bearerAuthorization(accessToken),
         Accept: 'application/json',
       },
     },
