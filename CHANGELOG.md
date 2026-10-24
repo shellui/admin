@@ -21,6 +21,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [0.6.8] - 2026-10-24
+
+### 🐛 Bug Fixes
+
+- A 401 asks the shell for a fresh token and retries once. A second 401 shows "session expired" in the page instead of navigating.
+- Page errors and unknown routes show inline, so the admin layout and its frames stay mounted. Retry no longer reloads.
+- Content frame skips echoes of its own navigation, so fast redirects no longer bounce.
+- Files embedded in admin gets admin's `storage` settings, fixing "Storage URL is not set" inside the dashboard.
+
 ## [0.6.7] - 2026-10-24
 
 ### ✨ Feature

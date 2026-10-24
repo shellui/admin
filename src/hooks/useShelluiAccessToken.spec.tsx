@@ -5,7 +5,7 @@ import {
   shellAccessTokenRefreshDue,
   useShelluiAccessToken,
 } from '@/hooks/useShelluiAccessToken';
-import { bearerAuthorization } from '@/lib/shellAccessToken';
+import { freshShellAccessToken } from '@/lib/shellAccessToken';
 
 const sdk = vi.hoisted(() => {
   const listeners: { type: string; fn: (message: { payload?: unknown }) => void }[] = [];
@@ -144,7 +144,7 @@ describe('useShelluiAccessToken', () => {
     });
     expect(sdk.sendMessageToParent).toHaveBeenCalledWith(REQUEST);
     expect(result.current).toBe(stale);
-    expect(bearerAuthorization(stale)).toBe(`Bearer ${fresh}`);
+    expect(freshShellAccessToken(stale)).toBe(fresh);
 
     // The newest token is not due, so a later focus does not ask again.
     sdk.sendMessageToParent.mockClear();
@@ -173,7 +173,7 @@ describe('useShelluiAccessToken', () => {
       act(() => {
         emit('SHELLUI_SETTINGS_UPDATED', { user: { id: '1' }, accessToken: renewed });
       });
-      expect(bearerAuthorization(first)).toBe(`Bearer ${renewed}`);
+      expect(freshShellAccessToken(first)).toBe(renewed);
     }
     expect(result.current).toBe(first);
     expect(renders).toBe(before);
@@ -189,7 +189,7 @@ describe('useShelluiAccessToken', () => {
       emit('SHELLUI_SETTINGS_UPDATED', { user: { id: '1' }, accessToken: otherCompany });
     });
     expect(result.current).toBe(otherCompany);
-    expect(bearerAuthorization(first)).toBe(`Bearer ${first}`);
+    expect(freshShellAccessToken(first)).toBe(first);
 
     const owner = jwtWithExp(Date.now() / 1000 + 300, {
       sub: '1',

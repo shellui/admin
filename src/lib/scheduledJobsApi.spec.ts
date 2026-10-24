@@ -53,7 +53,7 @@ describe('scheduled jobs API client', () => {
     expect(runs).toEqual([{ id: 1 }]);
   });
 
-  it.each([401, 403])('maps %i to ScheduledJobsForbiddenError', async (status) => {
+  it.each([403])('maps %i to ScheduledJobsForbiddenError', async (status) => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse(status, { detail: 'Staff only.' })),

@@ -11,7 +11,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { ContentView } from '@shellui/core/ContentView';
 import type { NavigationItem } from '@shellui/core/types';
-import shellui, { type ShellUIMessage } from '@shellui/sdk';
+import shellui, { normalizeAppPath, type ShellUIMessage } from '@shellui/sdk';
 import { LoadingOverlay } from '@/components/LoadingOverlay';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -794,8 +794,8 @@ function AdminHashContentFrame({
   const containerRef = useRef<HTMLDivElement>(null);
   const initialUrlRef = useRef(targetUrl);
   const skipFirstSoftNavRef = useRef(true);
-  /** Hash last reported by the content iframe — chrome updates from that must not soft-nav. */
-  const lastIframeHashRef = useRef<string | null>(null);
+  /** Hashes recently reported by the content iframe. The chrome echo of one must not soft-nav. */
+  const pendingRef = useRef<string[]>([]);
 
   // Register before ContentView's useEffect listeners so we record iframe hash first.
   useLayoutEffect(() => {
@@ -805,7 +805,9 @@ function AdminHashContentFrame({
         const iframe = containerRef.current?.querySelector('iframe');
         if (!iframe || event.source !== iframe.contentWindow) return;
         const hash = (data.payload as { hash?: string } | undefined)?.hash;
-        lastIframeHashRef.current = normalizeHash(hash);
+        pendingRef.current = [...pendingRef.current, normalizeAppPath(normalizeHash(hash))].slice(
+          -20,
+        );
       },
     );
     return off;
@@ -824,17 +826,17 @@ function AdminHashContentFrame({
       }
     }
 
-    // Chrome URL was updated from the iframe — do not push hash back in (avoids churn).
-    if (lastIframeHashRef.current === targetHash) {
+    // Chrome URL was updated from the iframe: consume the echo, do not push it back in.
+    const echo = pendingRef.current.indexOf(normalizeAppPath(targetHash));
+    if (echo !== -1) {
+      pendingRef.current = pendingRef.current.slice(echo + 1);
       return;
     }
+    pendingRef.current = [];
 
     if (softNavigateIframeHash(iframe, targetUrl)) return;
 
-    const onLoad = () => {
-      if (lastIframeHashRef.current === getHashFragment(targetUrl)) return;
-      softNavigateIframeHash(iframe, targetUrl);
-    };
+    const onLoad = () => softNavigateIframeHash(iframe, targetUrl);
     iframe.addEventListener('load', onLoad);
     return () => iframe.removeEventListener('load', onLoad);
   }, [targetUrl]);

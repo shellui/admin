@@ -1,4 +1,4 @@
-import { bearerAuthorization } from './shellAccessToken';
+import { bearerFetch } from './shellAccessToken';
 import { useShelluiStorage } from '@/hooks/useShelluiStorage';
 
 /** storage-service base URL from host `storage.url` (via SDK). */
@@ -13,14 +13,10 @@ export async function fetchStorageStats(
   accessToken: string,
   days = 14,
 ): Promise<StorageStatsSnapshot> {
-  const response = await fetch(
+  const response = await bearerFetch(
     `${storageBaseUrl.replace(/\/+$/, '')}/storage/v1/stats?days=${days}`,
-    {
-      headers: {
-        Authorization: bearerAuthorization(accessToken),
-        Accept: 'application/json',
-      },
-    },
+    { headers: { Accept: 'application/json' } },
+    accessToken,
   );
   if (!response.ok) {
     let message = response.statusText || 'Request failed';

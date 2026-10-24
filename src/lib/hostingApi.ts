@@ -1,4 +1,4 @@
-import { bearerAuthorization } from './shellAccessToken';
+import { bearerFetch } from './shellAccessToken';
 import { useShelluiHosting, isHostingAdminEnabled } from '@/hooks/useShelluiHosting';
 
 /** hosting-service base URL from host `hosting.url` (via SDK). */
@@ -84,8 +84,7 @@ async function hostingFetch<T>(
   if (!headers.has('Content-Type') && init.body) {
     headers.set('Content-Type', 'application/json');
   }
-  headers.set('Authorization', bearerAuthorization(accessToken));
-  const response = await fetch(url, { ...init, headers });
+  const response = await bearerFetch(url, { ...init, headers }, accessToken);
   const body = await response.json().catch(() => null);
   if (!response.ok) {
     throw new Error(parseErrorMessage(body, response.statusText || 'Request failed'));
@@ -168,13 +167,16 @@ export async function deleteHostingApp(
 ): Promise<void> {
   const base = hostingBaseUrl.replace(/\/+$/, '');
   const url = `${base}/hosting/v1/apps/${encodeURIComponent(appRef)}`;
-  const response = await fetch(url, {
-    method: 'DELETE',
-    headers: {
-      Accept: 'application/json',
-      Authorization: bearerAuthorization(accessToken),
+  const response = await bearerFetch(
+    url,
+    {
+      method: 'DELETE',
+      headers: {
+        Accept: 'application/json',
+      },
     },
-  });
+    accessToken,
+  );
   if (response.status === 204) return;
   const body = await response.json().catch(() => null);
   throw new Error(parseErrorMessage(body, response.statusText || 'Request failed'));

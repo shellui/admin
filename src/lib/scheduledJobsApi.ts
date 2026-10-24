@@ -152,7 +152,7 @@ async function getJson<T>(
   const resolved = baseUrl?.trim() ? baseUrl : requireAuthBackendBaseUrl();
   const res = await serviceAuthFetch(resolved, path, accessToken, {}, { query });
   const body = await res.json().catch(() => null);
-  if (res.status === 401 || res.status === 403) {
+  if (res.status === 403) {
     throw new ScheduledJobsForbiddenError(parseErrorMessage(body) || 'Forbidden');
   }
   if (!res.ok) {
