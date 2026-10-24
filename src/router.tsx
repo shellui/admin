@@ -11,7 +11,7 @@ import { ActionsRuleEditorPage } from '@/features/actions/pages/ActionsRuleEdito
 import { ActionsRulesListPage } from '@/features/actions/pages/ActionsRulesListPage';
 import { OAuthSetupPage } from '@/pages/OAuthSetupPage';
 import { ScimSetupPage } from '@/pages/ScimSetupPage';
-import { RouteErrorPage } from '@/pages/RouteErrorPage';
+import { NotFoundPage, RouteErrorPage } from '@/pages/RouteErrorPage';
 import { AccessTokensPage } from '@/pages/AccessTokensPage';
 import { InviteUserPage } from '@/pages/InviteUserPage';
 import { INVITATIONS_ROUTE, INVITE_ROUTE } from '@/lib/inviteModal';
@@ -127,163 +127,161 @@ export const router = createHashRouter([
     element: <AdminShellLayout />,
     errorElement: <RouteErrorPage />,
     children: [
-      { index: true, element: <DashboardPage /> },
-      { path: 'company', element: <CompanyPage /> },
-      { path: 'groups', element: <GroupsListPage /> },
-      { path: 'oauth/*', element: <OAuthSetupPage /> },
-      { path: 'scim', element: <ScimSetupPage /> },
-      ...identityWebhookRoutes,
-      ...hostingWebhookRoutes,
-      ...storageWebhookRoutes,
       {
-        path: 'webhooks/*',
-        element: <LegacyWebhooksCatchAll />,
-      },
-      {
-        path: 'webhooks',
-        element: (
-          <Navigate
-            to={webhookRulesListPath('identity')}
-            replace
-          />
-        ),
-      },
-      {
-        path: 'actions/rules/new',
-        element: (
-          <Navigate
-            to={webhookRulesNewPath('identity')}
-            replace
-          />
-        ),
-      },
-      { path: 'actions/rules/:ruleId', element: <LegacyActionsRuleRedirect /> },
-      {
-        path: 'actions/rules',
-        element: (
-          <Navigate
-            to={webhookRulesListPath('identity')}
-            replace
-          />
-        ),
-      },
-      {
-        path: 'actions/deliveries/:deliveryId',
-        element: <LegacyActionsDeliveryRedirect />,
-      },
-      {
-        path: 'actions/deliveries',
-        element: (
-          <Navigate
-            to={webhookDeliveriesPath('identity')}
-            replace
-          />
-        ),
-      },
-      {
-        path: 'actions',
-        element: (
-          <Navigate
-            to={webhookRulesListPath('identity')}
-            replace
-          />
-        ),
-      },
-      { path: 'swagger', element: null },
-      { path: 'redoc', element: null },
-      { path: 'users/:userId', element: <UserDetailPage /> },
-      { path: 'users', element: <UsersListPage /> },
-      { path: 'personal-access-tokens', element: <AccessTokensPage /> },
-      {
-        path: 'access-tokens',
-        element: (
-          <Navigate
-            to="/personal-access-tokens"
-            replace
-          />
-        ),
-      },
-      { path: 'identity/statistics', element: <IdentityStatisticsPage /> },
-      { path: 'events/:eventId', element: <EventDetailPage key="identity" /> },
-      { path: 'events', element: <EventsListPage key="identity" /> },
-      {
-        path: 'login-events/*',
-        element: (
-          <Navigate
-            to="/events"
-            replace
-          />
-        ),
-      },
-      {
-        path: 'storage/events/:eventId',
-        element: (
-          <EventDetailPage
-            key="storage"
-            service="storage"
-          />
-        ),
-      },
-      {
-        path: 'storage/events',
-        element: (
-          <EventsListPage
-            key="storage"
-            service="storage"
-          />
-        ),
-      },
-      { path: 'storage/statistics', element: <StorageStatisticsPage /> },
-      {
-        element: <EmailServiceGate />,
+        // Page errors render inside the layout, so the chrome and its frames stay mounted.
+        errorElement: <RouteErrorPage />,
         children: [
-          { path: 'email/templates/id/:templateId', element: <EmailTemplateEditorPage /> },
-          { path: 'email/templates/:libraryId', element: <EmailLibraryTemplatePage /> },
-          { path: 'email/templates', element: <EmailTemplatesPage /> },
-          { path: 'email/broadcasts/:broadcastId', element: <EmailBroadcastPage /> },
-          { path: 'email/broadcasts', element: <EmailBroadcastsPage /> },
-          { path: 'email/newsletters/:newsletterId', element: <EmailNewsletterPage /> },
-          { path: 'email/newsletters', element: <EmailNewslettersPage /> },
-          { path: 'email/provider', element: <EmailProviderPage /> },
-          { path: 'email/link-hosts', element: <EmailLinkHostsPage /> },
-          { path: 'email/statistics', element: <EmailStatisticsPage /> },
+          { index: true, element: <DashboardPage /> },
+          { path: 'company', element: <CompanyPage /> },
+          { path: 'groups', element: <GroupsListPage /> },
+          { path: 'oauth/*', element: <OAuthSetupPage /> },
+          { path: 'scim', element: <ScimSetupPage /> },
+          ...identityWebhookRoutes,
+          ...hostingWebhookRoutes,
+          ...storageWebhookRoutes,
+          {
+            path: 'webhooks/*',
+            element: <LegacyWebhooksCatchAll />,
+          },
+          {
+            path: 'webhooks',
+            element: (
+              <Navigate
+                to={webhookRulesListPath('identity')}
+                replace
+              />
+            ),
+          },
+          {
+            path: 'actions/rules/new',
+            element: (
+              <Navigate
+                to={webhookRulesNewPath('identity')}
+                replace
+              />
+            ),
+          },
+          { path: 'actions/rules/:ruleId', element: <LegacyActionsRuleRedirect /> },
+          {
+            path: 'actions/rules',
+            element: (
+              <Navigate
+                to={webhookRulesListPath('identity')}
+                replace
+              />
+            ),
+          },
+          {
+            path: 'actions/deliveries/:deliveryId',
+            element: <LegacyActionsDeliveryRedirect />,
+          },
+          {
+            path: 'actions/deliveries',
+            element: (
+              <Navigate
+                to={webhookDeliveriesPath('identity')}
+                replace
+              />
+            ),
+          },
+          {
+            path: 'actions',
+            element: (
+              <Navigate
+                to={webhookRulesListPath('identity')}
+                replace
+              />
+            ),
+          },
+          { path: 'swagger', element: null },
+          { path: 'redoc', element: null },
+          { path: 'users/:userId', element: <UserDetailPage /> },
+          { path: 'users', element: <UsersListPage /> },
+          { path: 'personal-access-tokens', element: <AccessTokensPage /> },
+          {
+            path: 'access-tokens',
+            element: (
+              <Navigate
+                to="/personal-access-tokens"
+                replace
+              />
+            ),
+          },
+          { path: 'identity/statistics', element: <IdentityStatisticsPage /> },
+          { path: 'events/:eventId', element: <EventDetailPage key="identity" /> },
+          { path: 'events', element: <EventsListPage key="identity" /> },
+          {
+            path: 'login-events/*',
+            element: (
+              <Navigate
+                to="/events"
+                replace
+              />
+            ),
+          },
+          {
+            path: 'storage/events/:eventId',
+            element: (
+              <EventDetailPage
+                key="storage"
+                service="storage"
+              />
+            ),
+          },
+          {
+            path: 'storage/events',
+            element: (
+              <EventsListPage
+                key="storage"
+                service="storage"
+              />
+            ),
+          },
+          { path: 'storage/statistics', element: <StorageStatisticsPage /> },
+          {
+            element: <EmailServiceGate />,
+            children: [
+              { path: 'email/templates/id/:templateId', element: <EmailTemplateEditorPage /> },
+              { path: 'email/templates/:libraryId', element: <EmailLibraryTemplatePage /> },
+              { path: 'email/templates', element: <EmailTemplatesPage /> },
+              { path: 'email/broadcasts/:broadcastId', element: <EmailBroadcastPage /> },
+              { path: 'email/broadcasts', element: <EmailBroadcastsPage /> },
+              { path: 'email/newsletters/:newsletterId', element: <EmailNewsletterPage /> },
+              { path: 'email/newsletters', element: <EmailNewslettersPage /> },
+              { path: 'email/provider', element: <EmailProviderPage /> },
+              { path: 'email/link-hosts', element: <EmailLinkHostsPage /> },
+              { path: 'email/statistics', element: <EmailStatisticsPage /> },
+            ],
+          },
+          { path: 'storage/swagger', element: null },
+          { path: 'storage/redoc', element: null },
+          { path: 'storage', element: null },
+          { path: 'hosting/apps/:name', element: <HostingAppDetailPage /> },
+          {
+            path: 'hosting/events/:eventId',
+            element: (
+              <EventDetailPage
+                key="hosting"
+                service="hosting"
+              />
+            ),
+          },
+          {
+            path: 'hosting/events',
+            element: (
+              <EventsListPage
+                key="hosting"
+                service="hosting"
+              />
+            ),
+          },
+          { path: 'hosting/statistics', element: <HostingStatisticsPage /> },
+          { path: 'hosting/swagger', element: null },
+          { path: 'hosting/redoc', element: null },
+          { path: 'hosting', element: <HostingAppsPage /> },
+          { path: 'app/:appPath', element: null },
+          { path: '*', element: <NotFoundPage /> },
         ],
-      },
-      { path: 'storage/swagger', element: null },
-      { path: 'storage/redoc', element: null },
-      { path: 'storage', element: null },
-      { path: 'hosting/apps/:name', element: <HostingAppDetailPage /> },
-      {
-        path: 'hosting/events/:eventId',
-        element: (
-          <EventDetailPage
-            key="hosting"
-            service="hosting"
-          />
-        ),
-      },
-      {
-        path: 'hosting/events',
-        element: (
-          <EventsListPage
-            key="hosting"
-            service="hosting"
-          />
-        ),
-      },
-      { path: 'hosting/statistics', element: <HostingStatisticsPage /> },
-      { path: 'hosting/swagger', element: null },
-      { path: 'hosting/redoc', element: null },
-      { path: 'hosting', element: <HostingAppsPage /> },
-      { path: 'app/:appPath', element: null },
-      {
-        path: '*',
-        element: (
-          <Navigate
-            to="/"
-            replace
-          />
-        ),
       },
     ],
   },

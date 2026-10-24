@@ -6,6 +6,29 @@ import {
 } from '@/lib/contentFrameAuth';
 import { isAdminContentFrame } from '@/lib/embed';
 
+/** Admin's own `storage` settings, handed to the Files app it embeds. */
+let ownStorage: unknown = shellui.initialSettings?.storage ?? null;
+
+function originOf(url: unknown): string | null {
+  try {
+    return typeof url === 'string' && url ? new URL(url).origin : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The Files app needs `storage.url`, which only admin knows when embedded in a dashboard.
+ * Add it for the frame whose exact origin is admin's `storage.filesUrl`, never any other.
+ */
+function withFilesStorage(payload: ShellUIMessage['payload'], frameSrc: string) {
+  const filesOrigin = originOf((ownStorage as { filesUrl?: unknown } | null)?.filesUrl);
+  if (!filesOrigin || originOf(frameSrc) !== filesOrigin) return payload;
+  const settings = (payload as { settings?: Record<string, unknown> } | undefined)?.settings;
+  if (!settings) return payload;
+  return { ...(payload as object), settings: { ...settings, storage: ownStorage } };
+}
+
 const SETTINGS_MESSAGE_TYPES = ['SHELLUI_SETTINGS', 'SHELLUI_SETTINGS_UPDATED'] as const;
 
 /**
@@ -29,6 +52,11 @@ function stopParentSettingsRelay(message: ShellUIMessage): void {
 export function forwardSettingsToContentFrames(message: ShellUIMessage): void {
   const addressed = new Set(message.to ?? []);
   stopParentSettingsRelay(message);
+  if (!addressed.size) {
+    const storage = (message.payload as { settings?: { storage?: unknown } } | undefined)?.settings
+      ?.storage;
+    if (storage) ownStorage = storage;
+  }
   const registry = shellui.frameRegistry;
   if (!registry || typeof registry.getLiveIframes !== 'function') return;
 
@@ -44,7 +72,10 @@ export function forwardSettingsToContentFrames(message: ShellUIMessage): void {
     if (!delivery.forward && !handshake) continue;
     shellui.sendMessage({
       type: message.type,
-      payload: settingsPayloadForDelivery(message.payload, delivery.includeAccessToken),
+      payload: withFilesStorage(
+        settingsPayloadForDelivery(message.payload, delivery.includeAccessToken),
+        frameSrc,
+      ),
       to: [uuid],
     });
   }

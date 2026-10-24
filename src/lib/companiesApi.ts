@@ -1,4 +1,4 @@
-import { bearerAuthorization } from './shellAccessToken';
+import { bearerFetch } from './shellAccessToken';
 import { requireAuthBackendBaseUrl } from '@/lib/backendUrl';
 
 export type CompanyAccessMode = 'public' | 'domain' | 'invite';
@@ -101,8 +101,7 @@ async function companiesAuthFetch(
   if (!headers.has('Content-Type') && init.body) {
     headers.set('Content-Type', 'application/json');
   }
-  headers.set('Authorization', bearerAuthorization(accessToken));
-  return fetch(url.toString(), { ...init, headers });
+  return bearerFetch(url.toString(), { ...init, headers }, accessToken);
 }
 
 export async function fetchMemberCompanies(accessToken: string): Promise<CompanyDto[]> {
