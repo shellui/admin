@@ -1031,7 +1031,7 @@ export function AdminShellLayout() {
   const storageDjangoAdminHref = storageUrl ? `${storageUrl}/admin/` : null;
   const hostingDjangoAdminHref = hostingUrl ? `${hostingUrl}/admin/` : null;
   const emailUrl = isEmailAdminEnabled(emailSettings)
-    ? emailSettings.url?.trim().replace(/\/+$/, '') || null
+    ? emailSettings?.url?.trim().replace(/\/+$/, '') || null
     : null;
   const emailDjangoAdminHref = emailUrl ? `${emailUrl}/admin/` : null;
 
@@ -1089,7 +1089,7 @@ export function AdminShellLayout() {
           return {
             ...group,
             title: t('navEmailGroup'),
-            subtitle: emailSettings.url,
+            subtitle: emailUrl,
             items,
           };
         }
