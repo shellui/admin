@@ -1,3 +1,4 @@
+import { bearerAuthorization } from './shellAccessToken';
 import { requireAuthBackendBaseUrl } from '@/lib/backendUrl';
 
 export type CompanyAccessMode = 'public' | 'domain' | 'invite';
@@ -100,7 +101,7 @@ async function companiesAuthFetch(
   if (!headers.has('Content-Type') && init.body) {
     headers.set('Content-Type', 'application/json');
   }
-  headers.set('Authorization', `Bearer ${accessToken}`);
+  headers.set('Authorization', bearerAuthorization(accessToken));
   return fetch(url.toString(), { ...init, headers });
 }
 

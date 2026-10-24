@@ -1,3 +1,4 @@
+import { bearerAuthorization } from './shellAccessToken';
 export class ApiUnavailableError extends Error {
   readonly status: number;
 
@@ -49,7 +50,7 @@ export async function serviceAuthFetch(
   if (!headers.has('Content-Type') && init.body) {
     headers.set('Content-Type', 'application/json');
   }
-  headers.set('Authorization', `Bearer ${accessToken}`);
+  headers.set('Authorization', bearerAuthorization(accessToken));
   return fetch(url.toString(), { ...init, headers });
 }
 

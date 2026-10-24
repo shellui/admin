@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import shellui, { addMessageListener, sendMessageToParent } from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
+import {
+  freshShellAccessToken,
+  isSameShellSession,
+  setLatestShellAccessToken,
+} from '@/lib/shellAccessToken';
 
 /** Ask the shell again when JWT `exp` is this close, in seconds. */
 export const SHELL_ACCESS_TOKEN_LEEWAY_SECONDS = 90;
@@ -41,6 +46,10 @@ export function reconcileShellAccessToken(prev: string | null, settings: Setting
   return prev;
 }
 
+function freshShellAccessTokenOrNull(token: string | null): string | null {
+  return token ? freshShellAccessToken(token) : null;
+}
+
 function requestShellSettings(): void {
   sendMessageToParent({
     type: 'SHELLUI_SETTINGS_REQUESTED',
@@ -56,11 +65,17 @@ function requestShellSettings(): void {
  * Value is updated when `SHELLUI_SETTINGS` / `SHELLUI_SETTINGS_UPDATED` arrives (e.g. refresh).
  * After subscribe, and again when the tab is shown with a missing or soon-expiring token, this
  * posts `SHELLUI_SETTINGS_REQUESTED` so a dropped shell push can be replaced.
+ *
+ * A renewal for the same user, company and roles keeps the returned value, so pages do not
+ * reload and remount their forms every few minutes. Requests send the newest token through
+ * `bearerAuthorization`. A different identity or a logout changes the value.
  */
 export function useShelluiAccessToken(): string | null {
-  const [token, setToken] = useState<string | null>(
-    () => shellui.initialSettings?.accessToken ?? null,
-  );
+  const [token, setToken] = useState<string | null>(() => {
+    const initial = shellui.initialSettings?.accessToken ?? null;
+    setLatestShellAccessToken(initial);
+    return initial;
+  });
   const tokenRef = useRef(token);
   tokenRef.current = token;
 
@@ -71,7 +86,8 @@ export function useShelluiAccessToken(): string | null {
       if (!settings) return;
       setToken((prev) => {
         const next = reconcileShellAccessToken(prev, settings);
-        return prev === next ? prev : next;
+        setLatestShellAccessToken(next);
+        return prev === next || isSameShellSession(prev, next) ? prev : next;
       });
     };
     const offSettings = addMessageListener('SHELLUI_SETTINGS', apply);
@@ -79,7 +95,10 @@ export function useShelluiAccessToken(): string | null {
     requestShellSettings();
 
     const onResume = () => {
-      if (shellAccessTokenRefreshDue(tokenRef.current)) requestShellSettings();
+      // `tokenRef` can hold an older renewal; check the newest one.
+      if (shellAccessTokenRefreshDue(freshShellAccessTokenOrNull(tokenRef.current))) {
+        requestShellSettings();
+      }
     };
     document.addEventListener('visibilitychange', onResume);
     window.addEventListener('focus', onResume);

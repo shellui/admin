@@ -145,6 +145,8 @@ export function OAuthCredentialsForm({
           </label>
           <Input
             type="password"
+            data-1p-ignore
+            data-lpignore="true"
             value={values.client_secret}
             onChange={(e) => onChange({ ...values, client_secret: e.target.value })}
             className="font-mono text-sm"
