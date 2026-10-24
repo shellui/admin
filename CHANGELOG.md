@@ -23,6 +23,10 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ## [Unreleased]
 
+### 🐛 Bug Fixes
+
+- **Embedded shell:** Admin reads identity URL and session token per frame, and a production build errors instead of calling localhost when `backend.url` is missing.
+
 ### 🔒 Security
 
 - **Email:** No built-in `email.shellui.com` fallback; Email is hidden when the shell sends no `email.url`.

@@ -1,4 +1,4 @@
-import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
+import { requireAuthBackendBaseUrl } from '@/lib/backendUrl';
 import { parseErrorMessage, serviceAuthFetch } from '@/lib/serviceAuthFetch';
 
 /**
@@ -147,9 +147,10 @@ async function getJson<T>(
   path: string,
   accessToken: string,
   query?: Record<string, string | number | undefined>,
-  baseUrl: string = getAuthBackendBaseUrl(),
+  baseUrl?: string,
 ): Promise<T> {
-  const res = await serviceAuthFetch(baseUrl, path, accessToken, {}, { query });
+  const resolved = baseUrl?.trim() ? baseUrl : requireAuthBackendBaseUrl();
+  const res = await serviceAuthFetch(resolved, path, accessToken, {}, { query });
   const body = await res.json().catch(() => null);
   if (res.status === 401 || res.status === 403) {
     throw new ScheduledJobsForbiddenError(parseErrorMessage(body) || 'Forbidden');

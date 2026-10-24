@@ -1,25 +1,27 @@
 import { useEffect, useState } from 'react';
-import shellui, { addMessageListener } from '@shellui/sdk';
+import { addMessageListener } from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
+import { readExplicitAuthBackendBaseUrl, resolveAuthBackendBaseUrl } from '@/lib/backendUrl';
 
-function normalizeBaseUrl(raw: string | null | undefined): string | null {
+function normalizeExplicit(raw: string | null | undefined): string | null {
   if (typeof raw !== 'string' || !raw.trim()) return null;
   return raw.trim().replace(/\/+$/, '');
 }
 
 /**
- * Shell `backend.url` via SDK `authBackendBaseUrl` — updates when settings arrive.
+ * Identity URL for this frame (`settings.authBackendBaseUrl`).
+ * Updates when the shell pushes settings. A missing value uses the dev default
+ * and is null in a production build.
  */
 export function useShelluiAuthBackendBaseUrl(): string | null {
-  const [baseUrl, setBaseUrl] = useState<string | null>(() =>
-    normalizeBaseUrl(shellui.initialSettings?.authBackendBaseUrl),
-  );
+  const [explicit, setExplicit] = useState<string | null>(readExplicitAuthBackendBaseUrl);
 
   useEffect(() => {
     const apply = (message: { payload?: unknown }) => {
       const settings = (message.payload as { settings?: Settings } | undefined)?.settings;
-      const next = normalizeBaseUrl(settings?.authBackendBaseUrl ?? undefined);
-      if (next) setBaseUrl(next);
+      if (!settings) return;
+      const next = normalizeExplicit(settings.authBackendBaseUrl ?? undefined);
+      if (next) setExplicit(next);
     };
 
     const offSettings = addMessageListener('SHELLUI_SETTINGS', apply);
@@ -30,5 +32,5 @@ export function useShelluiAuthBackendBaseUrl(): string | null {
     };
   }, []);
 
-  return baseUrl;
+  return resolveAuthBackendBaseUrl(explicit);
 }

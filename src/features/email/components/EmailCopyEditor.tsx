@@ -61,7 +61,7 @@ export function EmailCopyEditor({
   onLoaded,
 }: {
   api: EmailApiClient;
-  baseUrl: string;
+  baseUrl: string | null;
   templateId: number;
   isStaff: boolean;
   jwtEmail: string | null;

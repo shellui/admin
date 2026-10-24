@@ -61,7 +61,9 @@ import {
   writeSidebarCollapsed,
 } from '@/lib/adminChromeNav';
 import { resolveAdminAppUrl } from '@/lib/resolveAdminAppUrl';
+import { IdentityBackendMissing } from '@/components/ServiceUrlMissing';
 import { isAdminContentFrame } from '@/lib/embed';
+import { routeShowsIdentityBackendMissing } from '@/lib/identityBackendRoute';
 import { adminShellUiConfig } from '@/admin.shellui.config';
 import type {
   AdminLocalizedString,
@@ -974,6 +976,9 @@ function AdminChromeMain() {
 
 function AdminContentMain() {
   const location = useLocation();
+  const authBackendBaseUrl = useShelluiAuthBackendBaseUrl();
+  const showIdentityMissing =
+    !authBackendBaseUrl && routeShowsIdentityBackendMissing(location.pathname);
   const isFullBleed =
     location.pathname.startsWith('/app/') ||
     location.pathname === '/storage' ||
@@ -991,7 +996,7 @@ function AdminContentMain() {
         isFullBleed ? 'overflow-hidden p-0' : 'overflow-auto px-4 py-6 md:px-6 md:py-8 lg:px-8',
       )}
     >
-      <Outlet />
+      {showIdentityMissing ? <IdentityBackendMissing /> : <Outlet />}
     </main>
   );
 }

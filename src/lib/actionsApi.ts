@@ -19,7 +19,7 @@ import {
   parseSendTestResult,
   toIdentityRuleWriteBody,
 } from '@/lib/actionsApiParsers';
-import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
+import { requireAuthBackendBaseUrl } from '@/lib/backendUrl';
 import { readServiceJsonOrThrow, serviceAuthFetch } from '@/lib/serviceAuthFetch';
 import {
   actionsApiUnavailableMessage,
@@ -198,5 +198,5 @@ export function createIdentityActionsApiClient(
   accessToken: string,
   companyId: number,
 ): ActionsApiClient {
-  return createActionsApiClient(getAuthBackendBaseUrl(), accessToken, companyId, 'identity');
+  return createActionsApiClient(requireAuthBackendBaseUrl(), accessToken, companyId, 'identity');
 }
