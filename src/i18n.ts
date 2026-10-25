@@ -1633,6 +1633,27 @@ const resources = {
       emailMetricNoProviderErrors: 'No provider errors in the last 24 hours.',
       emailMetricAuthExpiries: 'Auth TTL expiries',
       emailMetricLane: 'Lane',
+      emailFallbackTitle: 'Using the Shellui default provider',
+      emailFallbackBody:
+        'This project has no email provider yet, so Shellui sends its sign-in emails for you. It is limited on purpose: only built-in sign-in emails such as magic links go out. Notifications, rules and newsletters are not sent.',
+      emailFallbackUsed: '{{used}} of {{limit}} emails used today',
+      emailFallbackUsedNoCap: '{{used}} emails sent today',
+      emailFallbackRecipient: 'At most {{count}} emails per recipient per hour',
+      emailFallbackReset: 'The count resets daily at 00:00 UTC',
+      emailFallbackSender: 'Sent from no-reply@shellui.com with Shellui wording',
+      emailFallbackAddOwn:
+        'Add your own provider (Resend, Amazon SES, SMTP) below to send all your emails from your domain, with no Shellui limits.',
+      emailFallbackOffTitle: 'No email provider',
+      emailFallbackOffBody:
+        'Emails will not be sent until you configure a provider below, including sign-in emails.',
+      emailError_fallback_recipient_limit:
+        'This address got too many sign-in emails in the last hour. Try again later.',
+      emailError_fallback_company_limit:
+        'This project used its daily Shellui default provider quota. Add your own provider or try again after 00:00 UTC.',
+      emailError_fallback_global_limit:
+        'The Shellui default provider reached its daily limit. Add your own provider or try again after 00:00 UTC.',
+      emailError_fallback_disabled:
+        'The Shellui default provider is off for this project. Configure a provider to send emails.',
       emailError_unauthorized: 'Sign in again. The session token was refused.',
       emailError_forbidden: 'This account cannot change email for the company.',
       emailError_company_mismatch: 'The company on the token does not match this request.',
@@ -3419,6 +3440,27 @@ const resources = {
       emailMetricNoProviderErrors: 'Aucune erreur fournisseur sur les dernières 24 heures.',
       emailMetricAuthExpiries: 'Expirations TTL auth',
       emailMetricLane: 'Voie',
+      emailFallbackTitle: 'Fournisseur Shellui par défaut',
+      emailFallbackBody:
+        "Ce projet n'a pas encore de fournisseur e-mail, Shellui envoie donc ses e-mails de connexion pour vous. C'est limité volontairement : seuls les e-mails de connexion intégrés, comme les liens magiques, sont envoyés. Les notifications, règles et newsletters ne le sont pas.",
+      emailFallbackUsed: "{{used}} sur {{limit}} e-mails utilisés aujourd'hui",
+      emailFallbackUsedNoCap: "{{used}} e-mails envoyés aujourd'hui",
+      emailFallbackRecipient: 'Au plus {{count}} e-mails par destinataire et par heure',
+      emailFallbackReset: 'Le compteur se remet à zéro chaque jour à 00:00 UTC',
+      emailFallbackSender: 'Envoyé depuis no-reply@shellui.com avec les textes Shellui',
+      emailFallbackAddOwn:
+        'Ajoutez votre propre fournisseur (Resend, Amazon SES, SMTP) ci-dessous pour envoyer tous vos e-mails depuis votre domaine, sans limites Shellui.',
+      emailFallbackOffTitle: 'Aucun fournisseur e-mail',
+      emailFallbackOffBody:
+        "Aucun e-mail ne sera envoyé, même ceux de connexion, tant qu'un fournisseur n'est pas configuré ci-dessous.",
+      emailError_fallback_recipient_limit:
+        "Cette adresse a reçu trop d'e-mails de connexion dans la dernière heure. Réessayez plus tard.",
+      emailError_fallback_company_limit:
+        'Ce projet a utilisé son quota quotidien du fournisseur Shellui par défaut. Ajoutez votre fournisseur ou réessayez après 00:00 UTC.',
+      emailError_fallback_global_limit:
+        'Le fournisseur Shellui par défaut a atteint sa limite quotidienne. Ajoutez votre fournisseur ou réessayez après 00:00 UTC.',
+      emailError_fallback_disabled:
+        'Le fournisseur Shellui par défaut est désactivé pour ce projet. Configurez un fournisseur pour envoyer des e-mails.',
       emailError_unauthorized: 'Reconnectez-vous. Le jeton de session a été refusé.',
       emailError_forbidden: 'Ce compte ne peut pas modifier l’e-mail de l’entreprise.',
       emailError_company_mismatch: 'L’entreprise du jeton ne correspond pas à cette requête.',

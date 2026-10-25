@@ -171,6 +171,18 @@ export type EmailProviderSettings = {
   smtpAllowed: boolean;
   /** Effective hosts for this company: platform, application, and extra. */
   authLinkHosts: string[];
+  /** Today's use of the Shellui fallback. Missing on older email-service. */
+  fallbackUsage?: EmailFallbackUsage | null;
+};
+
+/** `fallback_usage` from `GET /api/v1/provider`. A limit of 0 means no cap. */
+export type EmailFallbackUsage = {
+  applies: boolean;
+  disabled: boolean;
+  day: string;
+  used: number;
+  limit: number;
+  recipientHourlyLimit: number;
 };
 
 export type EmailProviderWrite = {

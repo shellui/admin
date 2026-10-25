@@ -26,6 +26,7 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 ### ✨ Feature
 
 - **Amazon SES:** the email provider form supports Amazon SES. Needs email-service with SES support (shellui/email-service#16).
+- **Default provider quota:** projects without a provider see the Shellui default provider limits and today's use. Needs shellui/email-service#18.
 
 ## [0.6.8] - 2026-10-24
 
