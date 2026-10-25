@@ -1552,6 +1552,19 @@ const resources = {
       emailProvider_resend: 'Resend',
       emailProvider_smtp: 'SMTP',
       emailProvider_mailjet: 'Mailjet',
+      emailProvider_ses: 'Amazon SES',
+      emailSesAccessKeyId: 'Access key ID',
+      emailSesSecretAccessKey: 'Secret access key',
+      emailSesRegion: 'Region',
+      emailSesRegionZurich: '{{region}} (Zurich)',
+      emailSesRegionOther: 'Other region…',
+      emailSesRegionCustom: 'Custom region',
+      emailSesConfigurationSet: 'Configuration set (optional)',
+      emailSesCredentialsHint:
+        'Stored secret hint: {{hint}}. Leave every field as is to keep the stored credentials. To change any of them, enter all of them again.',
+      emailSesBulkNote:
+        'Broadcasts on Amazon SES go through the bulk lane, one email per recipient. Resend Broadcasts are not used.',
+      emailSesFixFields: 'Check the Amazon SES fields.',
       emailProviderUnavailable: 'not available',
       emailSmtpDisabled: 'Company SMTP is off on this email service.',
       emailFieldApiKey: 'API key',
@@ -1620,6 +1633,27 @@ const resources = {
       emailMetricNoProviderErrors: 'No provider errors in the last 24 hours.',
       emailMetricAuthExpiries: 'Auth TTL expiries',
       emailMetricLane: 'Lane',
+      emailFallbackTitle: 'Using the Shellui default provider',
+      emailFallbackBody:
+        'This project has no email provider yet, so Shellui sends its sign-in emails for you. It is limited on purpose: only built-in sign-in emails such as magic links go out. Notifications, rules and newsletters are not sent.',
+      emailFallbackUsed: '{{used}} of {{limit}} emails used today',
+      emailFallbackUsedNoCap: '{{used}} emails sent today',
+      emailFallbackRecipient: 'At most {{count}} emails per recipient per hour',
+      emailFallbackReset: 'The count resets daily at 00:00 UTC',
+      emailFallbackSender: 'Sent from no-reply@shellui.com with Shellui wording',
+      emailFallbackAddOwn:
+        'Add your own provider (Resend, Amazon SES, SMTP) below to send all your emails from your domain, with no Shellui limits.',
+      emailFallbackOffTitle: 'No email provider',
+      emailFallbackOffBody:
+        'Emails will not be sent until you configure a provider below, including sign-in emails.',
+      emailError_fallback_recipient_limit:
+        'This address got too many sign-in emails in the last hour. Try again later.',
+      emailError_fallback_company_limit:
+        'This project used its daily Shellui default provider quota. Add your own provider or try again after 00:00 UTC.',
+      emailError_fallback_global_limit:
+        'The Shellui default provider reached its daily limit. Add your own provider or try again after 00:00 UTC.',
+      emailError_fallback_disabled:
+        'The Shellui default provider is off for this project. Configure a provider to send emails.',
       emailError_unauthorized: 'Sign in again. The session token was refused.',
       emailError_forbidden: 'This account cannot change email for the company.',
       emailError_company_mismatch: 'The company on the token does not match this request.',
@@ -1679,6 +1713,7 @@ const resources = {
       emailFieldError_platform_from: 'platform From address',
       emailFieldError_not_public: 'not a public address',
       emailFieldError_invalid_port: 'invalid port',
+      emailFieldError_invalid_region: 'not a valid AWS region',
       emailFieldError_literal_url: 'literal web address',
       emailFieldError_draft_required: 'editor draft is required',
       emailFieldError_invalid: 'invalid',
@@ -3323,6 +3358,19 @@ const resources = {
       emailProvider_resend: 'Resend',
       emailProvider_smtp: 'SMTP',
       emailProvider_mailjet: 'Mailjet',
+      emailProvider_ses: 'Amazon SES',
+      emailSesAccessKeyId: 'ID de clé d’accès',
+      emailSesSecretAccessKey: 'Clé d’accès secrète',
+      emailSesRegion: 'Région',
+      emailSesRegionZurich: '{{region}} (Zurich)',
+      emailSesRegionOther: 'Autre région…',
+      emailSesRegionCustom: 'Région personnalisée',
+      emailSesConfigurationSet: 'Configuration set (facultatif)',
+      emailSesCredentialsHint:
+        'Indice du secret enregistré : {{hint}}. Laissez tous les champs tels quels pour garder les identifiants enregistrés. Pour en changer un, saisissez-les tous à nouveau.',
+      emailSesBulkNote:
+        'Avec Amazon SES, les envois groupés passent par la file bulk, un e-mail par destinataire. Resend Broadcasts n’est pas utilisé.',
+      emailSesFixFields: 'Vérifiez les champs Amazon SES.',
       emailProviderUnavailable: 'indisponible',
       emailSmtpDisabled: 'Le SMTP d’entreprise est désactivé sur ce service d’e-mail.',
       emailFieldApiKey: 'Clé d’API',
@@ -3392,6 +3440,27 @@ const resources = {
       emailMetricNoProviderErrors: 'Aucune erreur fournisseur sur les dernières 24 heures.',
       emailMetricAuthExpiries: 'Expirations TTL auth',
       emailMetricLane: 'Voie',
+      emailFallbackTitle: 'Fournisseur Shellui par défaut',
+      emailFallbackBody:
+        "Ce projet n'a pas encore de fournisseur e-mail, Shellui envoie donc ses e-mails de connexion pour vous. C'est limité volontairement : seuls les e-mails de connexion intégrés, comme les liens magiques, sont envoyés. Les notifications, règles et newsletters ne le sont pas.",
+      emailFallbackUsed: "{{used}} sur {{limit}} e-mails utilisés aujourd'hui",
+      emailFallbackUsedNoCap: "{{used}} e-mails envoyés aujourd'hui",
+      emailFallbackRecipient: 'Au plus {{count}} e-mails par destinataire et par heure',
+      emailFallbackReset: 'Le compteur se remet à zéro chaque jour à 00:00 UTC',
+      emailFallbackSender: 'Envoyé depuis no-reply@shellui.com avec les textes Shellui',
+      emailFallbackAddOwn:
+        'Ajoutez votre propre fournisseur (Resend, Amazon SES, SMTP) ci-dessous pour envoyer tous vos e-mails depuis votre domaine, sans limites Shellui.',
+      emailFallbackOffTitle: 'Aucun fournisseur e-mail',
+      emailFallbackOffBody:
+        "Aucun e-mail ne sera envoyé, même ceux de connexion, tant qu'un fournisseur n'est pas configuré ci-dessous.",
+      emailError_fallback_recipient_limit:
+        "Cette adresse a reçu trop d'e-mails de connexion dans la dernière heure. Réessayez plus tard.",
+      emailError_fallback_company_limit:
+        'Ce projet a utilisé son quota quotidien du fournisseur Shellui par défaut. Ajoutez votre fournisseur ou réessayez après 00:00 UTC.',
+      emailError_fallback_global_limit:
+        'Le fournisseur Shellui par défaut a atteint sa limite quotidienne. Ajoutez votre fournisseur ou réessayez après 00:00 UTC.',
+      emailError_fallback_disabled:
+        'Le fournisseur Shellui par défaut est désactivé pour ce projet. Configurez un fournisseur pour envoyer des e-mails.',
       emailError_unauthorized: 'Reconnectez-vous. Le jeton de session a été refusé.',
       emailError_forbidden: 'Ce compte ne peut pas modifier l’e-mail de l’entreprise.',
       emailError_company_mismatch: 'L’entreprise du jeton ne correspond pas à cette requête.',
@@ -3458,6 +3527,7 @@ const resources = {
       emailFieldError_platform_from: 'adresse d’expéditeur de la plateforme',
       emailFieldError_not_public: 'adresse non publique',
       emailFieldError_invalid_port: 'port invalide',
+      emailFieldError_invalid_region: 'région AWS invalide',
       emailFieldError_literal_url: 'adresse web littérale',
       emailFieldError_draft_required: 'le brouillon de l’éditeur est requis',
       emailFieldError_invalid: 'invalide',

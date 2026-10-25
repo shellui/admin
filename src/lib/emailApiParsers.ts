@@ -8,6 +8,7 @@ import type {
   EmailLibrary,
   EmailLibraryDetail,
   EmailLibraryTemplate,
+  EmailFallbackUsage,
   EmailProviderSettings,
   EmailRule,
   EmailStats,
@@ -242,6 +243,19 @@ export function parseAuthLinkHosts(body: unknown): AuthLinkHosts {
   };
 }
 
+function parseFallbackUsage(value: unknown): EmailFallbackUsage | null {
+  const row = record(value);
+  if (!row) return null;
+  return {
+    applies: bool(row.applies),
+    disabled: bool(row.disabled),
+    day: str(row.day),
+    used: num(row.used),
+    limit: num(row.limit),
+    recipientHourlyLimit: num(row.recipient_hourly_limit),
+  };
+}
+
 export function parseProvider(body: unknown): EmailProviderSettings {
   const row = record(body);
   if (!row) throw new EmailApiError('request_failed', 200);
@@ -260,6 +274,7 @@ export function parseProvider(body: unknown): EmailProviderSettings {
     fallbackConfigured: bool(row.fallback_configured),
     smtpAllowed: row.smtp_allowed === true,
     authLinkHosts: stringList(row.auth_link_hosts),
+    fallbackUsage: parseFallbackUsage(row.fallback_usage),
   };
 }
 
