@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Text } from '@/components/ui/text';
+import { EmailFallbackCard } from '@/features/email/components/EmailFallbackCard';
 import { EmailProviderForm } from '@/features/email/components/EmailProviderForm';
 import { useEmailApi } from '@/features/email/useEmailApi';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
@@ -80,6 +81,7 @@ export function EmailProviderPage() {
       {error ? (
         <Text className="font-mono text-sm text-destructive">{emailErrorText(t, error)}</Text>
       ) : null}
+      {settings ? <EmailFallbackCard settings={settings} /> : null}
       {settings && api ? (
         <EmailProviderForm
           settings={settings}
