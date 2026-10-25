@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [Unreleased]
+
+### ✨ Feature
+
+- **Amazon SES:** the email provider form supports Amazon SES. Needs email-service with SES support (shellui/email-service#16).
+
 ## [0.6.8] - 2026-10-24
 
 ### 🐛 Bug Fixes

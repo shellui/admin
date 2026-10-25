@@ -243,3 +243,127 @@ describe('EmailProviderForm', () => {
     expect(screen.queryByText('The SMTP host must resolve to a public address.')).toBeNull();
   });
 });
+
+describe('EmailProviderForm with Amazon SES', () => {
+  afterEach(async () => {
+    cleanup();
+    await i18n.changeLanguage('en');
+  });
+
+  function renderSes(
+    overrides: Partial<EmailProviderSettings> = {},
+    onSave = vi.fn(async (_body: EmailProviderWrite) => undefined),
+  ) {
+    render(
+      <I18nextProvider i18n={i18n}>
+        <EmailProviderForm
+          settings={{ ...settings, ...overrides }}
+          jwtEmail="ada@acme.com"
+          isStaff={false}
+          saving={false}
+          testing={false}
+          onSave={onSave}
+          onTest={vi.fn(async () => undefined)}
+        />
+      </I18nextProvider>,
+    );
+    return onSave;
+  }
+
+  function chooseSes() {
+    fireEvent.change(screen.getByLabelText('Provider'), { target: { value: 'ses' } });
+  }
+
+  it('sends SES credentials with the Zurich default region', async () => {
+    const onSave = renderSes();
+    chooseSes();
+    expect((screen.getByLabelText('Region') as HTMLSelectElement).value).toBe('eu-central-2');
+    expect(screen.queryByLabelText('API key')).toBeNull();
+    expect(screen.getByText(/bulk lane/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Access key ID'), {
+      target: { value: 'AKIAIOSFODNN7EXAMPLE' },
+    });
+    fireEvent.change(screen.getByLabelText('Secret access key'), {
+      target: { value: 'ses-secret-value' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save provider' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
+    const body = onSave.mock.calls[0]?.[0];
+    expect(body?.provider).toBe('ses');
+    expect(body?.credentials).toEqual({
+      access_key_id: 'AKIAIOSFODNN7EXAMPLE',
+      secret_access_key: 'ses-secret-value',
+      region: 'eu-central-2',
+    });
+    expect((screen.getByLabelText('Secret access key') as HTMLInputElement).value).toBe('');
+  });
+
+  it('accepts a custom region and a configuration set', async () => {
+    const onSave = renderSes();
+    chooseSes();
+    fireEvent.change(screen.getByLabelText('Region'), { target: { value: '__other__' } });
+    fireEvent.change(screen.getByLabelText('Custom region'), { target: { value: 'ap-south-1' } });
+    fireEvent.change(screen.getByLabelText('Configuration set (optional)'), {
+      target: { value: 'shellui-events' },
+    });
+    fireEvent.change(screen.getByLabelText('Access key ID'), {
+      target: { value: 'AKIAIOSFODNN7EXAMPLE' },
+    });
+    fireEvent.change(screen.getByLabelText('Secret access key'), { target: { value: 's' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save provider' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
+    expect(onSave.mock.calls[0]?.[0]?.credentials).toMatchObject({
+      region: 'ap-south-1',
+      configuration_set: 'shellui-events',
+    });
+  });
+
+  it('validates fields before sending', async () => {
+    const onSave = renderSes();
+    chooseSes();
+    fireEvent.change(screen.getByLabelText('Region'), { target: { value: '__other__' } });
+    fireEvent.change(screen.getByLabelText('Custom region'), {
+      target: { value: 'attacker.example' },
+    });
+    fireEvent.change(screen.getByLabelText('Access key ID'), { target: { value: 'bad key' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save provider' }));
+    expect(await screen.findByText('Check the Amazon SES fields.')).toBeTruthy();
+    expect(screen.getByText('not a valid AWS region')).toBeTruthy();
+    expect(screen.getByText('invalid format')).toBeTruthy();
+    expect(screen.getByText('required')).toBeTruthy();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('keeps stored SES credentials when nothing changes', async () => {
+    const onSave = renderSes({ provider: 'ses', credentialsHint: '••••EKEY' });
+    expect(screen.getByText(/••••EKEY/)).toBeTruthy();
+    expect((screen.getByLabelText('Secret access key') as HTMLInputElement).value).toBe('');
+    fireEvent.click(screen.getByRole('button', { name: 'Save provider' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
+    expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty('credentials');
+  });
+
+  it('asks for the secret again when a stored SES field changes', async () => {
+    const onSave = renderSes({ provider: 'ses', credentialsHint: '••••EKEY' });
+    fireEvent.change(screen.getByLabelText('Configuration set (optional)'), {
+      target: { value: 'new-set' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save provider' }));
+    expect(await screen.findByText('Check the Amazon SES fields.')).toBeTruthy();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('shows API field errors next to the SES fields', async () => {
+    const onSave = vi.fn(async (_body: EmailProviderWrite) => {
+      throw new EmailApiError('validation_failed', 400, { region: ['invalid_region'] });
+    });
+    renderSes({}, onSave);
+    chooseSes();
+    fireEvent.change(screen.getByLabelText('Access key ID'), {
+      target: { value: 'AKIAIOSFODNN7EXAMPLE' },
+    });
+    fireEvent.change(screen.getByLabelText('Secret access key'), { target: { value: 's' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save provider' }));
+    expect(await screen.findByText('not a valid AWS region')).toBeTruthy();
+  });
+});

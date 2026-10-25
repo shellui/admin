@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
+import { EmailApiError } from '@/lib/emailApiErrors';
 import {
   ActionFeedback,
   feedbackFromError,
@@ -12,7 +13,11 @@ import {
 import {
   EMAIL_PROVIDER_CATALOG,
   emailProviderDefinition,
+  SES_DEFAULT_REGION,
+  SES_REGIONS,
+  validateSesDraft,
   type EmailProviderDefinition,
+  type SesDraft,
 } from '@/lib/emailProviders';
 import type { EmailProviderSettings, EmailProviderWrite } from '@/lib/emailTypes';
 
@@ -25,6 +30,12 @@ type SmtpDraft = {
 };
 
 const EMPTY_SMTP: SmtpDraft = { host: '', port: '587', username: '', useTls: true, useSsl: false };
+
+const EMPTY_SES: SesDraft = { accessKeyId: '', region: SES_DEFAULT_REGION, configurationSet: '' };
+
+const SES_OTHER_REGION = '__other__';
+
+const SES_FIELDS = ['access_key_id', 'secret_access_key', 'region', 'configuration_set'] as const;
 
 function providerOptionEnabled(
   item: EmailProviderDefinition,
@@ -69,6 +80,10 @@ export function EmailProviderForm({
   const [apiKey, setApiKey] = useState('');
   const [smtpPassword, setSmtpPassword] = useState('');
   const [smtp, setSmtp] = useState<SmtpDraft>(EMPTY_SMTP);
+  const [ses, setSes] = useState<SesDraft>(EMPTY_SES);
+  const [sesSecret, setSesSecret] = useState('');
+  const [sesOtherRegion, setSesOtherRegion] = useState(false);
+  const [sesErrors, setSesErrors] = useState<Record<string, string[]>>({});
   const [testTo, setTestTo] = useState(jwtEmail ?? '');
   const [saveFeedback, setSaveFeedback] = useState<ActionFeedbackState | null>(null);
   const [testFeedback, setTestFeedback] = useState<ActionFeedbackState | null>(null);
@@ -94,12 +109,42 @@ export function EmailProviderForm({
   function clearSecrets() {
     setApiKey('');
     setSmtpPassword('');
+    setSesSecret('');
+  }
+
+  const sesTouched =
+    ses.accessKeyId.trim() !== '' ||
+    ses.region.trim() !== SES_DEFAULT_REGION ||
+    ses.configurationSet.trim() !== '' ||
+    sesSecret.trim() !== '';
+
+  function fieldErrorText(field: string): string {
+    const codes = sesErrors[field];
+    if (!codes?.length) return '';
+    return codes
+      .map((code) => {
+        const key = `emailFieldError_${code}`;
+        const label = t(key);
+        return label === key ? code : label;
+      })
+      .join(', ');
   }
 
   async function submit() {
     setSaveFeedback(null);
-    const secret = definition?.credentialKind === 'smtp' ? smtpPassword.trim() : apiKey.trim();
+    setSesErrors({});
+    const kind = definition?.credentialKind;
+    const secret =
+      kind === 'smtp' ? smtpPassword.trim() : kind === 'ses' ? sesSecret.trim() : apiKey.trim();
     const providerChanged = !providerUnchanged || !settings.configured;
+    if (kind === 'ses' && (providerChanged || sesTouched)) {
+      const errors = validateSesDraft(ses, sesSecret);
+      if (Object.keys(errors).length) {
+        setSesErrors(errors);
+        setSaveFeedback({ tone: 'error', text: t('emailSesFixFields') });
+        return;
+      }
+    }
     if (providerChanged && !secret) {
       setSaveFeedback({ tone: 'error', text: t('emailCredentialsRequired') });
       return;
@@ -124,6 +169,15 @@ export function EmailProviderForm({
           use_tls: smtp.useTls,
           use_ssl: smtp.useSsl,
         };
+      } else if (definition?.credentialKind === 'ses') {
+        const credentials: Record<string, string> = {
+          access_key_id: ses.accessKeyId.trim(),
+          secret_access_key: sesSecret.trim(),
+          region: ses.region.trim(),
+        };
+        const configurationSet = ses.configurationSet.trim();
+        if (configurationSet) credentials.configuration_set = configurationSet;
+        body.credentials = credentials;
       } else {
         body.credentials = { api_key: apiKey };
       }
@@ -133,6 +187,14 @@ export function EmailProviderForm({
       clearSecrets();
       setSaveFeedback({ tone: 'success', text: t('emailProviderSaved') });
     } catch (err) {
+      if (err instanceof EmailApiError) {
+        const sesFieldErrors: Record<string, string[]> = {};
+        for (const field of SES_FIELDS) {
+          const codes = err.fieldErrors[field];
+          if (codes?.length) sesFieldErrors[field] = codes;
+        }
+        setSesErrors(sesFieldErrors);
+      }
       setSaveFeedback(feedbackFromError(t, err));
     }
   }
@@ -164,11 +226,12 @@ export function EmailProviderForm({
           <Label htmlFor="email-provider">{t('emailFieldProvider')}</Label>
           <select
             id="email-provider"
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+            className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-transparent px-3 text-sm"
             value={provider}
             onChange={(event) => {
               setProvider(event.target.value);
               clearSecrets();
+              setSesErrors({});
             }}
           >
             {EMAIL_PROVIDER_CATALOG.map((item) => {
@@ -280,22 +343,120 @@ export function EmailProviderForm({
               onChange={(event) => setSmtpPassword(event.target.value)}
             />
           </div>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex cursor-pointer items-center gap-2 text-sm">
             <input
               type="checkbox"
+              className="cursor-pointer"
               checked={smtp.useTls}
               onChange={(event) => setSmtp((prev) => ({ ...prev, useTls: event.target.checked }))}
             />
             {t('emailSmtpTls')}
           </label>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex cursor-pointer items-center gap-2 text-sm">
             <input
               type="checkbox"
+              className="cursor-pointer"
               checked={smtp.useSsl}
               onChange={(event) => setSmtp((prev) => ({ ...prev, useSsl: event.target.checked }))}
             />
             {t('emailSmtpSsl')}
           </label>
+        </div>
+      ) : definition?.credentialKind === 'ses' ? (
+        <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="email-ses-access-key">{t('emailSesAccessKeyId')}</Label>
+              <Input
+                id="email-ses-access-key"
+                autoComplete="off"
+                spellCheck={false}
+                value={ses.accessKeyId}
+                aria-invalid={Boolean(sesErrors.access_key_id)}
+                onChange={(event) =>
+                  setSes((prev) => ({ ...prev, accessKeyId: event.target.value }))
+                }
+              />
+              <SesFieldError text={fieldErrorText('access_key_id')} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email-ses-secret">{t('emailSesSecretAccessKey')}</Label>
+              <Input
+                id="email-ses-secret"
+                name="sesSecretAccessKey"
+                type="password"
+                data-1p-ignore
+                data-lpignore="true"
+                autoComplete="new-password"
+                value={sesSecret}
+                placeholder={t('emailSecretPlaceholder')}
+                aria-invalid={Boolean(sesErrors.secret_access_key)}
+                onChange={(event) => setSesSecret(event.target.value)}
+              />
+              <SesFieldError text={fieldErrorText('secret_access_key')} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email-ses-region">{t('emailSesRegion')}</Label>
+              <select
+                id="email-ses-region"
+                className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-transparent px-3 text-sm"
+                value={sesOtherRegion ? SES_OTHER_REGION : ses.region}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (value === SES_OTHER_REGION) {
+                    setSesOtherRegion(true);
+                    setSes((prev) => ({ ...prev, region: '' }));
+                  } else {
+                    setSesOtherRegion(false);
+                    setSes((prev) => ({ ...prev, region: value }));
+                  }
+                }}
+              >
+                {SES_REGIONS.map((region) => (
+                  <option
+                    key={region}
+                    value={region}
+                  >
+                    {region === SES_DEFAULT_REGION ? t('emailSesRegionZurich', { region }) : region}
+                  </option>
+                ))}
+                <option value={SES_OTHER_REGION}>{t('emailSesRegionOther')}</option>
+              </select>
+              {sesOtherRegion ? (
+                <Input
+                  id="email-ses-region-other"
+                  aria-label={t('emailSesRegionCustom')}
+                  placeholder="ap-south-1"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={ses.region}
+                  aria-invalid={Boolean(sesErrors.region)}
+                  onChange={(event) => setSes((prev) => ({ ...prev, region: event.target.value }))}
+                />
+              ) : null}
+              <SesFieldError text={fieldErrorText('region')} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email-ses-config-set">{t('emailSesConfigurationSet')}</Label>
+              <Input
+                id="email-ses-config-set"
+                autoComplete="off"
+                spellCheck={false}
+                value={ses.configurationSet}
+                aria-invalid={Boolean(sesErrors.configuration_set)}
+                onChange={(event) =>
+                  setSes((prev) => ({ ...prev, configurationSet: event.target.value }))
+                }
+              />
+              <SesFieldError text={fieldErrorText('configuration_set')} />
+            </div>
+          </div>
+          <Text className="font-mono text-xs">
+            {hint && providerUnchanged
+              ? t('emailSesCredentialsHint', { hint })
+              : t('emailCredentialsEmpty')}
+          </Text>
+          <Text className="text-xs">{t('emailSesBulkNote')}</Text>
         </div>
       ) : (
         <div className="space-y-2">
@@ -359,4 +520,9 @@ export function EmailProviderForm({
       </div>
     </form>
   );
+}
+
+function SesFieldError({ text }: { text: string }) {
+  if (!text) return null;
+  return <Text className="font-mono text-xs text-destructive">{text}</Text>;
 }
