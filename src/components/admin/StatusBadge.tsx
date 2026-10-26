@@ -9,14 +9,17 @@ export function StatusBadge({
   children,
   dot = true,
   className,
+  title,
 }: {
   tone: StatusTone;
   children: ReactNode;
   dot?: boolean;
   className?: string;
+  title?: string;
 }) {
   return (
     <span
+      title={title}
       className={cn(
         `tone-${tone}`,
         'inline-flex h-5 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-1.5 text-[11.5px] font-medium leading-none',

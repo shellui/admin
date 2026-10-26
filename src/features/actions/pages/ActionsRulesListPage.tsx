@@ -1,10 +1,32 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { ExternalLink, Loader2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import shellui from '@shellui/sdk';
+import { ExternalLink, Lock, Mail, MoreHorizontal, Plus, Webhook } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { DataTableCard, SkeletonRows } from '@/components/admin/DataTableCard';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { StatusBadge } from '@/components/admin/StatusBadge';
 import { Button } from '@/components/ui/button';
-import { Text } from '@/components/ui/text';
+import { useNavigate } from 'react-router-dom';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
 import { ActionsSubNav } from '@/features/actions/components/ActionsSubNav';
@@ -37,46 +59,11 @@ import {
   webhookRuleEditPath,
   webhookRulesNewPath,
 } from '@/lib/webhookRoutePaths';
-import { cn } from '@/lib/utils';
-
-function EnabledSwitch({
-  checked,
-  disabled,
-  label,
-  onClick,
-}: {
-  checked: boolean;
-  disabled: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        'inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-        checked ? 'bg-primary' : 'bg-input',
-        disabled && 'cursor-not-allowed opacity-60',
-      )}
-    >
-      <span
-        className={cn(
-          'pointer-events-none block size-4 rounded-full bg-background shadow-sm transition-transform',
-          checked ? 'translate-x-4' : 'translate-x-0',
-        )}
-      />
-    </button>
-  );
-}
 
 export function ActionsRulesListPage() {
   const { t } = useTranslation();
   const accessToken = useShelluiAccessToken();
+  const navigate = useNavigate();
   const isOwner = Boolean(accessToken && getIsCompanyOwnerFromJwt(accessToken));
   const { service, serviceConfigured } = useWebhookPageMeta();
   const { api } = useActionsApi(accessToken, service.key);
@@ -199,6 +186,10 @@ export function ActionsRulesListPage() {
             text: t(row.enabled ? 'actionsRuleDisabled' : 'actionsRuleEnabled'),
           },
         }));
+        shellui.toast({
+          title: t(row.enabled ? 'actionsRuleDisabled' : 'actionsRuleEnabled'),
+          type: 'success',
+        });
         try {
           await refreshWebhooks();
         } catch (reloadError) {
@@ -214,6 +205,10 @@ export function ActionsRulesListPage() {
             text: t(row.enabled ? 'emailRuleDisabled' : 'emailRuleEnabled'),
           },
         }));
+        shellui.toast({
+          title: t(row.enabled ? 'emailRuleDisabled' : 'emailRuleEnabled'),
+          type: 'success',
+        });
         try {
           await refreshEmails();
         } catch (reloadError) {
@@ -265,6 +260,10 @@ export function ActionsRulesListPage() {
         await emailApi?.deleteRule(Number(row.id));
       }
       setRemoved((prev) => [...prev.filter((item) => item.key !== row.key), row]);
+      shellui.toast({
+        title: t(row.kind === 'webhook' ? 'actionsRuleDeleted' : 'emailRuleDeleted'),
+        type: 'success',
+      });
       try {
         if (row.kind === 'webhook') await refreshWebhooks();
         else await refreshEmails();
@@ -296,44 +295,89 @@ export function ActionsRulesListPage() {
     !emailError &&
     (canCreateWebhook || canCreateEmail);
 
+  const createButtons = (
+    <>
+      {canCreateWebhook ? (
+        isApiUnavailableError(webhookError) ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled
+          >
+            <Webhook aria-hidden />
+            {t('actionsRuleCreate')}
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            asChild
+          >
+            <Link to={webhookRulesNewPath(service.key)}>
+              <Webhook aria-hidden />
+              {t('actionsRuleCreate')}
+            </Link>
+          </Button>
+        )
+      ) : null}
+      {canCreateEmail ? (
+        <Button
+          type="button"
+          asChild
+        >
+          <Link to={emailRuleNewPath(service.key)}>
+            <Plus aria-hidden />
+            {t('emailRuleCreate')}
+          </Link>
+        </Button>
+      ) : null}
+    </>
+  );
+
+  const editPath = (row: MergedServiceRule) =>
+    row.kind === 'webhook'
+      ? webhookRuleEditPath(service.key, row.id)
+      : emailRuleEditPath(service.key, row.id);
+
   return (
     <div className="w-full space-y-6">
-      <header className="space-y-1">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            {t(service.pageTitleKey)}
-          </h1>
-          <Badge
-            variant="secondary"
-            className="font-mono text-[10px] uppercase"
-          >
-            {t(service.badgeKey)}
-          </Badge>
-        </div>
-        <Text className="max-w-3xl text-sm text-muted-foreground">{t(service.descriptionKey)}</Text>
-        <a
-          href={SHELLUI_N8N_WEBHOOK_DOCS_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 font-mono text-xs text-primary underline-offset-2 hover:underline"
-        >
-          {t('webhooksN8nDocLink')}
-          <ExternalLink
-            className="size-3"
-            aria-hidden
-          />
-        </a>
-      </header>
+      <PageHeader
+        title={t(service.pageTitleKey)}
+        service={t(service.badgeKey)}
+        description={t('actionsListDescription', { service: t(service.labelKey) })}
+        actions={canCreateWebhook || canCreateEmail ? createButtons : undefined}
+      />
 
-      <ActionsSubNav />
+      <ActionsSubNav
+        rulesCount={loading ? undefined : merged.length}
+        aside={
+          <a
+            href={SHELLUI_N8N_WEBHOOK_DOCS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-[13px] text-muted-foreground no-underline hover:text-foreground"
+          >
+            {t('webhooksN8nDocLink')}
+            <ExternalLink
+              className="size-3.5"
+              aria-hidden
+            />
+            <span className="sr-only">{t('navOpensExternally')}</span>
+          </a>
+        }
+      />
 
       {!serviceConfigured ? <WebhookServiceUnavailable serviceKey={service.key} /> : null}
 
       {!accessToken ? (
-        <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
+        <Alert variant="info">
+          <AlertDescription>{t('dashboardNoSession')}</AlertDescription>
+        </Alert>
       ) : null}
       {accessToken && !isOwner && !canManageEmail ? (
-        <Text className="font-mono text-sm text-muted-foreground">{t('actionsPageForbidden')}</Text>
+        <Alert variant="info">
+          <AlertDescription>{t('actionsPageForbidden')}</AlertDescription>
+        </Alert>
       ) : null}
 
       {webhookError && isApiUnavailableError(webhookError) ? (
@@ -343,158 +387,207 @@ export function ActionsRulesListPage() {
         />
       ) : null}
       {webhookError && !isApiUnavailableError(webhookError) ? (
-        <Text className="font-mono text-sm text-destructive">
-          {webhookError instanceof Error ? webhookError.message : t('actionsLoadError')}
-        </Text>
+        <Alert variant="destructive">
+          <AlertDescription>
+            {webhookError instanceof Error ? webhookError.message : t('actionsLoadError')}
+          </AlertDescription>
+        </Alert>
       ) : null}
       {emailError ? (
-        <Text className="font-mono text-sm text-destructive">{emailErrorText(t, emailError)}</Text>
+        <Alert variant="destructive">
+          <AlertDescription>{emailErrorText(t, emailError)}</AlertDescription>
+        </Alert>
       ) : null}
 
-      {canCreateWebhook || canCreateEmail ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {canCreateWebhook ? (
-            isApiUnavailableError(webhookError) ? (
-              <Button
-                type="button"
-                size="sm"
-                disabled
-              >
-                {t('actionsRuleCreate')}
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                size="sm"
-                asChild
-              >
-                <Link to={webhookRulesNewPath(service.key)}>{t('actionsRuleCreate')}</Link>
-              </Button>
-            )
-          ) : null}
-          {canCreateEmail ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              asChild
-            >
-              <Link to={emailRuleNewPath(service.key)}>{t('emailRuleCreate')}</Link>
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-
-      {loading ? (
-        <div className="flex items-center gap-2 py-8 text-muted-foreground">
-          <Loader2
-            className="size-5 animate-spin"
-            aria-hidden
-          />
-          <span className="text-sm">{t('actionsLoading')}</span>
-        </div>
-      ) : null}
-
-      {!loading && (canCreateWebhook || canCreateEmail) && listNeedsSearch(merged.length) ? (
-        <SearchField
-          value={query}
-          onChange={setQuery}
-          label={t('emailServiceRulesSearch')}
-          placeholder={t('emailServiceRulesSearch')}
-        />
-      ) : null}
-
-      {!loading && (showList || showEmpty) ? (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold tracking-tight">
-            {sectionTitle(t('emailServiceRulesTitle'), visible.length)}
-          </h2>
-          {showEmpty ? (
-            <Text className="py-8 text-center font-mono text-sm text-muted-foreground">
-              {t('emailServiceRulesEmpty')}
-            </Text>
-          ) : (
-            <ul className="divide-y divide-border/80 rounded-md border border-border/80">
-              {visible.map((row) => (
-                <li
-                  key={row.key}
-                  className="flex flex-wrap items-start justify-between gap-3 px-3 py-3"
-                >
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant={row.kind === 'email' ? 'secondary' : 'outline'}>
-                        {row.kind === 'email' ? t('emailRuleKindEmail') : t('emailRuleKindWebhook')}
-                      </Badge>
-                      {row.builtIn ? (
-                        <Badge
-                          variant="muted"
-                          title={t('emailRuleBuiltInLocked')}
-                        >
-                          {t('emailRuleBuiltIn')}
-                        </Badge>
-                      ) : null}
-                    </div>
-                    <p className="font-mono text-xs">{row.event}</p>
-                    <p className="break-all text-sm text-muted-foreground">{row.target}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      {row.builtIn ? null : (
-                        <EnabledSwitch
-                          checked={row.enabled}
-                          disabled={busyKey === row.key}
-                          label={row.kind === 'webhook' ? row.name : row.event}
-                          onClick={() => void onToggle(row)}
-                        />
-                      )}
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        asChild
-                      >
-                        <Link
-                          to={
-                            row.kind === 'webhook'
-                              ? webhookRuleEditPath(service.key, row.id)
-                              : emailRuleEditPath(service.key, row.id)
-                          }
-                        >
-                          {t('actionsEdit')}
-                        </Link>
-                      </Button>
-                      {row.builtIn ? null : (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="destructive"
-                          disabled={busyKey === row.key}
-                          onClick={() => void onDelete(row)}
-                        >
-                          {t('actionsDelete')}
-                        </Button>
-                      )}
-                    </div>
-                    <ActionFeedback feedback={rowFeedback[row.key] ?? null} />
-                  </div>
-                </li>
-              ))}
-              {removed.map((row) => (
-                <li
-                  key={`removed-${row.key}`}
-                  className="flex justify-end px-3 py-3"
-                >
-                  <ActionFeedback
-                    feedback={{
-                      tone: 'success',
-                      text: t(row.kind === 'webhook' ? 'actionsRuleDeleted' : 'emailRuleDeleted'),
-                    }}
+      {loading || showList || showEmpty ? (
+        <DataTableCard
+          label={t('emailServiceRulesTitle')}
+          busy={loading}
+          toolbar={
+            <>
+              <h2 className="text-sm font-semibold">
+                {sectionTitle(t('emailServiceRulesTitle'), visible.length)}
+              </h2>
+              {!loading &&
+              (canCreateWebhook || canCreateEmail) &&
+              listNeedsSearch(merged.length) ? (
+                <div className="w-full sm:w-72">
+                  <SearchField
+                    value={query}
+                    onChange={setQuery}
+                    label={t('emailServiceRulesSearch')}
+                    placeholder={t('actionsSearchPlaceholder')}
                   />
-                </li>
-              ))}
-            </ul>
+                </div>
+              ) : null}
+            </>
+          }
+        >
+          {showEmpty ? (
+            <EmptyState
+              icon={Webhook}
+              title={t('emailServiceRulesEmpty')}
+              actions={createButtons}
+            />
+          ) : (
+            <TooltipProvider delayDuration={200}>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="pl-4">{t('actionsColName')}</TableHead>
+                    <TableHead className="hidden md:table-cell">{t('actionsColEvent')}</TableHead>
+                    <TableHead className="hidden lg:table-cell">{t('actionsColSendsTo')}</TableHead>
+                    <TableHead className="w-24">{t('actionsColEnabled')}</TableHead>
+                    <TableHead className="w-12 pr-4">
+                      <span className="sr-only">{t('actionsColActions')}</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <SkeletonRows
+                      rows={4}
+                      columns={['pl-4', 'hidden md:table-cell', 'hidden lg:table-cell', '', 'pr-4']}
+                    />
+                  ) : null}
+                  {!loading &&
+                    visible.map((row) => {
+                      const KindIcon = row.kind === 'email' ? Mail : Webhook;
+                      const label = row.kind === 'webhook' ? row.name : row.event;
+                      return (
+                        <TableRow key={row.key}>
+                          <TableCell className="pl-4">
+                            <div className="flex min-w-0 items-center gap-3">
+                              <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground">
+                                <KindIcon
+                                  className="size-4"
+                                  aria-hidden
+                                />
+                              </span>
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <Link
+                                    to={editPath(row)}
+                                    className="truncate font-medium text-foreground no-underline hover:underline"
+                                  >
+                                    {row.name || row.event}
+                                  </Link>
+                                  {row.builtIn ? (
+                                    <StatusBadge
+                                      tone="muted"
+                                      dot={false}
+                                      title={t('emailRuleBuiltInLocked')}
+                                    >
+                                      {t('emailRuleBuiltIn')}
+                                    </StatusBadge>
+                                  ) : null}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {row.kind === 'email'
+                                    ? t('emailRuleKindEmail')
+                                    : t('emailRuleKindWebhook')}
+                                  <span className="font-mono md:hidden"> · {row.event}</span>
+                                </p>
+                                <ActionFeedback feedback={rowFeedback[row.key] ?? null} />
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden font-mono text-xs md:table-cell">
+                            {row.event}
+                          </TableCell>
+                          <TableCell className="hidden max-w-[16rem] lg:table-cell">
+                            <span
+                              className="block truncate text-sm text-muted-foreground"
+                              title={row.target}
+                            >
+                              {row.target}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            {row.builtIn ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span
+                                    className="inline-flex items-center gap-1.5"
+                                    tabIndex={0}
+                                    aria-label={t('emailRuleBuiltInLocked')}
+                                  >
+                                    <Lock
+                                      className="size-3.5 text-muted-foreground"
+                                      aria-hidden
+                                    />
+                                    <StatusBadge tone="success">{t('actionsOn')}</StatusBadge>
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>{t('emailRuleBuiltInLocked')}</TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <Switch
+                                checked={row.enabled}
+                                disabled={busyKey === row.key}
+                                aria-label={label}
+                                onCheckedChange={() => void onToggle(row)}
+                              />
+                            )}
+                          </TableCell>
+                          <TableCell className="pr-4 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-8"
+                                  aria-label={t('actionsMoreFor', { name: row.name || row.event })}
+                                >
+                                  <MoreHorizontal aria-hidden />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onSelect={() => navigate(editPath(row))}>
+                                  {t('actionsEdit')}
+                                </DropdownMenuItem>
+                                {row.builtIn ? null : (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      className="text-destructive focus:text-destructive"
+                                      disabled={busyKey === row.key}
+                                      onSelect={() => void onDelete(row)}
+                                    >
+                                      {t('actionsDelete')}
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  {!loading &&
+                    removed.map((row) => (
+                      <TableRow key={`removed-${row.key}`}>
+                        <TableCell
+                          colSpan={5}
+                          className="px-4"
+                        >
+                          <ActionFeedback
+                            feedback={{
+                              tone: 'success',
+                              text: t(
+                                row.kind === 'webhook' ? 'actionsRuleDeleted' : 'emailRuleDeleted',
+                              ),
+                            }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </TooltipProvider>
           )}
-        </section>
+        </DataTableCard>
       ) : null}
     </div>
   );

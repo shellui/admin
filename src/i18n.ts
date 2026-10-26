@@ -4,6 +4,13 @@ import { initReactI18next } from 'react-i18next';
 const resources = {
   en: {
     translation: {
+      actionsMoreFor: 'More actions for {{name}}',
+      actionsSearchPlaceholder: 'Search by name or event',
+      actionsOn: 'On',
+      actionsColActions: 'Actions',
+      actionsColSendsTo: 'Sends to',
+      actionsListDescription:
+        'Send an email or a signed webhook when an event happens in {{service}}. Company owners manage webhooks. Owners and staff manage email rules.',
       dashboardHostingLink: 'Apps',
       dashboardStorageLink: 'Statistics',
       dashboardIdentityLink: 'Users',
@@ -1847,6 +1854,13 @@ const resources = {
   },
   fr: {
     translation: {
+      actionsMoreFor: "Plus d'actions pour {{name}}",
+      actionsSearchPlaceholder: 'Rechercher par nom ou événement',
+      actionsOn: 'Activé',
+      actionsColActions: 'Actions',
+      actionsColSendsTo: 'Destinataire',
+      actionsListDescription:
+        'Envoyez un email ou un webhook signé quand un événement se produit dans {{service}}. Les propriétaires gèrent les webhooks. Les propriétaires et le staff gèrent les règles email.',
       dashboardHostingLink: 'Apps',
       dashboardStorageLink: 'Statistiques',
       dashboardIdentityLink: 'Utilisateurs',
@@ -2926,7 +2940,7 @@ const resources = {
       actionsRulesEmpty: 'Aucune règle webhook. Créez-en une pour commencer.',
       actionsColName: 'Nom',
       actionsColEvent: 'Événement',
-      actionsColEnabled: 'Activée',
+      actionsColEnabled: 'Activé',
       actionsColUpdated: 'Mise à jour',
       actionsColStatus: 'Statut',
       actionsColRule: 'Règle',

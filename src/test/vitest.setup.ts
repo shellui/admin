@@ -5,6 +5,7 @@ vi.mock('@shellui/sdk', () => ({
     initialSettings: {
       authBackendBaseUrl: 'http://localhost:8000',
     },
+    toast: vi.fn(),
   },
   addMessageListener: () => () => {},
   sendMessageToParent: () => false,
