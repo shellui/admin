@@ -67,8 +67,12 @@ const resources = {
       userDetailProfile: 'Profile',
       userDetailBackToUsers: 'Users',
       accessTokensRevokeConfirmDescription:
-        'Apps and scripts using this token stop working right away. You cannot undo this.',
-      accessTokensRevokeConfirmTitle: 'Revoke this access token?',
+        'Scripts using this token stop working at once. You cannot undo this.',
+      accessTokensRevokeConfirmTitle: 'Revoke this token?',
+      accessTokensRevokeConfirmTitleNamed: 'Revoke token "{{name}}"?',
+      accessTokensRevokeConfirmOk: 'Revoke token',
+      accessTokensActiveTitle: 'Active tokens',
+      accessTokensCreateTitle: 'Create token',
       usersApiNote:
         'Toggling access calls PUT /api/v1/users/{id} and emails the person when access is enabled.',
       usersEmptyDescription: 'Invite people to give them access to this company.',
@@ -1951,8 +1955,12 @@ const resources = {
       userDetailProfile: 'Profil',
       userDetailBackToUsers: 'Utilisateurs',
       accessTokensRevokeConfirmDescription:
-        'Les apps et scripts qui utilisent ce jeton cessent de fonctionner immédiatement. Cette action est définitive.',
-      accessTokensRevokeConfirmTitle: "Révoquer ce jeton d'accès ?",
+        'Les scripts qui utilisent ce jeton cessent de fonctionner immédiatement. Cette action est définitive.',
+      accessTokensRevokeConfirmTitle: 'Révoquer ce jeton ?',
+      accessTokensRevokeConfirmTitleNamed: 'Révoquer le jeton « {{name}} » ?',
+      accessTokensRevokeConfirmOk: 'Révoquer le jeton',
+      accessTokensActiveTitle: 'Jetons actifs',
+      accessTokensCreateTitle: 'Créer un jeton',
       usersApiNote:
         'Changer l’accès appelle PUT /api/v1/users/{id} et envoie un e-mail à la personne quand l’accès est activé.',
       usersEmptyDescription: 'Invitez des personnes pour leur donner accès à cette entreprise.',
