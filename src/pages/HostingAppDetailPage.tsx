@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, Loader2, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ExternalLink, Loader2, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { DataTableCard, SkeletonRows } from '@/components/admin/DataTableCard';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { SettingRow } from '@/components/admin/SettingsSection';
+import { StatusBadge, type StatusTone } from '@/components/admin/StatusBadge';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Text } from '@/components/ui/text';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Table,
@@ -37,7 +41,7 @@ import shellui from '@shellui/sdk';
 import { confirmAction } from '@/lib/confirmAction';
 
 function formatDate(value: string | null, locale: string): string {
-  if (!value) return '—';
+  if (!value) return '-';
   try {
     return new Date(value).toLocaleString(locale);
   } catch {
@@ -66,10 +70,10 @@ function formatBytes(bytes: number): string {
   return `${n.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
-function deploymentStatusVariant(status: string): 'default' | 'secondary' | 'outline' | 'muted' {
-  if (status === 'active') return 'default';
-  if (status === 'failed') return 'outline';
-  if (status === 'draft' || status === 'uploading') return 'secondary';
+function deploymentStatusTone(status: string): StatusTone {
+  if (status === 'active') return 'success';
+  if (status === 'failed') return 'destructive';
+  if (status === 'draft' || status === 'uploading') return 'info';
   return 'muted';
 }
 
@@ -244,254 +248,268 @@ export function HostingAppDetailPage() {
     }
   }
 
+  const back = { to: '/hosting', label: t('hostingBackToApps') };
+
   if (!hostingBaseUrl) {
     return (
-      <div className="mx-auto flex max-w-lg flex-col gap-3 px-4 py-8 md:px-6">
-        <h1 className="text-xl font-semibold tracking-tight">{t('hostingMissingTitle')}</h1>
-        <p className="text-sm text-muted-foreground">{t('hostingMissingDescription')}</p>
+      <div className="w-full space-y-6">
+        <PageHeader
+          back={back}
+          title={name || t('hostingAppsTitle')}
+          service="hosting-service"
+        />
+        <Alert variant="warning">
+          <AlertTitle>{t('hostingMissingTitle')}</AlertTitle>
+          <AlertDescription>{t('hostingMissingDescription')}</AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   if (!name) {
     return (
-      <div className="mx-auto flex max-w-lg flex-col gap-3 px-4 py-8 md:px-6">
-        <Text className="text-sm text-muted-foreground">{t('hostingAppNotFound')}</Text>
-        <Link
-          to="/hosting"
-          className="text-sm text-primary hover:underline"
-        >
-          {t('hostingBackToApps')}
-        </Link>
+      <div className="w-full space-y-6">
+        <PageHeader
+          back={back}
+          title={t('hostingAppsTitle')}
+          service="hosting-service"
+        />
+        <Alert variant="warning">
+          <AlertDescription>{t('hostingAppNotFound')}</AlertDescription>
+        </Alert>
       </div>
     );
   }
 
+  const expired = app ? isPreviewExpired(app.expires_at) : false;
+  const cols = [
+    'pl-4',
+    'hidden md:table-cell',
+    '',
+    '',
+    'hidden md:table-cell',
+    'hidden md:table-cell',
+    'pr-4',
+  ];
+
   return (
-    <div className="w-full space-y-8">
-      <header className="space-y-4">
-        <Link
-          to="/hosting"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="size-3.5" />
-          {t('hostingBackToApps')}
-        </Link>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-baseline gap-3">
-              <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-                {app?.display_name || name}
-              </h1>
-              <Badge
-                variant="secondary"
-                className="font-mono text-[10px] uppercase"
-              >
-                {name}
-              </Badge>
-              {app?.slug ? (
-                <Badge
-                  variant="outline"
-                  className="font-mono text-[10px] uppercase"
+    <div className="w-full space-y-6">
+      <PageHeader
+        back={back}
+        title={app?.display_name || name}
+        service="hosting-service"
+        description={
+          <>
+            <span className="block">{t('hostingAppDetailDescription')}</span>
+            <span className="mt-1 flex flex-wrap items-center gap-2 font-mono text-xs text-muted-foreground">
+              <span>{name}</span>
+              {app?.slug ? <span>{app.slug}</span> : null}
+              {app?.urls?.url ? (
+                <a
+                  href={app.urls.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-primary hover:underline"
                 >
-                  {app.slug}
-                </Badge>
+                  {app.urls.url}
+                  <ExternalLink
+                    aria-hidden
+                    className="size-3"
+                  />
+                  <span className="sr-only">{t('navOpensExternally')}</span>
+                </a>
               ) : null}
-            </div>
-            <Text className="font-mono text-sm text-muted-foreground">
-              {t('hostingAppDetailDescription')}
-            </Text>
-            {app?.urls?.url ? (
-              <a
-                href={app.urls.url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-block font-mono text-sm text-primary hover:underline"
-              >
-                {app.urls.url}
-              </a>
-            ) : null}
-            {app && isPreviewApp(app) ? (
-              <div className="space-y-2 pt-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Text className="font-mono text-sm text-muted-foreground">
-                    {t('hostingColExpires')}: {formatDate(app.expires_at ?? null, i18n.language)}
-                  </Text>
-                  {isPreviewExpired(app.expires_at) ? (
-                    <Badge variant="outline">{t('hostingExpiresExpired')}</Badge>
-                  ) : null}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-flex">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={renewingExpiry || isPreviewExpired(app.expires_at)}
-                          onClick={() => void handleRenewExpiry()}
-                        >
-                          {renewingExpiry ? (
-                            <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                          ) : (
-                            <RotateCcw className="mr-1.5 size-3.5" />
-                          )}
-                          {t('hostingRenewExpiry')}
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      {isPreviewExpired(app.expires_at)
-                        ? t('hostingRenewExpiryDisabledHint')
-                        : t('hostingRenewExpiryHint')}
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                {isPreviewExpired(app.expires_at) ? (
-                  <Text className="text-sm text-muted-foreground">
-                    {t('hostingExpiresExpiredHint')}
-                  </Text>
-                ) : (
-                  <Text className="text-sm text-muted-foreground">
-                    {t('hostingRenewExpiryHint')}
-                  </Text>
+            </span>
+          </>
+        }
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void load()}
+              disabled={loading || deleting}
+            >
+              <RefreshCw
+                aria-hidden
+                className={cn(
+                  'mr-1.5 size-3.5',
+                  loading && 'animate-spin motion-reduce:animate-none',
                 )}
-              </div>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+              />
+              {t('hostingRefresh')}
+            </Button>
             {app ? (
               <Button
                 type="button"
                 size="sm"
-                variant="outline"
+                variant="destructive"
                 disabled={deleting || loading}
                 onClick={() => void handleDelete()}
               >
                 {deleting ? (
-                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin motion-reduce:animate-none" />
                 ) : (
                   <Trash2 className="mr-1.5 size-3.5" />
                 )}
                 {t('hostingDelete')}
               </Button>
             ) : null}
-            <button
-              type="button"
-              onClick={() => void load()}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm hover:bg-muted"
-              disabled={loading || deleting}
-            >
-              <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
-              {t('hostingRefresh')}
-            </button>
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {!accessToken && (
-        <Text className="font-mono text-sm text-muted-foreground">{t('hostingNoSession')}</Text>
+        <Alert variant="info">
+          <AlertDescription>{t('hostingNoSession')}</AlertDescription>
+        </Alert>
       )}
 
-      {accessToken && loading && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          {t('hostingAppDetailLoading')}
-        </div>
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription className="font-mono text-sm">{error}</AlertDescription>
+        </Alert>
       )}
-
-      {error && <Text className="font-mono text-sm text-destructive">{error}</Text>}
 
       {accessToken && !loading && app && appBrowseUrl && redirectStatus === 'missing' ? (
-        <div className="flex flex-col gap-3 rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-start gap-2">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
-            <div className="min-w-0 space-y-1">
-              <Text className="text-sm font-medium text-destructive">
-                {t('hostingRedirectMissingTitle')}
-              </Text>
-              <Text className="font-mono text-xs text-destructive/90">
-                {t('hostingRedirectMissingDescription', { origin: appOrigin || appBrowseUrl })}
-              </Text>
-              {redirectActionError ? (
-                <Text className="font-mono text-xs text-destructive">{redirectActionError}</Text>
+        <Alert variant="warning">
+          <AlertTitle>{t('hostingRedirectMissingTitle')}</AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p className="font-mono text-xs">
+              {t('hostingRedirectMissingDescription', { origin: appOrigin || appBrowseUrl })}
+            </p>
+            {redirectActionError ? (
+              <p className="font-mono text-xs text-destructive">{redirectActionError}</p>
+            ) : null}
+            <Button
+              type="button"
+              size="sm"
+              disabled={addingRedirect || !appOrigin}
+              onClick={() => void handleAddLoginRedirect()}
+            >
+              {addingRedirect ? (
+                <Loader2 className="mr-1.5 size-3.5 animate-spin motion-reduce:animate-none" />
               ) : null}
-            </div>
-          </div>
-          <Button
-            type="button"
-            size="sm"
-            variant="destructive"
-            className="shrink-0"
-            disabled={addingRedirect || !appOrigin}
-            onClick={() => void handleAddLoginRedirect()}
-          >
-            {addingRedirect ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : null}
-            {addingRedirect ? t('hostingRedirectAdding') : t('hostingRedirectAdd')}
-          </Button>
-        </div>
+              {addingRedirect ? t('hostingRedirectAdding') : t('hostingRedirectAdd')}
+            </Button>
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       {accessToken && !loading && app && redirectStatus === 'error' && redirectActionError ? (
-        <Text className="font-mono text-sm text-muted-foreground">
-          {t('hostingRedirectCheckError')}: {redirectActionError}
-        </Text>
+        <Alert variant="destructive">
+          <AlertDescription className="font-mono text-sm">
+            {t('hostingRedirectCheckError')}: {redirectActionError}
+          </AlertDescription>
+        </Alert>
       ) : null}
 
-      {accessToken && !loading && app && (
-        <Card className="border-border/80 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base">{t('hostingDeploymentsTitle')}</CardTitle>
-            <CardDescription>{t('hostingDeploymentsDescription')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {deployments.length === 0 ? (
-              <Text className="text-sm text-muted-foreground">{t('hostingDeploymentsEmpty')}</Text>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('hostingColVersion')}</TableHead>
-                    <TableHead>{t('hostingColShellui')}</TableHead>
-                    <TableHead>{t('hostingColStatus')}</TableHead>
-                    <TableHead>{t('hostingColBrowse')}</TableHead>
-                    <TableHead>{t('hostingColArtifact')}</TableHead>
-                    <TableHead>{t('hostingColFinalized')}</TableHead>
-                    <TableHead className="text-right">{t('hostingColActions')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {deployments.map((deployment) => {
+      {app && isPreviewApp(app) ? (
+        <section className="rounded-xl border border-border bg-card px-4 shadow-sm sm:px-5">
+          <SettingRow
+            title={`${t('hostingColExpires')}: ${formatDate(app.expires_at ?? null, i18n.language)}`}
+            badge={
+              expired ? (
+                <StatusBadge tone="destructive">{t('hostingExpiresExpired')}</StatusBadge>
+              ) : null
+            }
+            description={expired ? t('hostingExpiresExpiredHint') : t('hostingRenewExpiryHint')}
+            control={
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={renewingExpiry || expired}
+                      onClick={() => void handleRenewExpiry()}
+                    >
+                      {renewingExpiry ? (
+                        <Loader2 className="mr-1.5 size-3.5 animate-spin motion-reduce:animate-none" />
+                      ) : (
+                        <RotateCcw className="mr-1.5 size-3.5" />
+                      )}
+                      {t('hostingRenewExpiry')}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  {expired ? t('hostingRenewExpiryDisabledHint') : t('hostingRenewExpiryHint')}
+                </TooltipContent>
+              </Tooltip>
+            }
+          />
+        </section>
+      ) : null}
+
+      {accessToken && (loading || app) ? (
+        <DataTableCard
+          label={t('hostingDeploymentsTitle')}
+          busy={loading}
+          toolbar={
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold">{t('hostingDeploymentsTitle')}</h2>
+              <p className="text-xs text-muted-foreground">{t('hostingDeploymentsDescription')}</p>
+            </div>
+          }
+        >
+          {loading ? <span className="sr-only">{t('hostingAppDetailLoading')}</span> : null}
+          {!loading && app && deployments.length === 0 ? (
+            <EmptyState
+              icon={RotateCcw}
+              title={t('hostingDeploymentsEmpty')}
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className={cols[0]}>{t('hostingColVersion')}</TableHead>
+                  <TableHead className={cols[1]}>{t('hostingColShellui')}</TableHead>
+                  <TableHead>{t('hostingColStatus')}</TableHead>
+                  <TableHead>{t('hostingColBrowse')}</TableHead>
+                  <TableHead className={cols[4]}>{t('hostingColArtifact')}</TableHead>
+                  <TableHead className={cols[5]}>{t('hostingColFinalized')}</TableHead>
+                  <TableHead className="pr-4 text-right">{t('hostingColActions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <SkeletonRows
+                    rows={3}
+                    columns={cols}
+                  />
+                ) : null}
+                {!loading &&
+                  app &&
+                  deployments.map((deployment) => {
                     const isCurrent = app.current_deployment_id === deployment.id;
                     const showRollback =
                       canRollback(deployment) && deployment.status !== 'active' && !isCurrent;
                     return (
                       <TableRow key={deployment.id}>
-                        <TableCell className="font-mono text-xs">
-                          {deployment.app_version}
-                          {deployment.pinned ? (
-                            <Badge
-                              variant="outline"
-                              className="ml-2 text-[10px]"
-                            >
-                              {t('hostingPinned')}
-                            </Badge>
-                          ) : null}
+                        <TableCell className="pl-4 font-mono text-xs">
+                          <span className="inline-flex flex-wrap items-center gap-1.5">
+                            {deployment.app_version}
+                            {deployment.pinned ? (
+                              <StatusBadge tone="gold">{t('hostingPinned')}</StatusBadge>
+                            ) : null}
+                            {isCurrent ? (
+                              <StatusBadge tone="info">{t('hostingCurrent')}</StatusBadge>
+                            ) : null}
+                          </span>
                         </TableCell>
-                        <TableCell className="font-mono text-xs">
+                        <TableCell className="hidden font-mono text-xs md:table-cell">
                           {deployment.shellui_version}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={deploymentStatusVariant(deployment.status)}>
+                          <StatusBadge
+                            tone={deploymentStatusTone(deployment.status)}
+                            dot
+                          >
                             {deployment.status}
-                          </Badge>
-                          {isCurrent ? (
-                            <Badge
-                              variant="secondary"
-                              className="ml-2 text-[10px]"
-                            >
-                              {t('hostingCurrent')}
-                            </Badge>
-                          ) : null}
+                          </StatusBadge>
                         </TableCell>
                         <TableCell className="font-mono text-xs">
                           {deployment.urls?.url ? (
@@ -499,21 +517,26 @@ export function HostingAppDetailPage() {
                               href={deployment.urls.url}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-primary hover:underline"
+                              className="inline-flex items-center gap-1 text-primary hover:underline"
                             >
                               {t('hostingOpenVersion')}
+                              <ExternalLink
+                                aria-hidden
+                                className="size-3"
+                              />
+                              <span className="sr-only">{t('navOpensExternally')}</span>
                             </a>
                           ) : (
-                            '—'
+                            <span className="text-muted-foreground">-</span>
                           )}
                         </TableCell>
-                        <TableCell className="font-mono text-xs">
+                        <TableCell className="hidden font-mono text-xs md:table-cell">
                           {formatBytes(deployment.artifact_size)}
                         </TableCell>
-                        <TableCell className="font-mono text-xs">
+                        <TableCell className="hidden font-mono text-xs text-muted-foreground md:table-cell">
                           {formatDate(deployment.finalized_at, i18n.language)}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="pr-4 text-right">
                           {showRollback ? (
                             <Button
                               type="button"
@@ -523,25 +546,24 @@ export function HostingAppDetailPage() {
                               onClick={() => void handleRollback(deployment.id)}
                             >
                               {rollingBackId === deployment.id ? (
-                                <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                                <Loader2 className="mr-1.5 size-3.5 animate-spin motion-reduce:animate-none" />
                               ) : (
                                 <RotateCcw className="mr-1.5 size-3.5" />
                               )}
                               {t('hostingRollback')}
                             </Button>
                           ) : (
-                            <Text className="text-xs text-muted-foreground">—</Text>
+                            <span className="text-xs text-muted-foreground">-</span>
                           )}
                         </TableCell>
                       </TableRow>
                     );
                   })}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      )}
+              </TableBody>
+            </Table>
+          )}
+        </DataTableCard>
+      ) : null}
     </div>
   );
 }
