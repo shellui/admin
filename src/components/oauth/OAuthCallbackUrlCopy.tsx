@@ -2,7 +2,6 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Text } from '@/components/ui/text';
 
 type Props = {
   callbackUrl: string;
@@ -24,13 +23,9 @@ export function OAuthCallbackUrlCopy({ callbackUrl, description }: Props) {
   }, [callbackUrl]);
 
   return (
-    <div className="space-y-2 rounded-md border border-border/70 p-3">
-      <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-        {t('oauthWizardCallbackLabel')}
-      </p>
-      {description ? (
-        <p className="font-mono text-xs text-muted-foreground">{description}</p>
-      ) : null}
+    <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3 sm:p-4">
+      <p className="text-sm font-medium">{t('oauthWizardCallbackLabel')}</p>
+      {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
       <div className="flex flex-col gap-2 sm:flex-row">
         <Input
           value={callbackUrl}
@@ -40,15 +35,14 @@ export function OAuthCallbackUrlCopy({ callbackUrl, description }: Props) {
         />
         <Button
           type="button"
-          size="sm"
-          variant="secondary"
+          variant="outline"
           onClick={() => void onCopy()}
         >
           {copyState === 'done' ? t('oauthWizardCopied') : t('oauthWizardCopy')}
         </Button>
       </div>
       {copyState === 'error' ? (
-        <Text className="font-mono text-xs text-destructive">{t('oauthWizardCopyError')}</Text>
+        <p className="text-xs text-destructive">{t('oauthWizardCopyError')}</p>
       ) : null}
     </div>
   );

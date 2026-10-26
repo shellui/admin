@@ -22,31 +22,31 @@ export function OAuthWizardStepActions({
   extraActions,
 }: Props) {
   return (
-    <div className="flex flex-wrap items-center gap-2 pt-2">
-      {onBack ? (
+    <div className="-mx-4 -mb-4 mt-2 flex flex-wrap items-center gap-2 border-t border-border bg-muted/30 px-4 py-3 sm:-mx-5 sm:-mb-5 sm:px-5">
+      {extraActions}
+      <div className="ml-auto flex flex-wrap items-center gap-2">
+        {onBack ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            onClick={onBack}
+          >
+            <ChevronLeft
+              className="size-4"
+              aria-hidden
+            />
+            {backLabel}
+          </Button>
+        ) : null}
         <Button
           type="button"
-          variant="outline"
-          size="sm"
-          disabled={busy}
-          onClick={onBack}
+          disabled={busy || primaryDisabled}
+          onClick={onPrimary}
         >
-          <ChevronLeft
-            className="mr-1 h-4 w-4"
-            aria-hidden
-          />
-          {backLabel}
+          {primaryLabel}
         </Button>
-      ) : null}
-      <Button
-        type="button"
-        size="sm"
-        disabled={busy || primaryDisabled}
-        onClick={onPrimary}
-      >
-        {primaryLabel}
-      </Button>
-      {extraActions}
+      </div>
     </div>
   );
 }

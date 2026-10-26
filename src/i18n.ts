@@ -4,6 +4,9 @@ import { initReactI18next } from 'react-i18next';
 const resources = {
   en: {
     translation: {
+      loginRedirectsDeleteConfirmDescription:
+        'Sign-in from {{url}} stops working until it is added again.',
+      loginRedirectsDeleteConfirmTitle: 'Remove this redirect URL?',
       groupsDeleteConfirmDescription:
         'Members lose this group in their token after the next sign-in or refresh.',
       groupsDeleteConfirmTitle: 'Delete {{name}}?',
@@ -655,8 +658,7 @@ const resources = {
       loginRedirectsEmpty:
         'No shell origins yet. Loopback is always allowed for CLI; add each browser shell origin for login.',
       loginRedirectsHostingTitle: 'Hosting preview redirect URLs',
-      loginRedirectsHostingDescription:
-        'Origins added automatically when you deploy with shellui deploy. Removed when the hosting project is deleted. Managed by hosting-service — usually no action needed.',
+      loginRedirectsHostingDescription: 'Managed by hosting-service, usually no action needed.',
       loginRedirectsHostingEmpty:
         'No hosted preview origins yet. Deploy with shellui deploy and the site URL appears here for login.',
       loginRedirectsColUrl: 'Base URL',
@@ -1885,6 +1887,9 @@ const resources = {
   },
   fr: {
     translation: {
+      loginRedirectsDeleteConfirmDescription:
+        "La connexion depuis {{url}} cesse de fonctionner jusqu'à ce qu'elle soit ajoutée à nouveau.",
+      loginRedirectsDeleteConfirmTitle: 'Retirer cette URL de redirection ?',
       groupsDeleteConfirmDescription:
         'Les membres perdent ce groupe dans leur jeton après la prochaine connexion ou actualisation.',
       groupsDeleteConfirmTitle: 'Supprimer {{name}} ?',
@@ -2542,7 +2547,7 @@ const resources = {
         'Aucune origine shell. Le loopback est toujours autorisé pour le CLI ; ajoutez chaque origine shell navigateur pour la connexion.',
       loginRedirectsHostingTitle: 'URL de retour des previews hébergées',
       loginRedirectsHostingDescription:
-        'Origines ajoutées automatiquement lors d’un shellui deploy. Retirées à la suppression du projet hosting. Gérées par hosting-service — aucune action requise en général.',
+        'Géré par hosting-service, en général aucune action requise.',
       loginRedirectsHostingEmpty:
         'Aucune origine preview hébergée. Déployez avec shellui deploy et l’URL du site apparaît ici pour la connexion.',
       loginRedirectsColUrl: 'URL de base',

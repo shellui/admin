@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, Route, Routes } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Badge } from '@/components/ui/badge';
+import { KeyRound, Plus } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Text } from '@/components/ui/text';
+import { Skeleton } from '@/components/ui/skeleton';
+import { DataTableCard } from '@/components/admin/DataTableCard';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { PageHeader } from '@/components/admin/PageHeader';
 import { OAuthAppsTable } from '@/components/oauth/OAuthAppsTable';
 import { useDocumentColorScheme } from '@/hooks/useDocumentColorScheme';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
@@ -63,52 +66,91 @@ function OAuthAppsListPanel() {
 
   if (!accessToken) {
     return (
-      <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
+      <Alert>
+        <AlertDescription>{t('dashboardNoSession')}</AlertDescription>
+      </Alert>
     );
   }
   if (!canManage || companyId == null) {
     return (
-      <Text className="font-mono text-sm text-muted-foreground">
-        {t('oauthSetupPageForbidden')}
-      </Text>
+      <Alert>
+        <AlertDescription>{t('oauthSetupPageForbidden')}</AlertDescription>
+      </Alert>
     );
   }
 
+  const linkedCount = rows.filter((r) => r.is_linked).length;
   return (
     <>
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <CardTitle className="font-heading text-lg">{t('oauthSetupCatalogTitle')}</CardTitle>
-              <CardDescription className="font-mono text-xs">
-                {t('oauthSetupCatalogDescription')}
-              </CardDescription>
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              asChild
-            >
-              <Link to="/oauth/new">{t('oauthWizardAddProvider')}</Link>
-            </Button>
+      <DataTableCard
+        label={t('oauthSetupCatalogTitle')}
+        busy={loading}
+        toolbar={
+          <div className="space-y-0.5">
+            <h2 className="text-sm font-semibold">{t('oauthSetupCatalogTitle')}</h2>
+            <p className="text-xs text-muted-foreground">{t('oauthSetupCatalogDescription')}</p>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {error ? <Text className="font-mono text-sm text-destructive">{error}</Text> : null}
-          {loading ? (
-            <Text className="font-mono text-sm text-muted-foreground">
-              {t('oauthSetupLoading')}
-            </Text>
-          ) : (
-            <OAuthAppsTable
-              rows={rows}
-              catalogProviders={catalogProviders}
-              colorScheme={colorScheme}
-            />
-          )}
-        </CardContent>
-      </Card>
+        }
+        footer={
+          linkedCount > 0 && !loading ? (
+            <div className="flex justify-end">
+              <Button asChild>
+                <Link to="/oauth/new">
+                  <Plus aria-hidden />
+                  {t('oauthWizardAddProvider')}
+                </Link>
+              </Button>
+            </div>
+          ) : undefined
+        }
+      >
+        {error ? (
+          <div className="p-4">
+            <Alert variant="destructive">
+              <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+                <span>{error}</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void load()}
+                >
+                  {t('usersRetry')}
+                </Button>
+              </AlertDescription>
+            </Alert>
+          </div>
+        ) : loading ? (
+          <div className="space-y-2 p-4">
+            <span className="sr-only">{t('oauthSetupLoading')}</span>
+            {[0, 1, 2].map((i) => (
+              <Skeleton
+                key={i}
+                className="h-9 w-full"
+              />
+            ))}
+          </div>
+        ) : linkedCount === 0 ? (
+          <EmptyState
+            icon={KeyRound}
+            title={t('oauthWizardAppsEmpty')}
+            actions={
+              <Button asChild>
+                <Link to="/oauth/new">
+                  <Plus aria-hidden />
+                  {t('oauthWizardAddProvider')}
+                </Link>
+              </Button>
+            }
+          />
+        ) : (
+          <OAuthAppsTable
+            rows={rows}
+            catalogProviders={catalogProviders}
+            colorScheme={colorScheme}
+          />
+        )}
+      </DataTableCard>
       <OAuthRedirectsSection accessToken={accessToken} />
     </>
   );
@@ -118,22 +160,12 @@ export function OAuthSetupPage() {
   const { t } = useTranslation();
 
   return (
-    <div className="w-full space-y-8">
-      <header className="space-y-1">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            {t('oauthSetupPageTitle')}
-          </h1>
-          <Badge
-            variant="secondary"
-            className="font-mono text-[10px] uppercase"
-          >
-            {t('dashboardEnvBadge')}
-          </Badge>
-        </div>
-        <Text className="max-w-4xl font-mono text-sm">{t('oauthSetupPageDescription')}</Text>
-      </header>
-
+    <div className="w-full space-y-6">
+      <PageHeader
+        title={t('oauthSetupPageTitle')}
+        service={t('dashboardEnvBadge')}
+        description={t('oauthSetupPageDescription')}
+      />
       <Routes>
         <Route
           index

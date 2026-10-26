@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Text } from '@/components/ui/text';
 import type { OAuthCatalogProvider } from '@/lib/oauthProviderCatalogTypes';
 import {
   isMultiInstanceCatalogProvider,
@@ -50,9 +49,9 @@ export function OAuthProviderPicker({
     const multiConfigured = multi && linkedApps.length > 0;
 
     const tileClass = cn(
-      'flex flex-col items-center gap-2 rounded-lg border border-border/80 p-3 text-center transition-colors',
+      'flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card p-3 text-center shadow-sm transition-colors motion-reduce:transition-none',
       large ? 'min-h-[7rem]' : 'min-h-[4.5rem] p-2',
-      'hover:border-primary/40 hover:bg-muted/40',
+      'hover:border-primary/60 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
     );
 
     const iconBlock = (
@@ -62,7 +61,7 @@ export function OAuthProviderPicker({
           size={large ? 'lg' : 'md'}
           colorScheme={colorScheme}
         />
-        <span className="font-mono text-[11px] leading-tight">{provider.name}</span>
+        <span className="text-xs font-medium leading-tight">{provider.name}</span>
       </>
     );
 
@@ -163,20 +162,20 @@ export function OAuthProviderPicker({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t('oauthWizardSearchPlaceholder')}
-          className="font-mono text-sm"
+          className="sm:max-w-sm"
           aria-label={t('oauthWizardSearchPlaceholder')}
         />
       </div>
 
       {!hasAny ? (
-        <Text className="font-mono text-sm text-muted-foreground">
+        <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
           {t('oauthWizardSearchEmpty')}
-        </Text>
+        </p>
       ) : null}
 
       {sections.popular.length > 0 ? (
         <section className="space-y-2">
-          <h2 className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+          <h2 className="text-xs font-semibold text-muted-foreground">
             {pickerSectionHeading(t, 'popular', sections.popular.length)}
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
@@ -187,7 +186,7 @@ export function OAuthProviderPicker({
 
       {sections.generic.length > 0 ? (
         <section className="space-y-2">
-          <h2 className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+          <h2 className="text-xs font-semibold text-muted-foreground">
             {pickerSectionHeading(t, 'generic', sections.generic.length)}
           </h2>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -198,7 +197,7 @@ export function OAuthProviderPicker({
 
       {sections.other.length > 0 ? (
         <section className="space-y-2">
-          <h2 className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+          <h2 className="text-xs font-semibold text-muted-foreground">
             {pickerSectionHeading(t, 'other', sections.other.length)}
           </h2>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
