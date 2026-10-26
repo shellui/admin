@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { SettingsSection } from '@/components/admin/SettingsSection';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import {
@@ -104,78 +106,83 @@ export function NewsletterSignupPanel({
   }
 
   return (
-    <div className="max-w-4xl space-y-5">
+    <div className="space-y-6">
       {sender?.errorCode ? (
-        <section className="rounded-lg border border-destructive/50 p-4">
-          <Text className="text-sm text-destructive">
+        <Alert variant="warning">
+          <AlertDescription>
             {t('emailNewsletterSenderMissing')}{' '}
             {emailErrorText(t, new EmailApiError(sender.errorCode, 409))}{' '}
             <Link
               to="/email/provider"
-              className="text-primary underline-offset-2 hover:underline"
+              className="font-medium underline underline-offset-2"
             >
               {t('emailBroadcastOpenProvider')}
             </Link>
-          </Text>
-        </section>
+          </AlertDescription>
+        </Alert>
       ) : null}
 
-      <section className="space-y-4 rounded-lg border border-border bg-card p-4">
-        <div className="space-y-1">
-          <h2 className="text-sm font-semibold">{t('emailNewsletterSignupTitle')}</h2>
-          <Text className="text-xs">{t('emailNewsletterSignupHint')}</Text>
+      <SettingsSection
+        title={t('emailNewsletterSignupTitle')}
+        description={t('emailNewsletterSignupHint')}
+        footerNote={
+          newsletter.allowedOrigins.length
+            ? t('emailNewsletterOriginsSet', { origins: newsletter.allowedOrigins.join(', ') })
+            : t('emailNewsletterOriginsAny')
+        }
+      >
+        <div className="space-y-4">
+          <CopyField
+            label={t('emailNewsletterSubscribeUrl')}
+            value={newsletter.subscribeUrl}
+          />
+          <CopyField
+            label={t('emailNewsletterSnippet')}
+            value={newsletterFormSnippet(newsletter)}
+            multiline
+          />
+          <p className="text-xs text-muted-foreground">
+            {t('emailNewsletterCspHint', { origin: new URL(newsletter.subscribeUrl).origin })}
+          </p>
         </div>
-        <CopyField
-          label={t('emailNewsletterSubscribeUrl')}
-          value={newsletter.subscribeUrl}
-        />
-        <CopyField
-          label={t('emailNewsletterSnippet')}
-          value={newsletterFormSnippet(newsletter)}
-          multiline
-        />
-        <Text className="text-xs">
-          {t('emailNewsletterCspHint', { origin: new URL(newsletter.subscribeUrl).origin })}
-        </Text>
-        {newsletter.allowedOrigins.length ? (
-          <Text className="text-xs">
-            {t('emailNewsletterOriginsSet', { origins: newsletter.allowedOrigins.join(', ') })}
-          </Text>
-        ) : (
-          <Text className="text-xs">{t('emailNewsletterOriginsAny')}</Text>
-        )}
-      </section>
+      </SettingsSection>
 
-      <section className="space-y-3 rounded-lg border border-border bg-card p-4">
-        <div className="space-y-1">
-          <h2 className="text-sm font-semibold">{t('emailNewsletterKey')}</h2>
-          <Text className="text-xs">{t('emailNewsletterKeyHint')}</Text>
-        </div>
-        <p className="font-mono text-sm">{newsletter.publicKey}</p>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={rotating}
-          onClick={() => void rotate()}
-        >
-          {rotating ? <Loader2 className="animate-spin" /> : <RefreshCw />}
-          {t('emailNewsletterRotate')}
-        </Button>
-        <ActionFeedback feedback={feedback} />
-      </section>
-
-      <section className="space-y-1 rounded-lg border border-border p-4">
-        <h2 className="text-sm font-semibold">{t('emailNewsletterSendTitle')}</h2>
-        <Text className="text-xs">
-          {t('emailNewsletterSendHint')}{' '}
-          <Link
-            to="/email/broadcasts"
-            className="text-primary underline-offset-2 hover:underline"
+      <SettingsSection
+        title={t('emailNewsletterKey')}
+        description={t('emailNewsletterKeyHint')}
+        footerNote={<ActionFeedback feedback={feedback} />}
+        footerAction={
+          <Button
+            type="button"
+            variant="outline"
+            disabled={rotating}
+            onClick={() => void rotate()}
           >
-            {t('emailNewsletterOpenBroadcasts')}
-          </Link>
-        </Text>
-      </section>
+            {rotating ? (
+              <Loader2 className="animate-spin motion-reduce:animate-none" />
+            ) : (
+              <RefreshCw aria-hidden />
+            )}
+            {t('emailNewsletterRotate')}
+          </Button>
+        }
+      >
+        <p className="break-all rounded-md border border-border bg-muted/40 px-3 py-2 font-mono text-sm">
+          {newsletter.publicKey}
+        </p>
+      </SettingsSection>
+
+      <SettingsSection
+        title={t('emailNewsletterSendTitle')}
+        description={t('emailNewsletterSendHint')}
+      >
+        <Button
+          asChild
+          variant="outline"
+        >
+          <Link to="/email/broadcasts">{t('emailNewsletterOpenBroadcasts')}</Link>
+        </Button>
+      </SettingsSection>
     </div>
   );
 }

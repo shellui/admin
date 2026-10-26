@@ -70,116 +70,124 @@ export function NewsletterSettingsPanel({
 
   return (
     <form
-      className="max-w-3xl space-y-5 rounded-lg border border-border bg-card p-4"
+      className="max-w-3xl overflow-hidden rounded-xl border border-border bg-card shadow-sm"
       onSubmit={(ev) => void save(ev)}
     >
-      <div className="space-y-1.5">
-        <Label htmlFor="newsletter-description">{t('emailNewsletterDescription')}</Label>
-        <Input
-          id="newsletter-description"
-          value={description}
-          maxLength={500}
-          placeholder={t('emailNewsletterDescriptionPlaceholder')}
-          onChange={(ev) => setDescription(ev.target.value)}
-        />
-        <Text className="text-xs">{t('emailNewsletterDescriptionHint')}</Text>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label>{t('emailNewsletterLanguage')}</Label>
-        <div>
-          <SegmentedControl
-            label={t('emailNewsletterLanguage')}
-            value={language}
-            options={EMAIL_LANGS.map((value) => ({ value, label: t(`emailLangInline_${value}`) }))}
-            onChange={setLanguage}
+      <div className="space-y-5 p-4 sm:p-5">
+        <div className="space-y-1.5">
+          <Label htmlFor="newsletter-description">{t('emailNewsletterDescription')}</Label>
+          <Input
+            id="newsletter-description"
+            value={description}
+            maxLength={500}
+            placeholder={t('emailNewsletterDescriptionPlaceholder')}
+            onChange={(ev) => setDescription(ev.target.value)}
           />
+          <Text className="text-xs">{t('emailNewsletterDescriptionHint')}</Text>
         </div>
-        <Text className="text-xs">{t('emailNewsletterLanguageHint')}</Text>
-      </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="newsletter-origins">{t('emailNewsletterOrigins')}</Label>
-        <textarea
-          id="newsletter-origins"
-          className={TEXTAREA}
-          value={origins}
-          placeholder="https://www.example.com"
-          onChange={(ev) => setOrigins(ev.target.value)}
-        />
-        <Text className="text-xs">{t('emailNewsletterOriginsHint')}</Text>
-        {parsed.invalid.length ? (
-          <Text className="text-xs text-destructive">
-            {t('emailNewsletterOriginsInvalid', { origins: parsed.invalid.slice(0, 5).join(', ') })}
-          </Text>
-        ) : null}
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="newsletter-redirect">{t('emailNewsletterRedirect')}</Label>
-        <Input
-          id="newsletter-redirect"
-          type="url"
-          value={redirect}
-          placeholder="https://www.example.com/newsletter/confirmed/"
-          onChange={(ev) => setRedirect(ev.target.value)}
-        />
-        <Text className="text-xs">{t('emailNewsletterRedirectHint')}</Text>
-      </div>
-
-      <fieldset className="space-y-3">
-        <legend className="text-sm font-medium">{t('emailNewsletterTurnstile')}</legend>
-        <Text className="text-xs">{t('emailNewsletterTurnstileHint')}</Text>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="newsletter-site-key">{t('emailNewsletterSiteKey')}</Label>
-            <Input
-              id="newsletter-site-key"
-              value={siteKey}
-              className="font-mono text-xs"
-              onChange={(ev) => setSiteKey(ev.target.value)}
+        <div className="space-y-1.5">
+          <Label>{t('emailNewsletterLanguage')}</Label>
+          <div>
+            <SegmentedControl
+              label={t('emailNewsletterLanguage')}
+              value={language}
+              options={EMAIL_LANGS.map((value) => ({
+                value,
+                label: t(`emailLangInline_${value}`),
+              }))}
+              onChange={setLanguage}
             />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="newsletter-secret">{t('emailNewsletterSecret')}</Label>
-            <Input
-              id="newsletter-secret"
-              type="password"
-              data-1p-ignore
-              data-lpignore="true"
-              autoComplete="off"
-              value={secret}
-              className="font-mono text-xs"
-              placeholder={
-                newsletter.turnstileConfigured ? t('emailNewsletterSecretSaved') : undefined
-              }
-              onChange={(ev) => setSecret(ev.target.value)}
-            />
-          </div>
+          <Text className="text-xs">{t('emailNewsletterLanguageHint')}</Text>
         </div>
-        {newsletter.turnstileConfigured ? (
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="size-4 rounded border"
-              checked={clearSecret}
-              onChange={(ev) => setClearSecret(ev.target.checked)}
-            />
-            {t('emailNewsletterSecretClear')}
-          </label>
-        ) : null}
-      </fieldset>
 
-      <div className="flex flex-wrap items-center gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="newsletter-origins">{t('emailNewsletterOrigins')}</Label>
+          <textarea
+            id="newsletter-origins"
+            className={TEXTAREA}
+            value={origins}
+            placeholder="https://www.example.com"
+            onChange={(ev) => setOrigins(ev.target.value)}
+          />
+          <Text className="text-xs">{t('emailNewsletterOriginsHint')}</Text>
+          {parsed.invalid.length ? (
+            <Text className="text-xs text-destructive">
+              {t('emailNewsletterOriginsInvalid', {
+                origins: parsed.invalid.slice(0, 5).join(', '),
+              })}
+            </Text>
+          ) : null}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="newsletter-redirect">{t('emailNewsletterRedirect')}</Label>
+          <Input
+            id="newsletter-redirect"
+            type="url"
+            value={redirect}
+            placeholder="https://www.example.com/newsletter/confirmed/"
+            onChange={(ev) => setRedirect(ev.target.value)}
+          />
+          <Text className="text-xs">{t('emailNewsletterRedirectHint')}</Text>
+        </div>
+
+        <fieldset className="space-y-3">
+          <legend className="w-full border-t border-border pt-5 text-sm font-medium">
+            {t('emailNewsletterTurnstile')}
+          </legend>
+          <Text className="text-xs">{t('emailNewsletterTurnstileHint')}</Text>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="newsletter-site-key">{t('emailNewsletterSiteKey')}</Label>
+              <Input
+                id="newsletter-site-key"
+                value={siteKey}
+                className="font-mono text-xs"
+                onChange={(ev) => setSiteKey(ev.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="newsletter-secret">{t('emailNewsletterSecret')}</Label>
+              <Input
+                id="newsletter-secret"
+                type="password"
+                data-1p-ignore
+                data-lpignore="true"
+                autoComplete="off"
+                value={secret}
+                className="font-mono text-xs"
+                placeholder={
+                  newsletter.turnstileConfigured ? t('emailNewsletterSecretSaved') : undefined
+                }
+                onChange={(ev) => setSecret(ev.target.value)}
+              />
+            </div>
+          </div>
+          {newsletter.turnstileConfigured ? (
+            <label className="flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="size-4 rounded border"
+                checked={clearSecret}
+                onChange={(ev) => setClearSecret(ev.target.checked)}
+              />
+              {t('emailNewsletterSecretClear')}
+            </label>
+          ) : null}
+        </fieldset>
+      </div>
+      <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border bg-muted/30 px-4 py-3 sm:px-5">
+        <ActionFeedback feedback={feedback} />
         <Button
           type="submit"
           disabled={busy || parsed.invalid.length > 0}
         >
-          {busy ? <Loader2 className="animate-spin" /> : null}
+          {busy ? <Loader2 className="animate-spin motion-reduce:animate-none" /> : null}
           {t('emailNewsletterSave')}
         </Button>
       </div>
-      <ActionFeedback feedback={feedback} />
     </form>
   );
 }

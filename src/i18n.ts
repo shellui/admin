@@ -4,6 +4,7 @@ import { initReactI18next } from 'react-i18next';
 const resources = {
   en: {
     translation: {
+      emailNewslettersAll: 'All newsletters',
       emailBroadcastsAll: 'All broadcasts',
       emailBroadcastUnpublishedTitle: 'Unpublished changes',
       emailBroadcastsColDate: 'Date',
@@ -1476,8 +1477,7 @@ const resources = {
         'One per line, for example https://www.example.com. Empty means any website.',
       emailNewsletterOriginsInvalid: 'Not valid: {{origins}}',
       emailNewsletterRedirect: 'Page after confirming',
-      emailNewsletterRedirectHint:
-        'Where people land after confirming, on your website. Empty shows a simple confirmation page.',
+      emailNewsletterRedirectHint: 'Empty shows the default confirmation page.',
       emailNewsletterTurnstile: 'Cloudflare Turnstile',
       emailNewsletterTurnstileHint:
         'Optional bot check. With a secret set, every sign-up needs a valid Turnstile token.',
@@ -1882,6 +1882,7 @@ const resources = {
   },
   fr: {
     translation: {
+      emailNewslettersAll: 'Toutes les newsletters',
       emailBroadcastsAll: 'Toutes les diffusions',
       emailBroadcastUnpublishedTitle: 'Modifications non publiées',
       emailBroadcastsColDate: 'Date',
@@ -3387,8 +3388,7 @@ const resources = {
         "Un par ligne, par exemple https://www.example.com. Vide : n'importe quel site.",
       emailNewsletterOriginsInvalid: 'Invalide : {{origins}}',
       emailNewsletterRedirect: 'Page après confirmation',
-      emailNewsletterRedirectHint:
-        'La page de votre site où arrivent les personnes après confirmation. Vide : une page de confirmation simple.',
+      emailNewsletterRedirectHint: 'Vide affiche la page de confirmation par défaut.',
       emailNewsletterTurnstile: 'Cloudflare Turnstile',
       emailNewsletterTurnstileHint:
         'Contrôle anti-robot facultatif. Avec une clé secrète, chaque inscription exige un jeton Turnstile valide.',

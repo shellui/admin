@@ -1,7 +1,10 @@
 import { Fragment, useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, ChevronRight, Download, Loader2, Trash2, Upload } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { ChevronDown, ChevronRight, Download, Loader2, Trash2, Upload, Users } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { StatusBadge } from '@/components/admin/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,8 +46,15 @@ function download(text: string, filename: string) {
 
 export function NewsletterStatusBadge({ status }: { status: NewsletterSubscriberStatus }) {
   const { t } = useTranslation();
-  const variant = status === 'confirmed' ? 'default' : status === 'pending' ? 'outline' : 'muted';
-  return <Badge variant={variant}>{t(`emailNewsletterStatus_${status}`)}</Badge>;
+  const tone = status === 'confirmed' ? 'success' : status === 'pending' ? 'warning' : 'muted';
+  return (
+    <StatusBadge
+      tone={tone}
+      dot
+    >
+      {t(`emailNewsletterStatus_${status}`)}
+    </StatusBadge>
+  );
 }
 
 /** Who is on the list: browse, add, import, export, and remove. */
@@ -182,9 +192,9 @@ export function NewsletterSubscribersPanel({
   const pages = data ? Math.max(1, Math.ceil(data.count / data.pageSize)) : 1;
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
-      <section className="min-w-0 space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
+    <div className="space-y-6">
+      <section className="min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+        <div className="flex flex-wrap items-center gap-3 border-b border-border px-3 py-3 sm:px-4">
           <SegmentedControl
             label={t('emailNewsletterStatusFilter')}
             value={status}
@@ -194,7 +204,7 @@ export function NewsletterSubscribersPanel({
               setPage(1);
             }}
           />
-          <div className="w-64">
+          <div className="w-full sm:w-64">
             <SearchField
               value={search}
               onChange={(next) => {
@@ -208,6 +218,8 @@ export function NewsletterSubscribersPanel({
           <Button
             type="button"
             variant="outline"
+            size="sm"
+            className="sm:ml-auto"
             disabled={busy !== null}
             onClick={() => void exportCsv()}
           >
@@ -215,31 +227,56 @@ export function NewsletterSubscribersPanel({
             {t('emailNewsletterExport')}
           </Button>
         </div>
-        {query && !exact ? <Text className="text-xs">{t('emailNewsletterSearchHint')}</Text> : null}
-        <ActionFeedback feedback={listFeedback} />
+        {query && !exact ? (
+          <p className="border-b border-border px-4 py-2 text-xs text-muted-foreground">
+            {t('emailNewsletterSearchHint')}
+          </p>
+        ) : null}
+        {listFeedback ? (
+          <div className="border-b border-border px-4 py-2">
+            <ActionFeedback feedback={listFeedback} />
+          </div>
+        ) : null}
         {error ? (
-          <Text className="font-mono text-sm text-destructive">{emailErrorText(t, error)}</Text>
+          <div className="p-4">
+            <Alert variant="destructive">
+              <AlertDescription className="font-mono text-sm">
+                {emailErrorText(t, error)}
+              </AlertDescription>
+            </Alert>
+          </div>
         ) : null}
         {loading && !data ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" />
-            {t('emailLoading')}
+          <div
+            className="space-y-2 p-4 motion-safe:animate-pulse"
+            aria-busy
+          >
+            <span className="sr-only">{t('emailLoading')}</span>
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton
+                key={i}
+                className="h-8 w-full"
+              />
+            ))}
           </div>
         ) : null}
         {data && data.results.length === 0 ? (
-          <Text>{t('emailNewsletterNoSubscribers')}</Text>
+          <EmptyState
+            icon={Users}
+            title={t('emailNewsletterNoSubscribers')}
+          />
         ) : null}
         {data && data.results.length ? (
-          <div className="overflow-x-auto rounded-lg border border-border">
+          <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
+              <thead className="text-left text-xs text-muted-foreground">
                 <tr>
-                  <th className="px-3 py-2 font-medium">{t('emailNewsletterColEmail')}</th>
-                  <th className="px-3 py-2 font-medium">{t('emailNewsletterColStatus')}</th>
-                  <th className="px-3 py-2 font-medium">{t('emailNewsletterColLanguage')}</th>
-                  <th className="px-3 py-2 font-medium">{t('emailNewsletterColSource')}</th>
-                  <th className="px-3 py-2 font-medium">{t('emailNewsletterColDate')}</th>
-                  <th className="px-3 py-2">
+                  <th className="px-4 py-2.5 font-medium">{t('emailNewsletterColEmail')}</th>
+                  <th className="px-4 py-2.5 font-medium">{t('emailNewsletterColStatus')}</th>
+                  <th className="px-4 py-2.5 font-medium">{t('emailNewsletterColLanguage')}</th>
+                  <th className="px-4 py-2.5 font-medium">{t('emailNewsletterColSource')}</th>
+                  <th className="px-4 py-2.5 font-medium">{t('emailNewsletterColDate')}</th>
+                  <th className="px-4 py-2.5">
                     <span className="sr-only">{t('emailNewsletterRemove')}</span>
                   </th>
                 </tr>
@@ -251,7 +288,7 @@ export function NewsletterSubscribersPanel({
                   return (
                     <Fragment key={row.id}>
                       <tr>
-                        <td className="px-3 py-2">
+                        <td className="px-4 py-2.5">
                           <span className="font-mono text-xs">{row.email}</span>
                           {row.firstName ? (
                             <span className="ml-2 text-xs text-muted-foreground">
@@ -279,19 +316,19 @@ export function NewsletterSubscribersPanel({
                             </button>
                           ) : null}
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="px-4 py-2.5">
                           <NewsletterStatusBadge status={row.status} />
                         </td>
-                        <td className="px-3 py-2 text-xs">
+                        <td className="px-4 py-2.5 text-xs">
                           {t(`emailLangInline_${row.language}`, { defaultValue: row.language })}
                         </td>
-                        <td className="px-3 py-2 text-xs">
+                        <td className="px-4 py-2.5 text-xs">
                           {t(`emailNewsletterSource_${row.source}`)}
                         </td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground">
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground">
                           {formatDate(row.unsubscribedAt ?? row.confirmedAt ?? row.createdAt, lang)}
                         </td>
-                        <td className="px-3 py-2 text-right">
+                        <td className="px-4 py-2.5 text-right">
                           <Button
                             type="button"
                             size="sm"
@@ -334,7 +371,7 @@ export function NewsletterSubscribersPanel({
           </div>
         ) : null}
         {data && pages > 1 ? (
-          <div className="flex items-center gap-3 text-sm">
+          <div className="flex items-center justify-end gap-3 border-t border-border px-4 py-2.5 text-sm">
             <Button
               type="button"
               size="sm"
@@ -360,9 +397,9 @@ export function NewsletterSubscribersPanel({
         ) : null}
       </section>
 
-      <aside className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-2">
         <form
-          className="space-y-3 rounded-lg border border-border bg-card p-4"
+          className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5"
           onSubmit={(ev) => void add(ev)}
         >
           <h2 className="text-sm font-semibold">{t('emailNewsletterAddTitle')}</h2>
@@ -399,7 +436,7 @@ export function NewsletterSubscribersPanel({
           <ActionFeedback feedback={addFeedback} />
         </form>
 
-        <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+        <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
           <h2 className="text-sm font-semibold">{t('emailNewsletterImportTitle')}</h2>
           <Text className="text-xs">{t('emailNewsletterImportHint')}</Text>
           <label className="flex cursor-pointer items-start gap-2 text-sm">
@@ -433,7 +470,7 @@ export function NewsletterSubscribersPanel({
           </Button>
           <ActionFeedback feedback={importFeedback} />
         </section>
-      </aside>
+      </div>
     </div>
   );
 }
