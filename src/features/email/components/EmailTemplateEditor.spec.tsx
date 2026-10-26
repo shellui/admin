@@ -80,7 +80,7 @@ describe('EmailTemplateEditor actions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
     const failure = await screen.findByText('The provider refused the test email.');
     expect(failure.className).toContain('text-destructive');
-    expect(send.closest('div.border-t')?.contains(failure)).toBe(true);
+    expect(send.closest('[data-testid="email-editor-actions"]')?.contains(failure)).toBe(true);
     expect(run).toHaveBeenCalledWith(undefined);
 
     fireEvent.change(screen.getByLabelText('Subject'), { target: { value: 'Hello again' } });

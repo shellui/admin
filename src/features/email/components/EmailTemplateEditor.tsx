@@ -1,6 +1,7 @@
 import { Suspense, lazy, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Braces, Check, Copy, Eye, Pencil, Plus } from 'lucide-react';
+import { Braces, Check, Copy, Eye, Info, Pencil, Plus } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -293,14 +294,14 @@ export function EmailTemplateEditor({
 
   const editPane = (
     <div className="mx-auto w-full max-w-3xl min-w-0 space-y-5">
-      <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+      <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm">
         <h2 className="text-sm font-semibold tracking-tight">{t('emailInboxSection')}</h2>
         {inboxField('subject', t('emailSubjectLabel'))}
         {inboxField('preheader', t('emailPreheaderLabel'))}
       </section>
 
       {variables.length ? (
-        <section className="space-y-2.5 rounded-lg border border-border bg-card p-4">
+        <section className="space-y-2.5 rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <h2 className="text-sm font-semibold tracking-tight">
               {t('emailVariablesLabel')}{' '}
@@ -343,7 +344,7 @@ export function EmailTemplateEditor({
         </section>
       ) : null}
 
-      <section className="space-y-3">
+      <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h2 className="text-sm font-semibold tracking-tight">{t('emailContentSection')}</h2>
           <Text className="text-xs">{t('emailEditorHint')}</Text>
@@ -477,27 +478,34 @@ export function EmailTemplateEditor({
       {languageNotice}
 
       {laneClass === 'auth' ? (
-        <Text>
-          {t('emailAuthLaneNotice', {
-            tokens: authTokens.map((token) => `{{ ${token} }}`).join(', '),
-          })}
-        </Text>
-      ) : null}
-      {laneClass === 'auth' ? (
-        <Text className="font-mono text-xs">
-          {authLinkHosts.length
-            ? t('emailAuthLinkHosts', { hosts: authLinkHosts.join(', ') })
-            : null}{' '}
-          <a
-            className="underline underline-offset-4"
-            href="#/email/link-hosts"
-          >
-            {t('navEmailLinkHosts')}
-          </a>
-        </Text>
+        <Alert>
+          <Info aria-hidden />
+          <AlertDescription className="space-y-1">
+            <p>
+              {t('emailAuthLaneNotice', {
+                tokens: authTokens.map((token) => `{{ ${token} }}`).join(', '),
+              })}
+            </p>
+            <p className="text-xs">
+              {authLinkHosts.length ? (
+                <span className="font-mono">
+                  {t('emailAuthLinkHosts', { hosts: authLinkHosts.join(', ') })}{' '}
+                </span>
+              ) : null}
+              <a
+                className="font-medium underline underline-offset-4"
+                href="#/email/link-hosts"
+              >
+                {t('navEmailLinkHosts')}
+              </a>
+            </p>
+          </AlertDescription>
+        </Alert>
       ) : null}
       {authIssue && authIssue.errorCode !== 'auth_literal_link' ? (
-        <Text className="font-mono text-sm text-destructive">{emailErrorText(t, authIssue)}</Text>
+        <Alert variant="destructive">
+          <AlertDescription>{emailErrorText(t, authIssue)}</AlertDescription>
+        </Alert>
       ) : null}
 
       {mode === 'preview' ? previewPane : null}
@@ -512,8 +520,11 @@ export function EmailTemplateEditor({
       ) : null}
 
       {primary || secondary || sendDraft ? (
-        <div className="space-y-4 border-t border-border/80 pt-4">
-          <div className="flex flex-wrap items-start gap-4">
+        <div
+          data-testid="email-editor-actions"
+          className="rounded-xl border border-border bg-muted/30 p-3"
+        >
+          <div className="flex flex-wrap items-start gap-3">
             {primary ? actionButton('primary', primary) : null}
             {secondary ? actionButton('secondary', secondary, 'outline') : null}
             {sendDraft ? (
