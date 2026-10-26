@@ -25,7 +25,7 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ### ✨ Feature
 
-- **Email and webhooks for email:** a new Email and webhooks page for email-service, with a newsletter filter on webhook rules. Needs shellui/email-service#19.
+- **Email and webhooks for email:** a new Email and webhooks page for email-service, with a newsletter filter on webhook and email rules. Needs shellui/email-service#19.
 - **Newsletter metadata:** the subscribers list shows the details sent with each sign-up. Needs shellui/email-service#19.
 
 ## [0.6.9] - 2026-10-25

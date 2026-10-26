@@ -963,6 +963,7 @@ const resources = {
       eventsDescriptionEmail:
         'Every email-service event in this company, newest first: messages and newsletter sign-ups.',
       webhooksNewsletterFilter: 'Newsletter',
+      emailRuleNewsletterFilterHint: 'Only send this email for events of one newsletter.',
       webhooksNewsletterFilterAll: 'All newsletters',
       webhooksNewsletterFilterHint: 'Only send this webhook for events of one newsletter.',
       emailNewsletterDetailsCount_one: '{{count}} detail',
@@ -2775,6 +2776,8 @@ const resources = {
       eventsDescriptionEmail:
         'Tous les événements du service e-mail de cette entreprise, du plus récent au plus ancien : messages et inscriptions aux newsletters.',
       webhooksNewsletterFilter: 'Newsletter',
+      emailRuleNewsletterFilterHint:
+        'N’envoyer cet e-mail que pour les événements d’une newsletter.',
       webhooksNewsletterFilterAll: 'Toutes les newsletters',
       webhooksNewsletterFilterHint:
         'N’envoyer ce webhook que pour les événements d’une newsletter.',
