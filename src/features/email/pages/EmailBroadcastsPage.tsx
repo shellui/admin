@@ -178,7 +178,7 @@ export function EmailBroadcastsPage() {
               id="broadcast-name"
               value={name}
               maxLength={120}
-              required
+              aria-required
               placeholder={t('emailBroadcastNamePlaceholder')}
               onChange={(ev) => setName(ev.target.value)}
             />
