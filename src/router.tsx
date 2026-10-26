@@ -99,6 +99,16 @@ const hostingWebhookRoutes = [
   { path: 'hosting/webhooks', element: <ActionsRulesListPage /> },
 ] as const;
 
+const emailWebhookRoutes = [
+  { path: 'email/webhooks/deliveries/:deliveryId', element: <ActionsDeliveryDetailPage /> },
+  { path: 'email/webhooks/deliveries', element: <ActionsDeliveriesListPage /> },
+  { path: 'email/webhooks/email/new', element: <EmailRuleFormPage /> },
+  { path: 'email/webhooks/email/:emailRuleId', element: <EmailRuleFormPage /> },
+  { path: 'email/webhooks/new', element: <ActionsRuleEditorPage /> },
+  { path: 'email/webhooks/:ruleId', element: <ActionsRuleEditorPage /> },
+  { path: 'email/webhooks', element: <ActionsRulesListPage /> },
+];
+
 const storageWebhookRoutes = [
   { path: 'storage/webhooks/deliveries/:deliveryId', element: <ActionsDeliveryDetailPage /> },
   { path: 'storage/webhooks/deliveries', element: <ActionsDeliveriesListPage /> },
@@ -139,6 +149,7 @@ export const router = createHashRouter([
           ...identityWebhookRoutes,
           ...hostingWebhookRoutes,
           ...storageWebhookRoutes,
+          ...emailWebhookRoutes,
           {
             path: 'webhooks/*',
             element: <LegacyWebhooksCatchAll />,

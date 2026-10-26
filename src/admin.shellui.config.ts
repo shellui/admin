@@ -92,6 +92,11 @@ export const adminShellUiConfig: AdminShellUIConfig = {
           url: '#/email/newsletters',
         },
         {
+          label: { en: 'Email and webhooks', fr: 'E-mail et webhooks' },
+          path: 'email/webhooks',
+          url: '#/email/webhooks',
+        },
+        {
           label: { en: 'Provider', fr: 'Fournisseur' },
           path: 'email/provider',
           url: '#/email/provider',

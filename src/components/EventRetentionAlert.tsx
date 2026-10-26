@@ -9,6 +9,7 @@ const SERVICE_LABEL_KEY = {
   identity: 'webhooksServiceIdentity',
   hosting: 'webhooksServiceHosting',
   storage: 'webhooksServiceStorage',
+  email: 'webhooksServiceEmail',
 } as const satisfies Record<WebhookServiceKey, string>;
 
 export function EventRetentionAlert({

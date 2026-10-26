@@ -127,6 +127,7 @@ const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
   'identity/webhooks': SendHorizonal,
   'hosting/webhooks': SendHorizonal,
   'storage/webhooks': SendHorizonal,
+  'email/webhooks': SendHorizonal,
   'email/templates': Mail,
   'email/broadcasts': Megaphone,
   'email/newsletters': Newspaper,
