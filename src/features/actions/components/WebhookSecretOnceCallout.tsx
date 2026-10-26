@@ -23,14 +23,13 @@ export function WebhookSecretOnceCallout({ secret, onDismiss }: Props) {
   }
 
   return (
-    <div className="space-y-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3">
-      <p className="font-mono text-xs font-semibold text-amber-950 dark:text-amber-100">
-        {t('webhooksSecretOnceTitle')}
-      </p>
-      <p className="font-mono text-[10px] text-amber-950/90 dark:text-amber-100/90">
-        {t('webhooksSecretOnceNote')}
-      </p>
-      <p className="font-mono text-[10px] text-muted-foreground">{t('webhooksSecretN8nHint')}</p>
+    <div
+      className="tone-gold space-y-2 rounded-xl border p-4"
+      role="status"
+    >
+      <p className="text-sm font-semibold text-foreground">{t('webhooksSecretOnceTitle')}</p>
+      <p className="text-[13px] text-foreground">{t('webhooksSecretOnceNote')}</p>
+      <p className="text-xs text-muted-foreground">{t('webhooksSecretN8nHint')}</p>
       <Input
         value={secret}
         readOnly

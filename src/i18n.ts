@@ -4,6 +4,16 @@ import { initReactI18next } from 'react-i18next';
 const resources = {
   en: {
     translation: {
+      ruleEditorEnabledHint:
+        'Turn it off to pause deliveries without losing the setup. Send test event needs the rule on.',
+      ruleEditorSecDeliveryHint: 'Where to send and how to sign it.',
+      ruleEditorSecDelivery: 'Delivery',
+      ruleEditorSecSampleHint: 'What your receiver gets for {{event}}.',
+      ruleEditorSecSample: 'Sample body',
+      ruleEditorSecRuleHint: 'What triggers this webhook.',
+      ruleEditorSecRule: 'Rule',
+      ruleEditorTypeLine:
+        'Webhook rule. Shellui POSTs a signed JSON body to your URL each time the event happens.',
       actionsMoreFor: 'More actions for {{name}}',
       actionsSearchPlaceholder: 'Search by name or event',
       actionsOn: 'On',
@@ -1854,6 +1864,16 @@ const resources = {
   },
   fr: {
     translation: {
+      ruleEditorEnabledHint:
+        "Désactivez-la pour suspendre les envois sans perdre la configuration. L'événement de test exige une règle active.",
+      ruleEditorSecDeliveryHint: 'Où envoyer et comment signer.',
+      ruleEditorSecDelivery: 'Envoi',
+      ruleEditorSecSampleHint: 'Ce que votre récepteur reçoit pour {{event}}.',
+      ruleEditorSecSample: 'Exemple de corps',
+      ruleEditorSecRuleHint: 'Ce qui déclenche ce webhook.',
+      ruleEditorSecRule: 'Règle',
+      ruleEditorTypeLine:
+        'Règle webhook. Shellui envoie un corps JSON signé en POST à votre URL à chaque événement.',
       actionsMoreFor: "Plus d'actions pour {{name}}",
       actionsSearchPlaceholder: 'Rechercher par nom ou événement',
       actionsOn: 'Activé',
