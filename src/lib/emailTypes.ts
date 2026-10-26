@@ -37,6 +37,8 @@ export type EmailRule = {
   language: string;
   templateId: number;
   builtIn: boolean;
+  /** `email.newsletter.*` rules only: one newsletter list, or `null` for every list. */
+  newsletterId: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -54,6 +56,7 @@ export type EmailRuleCreate = {
   language: string;
   recipient_mode: EmailRecipientMode;
   static_recipients: string[];
+  newsletter_id?: number | null;
   content: EmailRuleContent;
 };
 
@@ -62,6 +65,7 @@ export type EmailRulePatch = {
   recipient_mode?: EmailRecipientMode;
   static_recipients?: string[];
   language?: string;
+  newsletter_id?: number | null;
 };
 
 export type EmailTemplateRow = {

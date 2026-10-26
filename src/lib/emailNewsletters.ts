@@ -129,6 +129,8 @@ export type NewsletterSubscriber = {
   createdAt: string;
   confirmedAt: string | null;
   unsubscribedAt: string | null;
+  /** Extra sign-up fields sent by the visitor (string values only). Untrusted text. */
+  metadata: Record<string, string>;
 };
 
 export type NewsletterSubscriberPage = {
@@ -237,7 +239,18 @@ export function parseSubscriber(body: unknown): NewsletterSubscriber {
     createdAt: str(row.created_at),
     confirmedAt: nullableStr(row.confirmed_at),
     unsubscribedAt: nullableStr(row.unsubscribed_at),
+    metadata: parseMetadata(row.metadata),
   };
+}
+
+function parseMetadata(value: unknown): Record<string, string> {
+  const row = record(value);
+  if (!row) return {};
+  const out: Record<string, string> = {};
+  for (const [key, item] of Object.entries(row)) {
+    if (typeof item === 'string') out[key] = item;
+  }
+  return out;
 }
 
 export function parseSubscriberPage(body: unknown): NewsletterSubscriberPage {

@@ -26,6 +26,7 @@ function email(
     language: '',
     templateId: 15,
     builtIn: false,
+    newsletterId: null,
     updatedAt: overrides.createdAt,
     ...overrides,
   };

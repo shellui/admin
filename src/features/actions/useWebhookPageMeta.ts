@@ -4,6 +4,7 @@ import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
 import { useShelluiAuthBackendBaseUrl } from '@/hooks/useShelluiAuthBackendBaseUrl';
 import { useShelluiHosting } from '@/hooks/useShelluiHosting';
 import { useShelluiStorage } from '@/hooks/useShelluiStorage';
+import { useShelluiEmail } from '@/hooks/useShelluiEmail';
 import { useWebhookServices } from '@/features/actions/useWebhookServices';
 import { resolveWebhookServiceFromPathname } from '@/lib/webhookRoutePaths';
 import {
@@ -41,6 +42,15 @@ const STATIC_DEFS: Record<WebhookServiceKey, Omit<WebhookServiceDefinition, 'bas
     descriptionKey: 'webhooksPageDescriptionStorage',
     eventScopeKey: 'webhooksEventScopeStorage',
   },
+  email: {
+    key: 'email',
+    labelKey: 'webhooksServiceEmail',
+    badgeKey: 'webhooksBadgeEmail',
+    pageTitleKey: 'webhooksPageTitleEmail',
+    deliveriesPageTitleKey: 'webhooksDeliveriesPageTitleEmail',
+    descriptionKey: 'webhooksPageDescriptionEmail',
+    eventScopeKey: 'webhooksEventScopeEmail',
+  },
 };
 
 export function useWebhookPageMeta(): {
@@ -52,6 +62,7 @@ export function useWebhookPageMeta(): {
   const identityBaseUrl = useShelluiAuthBackendBaseUrl();
   const hosting = useShelluiHosting();
   const storage = useShelluiStorage();
+  const email = useShelluiEmail();
   const { services } = useWebhookServices();
 
   const shellOptions = useMemo(
@@ -59,8 +70,9 @@ export function useWebhookPageMeta(): {
       identityBaseUrl: identityBaseUrl ?? getAuthBackendBaseUrl(),
       hosting,
       storage,
+      email,
     }),
-    [hosting, identityBaseUrl, storage],
+    [email, hosting, identityBaseUrl, storage],
   );
 
   const configured = services.find((s) => s.key === serviceKey);
@@ -79,8 +91,9 @@ export function allWebhookServiceDefinitions(options: {
   identityBaseUrl?: string | null;
   hosting?: Parameters<typeof listConfiguredWebhookServices>[0]['hosting'];
   storage?: Parameters<typeof listConfiguredWebhookServices>[0]['storage'];
+  email?: Parameters<typeof listConfiguredWebhookServices>[0]['email'];
 }): WebhookServiceDefinition[] {
-  return (['identity', 'hosting', 'storage'] as WebhookServiceKey[]).map((key) => ({
+  return (['identity', 'hosting', 'storage', 'email'] as WebhookServiceKey[]).map((key) => ({
     ...STATIC_DEFS[key],
     baseUrl: resolveWebhookServiceBaseUrl(key, options),
   }));

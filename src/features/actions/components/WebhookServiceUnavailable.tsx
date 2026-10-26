@@ -7,10 +7,12 @@ const CONFIG_HINT_KEYS: Record<
   | 'webhooksServiceNotConfiguredIdentity'
   | 'webhooksServiceNotConfiguredHosting'
   | 'webhooksServiceNotConfiguredStorage'
+  | 'webhooksServiceNotConfiguredEmail'
 > = {
   identity: 'webhooksServiceNotConfiguredIdentity',
   hosting: 'webhooksServiceNotConfiguredHosting',
   storage: 'webhooksServiceNotConfiguredStorage',
+  email: 'webhooksServiceNotConfiguredEmail',
 };
 
 export function WebhookServiceUnavailable({ serviceKey }: { serviceKey: WebhookServiceKey }) {

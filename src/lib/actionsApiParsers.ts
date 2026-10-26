@@ -28,6 +28,7 @@ function parseWebhookConfig(cfg: Record<string, unknown>): ActionRuleWebhookConf
     ...(secret_hint ? { secret_hint } : {}),
     secret_set: cfg.secret_set === true,
     authorization_header_set: cfg.authorization_header_set === true,
+    ...(typeof cfg.newsletter_id === 'number' ? { newsletter_id: cfg.newsletter_id } : {}),
   };
 }
 
@@ -244,6 +245,7 @@ export function toIdentityRuleWriteBody(
     if (cfg.secret?.trim()) out.secret = cfg.secret.trim();
     const auth = webhookAuthorizationHeader(cfg);
     if (auth) out.authorization_header = auth;
+    if (cfg.newsletter_id !== undefined) out.newsletter_id = cfg.newsletter_id;
   }
 
   return out;

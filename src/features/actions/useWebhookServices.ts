@@ -3,6 +3,7 @@ import { getAuthBackendBaseUrl } from '@/lib/backendUrl';
 import { useShelluiAuthBackendBaseUrl } from '@/hooks/useShelluiAuthBackendBaseUrl';
 import { useShelluiHosting } from '@/hooks/useShelluiHosting';
 import { useShelluiStorage } from '@/hooks/useShelluiStorage';
+import { useShelluiEmail } from '@/hooks/useShelluiEmail';
 import {
   listConfiguredWebhookServices,
   resolveWebhookServiceBaseUrl,
@@ -17,14 +18,16 @@ export function useWebhookServices(): {
   const identityBaseUrl = useShelluiAuthBackendBaseUrl();
   const hosting = useShelluiHosting();
   const storage = useShelluiStorage();
+  const email = useShelluiEmail();
 
   const options = useMemo(
     () => ({
       identityBaseUrl: identityBaseUrl ?? getAuthBackendBaseUrl(),
       hosting,
       storage,
+      email,
     }),
-    [hosting, identityBaseUrl, storage],
+    [email, hosting, identityBaseUrl, storage],
   );
 
   const services = useMemo(() => listConfiguredWebhookServices(options), [options]);

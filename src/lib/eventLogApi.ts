@@ -14,6 +14,7 @@ const API_PREFIX: Record<WebhookServiceKey, string> = {
   identity: '/api/v1/events',
   storage: '/api/v1/actions/event-log',
   hosting: '/api/v1/actions/event-log',
+  email: '/api/v1/actions/event-log',
 };
 
 /** Where the purge job is documented, per service. */
@@ -21,6 +22,7 @@ export const RETENTION_DOCS_URL: Record<WebhookServiceKey, string> = {
   identity: 'https://github.com/shellui/identity-service/blob/develop/docs/scheduled-jobs.md',
   storage: 'https://github.com/shellui/storage-service/blob/develop/docs/event-log.md#retention',
   hosting: 'https://github.com/shellui/hosting-service/blob/develop/docs/event-log.md#retention',
+  email: 'https://github.com/shellui/email-service/blob/develop/docs/event-log.md',
 };
 
 /** Admin route of a service event log: identity keeps the historical `/events`. */
