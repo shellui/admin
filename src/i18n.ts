@@ -4,6 +4,9 @@ import { initReactI18next } from 'react-i18next';
 const resources = {
   en: {
     translation: {
+      groupsDeleteConfirmDescription:
+        'Members lose this group in their token after the next sign-in or refresh.',
+      groupsDeleteConfirmTitle: 'Delete {{name}}?',
       emailNewslettersAll: 'All newsletters',
       emailBroadcastsAll: 'All broadcasts',
       emailBroadcastUnpublishedTitle: 'Unpublished changes',
@@ -1183,7 +1186,7 @@ const resources = {
         'Webhooks API is not available on this service version. Update the service or run a build that includes company webhook endpoints.',
       groupsTitle: 'Groups',
       groupsDescription:
-        'Create and rename Django auth groups. Membership is visible on each user profile in Admin; group names appear in JWT user_metadata.groups after login or refresh.',
+        'Create and rename groups. Membership is set on each user profile. Group names appear in the user token after the next sign-in or refresh.',
       groupsCreateTitle: 'New group',
       groupsCreateDescription: 'Group names must be unique.',
       groupsFieldName: 'Display name',
@@ -1882,6 +1885,9 @@ const resources = {
   },
   fr: {
     translation: {
+      groupsDeleteConfirmDescription:
+        'Les membres perdent ce groupe dans leur jeton après la prochaine connexion ou actualisation.',
+      groupsDeleteConfirmTitle: 'Supprimer {{name}} ?',
       emailNewslettersAll: 'Toutes les newsletters',
       emailBroadcastsAll: 'Toutes les diffusions',
       emailBroadcastUnpublishedTitle: 'Modifications non publiées',
@@ -3085,7 +3091,7 @@ const resources = {
         'L’API Webhooks n’est pas disponible sur cette version du service. Mettez à jour le service ou utilisez une version avec les endpoints webhook entreprise.',
       groupsTitle: 'Groupes',
       groupsDescription:
-        'Créez et renommez les groupes Django. L’appartenance est visible sur chaque profil utilisateur dans l’admin ; les noms apparaissent dans user_metadata.groups du JWT après connexion ou rafraîchissement.',
+        "Créez et renommez des groupes. L'appartenance se règle sur chaque profil utilisateur. Les noms de groupe apparaissent dans le jeton après la prochaine connexion ou actualisation.",
       groupsCreateTitle: 'Nouveau groupe',
       groupsCreateDescription: 'Les noms de groupes doivent être uniques.',
       groupsFieldName: 'Nom affiché',
