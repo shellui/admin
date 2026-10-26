@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Loader2 } from 'lucide-react';
+import { Loader2, Lock, Trash2 } from 'lucide-react';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Text } from '@/components/ui/text';
 import { useWebhookPageMeta } from '@/features/actions/useWebhookPageMeta';
 import {
   ActionFeedback,
@@ -194,38 +197,108 @@ export function EmailRuleFormPage() {
     }
   }
 
+  const card =
+    'space-y-3 rounded-xl border border-border bg-card p-5 text-card-foreground shadow-sm';
+  const ready = !loading && !loadError && api && canManage;
+
   return (
     <div className="w-full space-y-6">
-      <header className="space-y-1">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-          {editing ? t('emailRuleEditTitle') : t('emailRuleCreateTitle')}
-        </h1>
-      </header>
+      <PageHeader
+        back={{ to: webhookRulesListPath(service.key), label: t('emailRuleBack') }}
+        title={editing ? t('emailRuleEditTitle') : t('emailRuleCreateTitle')}
+        service={t(service.badgeKey)}
+        description={
+          editing && eventType ? (
+            <span className="font-mono text-xs">{eventType}</span>
+          ) : (
+            t('emailRuleFormDescription', { service: t(service.labelKey) })
+          )
+        }
+        actions={
+          ready && editing && !builtIn ? (
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleting || saving}
+              onClick={() => void onDelete()}
+            >
+              <Trash2 aria-hidden />
+              {t('actionsDelete')}
+            </Button>
+          ) : ready && builtIn ? (
+            <StatusBadge tone="muted">
+              <Lock
+                className="size-3"
+                aria-hidden
+              />
+              {t('emailRuleBuiltInLocked')}
+            </StatusBadge>
+          ) : null
+        }
+      />
 
-      {!accessToken ? <Text>{t('dashboardNoSession')}</Text> : null}
-      {accessToken && !canManage ? <Text>{t('emailForbidden')}</Text> : null}
+      {!accessToken ? (
+        <Alert>
+          <AlertDescription>{t('dashboardNoSession')}</AlertDescription>
+        </Alert>
+      ) : null}
+      {accessToken && !canManage ? (
+        <Alert variant="warning">
+          <AlertDescription>{t('emailForbidden')}</AlertDescription>
+        </Alert>
+      ) : null}
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          {t('emailLoading')}
+        <div
+          className="max-w-2xl space-y-3 rounded-xl border border-border bg-card p-5"
+          aria-busy="true"
+          aria-label={t('emailLoading')}
+        >
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-2/3" />
         </div>
       ) : null}
       {loadError ? (
-        <Text className="font-mono text-sm text-destructive">{emailErrorText(t, loadError)}</Text>
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>{emailErrorText(t, loadError)}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void load()}
+            >
+              {t('usersRetry')}
+            </Button>
+          </AlertDescription>
+        </Alert>
       ) : null}
 
-      {!loading && !loadError && api && canManage ? (
+      {ready ? (
         <form
           className="space-y-6"
           onSubmit={(event) => void onSubmit(event)}
         >
-          <fieldset className="max-w-xl space-y-3">
-            <legend className="text-sm font-medium">{t('emailRuleEvent')}</legend>
+          <fieldset className={`max-w-2xl ${card}`}>
+            <legend className="sr-only">{t('emailRuleEvent')}</legend>
+            <p
+              className="text-sm font-semibold"
+              aria-hidden
+            >
+              {t('emailRuleEvent')}
+            </p>
             {editing ? (
-              <div className="space-y-1">
-                <p className="text-sm">{eventLabel}</p>
-                <p className="font-mono text-xs text-muted-foreground">{eventType}</p>
-                <Text className="text-xs text-muted-foreground">{t('emailRuleEventLocked')}</Text>
+              <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 p-3">
+                <Lock
+                  className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                  aria-hidden
+                />
+                <div className="min-w-0 space-y-0.5">
+                  <p className="text-sm font-medium">{eventLabel}</p>
+                  <p className="break-all font-mono text-xs text-muted-foreground">{eventType}</p>
+                  <p className="text-xs text-muted-foreground">{t('emailRuleEventLocked')}</p>
+                </div>
               </div>
             ) : (
               <>
@@ -235,25 +308,25 @@ export function EmailRuleFormPage() {
                   label={t('emailRuleEventSearch')}
                   placeholder={t('emailRuleEventSearch')}
                 />
-                <div className="max-h-64 space-y-2 overflow-auto rounded-md border border-border p-3">
+                <div className="max-h-64 divide-y divide-border overflow-auto rounded-lg border border-border">
                   {visibleEvents.length === 0 ? (
-                    <Text className="text-sm text-muted-foreground">{t('emailEventsEmpty')}</Text>
+                    <p className="p-4 text-sm text-muted-foreground">{t('emailEventsEmpty')}</p>
                   ) : (
                     visibleEvents.map((item) => (
                       <label
                         key={item.eventType}
-                        className="flex items-start gap-2 text-sm"
+                        className="flex cursor-pointer items-start gap-3 px-3 py-2.5 text-sm transition-colors hover:bg-muted/50 has-[:checked]:bg-primary/10 motion-reduce:transition-none"
                       >
                         <input
                           type="radio"
                           name="event"
-                          className="mt-1"
+                          className="mt-1 accent-primary"
                           checked={eventType === item.eventType}
                           onChange={() => pickEvent(item)}
                         />
-                        <span>
-                          <span className="block">{item.label}</span>
-                          <span className="block font-mono text-xs text-muted-foreground">
+                        <span className="min-w-0">
+                          <span className="block font-medium">{item.label}</span>
+                          <span className="block break-all font-mono text-xs text-muted-foreground">
                             {item.eventType}
                           </span>
                         </span>
@@ -263,14 +336,42 @@ export function EmailRuleFormPage() {
                 </div>
               </>
             )}
+
+            {isNewsletterEvent ? (
+              <div className="space-y-2 pt-1">
+                <Label htmlFor="email-rule-newsletter">{t('webhooksNewsletterFilter')}</Label>
+                <select
+                  id="email-rule-newsletter"
+                  className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  value={newsletterId == null ? '' : String(newsletterId)}
+                  onChange={(event) =>
+                    setNewsletterId(event.target.value ? Number(event.target.value) : null)
+                  }
+                >
+                  <option value="">{t('webhooksNewsletterFilterAll')}</option>
+                  {newsletterId != null && !newsletters.some((row) => row.id === newsletterId) ? (
+                    <option value={String(newsletterId)}>#{newsletterId}</option>
+                  ) : null}
+                  {newsletters.map((row) => (
+                    <option
+                      key={row.id}
+                      value={String(row.id)}
+                    >
+                      {row.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  {t('emailRuleNewsletterFilterHint')}
+                </p>
+              </div>
+            ) : null}
           </fieldset>
 
           {!editing && library ? (
             <fieldset className="space-y-3">
-              <legend className="text-sm font-medium">{t('emailRuleDesign')}</legend>
-              <Text className="max-w-3xl text-xs text-muted-foreground">
-                {t('emailRuleDesignHint')}
-              </Text>
+              <legend className="text-sm font-semibold">{t('emailRuleDesign')}</legend>
+              <p className="max-w-3xl text-xs text-muted-foreground">{t('emailRuleDesignHint')}</p>
               <EmailLibraryGrid
                 library={library}
                 assetsUrl={emailAssetsUrl(baseUrl)}
@@ -283,113 +384,84 @@ export function EmailRuleFormPage() {
             </fieldset>
           ) : null}
 
-          {isNewsletterEvent ? (
-            <div className="max-w-xl space-y-2">
-              <Label htmlFor="email-rule-newsletter">{t('webhooksNewsletterFilter')}</Label>
+          <div className={`max-w-2xl ${card}`}>
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-semibold">{t('emailRuleRecipients')}</legend>
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="recipients"
+                  className="accent-primary"
+                  checked={recipientMode === 'hints'}
+                  onChange={() => setRecipientMode('hints')}
+                />
+                {t('emailRuleRecipientHints')}
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="recipients"
+                  className="accent-primary"
+                  checked={recipientMode === 'static'}
+                  onChange={() => setRecipientMode('static')}
+                />
+                {t('emailRuleRecipientStatic')}
+              </label>
+              {recipientMode === 'static' ? (
+                <div className="space-y-1 pt-1">
+                  <textarea
+                    aria-label={t('emailRuleAddresses')}
+                    value={addresses}
+                    onChange={(event) => setAddresses(event.target.value)}
+                    rows={4}
+                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                  <p className="text-xs text-muted-foreground">{t('emailRuleAddressesHint')}</p>
+                </div>
+              ) : null}
+            </fieldset>
+
+            <div className="space-y-2 border-t border-border pt-3">
+              <Label htmlFor="email-rule-language">{t('emailRuleLanguage')}</Label>
               <select
-                id="email-rule-newsletter"
-                className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-transparent px-3 text-sm shadow-sm"
-                value={newsletterId == null ? '' : String(newsletterId)}
-                onChange={(event) =>
-                  setNewsletterId(event.target.value ? Number(event.target.value) : null)
-                }
+                id="email-rule-language"
+                className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={language}
+                onChange={(event) => setLanguage(event.target.value)}
               >
-                <option value="">{t('webhooksNewsletterFilterAll')}</option>
-                {newsletterId != null && !newsletters.some((row) => row.id === newsletterId) ? (
-                  <option value={String(newsletterId)}>#{newsletterId}</option>
-                ) : null}
-                {newsletters.map((row) => (
-                  <option
-                    key={row.id}
-                    value={String(row.id)}
-                  >
-                    {row.name}
-                  </option>
-                ))}
+                <option value="">{t('emailRuleLanguageRecipient')}</option>
+                <option value="en">{t('emailLangEn')}</option>
+                <option value="fr">{t('emailLangFr')}</option>
               </select>
-              <p className="text-xs text-muted-foreground">{t('emailRuleNewsletterFilterHint')}</p>
             </div>
-          ) : null}
-
-          <fieldset className="max-w-xl space-y-2">
-            <legend className="text-sm font-medium">{t('emailRuleRecipients')}</legend>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="radio"
-                name="recipients"
-                checked={recipientMode === 'hints'}
-                onChange={() => setRecipientMode('hints')}
-              />
-              {t('emailRuleRecipientHints')}
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="radio"
-                name="recipients"
-                checked={recipientMode === 'static'}
-                onChange={() => setRecipientMode('static')}
-              />
-              {t('emailRuleRecipientStatic')}
-            </label>
-            {recipientMode === 'static' ? (
-              <textarea
-                aria-label={t('emailRuleAddresses')}
-                value={addresses}
-                onChange={(event) => setAddresses(event.target.value)}
-                rows={4}
-                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              />
-            ) : null}
-          </fieldset>
-
-          <div className="max-w-xl space-y-2">
-            <Label htmlFor="email-rule-language">{t('emailRuleLanguage')}</Label>
-            <select
-              id="email-rule-language"
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm"
-              value={language}
-              onChange={(event) => setLanguage(event.target.value)}
-            >
-              <option value="">{t('emailRuleLanguageRecipient')}</option>
-              <option value="en">{t('emailLangEn')}</option>
-              <option value="fr">{t('emailLangFr')}</option>
-            </select>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {editing && !builtIn ? (
-              <Button
-                type="button"
-                variant="destructive"
-                disabled={deleting || saving}
-                onClick={() => void onDelete()}
-              >
-                {t('actionsDelete')}
-              </Button>
-            ) : null}
+          <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+            <Button
+              type="submit"
+              disabled={saving || deleting}
+            >
+              {saving ? (
+                <Loader2
+                  className="animate-spin motion-reduce:animate-none"
+                  aria-hidden
+                />
+              ) : null}
+              {editing ? t('emailRuleSave') : t('emailRuleCreate')}
+            </Button>
             <Button
               type="button"
               variant="ghost"
               onClick={back}
             >
-              <ChevronLeft aria-hidden />
-              {t('emailRuleBack')}
+              {t('actionsCancel')}
             </Button>
-            <Button
-              type="submit"
-              disabled={saving || deleting}
-            >
-              {editing ? t('emailRuleSave') : t('emailRuleCreate')}
-            </Button>
+            <ActionFeedback feedback={feedback} />
           </div>
-          <ActionFeedback feedback={feedback} />
-          {builtIn ? (
-            <Text className="text-xs text-muted-foreground">{t('emailRuleBuiltInLocked')}</Text>
-          ) : null}
         </form>
       ) : null}
 
-      {!loading && !loadError && api && canManage && editing && templateId ? (
+      {ready && editing && templateId ? (
         <section
           className="space-y-3 border-t border-border pt-6"
           aria-label={t('emailRuleEmail')}

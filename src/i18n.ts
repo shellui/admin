@@ -1629,6 +1629,7 @@ const resources = {
       emailRuleDeleteTitle: 'Delete email rule',
       emailRuleDeleteDescription: 'Mail for this rule stops. The template stays.',
       emailRuleBuiltInLocked: 'Built-in rules stay on.',
+      emailRuleFormDescription: 'Send an email when an event happens in {{service}}.',
       emailRuleEventLocked: 'The event stays the one this rule was created for.',
       emailPreviewUnavailable: 'Preview unavailable.',
       emailEditorModes: 'Editor mode',
@@ -3548,6 +3549,8 @@ const resources = {
       emailRuleDeleteTitle: 'Supprimer la règle e-mail',
       emailRuleDeleteDescription: 'L’envoi pour cette règle s’arrête. Le modèle reste.',
       emailRuleBuiltInLocked: 'Les règles intégrées restent activées.',
+      emailRuleFormDescription:
+        'Envoyez un e-mail lorsqu’un événement se produit dans {{service}}.',
       emailRuleEventLocked: 'L’événement reste celui pour lequel cette règle a été créée.',
       emailPreviewUnavailable: 'Aperçu indisponible.',
       emailEditorModes: 'Mode de l’éditeur',
