@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, createSearchParams, useSearchParams } from 'react-router-dom';
-import { ChevronDown, Loader2, X } from 'lucide-react';
+import { Activity, ChevronDown, Clock, ScrollText, X } from 'lucide-react';
+import { DataTableCard, SkeletonRows } from '@/components/admin/DataTableCard';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { KpiCard } from '@/components/admin/Kpi';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useForm } from 'react-hook-form';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -12,12 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Text } from '@/components/ui/text';
-import { Skeleton } from '@/components/ui/skeleton';
 import { EventRetentionAlert } from '@/components/EventRetentionAlert';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { useEventLogSource, useEventRetention } from '@/hooks/useEventRetention';
@@ -235,371 +237,325 @@ export function EventsListPage({ service = 'identity' }: { service?: WebhookServ
   const hasActiveFilters = Boolean(
     filters.type || filters.user.trim() || filters.from || filters.to || filters.userId != null,
   );
-  const labelClass = 'text-xs font-medium uppercase tracking-wide text-muted-foreground';
-  const headClass = 'text-xs font-medium uppercase tracking-wide text-muted-foreground';
+
+  const fieldLabel = 'text-xs font-medium text-muted-foreground';
+
+  const filterCard = (
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+      {!accessToken ? (
+        <p className="text-sm text-muted-foreground">{t('eventsNoSession')}</p>
+      ) : (
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            aria-label={t('eventsFiltersTitle')}
+            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_auto] lg:items-end"
+          >
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={fieldLabel}>{t('eventsFieldType')}</FormLabel>
+                  <FormControl>
+                    <select
+                      {...field}
+                      className={selectFieldClassName()}
+                    >
+                      <option value="">{t('eventsFilterAny')}</option>
+                      {eventTypes.map((et) => (
+                        <option
+                          key={et.type}
+                          value={et.type}
+                        >
+                          {et.label}
+                        </option>
+                      ))}
+                    </select>
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="user"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={fieldLabel}>{t('eventsFieldUser')}</FormLabel>
+                  <FormControl>
+                    <Input
+                      className="text-sm"
+                      placeholder={t('eventsFieldUserPlaceholder')}
+                      autoComplete="off"
+                      {...field}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="from"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={fieldLabel}>{t('eventsFieldFrom')}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      className="text-sm"
+                      {...field}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="to"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={fieldLabel}>{t('eventsFieldTo')}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      className="text-sm"
+                      {...field}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-1">
+              <Button
+                type="submit"
+                disabled={loading}
+              >
+                {t('eventsApplyFilters')}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={loading || !hasActiveFilters}
+                onClick={clearFilters}
+              >
+                {t('eventsClearFilters')}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      )}
+    </div>
+  );
 
   return (
     <div className="w-full space-y-6">
-      <header className="space-y-1">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            {t(copy.title)}
-          </h1>
-          <Badge
-            variant="secondary"
-            className="font-mono text-[10px] uppercase"
-          >
-            {t(copy.badge)}
-          </Badge>
-        </div>
-        <Text className="max-w-3xl text-sm text-muted-foreground">{t(copy.description)}</Text>
-      </header>
+      <PageHeader
+        title={t(copy.title)}
+        service={t(copy.badge)}
+        description={t(copy.description)}
+      />
+
+      {!source ? (
+        <Alert variant="destructive">
+          <AlertDescription>{t('eventsServiceNotConfigured')}</AlertDescription>
+        </Alert>
+      ) : null}
 
       <EventRetentionAlert
         service={service}
         status={retention}
       />
 
-      {!source ? (
-        <p className="text-sm text-muted-foreground">{t('eventsServiceNotConfigured')}</p>
-      ) : null}
+      <details
+        className="group rounded-xl border border-border bg-card shadow-sm lg:border-0 lg:bg-transparent lg:shadow-none"
+        open={sidebarOpen}
+        onToggle={(e) => {
+          if (isLg) return;
+          setMobileSidebarOpen(e.currentTarget.open);
+        }}
+      >
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-4 py-3.5 text-left marker:content-none lg:hidden [&::-webkit-details-marker]:hidden">
+          <span className="font-heading text-sm font-semibold tracking-tight">
+            {t('eventsSidebarSummary')}
+          </span>
+          <ChevronDown
+            className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+            aria-hidden
+          />
+        </summary>
+        <div className="space-y-4 border-t border-border px-4 pb-4 pt-4 lg:border-t-0 lg:p-0">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <KpiCard
+              label={t('eventsStat24hTitle')}
+              value={count24h == null ? '-' : String(count24h)}
+              icon={Activity}
+            />
+            <KpiCard
+              label={t('eventsStatRetentionTitle')}
+              value={
+                retention == null
+                  ? '-'
+                  : t('eventsStatRetentionValue', { count: retention.data_retention_days })
+              }
+              hint={t(copy.retentionHint)}
+              icon={Clock}
+            />
+          </div>
+          {filterCard}
+        </div>
+      </details>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_minmax(17rem,20rem)] lg:items-start">
-        <aside className="min-w-0 lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1 lg:self-start">
-          <details
-            className="group rounded-xl border border-border/80 bg-card shadow-sm lg:border-0 lg:bg-transparent lg:shadow-none"
-            open={sidebarOpen}
-            onToggle={(e) => {
-              if (isLg) return;
-              setMobileSidebarOpen(e.currentTarget.open);
-            }}
-          >
-            <summary
-              className={cn(
-                'flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-4 py-3.5 text-left',
-                'marker:content-none [&::-webkit-details-marker]:hidden lg:hidden',
-              )}
+      {filters.userId != null ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusBadge tone="info">
+            {t('eventsFilterUserId', { id: filters.userId })}
+            <button
+              type="button"
+              onClick={clearUserId}
+              className="-mr-1 rounded-sm p-0.5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={t('eventsClearUserFilter')}
             >
-              <span className="font-heading text-sm font-semibold tracking-tight">
-                {t('eventsSidebarSummary')}
-              </span>
-              <ChevronDown
-                className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+              <X
+                className="size-3"
                 aria-hidden
               />
-            </summary>
-            <div className="space-y-4 border-t border-border/60 px-4 pb-4 pt-4 lg:border-t-0 lg:px-0 lg:pb-0 lg:pt-0">
-              <div className="grid grid-cols-2 gap-4 lg:grid-cols-1">
-                <Card className="border-border/80 shadow-sm">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="font-heading text-base">
-                      {t('eventsStat24hTitle')}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {count24h == null ? (
-                      <Skeleton className="h-9 w-20" />
-                    ) : (
-                      <p className="font-mono text-3xl font-semibold tabular-nums">{count24h}</p>
-                    )}
-                  </CardContent>
-                </Card>
-                <Card className="border-border/80 shadow-sm">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="font-heading text-base">
-                      {t('eventsStatRetentionTitle')}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-1">
-                    {retention == null ? (
-                      <Skeleton className="h-9 w-20" />
-                    ) : (
-                      <p className="font-mono text-3xl font-semibold tabular-nums">
-                        {t('eventsStatRetentionValue', { count: retention.data_retention_days })}
-                      </p>
-                    )}
-                    <CardDescription className="text-xs">{t(copy.retentionHint)}</CardDescription>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card className="border-border/80 shadow-sm">
-                <CardHeader className="space-y-1 pb-4">
-                  <CardTitle className="font-heading text-lg">{t('eventsFiltersTitle')}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {!accessToken ? (
-                    <p className="text-sm text-muted-foreground">{t('eventsNoSession')}</p>
-                  ) : (
-                    <Form {...form}>
-                      <form
-                        onSubmit={form.handleSubmit(onSubmit)}
-                        className="space-y-5"
-                      >
-                        <div className="grid grid-cols-1 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="type"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className={labelClass}>{t('eventsFieldType')}</FormLabel>
-                                <FormControl>
-                                  <select
-                                    {...field}
-                                    className={selectFieldClassName()}
-                                  >
-                                    <option value="">{t('eventsFilterAny')}</option>
-                                    {eventTypes.map((et) => (
-                                      <option
-                                        key={et.type}
-                                        value={et.type}
-                                      >
-                                        {et.label}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="user"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className={labelClass}>{t('eventsFieldUser')}</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    className="text-sm"
-                                    placeholder={t('eventsFieldUserPlaceholder')}
-                                    autoComplete="off"
-                                    {...field}
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                          <div className="grid grid-cols-2 gap-3">
-                            <FormField
-                              control={form.control}
-                              name="from"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className={labelClass}>
-                                    {t('eventsFieldFrom')}
-                                  </FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      type="date"
-                                      className="text-sm"
-                                      {...field}
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="to"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className={labelClass}>{t('eventsFieldTo')}</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      type="date"
-                                      className="text-sm"
-                                      {...field}
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                          <Button
-                            type="submit"
-                            variant="secondary"
-                            size="sm"
-                            disabled={loading}
-                            className="w-full sm:w-auto"
-                          >
-                            {t('eventsApplyFilters')}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={loading || !hasActiveFilters}
-                            className="w-full sm:w-auto"
-                            onClick={clearFilters}
-                          >
-                            {t('eventsClearFilters')}
-                          </Button>
-                        </div>
-                      </form>
-                    </Form>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </details>
-        </aside>
-
-        <div className="min-w-0 space-y-4 lg:col-start-1 lg:row-start-1">
-          {filters.userId != null ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge
-                variant="secondary"
-                className="gap-1 text-[11px]"
-              >
-                {t('eventsFilterUserId', { id: filters.userId })}
-                <button
-                  type="button"
-                  onClick={clearUserId}
-                  className="rounded-sm hover:text-foreground"
-                  aria-label={t('eventsClearUserFilter')}
-                >
-                  <X
-                    className="size-3"
-                    aria-hidden
-                  />
-                </button>
-              </Badge>
-            </div>
-          ) : null}
-
-          <section aria-label={t('eventsListAria')}>
-            {accessToken && loading && !data ? (
-              <div className="flex items-center gap-2 py-12 text-muted-foreground">
-                <Loader2
-                  className="size-5 animate-spin"
-                  aria-hidden
-                />
-                <span className="text-sm">{t('eventsLoading')}</span>
-              </div>
-            ) : null}
-            {error && !loading ? (
-              <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {error}
-              </p>
-            ) : null}
-            {data && rows.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">{t('eventsEmpty')}</p>
-            ) : null}
-            {rows.length > 0 ? (
-              <>
-                <p className="mb-3 text-xs text-muted-foreground">
-                  {t('eventsListingSummary', { total: data?.count ?? 0 })}
-                </p>
-                <div className="rounded-md border border-border">
-                  <div className="w-full overflow-x-auto">
-                    <Table className="min-w-[34rem] md:min-w-[48rem]">
-                      <TableHeader>
-                        <TableRow className="bg-muted/30 hover:bg-muted/30">
-                          <TableHead className={cn('whitespace-nowrap', headClass)}>
-                            {t('eventsColWhen')}
-                          </TableHead>
-                          <TableHead className={headClass}>{t('eventsColEvent')}</TableHead>
-                          <TableHead className={headClass}>{t('eventsColUser')}</TableHead>
-                          <TableHead className={cn('hidden md:table-cell', headClass)}>
-                            {t('eventsColDetails')}
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody className="text-xs">
-                        {rows.map((ev) => {
-                          const href = eventDetailPath(service, ev.id);
-                          const summary = eventSummary(ev);
-                          return (
-                            <TableRow
-                              key={ev.id}
-                              className="hover:bg-muted/40"
-                            >
-                              <TableCell className="whitespace-nowrap font-mono text-muted-foreground">
-                                <Link
-                                  to={href}
-                                  className="text-primary underline-offset-2 hover:underline"
-                                >
-                                  {formatShortDateTime(ev.created_at)}
-                                </Link>
-                              </TableCell>
-                              <TableCell>
-                                <span
-                                  className={cn(
-                                    'rounded px-1.5 py-0.5 font-medium',
-                                    isFailureEvent(ev)
-                                      ? 'bg-destructive/15 text-destructive'
-                                      : 'bg-muted text-foreground',
-                                  )}
-                                >
-                                  {ev.label}
-                                </span>
-                              </TableCell>
-                              <TableCell
-                                className="max-w-[12rem] truncate font-mono lg:max-w-[16rem]"
-                                title={ev.user_email ?? undefined}
-                              >
-                                {ev.user_id != null ? (
-                                  <Link
-                                    to={`/users/${ev.user_id}`}
-                                    className="underline-offset-2 hover:underline"
-                                  >
-                                    {ev.user_email || `#${ev.user_id}`}
-                                  </Link>
-                                ) : (
-                                  ev.user_email || '—'
-                                )}
-                              </TableCell>
-                              <TableCell
-                                className="hidden max-w-[18rem] truncate text-muted-foreground md:table-cell"
-                                title={summary || undefined}
-                              >
-                                {summary || '—'}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-                {totalPages > 1 ? (
-                  <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                    <p className="text-xs text-muted-foreground">
-                      {t('eventsPageStatus', {
-                        page: pageParam,
-                        pages: totalPages,
-                        total: data?.count ?? 0,
-                      })}
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={pageParam <= 1 || loading}
-                        onClick={() => goToPage(Math.max(1, pageParam - 1))}
-                      >
-                        {t('usersPrevPage')}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={pageParam >= totalPages || loading}
-                        onClick={() => goToPage(pageParam + 1)}
-                      >
-                        {t('usersNextPage')}
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-              </>
-            ) : null}
-          </section>
+            </button>
+          </StatusBadge>
         </div>
-      </div>
+      ) : null}
+
+      {error && !loading ? (
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>{error}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void load()}
+            >
+              {t('usersRetry')}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {accessToken && source && !error ? (
+        <DataTableCard
+          label={t('eventsListAria')}
+          busy={loading}
+          toolbar={
+            data ? (
+              <p className="text-xs text-muted-foreground">
+                {t('eventsListingSummary', { total: data.count ?? 0 })}
+              </p>
+            ) : undefined
+          }
+          footer={
+            totalPages > 1 ? (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  {t('eventsPageStatus', {
+                    page: pageParam,
+                    pages: totalPages,
+                    total: data?.count ?? 0,
+                  })}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={pageParam <= 1 || loading}
+                    onClick={() => goToPage(Math.max(1, pageParam - 1))}
+                  >
+                    {t('usersPrevPage')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={pageParam >= totalPages || loading}
+                    onClick={() => goToPage(pageParam + 1)}
+                  >
+                    {t('usersNextPage')}
+                  </Button>
+                </div>
+              </>
+            ) : undefined
+          }
+        >
+          {loading && !data ? (
+            <SkeletonRows
+              rows={6}
+              columns={['w-28', 'w-40', 'w-36', 'w-48']}
+            />
+          ) : rows.length === 0 ? (
+            <EmptyState
+              icon={ScrollText}
+              title={t('eventsEmpty')}
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="whitespace-nowrap">{t('eventsColWhen')}</TableHead>
+                  <TableHead>{t('eventsColEvent')}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t('eventsColUser')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('eventsColDetails')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((ev) => {
+                  const href = eventDetailPath(service, ev.id);
+                  const summary = eventSummary(ev);
+                  return (
+                    <TableRow key={ev.id}>
+                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                        <Link
+                          to={href}
+                          className="font-medium text-foreground underline-offset-2 hover:underline"
+                        >
+                          {formatShortDateTime(ev.created_at)}
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <span className="inline-flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-xs">{ev.label}</span>
+                          {isFailureEvent(ev) ? (
+                            <StatusBadge tone="destructive">{t('eventsFailureBadge')}</StatusBadge>
+                          ) : null}
+                        </span>
+                      </TableCell>
+                      <TableCell
+                        className="hidden max-w-[16rem] truncate text-xs sm:table-cell"
+                        title={ev.user_email ?? undefined}
+                      >
+                        {ev.user_id != null ? (
+                          <Link
+                            to={`/users/${ev.user_id}`}
+                            className="underline-offset-2 hover:underline"
+                          >
+                            {ev.user_email || `#${ev.user_id}`}
+                          </Link>
+                        ) : (
+                          ev.user_email || <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell
+                        className="hidden max-w-[20rem] truncate text-xs text-muted-foreground md:table-cell"
+                        title={summary || undefined}
+                      >
+                        {summary || '-'}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </DataTableCard>
+      ) : null}
     </div>
   );
 }
