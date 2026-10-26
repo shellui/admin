@@ -19,6 +19,8 @@ export type ActionRuleWebhookConfig = {
   /** Legacy identity builds used secret_set instead of has_secret. */
   secret_set?: boolean;
   authorization_header_set?: boolean;
+  /** Email service only: limit a newsletter event rule to one list (`null` means all). */
+  newsletter_id?: number | null;
 };
 
 export type ActionRule = {

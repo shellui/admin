@@ -55,6 +55,12 @@ const PAGE_COPY = {
     description: 'eventsDescriptionHosting',
     retentionHint: 'eventsStatRetentionHintService',
   },
+  email: {
+    title: 'eventsTitleEmail',
+    badge: 'eventsBadgeEmail',
+    description: 'eventsDescriptionEmail',
+    retentionHint: 'eventsStatRetentionHintService',
+  },
 } as const satisfies Record<WebhookServiceKey, Record<string, string>>;
 
 type FilterValues = {

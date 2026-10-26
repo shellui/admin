@@ -17,6 +17,8 @@ import {
   isApiUnavailableError,
 } from '@/features/actions/components/ApiUnavailableNotice';
 import { useActionsApi } from '@/features/actions/useActionsApi';
+import { useEmailApi } from '@/features/email/useEmailApi';
+import type { Newsletter } from '@/lib/emailNewsletters';
 import { WebhookServiceUnavailable } from '@/features/actions/components/WebhookServiceUnavailable';
 import {
   ActionFeedback,
@@ -77,6 +79,27 @@ export function ActionsRuleEditorPage() {
 
   const [name, setName] = useState('');
   const [eventKey, setEventKey] = useState('');
+  const [newsletterId, setNewsletterId] = useState<number | null>(null);
+  const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
+  const isEmailService = service.key === 'email';
+  const { api: emailApi } = useEmailApi(isEmailService ? accessToken : null);
+  const isNewsletterEvent = isEmailService && eventKey.startsWith('email.newsletter.');
+
+  useEffect(() => {
+    if (!isEmailService || !emailApi) return;
+    let cancelled = false;
+    emailApi
+      .fetchNewsletters()
+      .then((rows) => {
+        if (!cancelled) setNewsletters(rows);
+      })
+      .catch(() => {
+        // The selector stays on "All newsletters" when the list cannot load.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [emailApi, isEmailService]);
   const [enabled, setEnabled] = useState(true);
   const [webhookUrl, setWebhookUrl] = useState('');
   const [webhookSecret, setWebhookSecret] = useState('');
@@ -144,6 +167,7 @@ export function ActionsRuleEditorPage() {
           setEnabled(rule.enabled);
           const cfg = rule.config;
           setWebhookUrl(cfg.url ?? '');
+          setNewsletterId(typeof cfg.newsletter_id === 'number' ? cfg.newsletter_id : null);
           setAuthHeaderName(cfg.auth_header_name ?? '');
           applyRuleConfigMeta(cfg);
         }
@@ -178,6 +202,7 @@ export function ActionsRuleEditorPage() {
               auth_header_value: authHeaderValue.trim(),
             }
           : {}),
+        ...(isEmailService ? { newsletter_id: isNewsletterEvent ? newsletterId : null } : {}),
       };
 
       if (isCreate) {
@@ -371,6 +396,41 @@ export function ActionsRuleEditorPage() {
                   </p>
                 ) : null}
               </div>
+              {isNewsletterEvent ? (
+                <div className="space-y-1 sm:col-span-2">
+                  <label
+                    htmlFor="webhook-newsletter-filter"
+                    className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground"
+                  >
+                    {t('webhooksNewsletterFilter')}
+                  </label>
+                  <select
+                    id="webhook-newsletter-filter"
+                    className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-transparent px-3 py-1 font-mono text-sm"
+                    value={newsletterId == null ? '' : String(newsletterId)}
+                    onChange={(e) => {
+                      clearActionFeedback();
+                      setNewsletterId(e.target.value ? Number(e.target.value) : null);
+                    }}
+                  >
+                    <option value="">{t('webhooksNewsletterFilterAll')}</option>
+                    {newsletterId != null && !newsletters.some((n) => n.id === newsletterId) ? (
+                      <option value={String(newsletterId)}>#{newsletterId}</option>
+                    ) : null}
+                    {newsletters.map((n) => (
+                      <option
+                        key={n.id}
+                        value={String(n.id)}
+                      >
+                        {n.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="font-mono text-[10px] text-muted-foreground">
+                    {t('webhooksNewsletterFilterHint')}
+                  </p>
+                </div>
+              ) : null}
               <label className="flex items-center gap-2 sm:col-span-2">
                 <input
                   type="checkbox"

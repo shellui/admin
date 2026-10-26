@@ -116,6 +116,7 @@ export function parseRule(body: unknown): EmailRule {
     language: str(row.language),
     templateId: num(row.template_id),
     builtIn: bool(row.built_in),
+    newsletterId: typeof row.newsletter_id === 'number' ? row.newsletter_id : null,
     createdAt: str(row.created_at),
     updatedAt: str(row.updated_at),
   };

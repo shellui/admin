@@ -117,6 +117,7 @@ function rule(overrides: Partial<EmailRule> = {}): EmailRule {
     language: '',
     templateId: 15,
     builtIn: false,
+    newsletterId: null,
     createdAt: '2026-10-03T12:00:00Z',
     updatedAt: '2026-10-03T12:00:00Z',
     ...overrides,

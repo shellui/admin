@@ -1,36 +1,58 @@
 import { isHostingAdminEnabled, type SettingsHosting } from '@/hooks/useShelluiHosting';
 import type { SettingsStorage } from '@shellui/sdk';
+import {
+  isEmailAdminEnabled,
+  resolveEmailServiceUrl,
+  type SettingsEmail,
+} from '@/lib/emailServiceUrl';
 
-export type WebhookServiceKey = 'identity' | 'hosting' | 'storage';
+export type WebhookServiceKey = 'identity' | 'hosting' | 'storage' | 'email';
 
-export const WEBHOOK_SERVICE_KEYS: WebhookServiceKey[] = ['identity', 'hosting', 'storage'];
+export const WEBHOOK_SERVICE_KEYS: WebhookServiceKey[] = [
+  'identity',
+  'hosting',
+  'storage',
+  'email',
+];
 
 export const DEFAULT_WEBHOOK_SERVICE: WebhookServiceKey = 'identity';
 
 export function isWebhookServiceKey(value: string): value is WebhookServiceKey {
-  return value === 'identity' || value === 'hosting' || value === 'storage';
+  return value === 'identity' || value === 'hosting' || value === 'storage' || value === 'email';
 }
 
 export type WebhookServiceDefinition = {
   key: WebhookServiceKey;
-  labelKey: 'webhooksServiceIdentity' | 'webhooksServiceHosting' | 'webhooksServiceStorage';
-  badgeKey: 'webhooksBadgeIdentity' | 'webhooksBadgeHosting' | 'webhooksBadgeStorage';
+  labelKey:
+    | 'webhooksServiceIdentity'
+    | 'webhooksServiceHosting'
+    | 'webhooksServiceStorage'
+    | 'webhooksServiceEmail';
+  badgeKey:
+    | 'webhooksBadgeIdentity'
+    | 'webhooksBadgeHosting'
+    | 'webhooksBadgeStorage'
+    | 'webhooksBadgeEmail';
   pageTitleKey:
     | 'webhooksPageTitleIdentity'
     | 'webhooksPageTitleHosting'
-    | 'webhooksPageTitleStorage';
+    | 'webhooksPageTitleStorage'
+    | 'webhooksPageTitleEmail';
   deliveriesPageTitleKey:
     | 'webhooksDeliveriesPageTitleIdentity'
     | 'webhooksDeliveriesPageTitleHosting'
-    | 'webhooksDeliveriesPageTitleStorage';
+    | 'webhooksDeliveriesPageTitleStorage'
+    | 'webhooksDeliveriesPageTitleEmail';
   descriptionKey:
     | 'webhooksPageDescriptionIdentity'
     | 'webhooksPageDescriptionHosting'
-    | 'webhooksPageDescriptionStorage';
+    | 'webhooksPageDescriptionStorage'
+    | 'webhooksPageDescriptionEmail';
   eventScopeKey:
     | 'webhooksEventScopeIdentity'
     | 'webhooksEventScopeHosting'
-    | 'webhooksEventScopeStorage';
+    | 'webhooksEventScopeStorage'
+    | 'webhooksEventScopeEmail';
   baseUrl: string | null;
 };
 
@@ -45,6 +67,7 @@ export function resolveWebhookServiceBaseUrl(
     identityBaseUrl?: string | null;
     hosting?: SettingsHosting | null;
     storage?: SettingsStorage | null;
+    email?: SettingsEmail | null;
   },
 ): string | null {
   switch (key) {
@@ -55,6 +78,9 @@ export function resolveWebhookServiceBaseUrl(
       return normalizeServiceUrl(options.hosting?.url);
     case 'storage':
       return normalizeServiceUrl(options.storage?.url);
+    case 'email':
+      if (!isEmailAdminEnabled(options.email ?? null)) return null;
+      return resolveEmailServiceUrl(options.email?.url);
     default:
       return null;
   }
@@ -64,6 +90,7 @@ export function listConfiguredWebhookServices(options: {
   identityBaseUrl?: string | null;
   hosting?: SettingsHosting | null;
   storage?: SettingsStorage | null;
+  email?: SettingsEmail | null;
 }): WebhookServiceDefinition[] {
   const defs: WebhookServiceDefinition[] = [
     {
@@ -96,6 +123,16 @@ export function listConfiguredWebhookServices(options: {
       eventScopeKey: 'webhooksEventScopeStorage',
       baseUrl: resolveWebhookServiceBaseUrl('storage', options),
     },
+    {
+      key: 'email',
+      labelKey: 'webhooksServiceEmail',
+      badgeKey: 'webhooksBadgeEmail',
+      pageTitleKey: 'webhooksPageTitleEmail',
+      deliveriesPageTitleKey: 'webhooksDeliveriesPageTitleEmail',
+      descriptionKey: 'webhooksPageDescriptionEmail',
+      eventScopeKey: 'webhooksEventScopeEmail',
+      baseUrl: resolveWebhookServiceBaseUrl('email', options),
+    },
   ];
   return defs.filter((d) => Boolean(d.baseUrl));
 }
@@ -108,6 +145,8 @@ export function actionsApiUnavailableMessage(service: WebhookServiceKey): string
       return 'Webhooks API is not available on this hosting version. Update hosting-service to v0.5.0 or newer.';
     case 'storage':
       return 'Webhooks API is not available on this storage version. Update storage-service to v0.4.0 or newer.';
+    case 'email':
+      return 'Webhooks API is not available on this email version. Update email-service to v0.5.0 or newer.';
     default:
       return 'Webhooks API is not available on this service version.';
   }

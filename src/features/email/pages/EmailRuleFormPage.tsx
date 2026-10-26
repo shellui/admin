@@ -23,6 +23,7 @@ import { emailAssetsUrl } from '@/lib/emailLibrary';
 import { filterByQuery } from '@/lib/emailList';
 import { parseStaticRecipientLines } from '@/lib/emailRules';
 import { askShelluiConfirm } from '@/lib/shelluiConfirm';
+import type { Newsletter } from '@/lib/emailNewsletters';
 import type { EmailCatalogEvent, EmailLibrary, EmailRecipientMode } from '@/lib/emailTypes';
 import { emailRuleEditPath, webhookRulesListPath } from '@/lib/webhookRoutePaths';
 
@@ -50,6 +51,9 @@ export function EmailRuleFormPage() {
   const [addresses, setAddresses] = useState('');
   const [language, setLanguage] = useState('');
   const [templateId, setTemplateId] = useState<number | null>(null);
+  const [newsletterId, setNewsletterId] = useState<number | null>(null);
+  const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
+  const isNewsletterEvent = service.key === 'email' && eventType.startsWith('email.newsletter.');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [feedback, setFeedback] = useState<ActionFeedbackState | null>(null);
@@ -74,6 +78,7 @@ export function EmailRuleFormPage() {
         setAddresses(rule.staticRecipients.join('\n'));
         setLanguage(rule.language === 'en' || rule.language === 'fr' ? rule.language : '');
         setTemplateId(rule.templateId || null);
+        setNewsletterId(rule.newsletterId);
       } else {
         setLibrary(await api.fetchLibrary());
       }
@@ -87,6 +92,22 @@ export function EmailRuleFormPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (service.key !== 'email' || !api || !canManage) return;
+    let cancelled = false;
+    api
+      .fetchNewsletters()
+      .then((rows) => {
+        if (!cancelled) setNewsletters(rows);
+      })
+      .catch(() => {
+        // The selector stays on "All newsletters" when the list cannot load.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, canManage, service.key]);
 
   const visibleEvents = useMemo(
     () => filterByQuery(events, eventQuery, (event) => `${event.label} ${event.eventType}`),
@@ -124,6 +145,9 @@ export function EmailRuleFormPage() {
           recipient_mode: recipientMode,
           static_recipients: staticRecipients,
           language,
+          ...(service.key === 'email'
+            ? { newsletter_id: isNewsletterEvent ? newsletterId : null }
+            : {}),
         });
         setFeedback({ tone: 'success', text: t('emailRuleSaved') });
         return;
@@ -135,6 +159,7 @@ export function EmailRuleFormPage() {
         language,
         recipient_mode: recipientMode,
         static_recipients: staticRecipients,
+        ...(isNewsletterEvent && newsletterId != null ? { newsletter_id: newsletterId } : {}),
         content: {
           library_id: libraryId ?? 0,
           ...(emailThemes.current ? { theme: emailThemes.current } : {}),
@@ -256,6 +281,34 @@ export function EmailRuleFormPage() {
                 }}
               />
             </fieldset>
+          ) : null}
+
+          {isNewsletterEvent ? (
+            <div className="max-w-xl space-y-2">
+              <Label htmlFor="email-rule-newsletter">{t('webhooksNewsletterFilter')}</Label>
+              <select
+                id="email-rule-newsletter"
+                className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-transparent px-3 text-sm shadow-sm"
+                value={newsletterId == null ? '' : String(newsletterId)}
+                onChange={(event) =>
+                  setNewsletterId(event.target.value ? Number(event.target.value) : null)
+                }
+              >
+                <option value="">{t('webhooksNewsletterFilterAll')}</option>
+                {newsletterId != null && !newsletters.some((row) => row.id === newsletterId) ? (
+                  <option value={String(newsletterId)}>#{newsletterId}</option>
+                ) : null}
+                {newsletters.map((row) => (
+                  <option
+                    key={row.id}
+                    value={String(row.id)}
+                  >
+                    {row.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">{t('emailRuleNewsletterFilterHint')}</p>
+            </div>
           ) : null}
 
           <fieldset className="max-w-xl space-y-2">

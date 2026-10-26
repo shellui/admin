@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Download, Loader2, Trash2, Upload } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, Loader2, Trash2, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +59,7 @@ export function NewsletterSubscribersPanel({
 }) {
   const { t } = useTranslation();
   const lang = useLang();
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const [status, setStatus] = useState<NewsletterSubscriberStatus | ''>('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -244,39 +245,90 @@ export function NewsletterSubscribersPanel({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {data.results.map((row) => (
-                  <tr key={row.id}>
-                    <td className="px-3 py-2">
-                      <span className="font-mono text-xs">{row.email}</span>
-                      {row.firstName ? (
-                        <span className="ml-2 text-xs text-muted-foreground">{row.firstName}</span>
+                {data.results.map((row) => {
+                  const metadataEntries = Object.entries(row.metadata);
+                  const expanded = expandedId === row.id && metadataEntries.length > 0;
+                  return (
+                    <Fragment key={row.id}>
+                      <tr>
+                        <td className="px-3 py-2">
+                          <span className="font-mono text-xs">{row.email}</span>
+                          {row.firstName ? (
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {row.firstName}
+                            </span>
+                          ) : null}
+                          {metadataEntries.length ? (
+                            <button
+                              type="button"
+                              className="ml-2 inline-flex cursor-pointer items-center gap-0.5 rounded text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                              aria-expanded={expanded}
+                              aria-controls={`subscriber-details-${row.id}`}
+                              onClick={() => setExpandedId(expanded ? null : row.id)}
+                            >
+                              {expanded ? (
+                                <ChevronDown className="h-3 w-3" />
+                              ) : (
+                                <ChevronRight className="h-3 w-3" />
+                              )}
+                              {expanded
+                                ? t('emailNewsletterDetailsHide')
+                                : t('emailNewsletterDetailsCount', {
+                                    count: metadataEntries.length,
+                                  })}
+                            </button>
+                          ) : null}
+                        </td>
+                        <td className="px-3 py-2">
+                          <NewsletterStatusBadge status={row.status} />
+                        </td>
+                        <td className="px-3 py-2 text-xs">
+                          {t(`emailLangInline_${row.language}`, { defaultValue: row.language })}
+                        </td>
+                        <td className="px-3 py-2 text-xs">
+                          {t(`emailNewsletterSource_${row.source}`)}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">
+                          {formatDate(row.unsubscribedAt ?? row.confirmedAt ?? row.createdAt, lang)}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            aria-label={t('emailNewsletterRemoveOne', { email: row.email })}
+                            onClick={() => void remove(row.id, row.email)}
+                          >
+                            <Trash2 />
+                          </Button>
+                        </td>
+                      </tr>
+                      {expanded ? (
+                        <tr id={`subscriber-details-${row.id}`}>
+                          <td
+                            colSpan={6}
+                            className="bg-muted/20 px-3 py-3"
+                          >
+                            <p className="text-xs font-medium">
+                              {t('emailNewsletterDetailsTitle')}
+                            </p>
+                            <p className="mb-2 text-xs text-muted-foreground">
+                              {t('emailNewsletterDetailsHint')}
+                            </p>
+                            <dl className="grid gap-x-4 gap-y-1 text-xs sm:grid-cols-[max-content_1fr]">
+                              {metadataEntries.map(([key, value]) => (
+                                <Fragment key={key}>
+                                  <dt className="font-mono text-muted-foreground">{key}</dt>
+                                  <dd className="whitespace-pre-wrap break-words">{value}</dd>
+                                </Fragment>
+                              ))}
+                            </dl>
+                          </td>
+                        </tr>
                       ) : null}
-                    </td>
-                    <td className="px-3 py-2">
-                      <NewsletterStatusBadge status={row.status} />
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      {t(`emailLangInline_${row.language}`, { defaultValue: row.language })}
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      {t(`emailNewsletterSource_${row.source}`)}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-muted-foreground">
-                      {formatDate(row.unsubscribedAt ?? row.confirmedAt ?? row.createdAt, lang)}
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        aria-label={t('emailNewsletterRemoveOne', { email: row.email })}
-                        onClick={() => void remove(row.id, row.email)}
-                      >
-                        <Trash2 />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
