@@ -6,7 +6,9 @@ export function SegmentedControl<T extends string>({
   value,
   options,
   onChange,
+  variant = 'pill',
 }: {
+  variant?: 'pill' | 'underline';
   label: string;
   value: T;
   options: Array<{ value: T; label: string; icon?: ReactNode }>;
@@ -16,7 +18,11 @@ export function SegmentedControl<T extends string>({
     <div
       role="tablist"
       aria-label={label}
-      className="inline-flex rounded-md border border-border bg-muted/40 p-0.5"
+      className={
+        variant === 'underline'
+          ? 'flex w-full gap-4 overflow-x-auto border-b border-border'
+          : 'inline-flex rounded-md border border-border bg-muted/40 p-0.5'
+      }
     >
       {options.map((option) => {
         const selected = option.value === value;
@@ -27,10 +33,16 @@ export function SegmentedControl<T extends string>({
             role="tab"
             aria-selected={selected}
             className={cn(
-              'inline-flex h-8 items-center gap-1.5 rounded px-3 text-sm transition-colors [&_svg]:size-4',
-              selected
-                ? 'bg-background font-medium text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
+              variant === 'underline'
+                ? '-mb-px inline-flex h-10 items-center gap-1.5 border-b-2 px-0.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none [&_svg]:size-4'
+                : 'inline-flex h-8 items-center gap-1.5 rounded px-3 text-sm transition-colors [&_svg]:size-4',
+              variant === 'underline'
+                ? selected
+                  ? 'border-primary font-medium text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                : selected
+                  ? 'bg-background font-medium text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
             )}
             onClick={() => onChange(option.value)}
           >

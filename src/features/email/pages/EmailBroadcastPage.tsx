@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Loader2, Send } from 'lucide-react';
+import { ChevronLeft, Loader2, Send, Trash2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { StatusBadge } from '@/components/admin/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
@@ -52,7 +55,14 @@ function PreviewSummary({
 }) {
   const { t } = useTranslation();
   if (error) {
-    return <Text className="font-mono text-sm text-destructive">{emailErrorText(t, error)}</Text>;
+    return (
+      <p
+        className="font-mono text-sm text-destructive"
+        role="alert"
+      >
+        {emailErrorText(t, error)}
+      </p>
+    );
   }
   if (!preview) {
     return loading ? <Loader2 className="size-4 animate-spin text-muted-foreground" /> : null;
@@ -61,7 +71,7 @@ function PreviewSummary({
   return (
     <div className="space-y-2 text-sm">
       <p className="flex items-center gap-2">
-        <span className="font-heading text-xl font-semibold tabular-nums">{preview.sendable}</span>
+        <span className="font-heading text-2xl font-semibold tabular-nums">{preview.sendable}</span>
         <span>{t('emailBroadcastPreviewSendable', { count: preview.sendable })}</span>
         {loading ? <Loader2 className="size-4 animate-spin text-muted-foreground" /> : null}
       </p>
@@ -296,70 +306,97 @@ export function EmailBroadcastPage() {
 
   return (
     <div className="w-full space-y-6">
-      <header className="space-y-2">
+      <header className="space-y-3">
         <Link
           to="/email/broadcasts"
-          className="font-mono text-xs text-primary underline-offset-2 hover:underline"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
+          <ChevronLeft
+            aria-hidden
+            className="size-4"
+          />
           {t('emailBroadcastBack')}
         </Link>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+            {isDraft ? (
+              <Input
+                aria-label={t('emailBroadcastName')}
+                className="h-auto max-w-full border-transparent bg-transparent px-1 [field-sizing:content] font-heading text-2xl font-semibold tracking-tight shadow-none hover:border-input focus-visible:border-input md:text-3xl"
+                value={name}
+                maxLength={120}
+                onChange={(ev) => setName(ev.target.value)}
+                onBlur={() => void saveName()}
+                onKeyDown={(ev) => {
+                  if (ev.key === 'Enter') ev.currentTarget.blur();
+                }}
+              />
+            ) : (
+              <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
+                {broadcast?.name ?? t('emailBroadcastsTitle')}
+              </h1>
+            )}
+            <span className="rounded-md border border-border px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+              email-service
+            </span>
+            {broadcast ? <BroadcastStateBadge state={broadcast.state} /> : null}
+          </div>
           {isDraft ? (
-            <Input
-              aria-label={t('emailBroadcastName')}
-              className="h-auto max-w-xl border-transparent px-1 font-heading text-2xl font-semibold tracking-tight shadow-none hover:border-input md:text-3xl"
-              value={name}
-              maxLength={120}
-              onChange={(ev) => setName(ev.target.value)}
-              onBlur={() => void saveName()}
-              onKeyDown={(ev) => {
-                if (ev.key === 'Enter') ev.currentTarget.blur();
-              }}
-            />
-          ) : (
-            <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-              {broadcast?.name ?? t('emailBroadcastsTitle')}
-            </h1>
-          )}
-          {broadcast ? <BroadcastStateBadge state={broadcast.state} /> : null}
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              disabled={busy !== null}
+              onClick={() => void remove()}
+            >
+              <Trash2 aria-hidden />
+              {t('emailBroadcastDelete')}
+            </Button>
+          ) : null}
         </div>
       </header>
 
-      {!accessToken ? <Text>{t('dashboardNoSession')}</Text> : null}
-      {accessToken && !canManage ? <Text>{t('emailForbidden')}</Text> : null}
+      {!accessToken ? (
+        <Alert variant="info">
+          <AlertDescription>{t('dashboardNoSession')}</AlertDescription>
+        </Alert>
+      ) : null}
+      {accessToken && !canManage ? (
+        <Alert variant="warning">
+          <AlertDescription>{t('emailForbidden')}</AlertDescription>
+        </Alert>
+      ) : null}
       {loadError ? (
-        <Text className="font-mono text-sm text-destructive">{emailErrorText(t, loadError)}</Text>
+        <Alert variant="destructive">
+          <AlertDescription className="font-mono text-sm">
+            {emailErrorText(t, loadError)}
+          </AlertDescription>
+        </Alert>
       ) : null}
       {!broadcast && !loadError && canManage ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          {t('emailLoading')}
+        <div
+          className="space-y-3 motion-safe:animate-pulse"
+          aria-busy
+        >
+          <span className="sr-only">{t('emailLoading')}</span>
+          <Skeleton className="h-10 w-72" />
+          <Skeleton className="h-64 w-full rounded-xl" />
         </div>
       ) : null}
 
       {broadcast && api && accessToken ? (
         <>
           {tabs.length ? (
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <SegmentedControl
-                label={t('emailBroadcastsTitle')}
-                value={tab}
-                options={tabs}
-                onChange={(next) => {
-                  setFeedback(null);
-                  setTab(next);
-                }}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                className="text-destructive"
-                disabled={busy !== null}
-                onClick={() => void remove()}
-              >
-                {t('emailBroadcastDelete')}
-              </Button>
-            </div>
+            <SegmentedControl
+              variant="underline"
+              label={t('emailBroadcastsTitle')}
+              value={tab}
+              options={tabs}
+              onChange={(next) => {
+                setFeedback(null);
+                setTab(next);
+              }}
+            />
           ) : null}
 
           {isDraft && tab === 'content' ? (
@@ -374,27 +411,40 @@ export function EmailBroadcastPage() {
 
           {isDraft && tab === 'audience' && audience ? (
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
-              <section className="space-y-4 rounded-lg border border-border bg-card p-4">
-                <BroadcastAudienceBuilder
-                  accessToken={accessToken}
-                  value={audience}
-                  onChange={setAudience}
-                  newsletters={newsletters}
-                />
-                <div className="flex flex-wrap items-center gap-3">
+              <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+                <div className="space-y-4 p-4 sm:p-5">
+                  <BroadcastAudienceBuilder
+                    accessToken={accessToken}
+                    value={audience}
+                    onChange={setAudience}
+                    newsletters={newsletters}
+                  />
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-muted/30 px-4 py-3 sm:px-5">
+                  <div className="flex min-w-0 flex-wrap items-center gap-3">
+                    {dirty ? (
+                      <StatusBadge
+                        tone="warning"
+                        dot
+                      >
+                        {t('emailBroadcastUnsaved')}
+                      </StatusBadge>
+                    ) : null}
+                    <ActionFeedback feedback={feedback} />
+                  </div>
                   <Button
                     type="button"
                     disabled={!dirty || busy !== null}
                     onClick={() => void runSave()}
                   >
-                    {busy === 'save' ? <Loader2 className="animate-spin" /> : null}
+                    {busy === 'save' ? (
+                      <Loader2 className="animate-spin motion-reduce:animate-none" />
+                    ) : null}
                     {t('emailBroadcastSaveAudience')}
                   </Button>
-                  {dirty ? <Text className="text-xs">{t('emailBroadcastUnsaved')}</Text> : null}
                 </div>
-                <ActionFeedback feedback={feedback} />
               </section>
-              <aside className="space-y-2 rounded-lg border border-border p-4">
+              <aside className="h-fit space-y-2 rounded-xl border border-border bg-card p-4 shadow-sm">
                 <h2 className="text-sm font-semibold">{t('emailBroadcastPreviewTitle')}</h2>
                 <PreviewSummary
                   preview={preview}
@@ -411,70 +461,87 @@ export function EmailBroadcastPage() {
           ) : null}
 
           {isDraft && tab === 'send' ? (
-            <section className="max-w-3xl space-y-5 rounded-lg border border-border bg-card p-4">
-              <div className="space-y-1">
-                <h2 className="text-sm font-semibold">{t('emailBroadcastSender')}</h2>
-                {sender?.errorCode ? (
-                  <Text className="text-sm text-destructive">
-                    {emailErrorText(t, new EmailApiError(sender.errorCode, 409))}{' '}
+            <div className="max-w-3xl space-y-4">
+              {unpublished ? (
+                <Alert variant="warning">
+                  <AlertTitle>{t('emailBroadcastUnpublishedTitle')}</AlertTitle>
+                  <AlertDescription>{t('emailBroadcastUnpublished')}</AlertDescription>
+                </Alert>
+              ) : null}
+              <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+                <div className="space-y-5 p-4 sm:p-5">
+                  <div className="space-y-1">
+                    <h2 className="text-sm font-semibold">{t('emailBroadcastSender')}</h2>
+                    {sender && !sender.errorCode && !senderOnSubdomain(sender.fromEmail) ? (
+                      <p className="text-[13px] text-muted-foreground">
+                        {t('emailBroadcastSubdomainHint')}
+                      </p>
+                    ) : null}
+                  </div>
+                  {sender?.errorCode ? (
+                    <Alert variant="destructive">
+                      <AlertDescription>
+                        {emailErrorText(t, new EmailApiError(sender.errorCode, 409))}
+                      </AlertDescription>
+                    </Alert>
+                  ) : sender ? (
+                    <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[10rem_1fr]">
+                      <dt className="text-muted-foreground">{t('emailBroadcastSender')}</dt>
+                      <dd className="break-all font-mono">
+                        {sender.fromName
+                          ? `${sender.fromName} <${sender.fromEmail}>`
+                          : sender.fromEmail}
+                      </dd>
+                      <dt className="text-muted-foreground">{t('emailBroadcastDelivery')}</dt>
+                      <dd>{t(`emailBroadcastDelivery_${sender.delivery}`)}</dd>
+                    </dl>
+                  ) : null}
+                  <div className="space-y-1 border-t border-border pt-4">
+                    <h2 className="text-sm font-semibold">{t('emailBroadcastTabAudience')}</h2>
+                    <PreviewSummary
+                      preview={preview}
+                      loading={previewLoading}
+                      error={previewError}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-muted/30 px-4 py-3 sm:px-5">
+                  <div className="flex min-w-0 flex-wrap items-center gap-3">
                     <Link
                       to="/email/provider"
-                      className="text-primary underline-offset-2 hover:underline"
+                      className="text-sm text-primary underline-offset-2 hover:underline"
                     >
                       {t('emailBroadcastOpenProvider')}
                     </Link>
-                  </Text>
-                ) : sender ? (
-                  <>
-                    <p className="font-mono text-sm">
-                      {sender.fromName
-                        ? `${sender.fromName} <${sender.fromEmail}>`
-                        : sender.fromEmail}
-                    </p>
-                    <Text className="text-xs">
-                      {t(`emailBroadcastDelivery_${sender.delivery}`)}
-                    </Text>
-                    {senderOnSubdomain(sender.fromEmail) ? null : (
-                      <Text className="text-xs">{t('emailBroadcastSubdomainHint')}</Text>
+                    <ActionFeedback feedback={feedback} />
+                  </div>
+                  <Button
+                    type="button"
+                    disabled={
+                      busy !== null ||
+                      Boolean(sender?.errorCode) ||
+                      !preview ||
+                      preview.sendable === 0 ||
+                      previewLoading
+                    }
+                    onClick={() => void send()}
+                  >
+                    {busy === 'send' ? (
+                      <Loader2 className="animate-spin motion-reduce:animate-none" />
+                    ) : (
+                      <Send aria-hidden />
                     )}
-                  </>
-                ) : null}
-              </div>
-              <div className="space-y-1">
-                <h2 className="text-sm font-semibold">{t('emailBroadcastTabAudience')}</h2>
-                <PreviewSummary
-                  preview={preview}
-                  loading={previewLoading}
-                  error={previewError}
-                />
-              </div>
-              {unpublished ? (
-                <Text className="text-sm">{t('emailBroadcastUnpublished')}</Text>
-              ) : null}
-              <div className="flex flex-wrap items-center gap-3">
-                <Button
-                  type="button"
-                  disabled={
-                    busy !== null ||
-                    Boolean(sender?.errorCode) ||
-                    !preview ||
-                    preview.sendable === 0 ||
-                    previewLoading
-                  }
-                  onClick={() => void send()}
-                >
-                  {busy === 'send' ? <Loader2 className="animate-spin" /> : <Send />}
-                  {t('emailBroadcastSend')}
-                </Button>
-              </div>
-              <ActionFeedback feedback={feedback} />
-            </section>
+                    {t('emailBroadcastSend')}
+                  </Button>
+                </div>
+              </section>
+            </div>
           ) : null}
 
           {!isDraft ? (
             <section className="space-y-4">
               {broadcast.counts ? <BroadcastCountsGrid counts={broadcast.counts} /> : null}
-              <dl className="grid max-w-3xl gap-x-6 gap-y-2 text-sm sm:grid-cols-[auto_1fr]">
+              <dl className="grid max-w-3xl gap-x-6 gap-y-2 rounded-xl border border-border bg-card p-4 text-sm shadow-sm sm:grid-cols-[10rem_1fr]">
                 <dt className="text-muted-foreground">{t('emailBroadcastSender')}</dt>
                 <dd className="font-mono">{broadcast.fromEmail}</dd>
                 <dt className="text-muted-foreground">{t('emailBroadcastDelivery')}</dt>
@@ -487,11 +554,20 @@ export function EmailBroadcastPage() {
                 ) : null}
               </dl>
               {broadcast.lastErrorCode ? (
-                <Text className="font-mono text-sm text-destructive">
-                  {emailErrorText(t, new EmailApiError(broadcast.lastErrorCode, 409))}
-                </Text>
+                <Alert variant="destructive">
+                  <AlertDescription className="font-mono text-sm">
+                    {emailErrorText(t, new EmailApiError(broadcast.lastErrorCode, 409))}
+                  </AlertDescription>
+                </Alert>
               ) : null}
-              {active ? <Text className="text-xs">{t('emailBroadcastSendingHint')}</Text> : null}
+              {active ? (
+                <p
+                  className="text-xs text-muted-foreground"
+                  role="status"
+                >
+                  {t('emailBroadcastSendingHint')}
+                </p>
+              ) : null}
             </section>
           ) : null}
         </>

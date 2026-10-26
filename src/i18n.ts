@@ -4,6 +4,12 @@ import { initReactI18next } from 'react-i18next';
 const resources = {
   en: {
     translation: {
+      emailBroadcastsAll: 'All broadcasts',
+      emailBroadcastUnpublishedTitle: 'Unpublished changes',
+      emailBroadcastsColDate: 'Date',
+      emailBroadcastsColRecipients: 'Recipients',
+      emailBroadcastsColStatus: 'Status',
+      emailBroadcastsColName: 'Name',
       statsColDay: 'Day',
       emailProviderTestHint:
         'Company owners can send to their own address. Staff can send to any address.',
@@ -1876,6 +1882,12 @@ const resources = {
   },
   fr: {
     translation: {
+      emailBroadcastsAll: 'Toutes les diffusions',
+      emailBroadcastUnpublishedTitle: 'Modifications non publiées',
+      emailBroadcastsColDate: 'Date',
+      emailBroadcastsColRecipients: 'Destinataires',
+      emailBroadcastsColStatus: 'Statut',
+      emailBroadcastsColName: 'Nom',
       statsColDay: 'Jour',
       emailProviderTestHint:
         "Les propriétaires peuvent envoyer à leur propre adresse. Le staff peut envoyer à n'importe quelle adresse.",

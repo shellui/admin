@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -134,16 +135,37 @@ export function BroadcastAudienceBuilder({
 
   return (
     <div className="space-y-5">
-      <SegmentedControl
-        label={t('emailBroadcastAudienceMode')}
-        value={value.mode}
-        options={[
-          { value: 'filter', label: t('emailBroadcastModeFilter') },
-          { value: 'pick', label: t('emailBroadcastModePick') },
-          { value: 'newsletter', label: t('emailBroadcastModeNewsletter') },
-        ]}
-        onChange={changeMode}
-      />
+      <fieldset>
+        <legend className="sr-only">{t('emailBroadcastAudienceMode')}</legend>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {(
+            [
+              ['filter', t('emailBroadcastModeFilter')],
+              ['pick', t('emailBroadcastModePick')],
+              ['newsletter', t('emailBroadcastModeNewsletter')],
+            ] as const
+          ).map(([mode, label]) => (
+            <label
+              key={mode}
+              className={cn(
+                'flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm transition-colors focus-within:ring-2 focus-within:ring-ring motion-reduce:transition-none',
+                value.mode === mode
+                  ? 'border-primary bg-primary/5 font-medium'
+                  : 'border-border hover:bg-muted/50',
+              )}
+            >
+              <input
+                type="radio"
+                name="broadcast-audience-mode"
+                className="size-4 accent-[hsl(var(--primary))]"
+                checked={value.mode === mode}
+                onChange={() => changeMode(mode)}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       {value.mode === 'newsletter' ? (
         <fieldset className="space-y-2">
@@ -196,11 +218,16 @@ export function BroadcastAudienceBuilder({
             ) : groups.length === 0 ? (
               <Text className="text-xs">{t('emailBroadcastNoGroups')}</Text>
             ) : (
-              <div className="max-h-48 space-y-1 overflow-y-auto">
+              <div className="grid max-h-56 gap-2 overflow-y-auto sm:grid-cols-2">
                 {groups.map((group) => (
                   <label
                     key={group.id}
-                    className="flex cursor-pointer items-center gap-2 text-sm"
+                    className={cn(
+                      'flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-ring',
+                      value.group_ids.includes(group.id)
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:bg-muted/50',
+                    )}
                   >
                     <input
                       type="checkbox"
@@ -208,8 +235,10 @@ export function BroadcastAudienceBuilder({
                       checked={value.group_ids.includes(group.id)}
                       onChange={() => set({ group_ids: toggle(value.group_ids, group.id) })}
                     />
-                    <span>{group.display_name}</span>
-                    <span className="text-xs text-muted-foreground">{group.user_count}</span>
+                    <span className="min-w-0 flex-1 truncate">{group.display_name}</span>
+                    <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                      {group.user_count}
+                    </span>
                   </label>
                 ))}
               </div>
