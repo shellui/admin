@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 import shellui from '@shellui/sdk';
+import { askShelluiConfirm } from '@/lib/shelluiConfirm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -102,6 +103,14 @@ export function AccessTokensPanel({ accessToken }: AccessTokensPanelProps) {
 
   async function onRevoke(keyId: string) {
     if (!accessToken) return;
+    const confirmed = await askShelluiConfirm({
+      title: t('accessTokensRevokeConfirmTitle'),
+      description: t('accessTokensRevokeConfirmDescription'),
+      okLabel: t('accessTokensRevoke'),
+      cancelLabel: t('actionsCancel'),
+      mode: 'delete',
+    });
+    if (!confirmed) return;
     setRevokingId(keyId);
     try {
       await revokePersonalAccessToken(accessToken, keyId);

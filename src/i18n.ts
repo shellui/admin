@@ -4,6 +4,9 @@ import { initReactI18next } from 'react-i18next';
 const resources = {
   en: {
     translation: {
+      accessTokensRevokeConfirmDescription:
+        'Apps and scripts using this token stop working right away. You cannot undo this.',
+      accessTokensRevokeConfirmTitle: 'Revoke this access token?',
       usersSearchActive: 'Showing results for “{{q}}”',
       usersApiNote:
         'Toggling access calls PUT /api/v1/users/{id} and emails the person when access is enabled.',
@@ -1827,6 +1830,9 @@ const resources = {
   },
   fr: {
     translation: {
+      accessTokensRevokeConfirmDescription:
+        'Les apps et scripts qui utilisent ce jeton cessent de fonctionner immédiatement. Cette action est définitive.',
+      accessTokensRevokeConfirmTitle: "Révoquer ce jeton d'accès ?",
       usersSearchActive: 'Résultats pour « {{q}} »',
       usersApiNote:
         'Changer l’accès appelle PUT /api/v1/users/{id} et envoie un e-mail à la personne quand l’accès est activé.',
