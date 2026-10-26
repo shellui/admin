@@ -478,7 +478,7 @@ export function EmailTemplateEditor({
       {languageNotice}
 
       {laneClass === 'auth' ? (
-        <Alert>
+        <Alert variant="info">
           <Info aria-hidden />
           <AlertDescription className="space-y-1">
             <p>
