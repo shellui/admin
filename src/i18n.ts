@@ -4,6 +4,13 @@ import { initReactI18next } from 'react-i18next';
 const resources = {
   en: {
     translation: {
+      dashboardHostingLink: 'Apps',
+      dashboardStorageLink: 'Statistics',
+      dashboardIdentityLink: 'Users',
+      dashboardIdentitySection: 'Identity',
+      dashboardOverviewDescription:
+        "Health and usage of this company across Identity, Storage, Hosting and Email. Numbers come from each service's metrics endpoint.",
+      dashboardOverviewTitle: 'Overview',
       userDetailTabHosting: 'Hosting',
       userDetailTabStorage: 'Storage',
       userDetailTabIdentity: 'Identity',
@@ -1840,6 +1847,13 @@ const resources = {
   },
   fr: {
     translation: {
+      dashboardHostingLink: 'Apps',
+      dashboardStorageLink: 'Statistiques',
+      dashboardIdentityLink: 'Utilisateurs',
+      dashboardIdentitySection: 'Identity',
+      dashboardOverviewDescription:
+        "État et usage de cette entreprise pour Identity, Storage, Hosting et Email. Les chiffres viennent de l'endpoint de métriques de chaque service.",
+      dashboardOverviewTitle: "Vue d'ensemble",
       userDetailTabHosting: 'Hébergement',
       userDetailTabStorage: 'Stockage',
       userDetailTabIdentity: 'Identité',

@@ -1,17 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { LucideIcon } from 'lucide-react';
 import {
   Calendar,
   CalendarDays,
   CalendarRange,
-  ChevronDown,
+  ChevronRight,
   ExternalLink,
   FileText,
   Gauge,
   HardDrive,
   Link2,
-  Loader2,
   Package,
   Rocket,
   Shield,
@@ -20,9 +18,9 @@ import {
   Users,
   AppWindow,
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { KpiCard, KpiRow, KpiSkeletonRow, ServiceSectionHeader } from '@/components/admin/Kpi';
 import { Text } from '@/components/ui/text';
 import { DashboardEmailSection } from '@/components/DashboardEmailSection';
 import { AllServicesRetentionAlerts } from '@/components/EventRetentionAlert';
@@ -48,36 +46,6 @@ import {
   type StorageMetricsSnapshot,
 } from '@/lib/storageMetricsApi';
 import { useStorageBaseUrl } from '@/lib/storageStatsApi';
-
-function StatBlock({
-  label,
-  value,
-  hint,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  hint: string;
-  icon: LucideIcon;
-}) {
-  return (
-    <Card className="border-border/80 shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardDescription className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-          {label}
-        </CardDescription>
-        <Icon
-          className="size-4 text-muted-foreground"
-          aria-hidden
-        />
-      </CardHeader>
-      <CardContent>
-        <p className="font-mono text-2xl font-semibold tabular-nums tracking-tight">{value}</p>
-        <Text className="mt-1 font-mono text-xs">{hint}</Text>
-      </CardContent>
-    </Card>
-  );
-}
 
 function formatInt(n: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.round(n));
@@ -267,137 +235,118 @@ export function DashboardPage() {
   const selectedSource = sources.find((s) => s.id === metricsSource) ?? sources[0] ?? null;
 
   return (
-    <div className="w-full space-y-8">
-      <header className="space-y-1">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            {t('dashboardTitle')}
-          </h1>
-          <Badge
-            variant="secondary"
-            className="font-mono text-[10px] uppercase"
-          >
-            {t('dashboardEnvBadge')}
-          </Badge>
-        </div>
-        <Text className="max-w-3xl font-mono text-sm">{t('dashboardDescription')}</Text>
-      </header>
+    <div className="w-full space-y-7">
+      <PageHeader
+        title={t('dashboardOverviewTitle')}
+        description={t('dashboardOverviewDescription')}
+      />
 
       <AllServicesRetentionAlerts />
 
       {!authBackendBaseUrl ? <IdentityBackendMissing heading="h2" /> : null}
 
       {authBackendBaseUrl && !accessToken && (
-        <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
+        <Text className="text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
       )}
 
-      {authBackendBaseUrl && accessToken && loading && (
-        <div className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
-          <Loader2
-            className="size-4 animate-spin"
-            aria-hidden
+      {authBackendBaseUrl && accessToken ? (
+        <section aria-labelledby="dashboard-identity-title">
+          <ServiceSectionHeader
+            id="dashboard-identity-title"
+            title={t('dashboardIdentitySection')}
+            service={t('dashboardEnvBadge')}
+            link={{ to: '/users', label: t('dashboardIdentityLink') }}
           />
-          {t('dashboardLoading')}
-        </div>
-      )}
+          {loading ? (
+            <div className="space-y-3">
+              <KpiSkeletonRow label={t('dashboardLoading')} />
+              <KpiSkeletonRow
+                columns={3}
+                label={t('dashboardLoading')}
+              />
+            </div>
+          ) : error ? (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : snapshot ? (
+            <div className="space-y-3">
+              <KpiRow label={t('dashboardKpiSection')}>
+                <KpiCard
+                  label={t('dashboardStatUsersTotal')}
+                  value={formatInt(snapshot.usersTotal)}
+                  hint={t('dashboardStatUsersTotalHint')}
+                  icon={Users}
+                />
+                <KpiCard
+                  label={t('dashboardStatUsersActive')}
+                  value={formatInt(snapshot.usersActive)}
+                  hint={t('dashboardStatUsersActiveHint', { inactive: formatInt(inactive) })}
+                  icon={UserCheck}
+                />
+                <KpiCard
+                  label={t('dashboardStatUsersStaff')}
+                  value={formatInt(snapshot.usersStaff)}
+                  hint={t('dashboardStatUsersStaffHint')}
+                  icon={Shield}
+                />
+                <KpiCard
+                  label={t('dashboardStatSocialLinks')}
+                  value={formatInt(snapshot.socialAccountsTotal)}
+                  hint={t('dashboardStatSocialLinksHint')}
+                  icon={Link2}
+                />
+              </KpiRow>
 
-      {authBackendBaseUrl && accessToken && error && (
-        <Text className="font-mono text-sm text-destructive">{error}</Text>
-      )}
-
-      {authBackendBaseUrl && accessToken && !loading && !error && snapshot && (
-        <>
-          <section
-            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
-            aria-label={t('dashboardKpiSection')}
-          >
-            <StatBlock
-              label={t('dashboardStatUsersTotal')}
-              value={formatInt(snapshot.usersTotal)}
-              hint={t('dashboardStatUsersTotalHint')}
-              icon={Users}
-            />
-            <StatBlock
-              label={t('dashboardStatUsersActive')}
-              value={formatInt(snapshot.usersActive)}
-              hint={t('dashboardStatUsersActiveHint', { inactive: formatInt(inactive) })}
-              icon={UserCheck}
-            />
-            <StatBlock
-              label={t('dashboardStatUsersStaff')}
-              value={formatInt(snapshot.usersStaff)}
-              hint={t('dashboardStatUsersStaffHint')}
-              icon={Shield}
-            />
-            <StatBlock
-              label={t('dashboardStatSocialLinks')}
-              value={formatInt(snapshot.socialAccountsTotal)}
-              hint={t('dashboardStatSocialLinksHint')}
-              icon={Link2}
-            />
-          </section>
-
-          <section
-            className="grid gap-4 sm:grid-cols-3"
-            aria-label={t('dashboardActivitySection')}
-          >
-            <StatBlock
-              label={t('dashboardStatDau')}
-              value={formatInt(snapshot.dailyActiveUsers)}
-              hint={t('dashboardStatDauHint')}
-              icon={Calendar}
-            />
-            <StatBlock
-              label={t('dashboardStatWau')}
-              value={formatInt(snapshot.weeklyActiveUsers)}
-              hint={t('dashboardStatWauHint')}
-              icon={CalendarRange}
-            />
-            <StatBlock
-              label={t('dashboardStatMau')}
-              value={formatInt(snapshot.monthlyActiveUsers)}
-              hint={t('dashboardStatMauHint')}
-              icon={CalendarDays}
-            />
-          </section>
-        </>
-      )}
+              <KpiRow
+                columns={3}
+                label={t('dashboardActivitySection')}
+              >
+                <KpiCard
+                  label={t('dashboardStatDau')}
+                  value={formatInt(snapshot.dailyActiveUsers)}
+                  hint={t('dashboardStatDauHint')}
+                  icon={Calendar}
+                />
+                <KpiCard
+                  label={t('dashboardStatWau')}
+                  value={formatInt(snapshot.weeklyActiveUsers)}
+                  hint={t('dashboardStatWauHint')}
+                  icon={CalendarRange}
+                />
+                <KpiCard
+                  label={t('dashboardStatMau')}
+                  value={formatInt(snapshot.monthlyActiveUsers)}
+                  hint={t('dashboardStatMauHint')}
+                  icon={CalendarDays}
+                />
+              </KpiRow>
+            </div>
+          ) : null}
+          <p className="mt-2 text-xs text-muted-foreground">{t('dashboardDescription')}</p>
+        </section>
+      ) : null}
 
       {accessToken && storageEnabled && (
-        <section className="space-y-4">
-          <div className="flex flex-wrap items-baseline gap-3">
-            <h2 className="font-heading text-lg font-semibold tracking-tight">
-              {t('dashboardStorageSection')}
-            </h2>
-            <Badge
-              variant="secondary"
-              className="font-mono text-[10px] uppercase"
-            >
-              {t('dashboardStorageBadge')}
-            </Badge>
-          </div>
-          <Text className="max-w-3xl font-mono text-sm">{t('dashboardStorageDescription')}</Text>
+        <section aria-labelledby="dashboard-storage-title">
+          <ServiceSectionHeader
+            id="dashboard-storage-title"
+            title={t('dashboardStorageSection')}
+            service={t('dashboardStorageBadge')}
+            link={{ to: '/storage/statistics', label: t('dashboardStorageLink') }}
+          />
 
-          {storageLoading && (
-            <div className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
-              <Loader2
-                className="size-4 animate-spin"
-                aria-hidden
-              />
-              {t('dashboardStorageLoading')}
-            </div>
-          )}
+          {storageLoading ? <KpiSkeletonRow label={t('dashboardStorageLoading')} /> : null}
 
-          {storageError && (
-            <Text className="font-mono text-sm text-destructive">{storageError}</Text>
-          )}
+          {storageError ? (
+            <Alert variant="destructive">
+              <AlertDescription>{storageError}</AlertDescription>
+            </Alert>
+          ) : null}
 
           {!storageLoading && !storageError && storageSnapshot && (
-            <div
-              className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
-              aria-label={t('dashboardStorageSection')}
-            >
-              <StatBlock
+            <KpiRow label={t('dashboardStorageSection')}>
+              <KpiCard
                 label={t('dashboardStatStorageObjects')}
                 value={formatInt(storageSnapshot.objectsTotal)}
                 hint={t('dashboardStatStorageObjectsHint', {
@@ -405,7 +354,7 @@ export function DashboardPage() {
                 })}
                 icon={HardDrive}
               />
-              <StatBlock
+              <KpiCard
                 label={t('dashboardStatStorageDocuments')}
                 value={formatInt(storageSnapshot.documentsTotal)}
                 hint={t('dashboardStatStorageDocumentsHint', {
@@ -413,7 +362,7 @@ export function DashboardPage() {
                 })}
                 icon={FileText}
               />
-              <StatBlock
+              <KpiCard
                 label={t('dashboardStatStorageQuota')}
                 value={formatBytes(storageSnapshot.quotaUsedBytes)}
                 hint={t('dashboardStatStorageQuotaHint', {
@@ -422,7 +371,7 @@ export function DashboardPage() {
                 })}
                 icon={Gauge}
               />
-              <StatBlock
+              <KpiCard
                 label={t('dashboardStatStorageUploads')}
                 value={formatInt(storageSnapshot.uploads7d)}
                 hint={t('dashboardStatStorageUploadsHint', {
@@ -431,46 +380,32 @@ export function DashboardPage() {
                 })}
                 icon={Upload}
               />
-            </div>
+            </KpiRow>
           )}
+          <p className="mt-2 text-xs text-muted-foreground">{t('dashboardStorageDescription')}</p>
         </section>
       )}
 
       {accessToken && hostingEnabled && (
-        <section className="space-y-4">
-          <div className="flex flex-wrap items-baseline gap-3">
-            <h2 className="font-heading text-lg font-semibold tracking-tight">
-              {t('dashboardHostingSection')}
-            </h2>
-            <Badge
-              variant="secondary"
-              className="font-mono text-[10px] uppercase"
-            >
-              {t('dashboardHostingBadge')}
-            </Badge>
-          </div>
-          <Text className="max-w-3xl font-mono text-sm">{t('dashboardHostingDescription')}</Text>
+        <section aria-labelledby="dashboard-hosting-title">
+          <ServiceSectionHeader
+            id="dashboard-hosting-title"
+            title={t('dashboardHostingSection')}
+            service={t('dashboardHostingBadge')}
+            link={{ to: '/hosting', label: t('dashboardHostingLink') }}
+          />
 
-          {hostingLoading && (
-            <div className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
-              <Loader2
-                className="size-4 animate-spin"
-                aria-hidden
-              />
-              {t('dashboardHostingLoading')}
-            </div>
-          )}
+          {hostingLoading ? <KpiSkeletonRow label={t('dashboardHostingLoading')} /> : null}
 
-          {hostingError && (
-            <Text className="font-mono text-sm text-destructive">{hostingError}</Text>
-          )}
+          {hostingError ? (
+            <Alert variant="destructive">
+              <AlertDescription>{hostingError}</AlertDescription>
+            </Alert>
+          ) : null}
 
           {!hostingLoading && !hostingError && hostingSnapshot && (
-            <div
-              className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
-              aria-label={t('dashboardHostingSection')}
-            >
-              <StatBlock
+            <KpiRow label={t('dashboardHostingSection')}>
+              <KpiCard
                 label={t('dashboardStatHostingApps')}
                 value={formatInt(hostingSnapshot.appsTotal)}
                 hint={t('dashboardStatHostingAppsHint', {
@@ -478,7 +413,7 @@ export function DashboardPage() {
                 })}
                 icon={AppWindow}
               />
-              <StatBlock
+              <KpiCard
                 label={t('dashboardStatHostingDeployments')}
                 value={formatInt(hostingSnapshot.deploymentsTotal)}
                 hint={t('dashboardStatHostingDeploymentsHint', {
@@ -486,13 +421,13 @@ export function DashboardPage() {
                 })}
                 icon={Rocket}
               />
-              <StatBlock
+              <KpiCard
                 label={t('dashboardStatHostingArtifacts')}
                 value={formatBytes(hostingSnapshot.artifactBytes)}
                 hint={t('dashboardStatHostingArtifactsHint')}
                 icon={Package}
               />
-              <StatBlock
+              <KpiCard
                 label={t('dashboardStatHostingDeploys')}
                 value={formatInt(hostingSnapshot.deployments7d)}
                 hint={t('dashboardStatHostingDeploysHint', {
@@ -500,35 +435,33 @@ export function DashboardPage() {
                 })}
                 icon={Upload}
               />
-            </div>
+            </KpiRow>
           )}
+          <p className="mt-2 text-xs text-muted-foreground">{t('dashboardHostingDescription')}</p>
         </section>
       )}
 
       <DashboardEmailSection />
 
       {selectedSource && (
-        <details className="group rounded-lg border border-border/80 bg-card text-card-foreground shadow-sm">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-6 [&::-webkit-details-marker]:hidden">
-            <div className="space-y-1.5">
-              <CardTitle className="font-heading text-lg">
-                {t('dashboardExpositionTitle')}
-              </CardTitle>
-              <CardDescription className="font-mono text-xs">
-                {t('dashboardExpositionDescription')}
-              </CardDescription>
-            </div>
-            <ChevronDown
-              className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+        <details className="group rounded-xl border border-border bg-card text-card-foreground shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl px-4 py-3.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-5 [&::-webkit-details-marker]:hidden">
+            <ChevronRight
+              className="size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-open:rotate-90"
               aria-hidden
             />
+            {t('dashboardExpositionTitle')}
+            <span className="ml-auto hidden font-mono text-[11px] font-normal text-muted-foreground sm:inline">
+              GET /api/v1/metrics
+            </span>
           </summary>
-          <div className="space-y-3 px-6 pb-6">
+          <div className="space-y-3 border-t border-border px-4 py-4 sm:px-5">
+            <p className="text-xs text-muted-foreground">{t('dashboardExpositionDescription')}</p>
             {sources.length > 1 && (
-              <label className="flex flex-col gap-1.5 font-mono text-xs text-muted-foreground">
+              <label className="flex flex-col gap-1.5 text-sm font-medium">
                 {t('dashboardExpositionSourceLabel')}
                 <select
-                  className="h-8 max-w-md rounded-md border border-input bg-background px-2 text-foreground"
+                  className="h-9 max-w-md rounded-md border border-input bg-background px-2.5 text-sm text-foreground"
                   value={selectedSource.id}
                   onChange={(e) => setMetricsSource(e.target.value as MetricsSourceId)}
                 >
@@ -549,7 +482,7 @@ export function DashboardPage() {
                   href={selectedSource.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 font-mono text-xs text-primary underline-offset-4 hover:underline"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-ink underline-offset-4 hover:underline"
                 >
                   <ExternalLink
                     className="size-3.5 shrink-0"
@@ -562,16 +495,14 @@ export function DashboardPage() {
                 </Text>
               </div>
             )}
-            <pre className="max-h-64 overflow-auto rounded-md border border-border bg-muted/30 p-3 font-mono text-[10px] leading-relaxed text-muted-foreground">
+            <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-lg border border-border bg-muted p-3 font-mono text-xs leading-relaxed text-foreground">
               {selectedSource.rawText.trim()}
             </pre>
           </div>
         </details>
       )}
 
-      <Separator className="bg-border" />
-
-      <Text className="font-mono text-xs text-muted-foreground">{t('dashboardUiHint')}</Text>
+      <p className="text-xs text-muted-foreground">{t('dashboardUiHint')}</p>
     </div>
   );
 }
