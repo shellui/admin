@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import type { EmailProviderSettings } from '@/lib/emailTypes';
 
@@ -12,28 +11,33 @@ export function EmailFallbackCard({ settings }: { settings: EmailProviderSetting
     usage.disabled || !settings.fallbackConfigured || settings.fallbackProvider === 'none';
   if (off) {
     return (
-      <Card
-        className="border-destructive/40"
+      <div
+        role="note"
+        className="tone-destructive space-y-1 rounded-xl border p-4"
         data-testid="email-fallback-card"
       >
-        <CardHeader>
-          <CardTitle>{t('emailFallbackOffTitle')}</CardTitle>
-          <CardDescription>{t('emailFallbackOffBody')}</CardDescription>
-        </CardHeader>
-      </Card>
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-foreground">{t('emailFallbackOffTitle')}</p>
+          <p className="text-[13px] text-foreground">{t('emailFallbackOffBody')}</p>
+        </div>
+      </div>
     );
   }
   const capped = usage.limit > 0;
   const pct = capped ? Math.min(100, Math.round((usage.used / usage.limit) * 100)) : 0;
   return (
-    <Card data-testid="email-fallback-card">
-      <CardHeader>
-        <CardTitle>{t('emailFallbackTitle')}</CardTitle>
-        <CardDescription>{t('emailFallbackBody')}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <div
+      data-testid="email-fallback-card"
+      role="note"
+      className="tone-info space-y-3 rounded-xl border p-4"
+    >
+      <div className="space-y-1">
+        <p className="text-sm font-semibold text-foreground">{t('emailFallbackTitle')}</p>
+        <p className="text-[13px] text-foreground">{t('emailFallbackBody')}</p>
+      </div>
+      <div className="space-y-3">
         <div className="space-y-1.5">
-          <Text className="font-mono text-sm">
+          <Text className="text-sm font-medium tabular-nums text-foreground">
             {capped
               ? t('emailFallbackUsed', { used: usage.used, limit: usage.limit })
               : t('emailFallbackUsedNoCap', { used: usage.used })}
@@ -53,15 +57,15 @@ export function EmailFallbackCard({ settings }: { settings: EmailProviderSetting
             </div>
           ) : null}
         </div>
-        <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+        <ul className="list-disc space-y-1 pl-5 text-[13px] text-foreground">
           {usage.recipientHourlyLimit > 0 ? (
             <li>{t('emailFallbackRecipient', { count: usage.recipientHourlyLimit })}</li>
           ) : null}
           <li>{t('emailFallbackReset')}</li>
           <li>{t('emailFallbackSender')}</li>
         </ul>
-        <Text className="text-sm">{t('emailFallbackAddOwn')}</Text>
-      </CardContent>
-    </Card>
+        <Text className="text-[13px] text-foreground">{t('emailFallbackAddOwn')}</Text>
+      </div>
+    </div>
   );
 }

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Text } from '@/components/ui/text';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { StatusBadge } from '@/components/admin/StatusBadge';
 import { EmailFallbackCard } from '@/features/email/components/EmailFallbackCard';
 import { EmailProviderForm } from '@/features/email/components/EmailProviderForm';
 import { useEmailApi } from '@/features/email/useEmailApi';
@@ -50,36 +52,73 @@ export function EmailProviderPage() {
         ? t('emailProviderUsingFallback')
         : t('emailProviderNotConfigured');
 
+  const statusTone = !settings
+    ? 'muted'
+    : settings.configured
+      ? 'success'
+      : settings.fallbackConfigured
+        ? 'warning'
+        : 'muted';
+
   return (
     <div className="w-full space-y-6">
-      <header className="space-y-1">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            {t('emailProviderTitle')}
-          </h1>
-          <Badge
-            variant="secondary"
-            className="font-mono text-[10px] uppercase"
-          >
-            email-service
-          </Badge>
-          {statusLabel ? (
-            <Badge variant={settings?.configured ? 'default' : 'muted'}>{statusLabel}</Badge>
-          ) : null}
-        </div>
-        <Text className="max-w-3xl">{t('emailProviderDescription')}</Text>
-        <Text className="font-mono text-xs text-muted-foreground">{baseUrl}</Text>
-      </header>
-      {!accessToken ? <Text>{t('dashboardNoSession')}</Text> : null}
-      {accessToken && !canManage ? <Text>{t('emailForbidden')}</Text> : null}
+      <PageHeader
+        title={t('emailProviderTitle')}
+        service="email-service"
+        description={t('emailProviderPageDescription')}
+        actions={
+          statusLabel ? <StatusBadge tone={statusTone}>{statusLabel}</StatusBadge> : undefined
+        }
+      />
+      {baseUrl ? <p className="-mt-3 font-mono text-xs text-muted-foreground">{baseUrl}</p> : null}
+      {!accessToken ? (
+        <Alert variant="info">
+          <AlertDescription>{t('dashboardNoSession')}</AlertDescription>
+        </Alert>
+      ) : null}
+      {accessToken && !canManage ? (
+        <Alert variant="info">
+          <AlertDescription>{t('emailForbidden')}</AlertDescription>
+        </Alert>
+      ) : null}
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          {t('emailLoading')}
+        <div
+          className="space-y-6 motion-safe:animate-pulse"
+          aria-busy
+        >
+          <span className="sr-only">{t('emailLoading')}</span>
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="grid gap-4 md:grid-cols-[260px_minmax(0,1fr)] md:gap-8"
+              aria-hidden
+            >
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-44" />
+              </div>
+              <div className="space-y-3 rounded-xl border border-border bg-card p-5">
+                <Skeleton className="h-9 w-full" />
+                <Skeleton className="h-9 w-2/3" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : null}
       {error ? (
-        <Text className="font-mono text-sm text-destructive">{emailErrorText(t, error)}</Text>
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>{emailErrorText(t, error)}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void load()}
+            >
+              {t('usersRetry')}
+            </Button>
+          </AlertDescription>
+        </Alert>
       ) : null}
       {settings ? <EmailFallbackCard settings={settings} /> : null}
       {settings && api ? (

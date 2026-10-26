@@ -4,6 +4,17 @@ import { initReactI18next } from 'react-i18next';
 const resources = {
   en: {
     translation: {
+      emailProviderTestHint:
+        'Company owners can send to their own address. Staff can send to any address.',
+      emailProviderCredsHint:
+        'The key for the selected provider. Leave it empty to keep the stored one.',
+      emailProviderSecCreds: '{{provider}} credentials',
+      emailProviderSecSenderHint: 'How your emails appear in inboxes.',
+      emailProviderSecSender: 'Sender',
+      emailProviderSecProviderHint: 'Pick the service that sends your emails.',
+      emailProviderSecProvider: 'Provider',
+      emailProviderPageDescription:
+        "Send this company's emails through your own provider. Until you add one, Shellui sends built-in sign-in emails with a daily limit.",
       ruleEditorEnabledHint:
         'Turn it off to pause deliveries without losing the setup. Send test event needs the rule on.',
       ruleEditorSecDeliveryHint: 'Where to send and how to sign it.',
@@ -1864,6 +1875,17 @@ const resources = {
   },
   fr: {
     translation: {
+      emailProviderTestHint:
+        "Les propriétaires peuvent envoyer à leur propre adresse. Le staff peut envoyer à n'importe quelle adresse.",
+      emailProviderCredsHint:
+        'La clé du fournisseur choisi. Laissez vide pour garder celle enregistrée.',
+      emailProviderSecCreds: 'Identifiants {{provider}}',
+      emailProviderSecSenderHint: 'Comment vos emails apparaissent dans les boîtes de réception.',
+      emailProviderSecSender: 'Expéditeur',
+      emailProviderSecProviderHint: 'Choisissez le service qui envoie vos emails.',
+      emailProviderSecProvider: 'Fournisseur',
+      emailProviderPageDescription:
+        'Envoyez les emails de cette entreprise via votre propre fournisseur. En attendant, Shellui envoie les emails de connexion intégrés avec une limite quotidienne.',
       ruleEditorEnabledHint:
         "Désactivez-la pour suspendre les envois sans perdre la configuration. L'événement de test exige une règle active.",
       ruleEditorSecDeliveryHint: 'Où envoyer et comment signer.',
