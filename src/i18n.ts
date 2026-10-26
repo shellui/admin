@@ -4,6 +4,19 @@ import { initReactI18next } from 'react-i18next';
 const resources = {
   en: {
     translation: {
+      userDetailTabHosting: 'Hosting',
+      userDetailTabStorage: 'Storage',
+      userDetailTabIdentity: 'Identity',
+      userDetailScimSynced: 'Synced from SCIM',
+      userDetailOpenGroups: 'Open Groups',
+      userDetailDangerZone: 'Danger zone',
+      userDetailActivityHint: 'Recent log events for this user across services.',
+      userDetailPrefsHint: 'Read only. The user changes these in Shellui settings.',
+      userDetailGroupsHint:
+        "Groups appear in the user's token as the groups claim after the next sign-in.",
+      userDetailIdLine: 'User ID {{id}}',
+      userDetailProfile: 'Profile',
+      userDetailBackToUsers: 'Users',
       accessTokensRevokeConfirmDescription:
         'Apps and scripts using this token stop working right away. You cannot undo this.',
       accessTokensRevokeConfirmTitle: 'Revoke this access token?',
@@ -829,12 +842,12 @@ const resources = {
       userDetailGroupsEmpty: 'No groups exist yet. Create them on the Groups page.',
       userDetailDeleteTitle: 'Delete user',
       userDetailDeleteHint:
-        'Removes this user and their data from this application. This cannot be undone.',
+        'Removes {{name}} from this company. If they belong to no other company, their account is deleted too. You cannot undo this.',
       userDetailDeleteAction: 'Delete user',
       userDetailDeleting: 'Deleting…',
       userDetailDeleteConfirmTitle: 'Delete {{name}}?',
       userDetailDeleteConfirm:
-        '{{name}} and their data will be removed from this application. This cannot be undone.',
+        '{{name}} will be removed from this company. If they belong to no other company, their account is deleted too. You cannot undo this.',
       userDetailDeleteCancel: 'Cancel',
       userDetailDeleted: 'User deleted',
       inviteAction: 'Invite user',
@@ -1830,6 +1843,19 @@ const resources = {
   },
   fr: {
     translation: {
+      userDetailTabHosting: 'Hébergement',
+      userDetailTabStorage: 'Stockage',
+      userDetailTabIdentity: 'Identité',
+      userDetailScimSynced: 'Synchronisé par SCIM',
+      userDetailOpenGroups: 'Ouvrir les groupes',
+      userDetailDangerZone: 'Zone sensible',
+      userDetailActivityHint: 'Événements récents de cet utilisateur dans tous les services.',
+      userDetailPrefsHint: "Lecture seule. L'utilisateur les modifie dans les réglages Shellui.",
+      userDetailGroupsHint:
+        "Les groupes apparaissent dans le jeton de l'utilisateur, dans la claim groups, après sa prochaine connexion.",
+      userDetailIdLine: 'ID utilisateur {{id}}',
+      userDetailProfile: 'Profil',
+      userDetailBackToUsers: 'Utilisateurs',
       accessTokensRevokeConfirmDescription:
         'Les apps et scripts qui utilisent ce jeton cessent de fonctionner immédiatement. Cette action est définitive.',
       accessTokensRevokeConfirmTitle: "Révoquer ce jeton d'accès ?",
@@ -2668,12 +2694,12 @@ const resources = {
       userDetailGroupsEmpty: 'Aucun groupe pour l’instant. Créez-en depuis la page Groupes.',
       userDetailDeleteTitle: 'Supprimer l’utilisateur',
       userDetailDeleteHint:
-        'Retire cet utilisateur et ses données de cette application. Cette action est irréversible.',
+        "Retire {{name}} de cette entreprise. S'il n'appartient à aucune autre entreprise, son compte est aussi supprimé. Action irréversible.",
       userDetailDeleteAction: 'Supprimer l’utilisateur',
       userDetailDeleting: 'Suppression…',
       userDetailDeleteConfirmTitle: 'Supprimer {{name}} ?',
       userDetailDeleteConfirm:
-        '{{name}} et ses données seront retirés de cette application. Cette action est irréversible.',
+        "{{name}} sera retiré de cette entreprise. S'il n'appartient à aucune autre entreprise, son compte est aussi supprimé. Action irréversible.",
       userDetailDeleteCancel: 'Annuler',
       userDetailDeleted: 'Utilisateur supprimé',
       inviteAction: 'Inviter un utilisateur',

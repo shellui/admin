@@ -1,24 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { HardDrive, Loader2, Rocket, ScrollText, Trash2, UserCheck, UserX } from 'lucide-react';
 import shellui from '@shellui/sdk';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { InitialsAvatar } from '@/components/admin/InitialsAvatar';
+import { CheckTile, CheckTiles, DangerCard, DefinitionList } from '@/components/admin/Extras';
+import { TablePager } from '@/components/admin/DataTableCard';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
-import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { useShelluiIsStaff } from '@/hooks/useShelluiIsStaff';
-import { confirmAction } from '@/lib/confirmAction';
+import { askShelluiConfirm } from '@/lib/shelluiConfirm';
 import { getUserIdFromJwt } from '@/lib/jwtCompany';
 import {
   deleteAdminUser,
@@ -31,13 +30,14 @@ import { fetchAdminGroups, type AdminGroupRow } from '@/lib/adminGroupsApi';
 import { useEventLogSource } from '@/hooks/useEventRetention';
 import {
   eventDetailPath,
-  eventsListPath,
   eventSummary,
   fetchEventLog,
   isFailureEvent,
   type EventLogListResponse,
 } from '@/lib/eventLogApi';
 import { cn } from '@/lib/utils';
+
+type ActivityTab = 'identity' | 'storage' | 'hosting';
 
 /** Keep moderate to limit JSON payload per request. */
 const EVENTS_PAGE_SIZE = 15;
@@ -68,11 +68,11 @@ function displayName(user: AdminUserRow): string {
   const meta = user.user_metadata;
   if (typeof meta.full_name === 'string' && meta.full_name.trim()) return meta.full_name.trim();
   const combined = `${user.first_name} ${user.last_name}`.trim();
-  return combined || user.username || user.email || '—';
+  return combined || user.username || user.email || '-';
 }
 
 function formatDateTime(iso: string | undefined, locale: string): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return new Intl.DateTimeFormat(locale, {
@@ -89,8 +89,15 @@ export function UserDetailPage() {
   const actorIsStaff = useShelluiIsStaff();
   const idNum = userId ? parseInt(userId, 10) : NaN;
   const identityEvents = useEventLogSource('identity');
-  const hasStorageEvents = Boolean(useEventLogSource('storage'));
-  const hasHostingEvents = Boolean(useEventLogSource('hosting'));
+  const storageEvents = useEventLogSource('storage');
+  const hostingEvents = useEventLogSource('hosting');
+  const [activityTab, setActivityTab] = useState<ActivityTab>('identity');
+  const activeEvents =
+    activityTab === 'storage'
+      ? storageEvents
+      : activityTab === 'hosting'
+        ? hostingEvents
+        : identityEvents;
 
   const [user, setUser] = useState<AdminUserRow | null>(null);
   const [events, setEvents] = useState<EventLogListResponse | null>(null);
@@ -133,13 +140,13 @@ export function UserDetailPage() {
   }, [accessToken, idNum, t]);
 
   const loadEvents = useCallback(async () => {
-    if (!eventsInView || !accessToken || !identityEvents || !Number.isFinite(idNum)) {
+    if (!eventsInView || !accessToken || !activeEvents || !Number.isFinite(idNum)) {
       return;
     }
     setLoadingEvents(true);
     setEventsError(null);
     try {
-      const ev = await fetchEventLog(identityEvents, accessToken, {
+      const ev = await fetchEventLog(activeEvents, accessToken, {
         userId: idNum,
         page: eventsPage,
         pageSize: EVENTS_PAGE_SIZE,
@@ -151,7 +158,7 @@ export function UserDetailPage() {
     } finally {
       setLoadingEvents(false);
     }
-  }, [eventsInView, accessToken, identityEvents, idNum, eventsPage, t]);
+  }, [eventsInView, accessToken, activeEvents, idNum, eventsPage, t]);
 
   useEffect(() => {
     void loadUser();
@@ -165,6 +172,7 @@ export function UserDetailPage() {
     setLoadingEvents(false);
   }, [idNum]);
 
+  const hasUser = user !== null;
   useEffect(() => {
     const el = eventsSectionRef.current;
     if (!el) return;
@@ -180,7 +188,7 @@ export function UserDetailPage() {
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [idNum]);
+  }, [idNum, hasUser]);
 
   useEffect(() => {
     void loadEvents();
@@ -201,9 +209,9 @@ export function UserDetailPage() {
 
   if (!Number.isFinite(idNum)) {
     return (
-      <div className="p-6">
-        <p className="text-sm text-destructive">{t('userDetailInvalidId')}</p>
-      </div>
+      <Alert variant="destructive">
+        <AlertDescription>{t('userDetailInvalidId')}</AlertDescription>
+      </Alert>
     );
   }
 
@@ -250,12 +258,12 @@ export function UserDetailPage() {
   async function onDeleteUser() {
     if (!accessToken || !Number.isFinite(idNum) || !user || deleting) return;
     const name = displayName(user);
-    const confirmed = await confirmAction({
+    const confirmed = await askShelluiConfirm({
       title: t('userDetailDeleteConfirmTitle', { name }),
       description: t('userDetailDeleteConfirm', { name }),
       okLabel: t('userDetailDeleteAction'),
       cancelLabel: t('userDetailDeleteCancel'),
-      danger: true,
+      mode: 'delete',
     });
     if (!confirmed) return;
     setDeleting(true);
@@ -273,464 +281,435 @@ export function UserDetailPage() {
     }
   }
 
+  const dirty =
+    !!user &&
+    [...selectedGroupIds].sort().join(',') !==
+      (user.groups ?? [])
+        .map((g) => g.id)
+        .sort()
+        .join(',');
+
+  const tabs: { key: ActivityTab; label: string; enabled: boolean }[] = [
+    { key: 'identity', label: t('userDetailTabIdentity'), enabled: Boolean(identityEvents) },
+    { key: 'storage', label: t('userDetailTabStorage'), enabled: Boolean(storageEvents) },
+    { key: 'hosting', label: t('userDetailTabHosting'), enabled: Boolean(hostingEvents) },
+  ];
+  const KindIcon =
+    activityTab === 'storage' ? HardDrive : activityTab === 'hosting' ? Rocket : ScrollText;
+
+  const cardTitle = 'font-heading text-[15px] font-semibold';
+
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6">
-      <header className="flex flex-wrap items-center gap-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          type="button"
-          onClick={() => navigate(-1)}
-        >
-          {t('userDetailBack')}
-        </Button>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-          {t('userDetailTitle')}
-        </h1>
-      </header>
+    <div className="w-full space-y-6">
+      {!user ? (
+        <PageHeader
+          title={t('userDetailTitle')}
+          back={{ to: '/users', label: t('userDetailBackToUsers') }}
+        />
+      ) : (
+        <PageHeader
+          back={{ to: '/users', label: t('userDetailBackToUsers') }}
+          title={
+            <span className="flex items-center gap-3">
+              <InitialsAvatar
+                name={displayName(user)}
+                email={user.email}
+                imageUrl={avatarUrlFromUser(user)}
+                className="size-11 text-sm"
+              />
+              <span>
+                <span className="sr-only">{t('userDetailTitle')}: </span>
+                {displayName(user)}
+              </span>
+            </span>
+          }
+          service="shellui-auth"
+          description={
+            <span>
+              {user.email} · {t('userDetailIdLine', { id: user.id })}
+            </span>
+          }
+          actions={
+            <>
+              <StatusBadge tone={user.is_active ? 'success' : 'muted'}>
+                {user.is_active ? t('usersActiveYes') : t('usersActiveNo')}
+              </StatusBadge>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={togglingAccess}
+                onClick={() => void onToggleAccess()}
+                className="inline-flex items-center gap-2"
+              >
+                {togglingAccess ? (
+                  <Loader2
+                    className="size-4 animate-spin"
+                    aria-hidden
+                  />
+                ) : user.is_active ? (
+                  <UserX
+                    className="size-4"
+                    aria-hidden
+                  />
+                ) : (
+                  <UserCheck
+                    className="size-4"
+                    aria-hidden
+                  />
+                )}
+                {user.is_active ? t('usersActionDisable') : t('usersActionEnable')}
+              </Button>
+            </>
+          }
+        />
+      )}
 
       {!accessToken ? (
         <Text className="text-sm text-muted-foreground">{t('usersNoSession')}</Text>
       ) : loadError && !user ? (
-        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {loadError}
-        </p>
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>{loadError}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void loadUser()}
+            >
+              {t('usersRetry')}
+            </Button>
+          </AlertDescription>
+        </Alert>
       ) : loadingUser && !user ? (
-        <div className="flex items-center gap-2 py-12 text-muted-foreground">
-          <Loader2
-            className="size-5 animate-spin"
-            aria-hidden
-          />
-          <span className="text-sm">{t('userDetailLoading')}</span>
+        <div
+          className="space-y-4"
+          aria-busy
+        >
+          <span className="sr-only">{t('userDetailLoading')}</span>
+          <Skeleton className="h-28 w-full rounded-xl" />
+          <div className="grid gap-4 md:grid-cols-2">
+            <Skeleton className="h-48 w-full rounded-xl" />
+            <Skeleton className="h-48 w-full rounded-xl" />
+          </div>
         </div>
       ) : user ? (
         <>
-          <Card className="border-border/80 shadow-sm">
-            <CardHeader className="flex flex-row flex-wrap items-start gap-4 space-y-0">
-              <div className="shrink-0">
-                {avatarUrlFromUser(user) ? (
-                  <img
-                    src={avatarUrlFromUser(user)!}
-                    alt=""
-                    className="size-20 rounded-full border border-border object-cover md:size-24"
-                  />
-                ) : (
-                  <div
-                    className="flex size-20 items-center justify-center rounded-full border border-dashed border-border bg-muted text-lg font-medium text-muted-foreground md:size-24"
-                    aria-hidden
-                  >
-                    {displayName(user).slice(0, 1).toUpperCase()}
-                  </div>
-                )}
-              </div>
-              <div className="min-w-0 flex-1 space-y-1">
-                <CardTitle className="text-xl leading-tight">{displayName(user)}</CardTitle>
-                <CardDescription className="font-mono text-sm">{user.email}</CardDescription>
-                <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {t('usersColStaff')}
-                    </span>
-                    <Badge
-                      variant={user.is_staff ? 'default' : 'outline'}
-                      className="tabular-nums"
-                    >
-                      {user.is_staff ? t('usersStaffYes') : t('usersStaffNo')}
-                    </Badge>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {t('usersColActive')}
-                    </span>
-                    <Badge
-                      variant={user.is_active ? 'secondary' : 'muted'}
-                      className="tabular-nums"
-                    >
-                      {user.is_active ? t('usersActiveYes') : t('usersActiveNo')}
-                    </Badge>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 px-2 text-xs"
-                      disabled={togglingAccess}
-                      onClick={() => void onToggleAccess()}
-                    >
-                      {togglingAccess ? (
-                        <Loader2
-                          className="size-3 animate-spin"
-                          aria-hidden
-                        />
-                      ) : user.is_active ? (
-                        t('usersActionDisable')
-                      ) : (
-                        t('usersActionEnable')
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6 border-t border-border/80 pt-6">
-              <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                <div>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {t('userDetailUsername')}
-                  </dt>
-                  <dd className="mt-0.5 font-mono">{user.username}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {t('userDetailId')}
-                  </dt>
-                  <dd className="mt-0.5 tabular-nums">{user.id}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {t('userDetailFirstName')}
-                  </dt>
-                  <dd className="mt-0.5">{user.first_name || '—'}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {t('userDetailLastName')}
-                  </dt>
-                  <dd className="mt-0.5">{user.last_name || '—'}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {t('userDetailLastSeen')}
-                  </dt>
-                  <dd className="mt-0.5">
-                    {formatDateTime(lastSeenFromUser(user) ?? undefined, locale)}
-                  </dd>
-                </div>
-              </dl>
-              <div className="space-y-4 border-t border-border/80 pt-6">
-                <div>
-                  <h3 className="text-sm font-medium leading-none">
-                    {t('userDetailMembershipTitle')}
-                  </h3>
-                  <p className="pt-1.5 text-xs text-muted-foreground">
-                    {t('userDetailMembershipHint')}
-                  </p>
-                </div>
-                {saveError ? (
-                  <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                    {saveError}
-                  </p>
-                ) : null}
-                <div className="space-y-2 rounded-md border p-3">
-                  <Label>{t('userDetailGroups')}</Label>
-                  <p className="text-xs text-muted-foreground">
-                    {t('userDetailGroupsEditableHint')}
-                  </p>
-                  {allGroups.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">{t('userDetailGroupsEmpty')}</p>
-                  ) : (
-                    <ul className="mt-2 max-h-48 space-y-2 overflow-auto pr-1">
-                      {allGroups.map((g) => {
-                        const checked = selectedGroupIds.includes(g.id);
-                        return (
-                          <li
-                            key={g.id}
-                            className="flex items-center gap-2"
-                          >
-                            <input
-                              type="checkbox"
-                              id={`user-detail-group-${g.id}`}
-                              className="size-4 rounded border"
-                              checked={checked}
-                              onChange={() => {
-                                setSelectedGroupIds((prev) =>
-                                  checked ? prev.filter((id) => id !== g.id) : [...prev, g.id],
-                                );
-                              }}
-                            />
-                            <label
-                              htmlFor={`user-detail-group-${g.id}`}
-                              className="flex cursor-pointer items-center gap-2 text-sm"
-                            >
-                              <span>{g.display_name}</span>
-                              {g.source === 'scim' ? (
-                                <span className="text-[10px] text-muted-foreground">
-                                  ({t('groupsScimBadge')})
-                                </span>
-                              ) : null}
-                            </label>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </div>
-                <Button
-                  type="button"
-                  disabled={saving}
-                  onClick={() => void onSaveMembership()}
-                  className="inline-flex items-center gap-2"
-                >
-                  {saving ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      {t('userDetailSaving')}
-                    </>
-                  ) : (
-                    t('userDetailSave')
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {saveError ? (
+            <Alert variant="destructive">
+              <AlertDescription>{saveError}</AlertDescription>
+            </Alert>
+          ) : null}
 
-          <Card className="border-border/80 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">{t('userDetailPreferencesTitle')}</CardTitle>
-              <CardDescription>{t('userDetailPreferencesHint')}</CardDescription>
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className={cardTitle}>{t('userDetailProfile')}</CardTitle>
             </CardHeader>
             <CardContent>
-              {!preferences ? (
-                <p className="text-sm text-muted-foreground">{t('userDetailPreferencesEmpty')}</p>
-              ) : (
-                <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                  <div>
-                    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      {t('userDetailPrefTheme')}
-                    </dt>
-                    <dd className="mt-0.5">{preferences.themeName ?? '—'}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      {t('userDetailPrefLanguage')}
-                    </dt>
-                    <dd className="mt-0.5">{preferences.language ?? '—'}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      {t('userDetailPrefRegion')}
-                    </dt>
-                    <dd className="mt-0.5">{preferences.region ?? '—'}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      {t('userDetailPrefColorScheme')}
-                    </dt>
-                    <dd className="mt-0.5">{preferences.colorScheme ?? '—'}</dd>
-                  </div>
-                </dl>
-              )}
+              <DefinitionList
+                items={[
+                  {
+                    key: 'u',
+                    term: t('userDetailUsername'),
+                    value: <span className="font-mono">{user.username || '-'}</span>,
+                  },
+                  {
+                    key: 'id',
+                    term: t('userDetailId'),
+                    value: <span className="font-mono">{user.id}</span>,
+                  },
+                  { key: 'fn', term: t('userDetailFirstName'), value: user.first_name || '-' },
+                  { key: 'ln', term: t('userDetailLastName'), value: user.last_name || '-' },
+                  {
+                    key: 'ls',
+                    term: t('userDetailLastSeen'),
+                    value: lastSeenFromUser(user)
+                      ? formatDateTime(lastSeenFromUser(user)!, locale)
+                      : t('usersNever'),
+                  },
+                  {
+                    key: 'st',
+                    term: t('usersColStaff'),
+                    value: user.is_staff ? t('usersStaffYes') : t('usersStaffNo'),
+                  },
+                  {
+                    key: 'ac',
+                    term: t('usersColAccess'),
+                    value: user.is_active ? t('usersActiveYes') : t('usersActiveNo'),
+                  },
+                ]}
+              />
             </CardContent>
           </Card>
 
-          <div ref={eventsSectionRef}>
-            <Card className="border-border/80 shadow-sm">
-              <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
-                <div className="min-w-0 space-y-1.5">
-                  <CardTitle className="text-lg">{t('userDetailEventsTitle')}</CardTitle>
-                  <CardDescription>{t('userDetailEventsHint')}</CardDescription>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                  >
-                    <Link to={`${eventsListPath('identity')}?user_id=${idNum}`}>
-                      {t('userDetailEventsIdentity')}
-                    </Link>
-                  </Button>
-                  {hasStorageEvents ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      asChild
-                    >
-                      <Link to={`${eventsListPath('storage')}?user_id=${idNum}`}>
-                        {t('userDetailEventsStorage')}
-                      </Link>
-                    </Button>
-                  ) : null}
-                  {hasHostingEvents ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      asChild
-                    >
-                      <Link to={`${eventsListPath('hosting')}?user_id=${idNum}`}>
-                        {t('userDetailEventsHosting')}
-                      </Link>
-                    </Button>
-                  ) : null}
-                </div>
+          <div className="grid gap-4 md:grid-cols-[1.6fr_1fr]">
+            <Card className="flex flex-col overflow-hidden shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className={cardTitle}>{t('userDetailMembershipTitle')}</CardTitle>
+                <CardDescription>{t('userDetailGroupsHint')}</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {!eventsInView && events === null ? (
-                  <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                    <p className="max-w-xl text-sm text-muted-foreground">
-                      {t('userDetailEventsDefer')}
-                    </p>
+              <CardContent className="flex-1">
+                {allGroups.length === 0 ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-border p-4">
+                    <p className="text-sm text-muted-foreground">{t('userDetailGroupsEmpty')}</p>
                     <Button
-                      type="button"
-                      variant="secondary"
+                      asChild
                       size="sm"
-                      onClick={() => setEventsInView(true)}
+                      variant="outline"
                     >
-                      {t('userDetailEventsLoadNow')}
+                      <Link to="/groups">{t('userDetailOpenGroups')}</Link>
                     </Button>
                   </div>
-                ) : null}
+                ) : (
+                  <CheckTiles>
+                    {allGroups.map((g) => {
+                      const checked = selectedGroupIds.includes(g.id);
+                      const id = `user-detail-group-${g.id}`;
+                      return (
+                        <CheckTile
+                          key={g.id}
+                          htmlFor={id}
+                          label={g.display_name}
+                          hint={g.source === 'scim' ? t('userDetailScimSynced') : undefined}
+                          control={
+                            <Checkbox
+                              id={id}
+                              checked={checked}
+                              onCheckedChange={() =>
+                                setSelectedGroupIds((prev) =>
+                                  checked ? prev.filter((x) => x !== g.id) : [...prev, g.id],
+                                )
+                              }
+                            />
+                          }
+                        />
+                      );
+                    })}
+                  </CheckTiles>
+                )}
+              </CardContent>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-muted/60 px-5 py-3">
+                <span className="font-mono text-xs text-muted-foreground">
+                  PATCH /api/v1/users/{user.id}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={saving || !dirty}
+                  onClick={() => void onSaveMembership()}
+                >
+                  {saving ? t('userDetailSaving') : t('userDetailSave')}
+                </Button>
+              </div>
+            </Card>
+
+            <Card className="shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className={cardTitle}>{t('userDetailPreferencesTitle')}</CardTitle>
+                <CardDescription>{t('userDetailPrefsHint')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!preferences ? (
+                  <p className="text-sm text-muted-foreground">{t('userDetailPreferencesEmpty')}</p>
+                ) : (
+                  <DefinitionList
+                    className="md:grid-cols-2"
+                    items={[
+                      {
+                        key: 't',
+                        term: t('userDetailPrefTheme'),
+                        value: preferences.themeName ?? '-',
+                      },
+                      {
+                        key: 'c',
+                        term: t('userDetailPrefColorScheme'),
+                        value: preferences.colorScheme ?? '-',
+                      },
+                      {
+                        key: 'l',
+                        term: t('userDetailPrefLanguage'),
+                        value: preferences.language ?? '-',
+                      },
+                      {
+                        key: 'r',
+                        term: t('userDetailPrefRegion'),
+                        value: preferences.region ?? '-',
+                      },
+                    ]}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div ref={eventsSectionRef}>
+            <Card className="overflow-hidden shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className={cardTitle}>{t('userDetailEventsTitle')}</CardTitle>
+                <CardDescription>{t('userDetailActivityHint')}</CardDescription>
+                <Tabs
+                  value={activityTab}
+                  onValueChange={(v) => {
+                    setActivityTab(v as ActivityTab);
+                    setEventsPage(1);
+                    setEvents(null);
+                    setEventsError(null);
+                  }}
+                  className="pt-2"
+                >
+                  <TabsList className="max-w-full overflow-x-auto">
+                    {tabs
+                      .filter((tab) => tab.enabled)
+                      .map((tab) => (
+                        <TabsTrigger
+                          key={tab.key}
+                          value={tab.key}
+                        >
+                          {tab.label}
+                        </TabsTrigger>
+                      ))}
+                  </TabsList>
+                </Tabs>
+              </CardHeader>
+              <CardContent className="p-0">
                 {eventsError ? (
-                  <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                    {eventsError}
-                  </p>
+                  <div className="px-5 pb-4">
+                    <Alert variant="destructive">
+                      <AlertDescription>{eventsError}</AlertDescription>
+                    </Alert>
+                  </div>
                 ) : null}
                 {eventsInView && loadingEvents && !events ? (
-                  <div className="flex items-center gap-2 py-6 text-muted-foreground">
-                    <Loader2
-                      className="size-4 animate-spin"
-                      aria-hidden
-                    />
-                    <span className="text-sm">{t('eventsLoading')}</span>
+                  <div
+                    className="space-y-2 px-5 pb-4"
+                    aria-busy
+                  >
+                    <span className="sr-only">{t('eventsLoading')}</span>
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
                   </div>
                 ) : null}
                 {events && events.results.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">{t('userDetailEventsEmpty')}</p>
+                  <p className="px-5 pb-4 text-sm text-muted-foreground">
+                    {t('userDetailEventsEmpty')}
+                  </p>
                 ) : null}
                 {events && events.results.length > 0 ? (
-                  <>
-                    <div
-                      className={cn(
-                        'relative rounded-md border border-border',
-                        loadingEvents && 'opacity-60',
-                      )}
-                    >
-                      {loadingEvents ? (
-                        <div className="pointer-events-none absolute inset-0 z-[1] flex items-center justify-center bg-background/40">
-                          <Loader2
-                            className="size-6 animate-spin text-muted-foreground"
+                  <ul className={cn('border-t border-border', loadingEvents && 'opacity-60')}>
+                    {events.results.map((ev) => {
+                      const summary = eventSummary(ev);
+                      return (
+                        <li
+                          key={ev.id}
+                          className="flex items-center gap-3 border-b border-border px-5 py-2.5 last:border-b-0"
+                        >
+                          <span
+                            className="inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground"
                             aria-hidden
-                          />
-                          <span className="sr-only">{t('eventsLoading')}</span>
-                        </div>
-                      ) : null}
-                      <div className="w-full overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="bg-muted/30 hover:bg-muted/30">
-                              <TableHead className="whitespace-nowrap text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                {t('eventsColWhen')}
-                              </TableHead>
-                              <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                {t('eventsColEvent')}
-                              </TableHead>
-                              <TableHead className="hidden md:table-cell text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                {t('eventsColDetails')}
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody className="text-xs">
-                            {events.results.map((ev) => {
-                              const summary = eventSummary(ev);
-                              return (
-                                <TableRow key={ev.id}>
-                                  <TableCell className="whitespace-nowrap font-mono text-muted-foreground">
-                                    <Link
-                                      className="text-primary underline-offset-2 hover:underline"
-                                      to={eventDetailPath('identity', ev.id)}
-                                    >
-                                      {formatDateTime(ev.created_at, locale)}
-                                    </Link>
-                                  </TableCell>
-                                  <TableCell>
-                                    <span
-                                      className={cn(
-                                        'rounded px-1.5 py-0.5 font-medium',
-                                        isFailureEvent(ev)
-                                          ? 'bg-destructive/15 text-destructive'
-                                          : 'bg-muted text-foreground',
-                                      )}
-                                    >
-                                      {ev.label}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell
-                                    className="hidden max-w-[20rem] truncate text-muted-foreground md:table-cell"
-                                    title={summary || undefined}
-                                  >
-                                    {summary || '—'}
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-                    {eventsTotalPages > 1 ? (
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <p className="text-xs text-muted-foreground">
-                          {t('eventsPageStatus', {
-                            page: events.page,
-                            pages: eventsTotalPages,
-                            total: events.count,
-                          })}
-                        </p>
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={eventsPage <= 1 || loadingEvents}
-                            onClick={() => setEventsPage((p) => Math.max(1, p - 1))}
                           >
-                            {t('usersPrevPage')}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={eventsPage >= eventsTotalPages || loadingEvents}
-                            onClick={() => setEventsPage((p) => p + 1)}
+                            <KindIcon className="size-[15px]" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <Link
+                              className={cn(
+                                'text-sm font-medium text-foreground underline underline-offset-2 hover:text-primary-ink',
+                                isFailureEvent(ev) && 'text-destructive',
+                              )}
+                              to={eventDetailPath(activityTab, ev.id)}
+                            >
+                              {ev.label}
+                            </Link>
+                            {summary ? (
+                              <p
+                                className="truncate text-xs text-muted-foreground"
+                                title={summary}
+                              >
+                                {summary}
+                              </p>
+                            ) : null}
+                          </div>
+                          <time
+                            dateTime={ev.created_at}
+                            className="whitespace-nowrap text-xs text-muted-foreground"
                           >
-                            {t('usersNextPage')}
-                          </Button>
-                        </div>
-                      </div>
+                            {formatDateTime(ev.created_at, locale)}
+                          </time>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : null}
+                {(!eventsInView && events === null) || (events && eventsTotalPages > 1) ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-muted/60 px-5 py-2.5 text-xs text-muted-foreground">
+                    {!eventsInView && events === null ? (
+                      <>
+                        <span>{t('userDetailEventsDefer')}</span>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setEventsInView(true)}
+                        >
+                          {t('userDetailEventsLoadNow')}
+                        </Button>
+                      </>
+                    ) : events && eventsTotalPages > 1 ? (
+                      <TablePager
+                        status={t('eventsPageStatus', {
+                          page: events.page,
+                          pages: eventsTotalPages,
+                          total: events.count,
+                        })}
+                        previousLabel={t('usersPrevPage')}
+                        nextLabel={t('usersNextPage')}
+                        canPrevious={eventsPage > 1 && !loadingEvents}
+                        canNext={eventsPage < eventsTotalPages && !loadingEvents}
+                        onPrevious={() => setEventsPage((p) => Math.max(1, p - 1))}
+                        onNext={() => setEventsPage((p) => p + 1)}
+                      />
                     ) : null}
-                  </>
+                  </div>
                 ) : null}
               </CardContent>
             </Card>
           </div>
 
           {canDelete ? (
-            <Card className="border-destructive/40 shadow-sm">
-              <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4 space-y-0">
-                <div className="min-w-0 space-y-1.5">
-                  <CardTitle className="text-lg">{t('userDetailDeleteTitle')}</CardTitle>
-                  <CardDescription>{t('userDetailDeleteHint')}</CardDescription>
-                </div>
+            <DangerCard
+              title={t('userDetailDangerZone')}
+              description={
+                <>
+                  <span className="block font-medium text-foreground">
+                    {t('userDetailDeleteTitle')}
+                  </span>
+                  {t('userDetailDeleteHint', { name: displayName(user) })}
+                </>
+              }
+              action={
                 <Button
                   type="button"
                   variant="destructive"
+                  size="sm"
                   disabled={deleting}
                   onClick={() => void onDeleteUser()}
                   className="inline-flex items-center gap-2"
                 >
                   {deleting ? (
-                    <>
-                      <Loader2
-                        className="size-4 animate-spin"
-                        aria-hidden
-                      />
-                      {t('userDetailDeleting')}
-                    </>
+                    <Loader2
+                      className="size-4 animate-spin"
+                      aria-hidden
+                    />
                   ) : (
-                    t('userDetailDeleteAction')
+                    <Trash2
+                      className="size-4"
+                      aria-hidden
+                    />
                   )}
+                  {deleting ? t('userDetailDeleting') : t('userDetailDeleteAction')}
                 </Button>
-              </CardHeader>
-            </Card>
+              }
+            />
           ) : null}
         </>
       ) : null}
