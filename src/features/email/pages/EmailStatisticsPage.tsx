@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { LucideIcon } from 'lucide-react';
-import { BarChart3, Loader2, MailWarning, RefreshCw, Timer, Inbox } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Text } from '@/components/ui/text';
+import { Ban, Inbox, MailCheck, MailWarning, RefreshCw, Send, Timer, UserX } from 'lucide-react';
+import { KpiCard, KpiRow, KpiSkeletonRow, ServiceSectionHeader } from '@/components/admin/Kpi';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { BarSeriesCard, StatTableCard } from '@/components/admin/StatsParts';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
   ActionFeedback,
   feedbackFromError,
@@ -18,36 +19,7 @@ import { emailErrorText } from '@/lib/emailApiErrors';
 import { filterByQuery, listNeedsSearch, sectionTitle } from '@/lib/emailList';
 import { EMAIL_LANES, type EmailMetricsSnapshot } from '@/lib/emailMetrics';
 import type { EmailCountBucket, EmailStats } from '@/lib/emailTypes';
-
-function StatBlock({
-  label,
-  value,
-  hint,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  icon: LucideIcon;
-}) {
-  return (
-    <Card className="border-border/80 shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardDescription className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-          {label}
-        </CardDescription>
-        <Icon
-          className="size-4 text-muted-foreground"
-          aria-hidden
-        />
-      </CardHeader>
-      <CardContent>
-        <p className="font-mono text-2xl font-semibold tabular-nums tracking-tight">{value}</p>
-        {hint ? <Text className="mt-1 font-mono text-xs">{hint}</Text> : null}
-      </CardContent>
-    </Card>
-  );
-}
+import { cn } from '@/lib/utils';
 
 function formatInt(n: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.round(n));
@@ -57,13 +29,17 @@ function formatSeconds(n: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(n);
 }
 
-const COUNT_LABELS: Array<{ key: keyof EmailCountBucket; labelKey: string }> = [
-  { key: 'sent', labelKey: 'emailStatsSent' },
-  { key: 'delivered', labelKey: 'emailStatsDelivered' },
-  { key: 'bounced', labelKey: 'emailStatsBounced' },
-  { key: 'complained', labelKey: 'emailStatsComplained' },
-  { key: 'expired', labelKey: 'emailStatsExpired' },
-  { key: 'failed', labelKey: 'emailStatsFailed' },
+const COUNT_LABELS: Array<{
+  key: keyof EmailCountBucket;
+  labelKey: string;
+  icon: typeof Inbox;
+}> = [
+  { key: 'sent', labelKey: 'emailStatsSent', icon: Send },
+  { key: 'delivered', labelKey: 'emailStatsDelivered', icon: MailCheck },
+  { key: 'bounced', labelKey: 'emailStatsBounced', icon: MailWarning },
+  { key: 'complained', labelKey: 'emailStatsComplained', icon: MailWarning },
+  { key: 'expired', labelKey: 'emailStatsExpired', icon: Timer },
+  { key: 'failed', labelKey: 'emailStatsFailed', icon: MailWarning },
 ];
 
 export function EmailStatisticsPage() {
@@ -131,6 +107,7 @@ export function EmailStatisticsPage() {
   }, [load]);
 
   const dayMax = Math.max(1, ...(stats?.byDay.map((row) => row.sent) ?? [1]));
+  const num = (n: number) => <span className="tabular-nums">{formatInt(n)}</span>;
   const eventRows = useMemo(() => {
     const rows = Object.entries(stats?.byEvent ?? {}).map(([eventType, bucket]) => ({
       eventType,
@@ -141,206 +118,222 @@ export function EmailStatisticsPage() {
   const eventTitle = sectionTitle(t('emailStatsByEvent'), eventRows.length);
 
   return (
-    <div className="w-full space-y-8">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-baseline gap-3">
-            <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-              {t('emailStatsTitle')}
-            </h1>
-            <Badge
-              variant="secondary"
-              className="font-mono text-[10px] uppercase"
-            >
-              email-service
-            </Badge>
+    <div className="w-full space-y-6">
+      <PageHeader
+        title={t('emailStatsTitle')}
+        service="email-service"
+        description={
+          <>
+            <span className="block">{t('emailStatsDescription')}</span>
+            {baseUrl ? (
+              <span className="mt-1 block font-mono text-xs text-muted-foreground">{baseUrl}</span>
+            ) : null}
+            {stats ? (
+              <span className="mt-1 block text-xs text-muted-foreground">
+                {t('emailStatsWindow', { from: stats.from, to: stats.to })}
+              </span>
+            ) : null}
+          </>
+        }
+        actions={
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              <select
+                aria-label={t('emailMetricLane')}
+                className="h-8 rounded-md border border-input bg-background px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={lane}
+                onChange={(event) => setLane(event.target.value)}
+              >
+                <option value="">{t('emailStatsAllLanes')}</option>
+                {EMAIL_LANES.map((item) => (
+                  <option
+                    key={item}
+                    value={item}
+                  >
+                    {t(`emailLane_${item}`)}
+                  </option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void load('action')}
+                disabled={loading}
+              >
+                <RefreshCw
+                  aria-hidden
+                  className={cn(
+                    'mr-1.5 size-3.5',
+                    loading && 'animate-spin motion-reduce:animate-none',
+                  )}
+                />
+                {t('emailStatsRefresh')}
+              </Button>
+            </div>
+            <ActionFeedback feedback={refreshFeedback} />
           </div>
-          <Text className="max-w-3xl">{t('emailStatsDescription')}</Text>
-          <Text className="font-mono text-xs text-muted-foreground">{baseUrl}</Text>
-          {stats ? (
-            <Text className="font-mono text-xs">
-              {t('emailStatsWindow', { from: stats.from, to: stats.to })}
-            </Text>
-          ) : null}
-        </div>
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex items-center gap-2">
-            <select
-              aria-label={t('emailMetricLane')}
-              className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
-              value={lane}
-              onChange={(event) => setLane(event.target.value)}
-            >
-              <option value="">{t('emailStatsAllLanes')}</option>
-              {EMAIL_LANES.map((item) => (
-                <option
-                  key={item}
-                  value={item}
-                >
-                  {t(`emailLane_${item}`)}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => void load('action')}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm hover:bg-muted"
-              disabled={loading}
-            >
-              <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
-              {t('emailStatsRefresh')}
-            </button>
-          </div>
-          <ActionFeedback feedback={refreshFeedback} />
-        </div>
-      </header>
+        }
+      />
 
-      {!accessToken ? <Text>{t('dashboardNoSession')}</Text> : null}
-      {accessToken && !canManage ? <Text>{t('emailForbidden')}</Text> : null}
+      {!accessToken ? (
+        <Alert variant="info">
+          <AlertDescription>{t('dashboardNoSession')}</AlertDescription>
+        </Alert>
+      ) : null}
+      {accessToken && !canManage ? (
+        <Alert variant="warning">
+          <AlertDescription>{t('emailForbidden')}</AlertDescription>
+        </Alert>
+      ) : null}
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          {t('emailLoading')}
+        <div className="space-y-4">
+          <KpiSkeletonRow
+            columns={6}
+            label={t('emailLoading')}
+          />
+          <KpiSkeletonRow
+            columns={3}
+            label={t('emailLoading')}
+          />
         </div>
       ) : null}
       {error ? (
-        <Text className="font-mono text-sm text-destructive">{emailErrorText(t, error)}</Text>
+        <Alert variant="destructive">
+          <AlertDescription>{emailErrorText(t, error)}</AlertDescription>
+        </Alert>
       ) : null}
 
       {stats && !loading ? (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <KpiRow
+            columns={6}
+            label={t('emailStatsTitle')}
+          >
             {COUNT_LABELS.map((item) => (
-              <StatBlock
+              <KpiCard
                 key={item.key}
                 label={t(item.labelKey)}
                 value={formatInt(stats.totals[item.key])}
                 hint={item.key === 'sent' ? t('emailStatsSentHint') : undefined}
-                icon={item.key === 'failed' || item.key === 'bounced' ? MailWarning : Inbox}
+                icon={item.icon}
               />
             ))}
-          </div>
+          </KpiRow>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <StatBlock
+          <KpiRow
+            columns={3}
+            label={t('emailStatsSkipped')}
+          >
+            <KpiCard
               label={t('emailStatsSkipped')}
               value={formatInt(stats.skipped.total)}
               hint={t('emailStatsSkippedHint')}
-              icon={MailWarning}
+              icon={Ban}
             />
-            <StatBlock
+            <KpiCard
               label={t('emailStatsNoRecipients')}
               value={formatInt(stats.skipped.noRecipients)}
               hint={t('emailStatsNoRecipientsHint')}
-              icon={Inbox}
+              icon={UserX}
             />
-            <StatBlock
+            <KpiCard
               label={t('emailStatsRuleDisabled')}
               value={formatInt(stats.skipped.ruleDisabled)}
               hint={t('emailStatsRuleDisabledHint')}
-              icon={Timer}
+              icon={Inbox}
             />
-          </div>
+          </KpiRow>
 
-          <Card className="border-border/80 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <BarChart3 className="size-4" />
-                {t('emailStatsByDay')}
-              </CardTitle>
-              <CardDescription>{t('emailStatsSentHint')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {stats.byDay.length === 0 ? (
-                <Text>{t('emailStatsEmpty')}</Text>
-              ) : (
-                <div
-                  className="flex h-28 items-end gap-0.5"
-                  aria-label={t('emailStatsByDay')}
-                >
-                  {stats.byDay.map((row) => (
-                    <div
-                      key={row.day}
-                      className="flex h-full min-w-0 flex-1 items-end rounded-sm bg-muted"
-                      title={`${row.day}: ${row.sent}`}
-                    >
-                      <div
-                        className="w-full rounded-sm bg-primary"
-                        style={{
-                          height: `${Math.max((row.sent / dayMax) * 100, row.sent > 0 ? 4 : 0)}%`,
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {stats.byDay.length === 0 ? (
+            <StatTableCard
+              title={t('emailStatsByDay')}
+              description={t('emailStatsSentHint')}
+              columns={[{ label: t('statsColDay') }, { label: t('emailStatsSent') }]}
+              rows={[]}
+              empty={t('emailStatsEmpty')}
+            />
+          ) : (
+            <BarSeriesCard
+              title={t('emailStatsByDay')}
+              description={t('emailStatsSentHint')}
+              dayLabel={t('statsColDay')}
+              valueLabel={t('emailStatsSent')}
+              bars={stats.byDay.map((row, idx) => ({
+                key: row.day,
+                label: row.day.slice(5),
+                value: row.sent,
+                pct: Math.max((row.sent / dayMax) * 100, row.sent > 0 ? 4 : 0),
+                title: `${row.day}: ${row.sent}`,
+                recent: idx >= stats.byDay.length - 7,
+              }))}
+            />
+          )}
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card className="border-border/80 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base">{t('emailStatsByLane')}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {Object.keys(stats.byLane).length === 0 ? (
-                  <Text>{t('emailStatsEmpty')}</Text>
-                ) : null}
-                {Object.entries(stats.byLane).map(([name, bucket]) => (
-                  <p
-                    key={name}
-                    className="flex justify-between gap-3 font-mono text-xs"
-                  >
-                    <span>{name}</span>
-                    <span>
-                      {t('emailStatsSent')} {formatInt(bucket.sent)} · {t('emailStatsFailed')}{' '}
-                      {formatInt(bucket.failed)}
-                    </span>
-                  </p>
-                ))}
-              </CardContent>
-            </Card>
-            <Card className="border-border/80 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base">{eventTitle}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {listNeedsSearch(Object.keys(stats.byEvent).length) ? (
-                  <SearchField
-                    value={eventQuery}
-                    onChange={setEventQuery}
-                    placeholder={t('emailStatsSearch')}
-                    label={t('emailStatsSearch')}
-                  />
-                ) : null}
-                {eventRows.length === 0 ? <Text>{t('emailStatsEmpty')}</Text> : null}
-                {eventRows.map((row) => (
-                  <p
-                    key={row.eventType}
-                    className="flex justify-between gap-3 font-mono text-xs"
-                  >
-                    <span className="min-w-0 truncate">{row.eventType}</span>
-                    <span>
-                      {formatInt(row.bucket.sent)} / {formatInt(row.bucket.delivered)} /{' '}
-                      {formatInt(row.bucket.bounced)} / {formatInt(row.bucket.failed)}
-                    </span>
-                  </p>
-                ))}
-              </CardContent>
-            </Card>
+            <StatTableCard
+              title={t('emailStatsByLane')}
+              columns={[
+                { label: t('emailMetricLane') },
+                { label: t('emailStatsSent'), className: 'text-right' },
+                { label: t('emailStatsFailed'), className: 'text-right' },
+              ]}
+              rows={Object.entries(stats.byLane).map(([name, bucket]) => ({
+                key: name,
+                cells: [
+                  <span className="font-mono text-xs">{name}</span>,
+                  num(bucket.sent),
+                  num(bucket.failed),
+                ],
+              }))}
+              empty={t('emailStatsEmpty')}
+            />
+            <section className="min-w-0 space-y-3">
+              {listNeedsSearch(Object.keys(stats.byEvent).length) ? (
+                <SearchField
+                  value={eventQuery}
+                  onChange={setEventQuery}
+                  placeholder={t('emailStatsSearch')}
+                  label={t('emailStatsSearch')}
+                />
+              ) : null}
+              <StatTableCard
+                title={eventTitle}
+                columns={[
+                  { label: t('eventsColEvent') },
+                  { label: t('emailStatsSent'), className: 'text-right' },
+                  { label: t('emailStatsDelivered'), className: 'hidden text-right sm:table-cell' },
+                  { label: t('emailStatsBounced'), className: 'hidden text-right sm:table-cell' },
+                  { label: t('emailStatsFailed'), className: 'text-right' },
+                ]}
+                rows={eventRows.map((row) => ({
+                  key: row.eventType,
+                  cells: [
+                    <span className="block min-w-0 truncate font-mono text-xs">
+                      {row.eventType}
+                    </span>,
+                    num(row.bucket.sent),
+                    num(row.bucket.delivered),
+                    num(row.bucket.bounced),
+                    num(row.bucket.failed),
+                  ],
+                }))}
+                empty={t('emailStatsEmpty')}
+              />
+            </section>
           </div>
         </>
       ) : null}
 
       {metrics && !loading ? (
         <section className="space-y-4">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold tracking-tight">{t('emailMetricsTitle')}</h2>
-            <Text>{t('emailMetricsDescription')}</Text>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <ServiceSectionHeader title={t('emailMetricsTitle')} />
+          <p className="-mt-2 max-w-3xl text-sm text-muted-foreground">
+            {t('emailMetricsDescription')}
+          </p>
+          <KpiRow label={t('emailMetricsTitle')}>
             {EMAIL_LANES.map((item) => (
-              <StatBlock
+              <KpiCard
                 key={item}
                 label={`${t('emailMetricQueueDepth')} · ${t(`emailLane_${item}`)}`}
                 value={formatInt(metrics.queueDepth[item] ?? 0)}
@@ -350,52 +343,54 @@ export function EmailStatisticsPage() {
                 icon={Timer}
               />
             ))}
-            <StatBlock
+            <KpiCard
               label={t('emailMetricAuthExpiries')}
               value={formatInt(metrics.authTtlExpiries)}
               icon={MailWarning}
             />
+          </KpiRow>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <StatTableCard
+              title={t('emailMetricLatency')}
+              columns={[
+                { label: t('emailMetricLane') },
+                { label: 'p50', className: 'text-right' },
+                { label: 'p95', className: 'text-right' },
+              ]}
+              rows={EMAIL_LANES.map((item) => ({
+                key: item,
+                cells: [
+                  t(`emailLane_${item}`),
+                  <span className="tabular-nums">
+                    {formatSeconds(metrics.latency[item]?.p50 ?? 0)}s
+                  </span>,
+                  <span className="tabular-nums">
+                    {formatSeconds(metrics.latency[item]?.p95 ?? 0)}s
+                  </span>,
+                ],
+              }))}
+              empty={t('emailStatsEmpty')}
+            />
+            <StatTableCard
+              title={sectionTitle(t('emailMetricProviderErrors'), metrics.providerErrors.length)}
+              columns={[
+                { label: t('identityStatsColProvider') },
+                { label: t('scheduledJobsColError') },
+                { label: t('hostingColCount'), className: 'text-right' },
+              ]}
+              rows={metrics.providerErrors.map((row) => ({
+                key: `${row.provider}:${row.errorCode}`,
+                cells: [
+                  <span className="font-mono text-xs">{row.provider}</span>,
+                  <span className="font-mono text-xs">
+                    {row.errorCode || t('emailError_request_failed')}
+                  </span>,
+                  num(row.count),
+                ],
+              }))}
+              empty={t('emailMetricNoProviderErrors')}
+            />
           </div>
-          <Card className="border-border/80 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base">{t('emailMetricLatency')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {EMAIL_LANES.map((item) => (
-                <p
-                  key={item}
-                  className="font-mono text-xs"
-                >
-                  {t(`emailLane_${item}`)}:{' '}
-                  {t('emailMetricLatencyValue', {
-                    p50: formatSeconds(metrics.latency[item]?.p50 ?? 0),
-                    p95: formatSeconds(metrics.latency[item]?.p95 ?? 0),
-                  })}
-                </p>
-              ))}
-            </CardContent>
-          </Card>
-          <Card className="border-border/80 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base">
-                {sectionTitle(t('emailMetricProviderErrors'), metrics.providerErrors.length)}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {metrics.providerErrors.length === 0 ? (
-                <Text>{t('emailMetricNoProviderErrors')}</Text>
-              ) : null}
-              {metrics.providerErrors.map((row) => (
-                <p
-                  key={`${row.provider}:${row.errorCode}`}
-                  className="font-mono text-xs"
-                >
-                  {row.provider} · {row.errorCode || t('emailError_request_failed')} ·{' '}
-                  {formatInt(row.count)}
-                </p>
-              ))}
-            </CardContent>
-          </Card>
         </section>
       ) : null}
 

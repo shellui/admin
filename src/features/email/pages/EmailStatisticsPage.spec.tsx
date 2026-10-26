@@ -99,7 +99,7 @@ describe('EmailStatisticsPage', () => {
     api.fetchMetrics.mockResolvedValue(metrics);
     renderPage();
     const failure = await screen.findByText('The email request failed.');
-    expect(failure.className).toContain('text-destructive');
+    expect(failure.closest('[role="alert"]')).toBeTruthy();
     expect(screen.queryByText('Statistics refreshed.')).toBeNull();
   });
 
