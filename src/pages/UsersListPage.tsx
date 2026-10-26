@@ -2,16 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, createSearchParams, useNavigate, useSearchParams } from 'react-router-dom';
 import shellui from '@shellui/sdk';
-import {
-  AlertCircle,
-  Copy,
-  Loader2,
-  MoreHorizontal,
-  Search,
-  UserPlus,
-  Users,
-  X,
-} from 'lucide-react';
+import { AlertCircle, Loader2, MoreHorizontal, Search, UserPlus, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -185,15 +176,6 @@ export function UsersListPage() {
     }
   }
 
-  async function copyEmail(email: string) {
-    try {
-      await navigator.clipboard.writeText(email);
-      shellui.toast({ title: t('usersEmailCopied'), type: 'success' });
-    } catch {
-      shellui.toast({ title: t('usersCopyFailed'), type: 'error' });
-    }
-  }
-
   const totalPages = useMemo(() => {
     if (!data?.count) return 1;
     return Math.max(1, Math.ceil(data.count / PAGE_SIZE));
@@ -343,19 +325,32 @@ export function UsersListPage() {
           toolbar={toolbar}
           footer={
             data && data.count > 0 ? (
-              <TablePager
-                status={t('usersPageStatus', {
-                  page: pageParam,
-                  pages: totalPages,
-                  total: data.count,
-                })}
-                previousLabel={t('usersPrevPage')}
-                nextLabel={t('usersNextPage')}
-                canPrevious={pageParam > 1 && !loading}
-                canNext={pageParam < totalPages && !loading}
-                onPrevious={() => goToPage(pageParam - 1)}
-                onNext={() => goToPage(pageParam + 1)}
-              />
+              <>
+                <p
+                  className="sr-only"
+                  aria-live="polite"
+                >
+                  {t('usersListingSummary', {
+                    shown: rows.length,
+                    total: data.count,
+                    page: pageParam,
+                    pages: totalPages,
+                  })}
+                </p>
+                <TablePager
+                  status={t('usersPageStatus', {
+                    page: pageParam,
+                    pages: totalPages,
+                    total: data.count,
+                  })}
+                  previousLabel={t('usersPrevPage')}
+                  nextLabel={t('usersNextPage')}
+                  canPrevious={pageParam > 1 && !loading}
+                  canNext={pageParam < totalPages && !loading}
+                  onPrevious={() => goToPage(pageParam - 1)}
+                  onNext={() => goToPage(pageParam + 1)}
+                />
+              </>
             ) : null
           }
         >
@@ -364,6 +359,7 @@ export function UsersListPage() {
               <EmptyState
                 icon={Search}
                 title={t('usersEmpty')}
+                description={t('usersEmptySearchHint')}
                 actions={
                   <Button
                     type="button"
@@ -398,10 +394,10 @@ export function UsersListPage() {
                 <TableRow className="hover:bg-transparent">
                   <TableHead className={`${HEAD} w-[38%] pl-4`}>{t('usersColUser')}</TableHead>
                   <TableHead className={`${HEAD} hidden lg:table-cell`}>
-                    {t('usersColGroups')}
+                    {t('usersColUsername')}
                   </TableHead>
                   <TableHead className={`${HEAD} hidden lg:table-cell`}>
-                    {t('usersColUsername')}
+                    {t('usersColGroups')}
                   </TableHead>
                   <TableHead className={`${HEAD} hidden md:table-cell`}>
                     {t('usersColLastSeen')}
@@ -457,6 +453,12 @@ export function UsersListPage() {
                           </span>
                         </Link>
                       </TableCell>
+                      <TableCell
+                        className="hidden max-w-[10rem] truncate font-mono text-xs text-muted-foreground lg:table-cell"
+                        title={row.username}
+                      >
+                        {row.username}
+                      </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         {groups.length ? (
                           <div className="flex flex-wrap gap-1">
@@ -472,12 +474,6 @@ export function UsersListPage() {
                         ) : (
                           <span className="text-sm text-muted-foreground">{t('usersNone')}</span>
                         )}
-                      </TableCell>
-                      <TableCell
-                        className="hidden max-w-[10rem] truncate font-mono text-xs text-muted-foreground lg:table-cell"
-                        title={row.username}
-                      >
-                        {row.username}
                       </TableCell>
                       <TableCell className="hidden whitespace-nowrap text-sm tabular-nums text-muted-foreground md:table-cell">
                         {formatShortDateTime(lastSeenFromRow(row))}
@@ -522,19 +518,6 @@ export function UsersListPage() {
                             <DropdownMenuItem onSelect={() => navigate(`/users/${row.id}`)}>
                               {t('usersOpenProfile')}
                             </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => void copyEmail(row.email)}>
-                              <Copy
-                                className="size-4"
-                                aria-hidden
-                              />
-                              {t('usersCopyEmail')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              disabled={togglingId != null}
-                              onSelect={() => void setAccess(row, !row.is_active)}
-                            >
-                              {row.is_active ? t('usersActionDisable') : t('usersActionEnable')}
-                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -546,10 +529,6 @@ export function UsersListPage() {
           )}
         </DataTableCard>
       )}
-
-      {accessToken ? (
-        <p className="font-mono text-[11.5px] text-muted-foreground">{t('usersApiNote')}</p>
-      ) : null}
     </div>
   );
 }
