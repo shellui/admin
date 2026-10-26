@@ -111,11 +111,11 @@ describe('sidebar version', () => {
   it('pins the package version at the bottom of the sidebar', () => {
     renderShell();
     const version = screen.getByText(appVersionLabel);
+    const footer = version.closest('footer');
     const aside = version.closest('aside');
-    expect(aside?.lastElementChild).toBe(version);
-    expect(version.className).toContain('text-center');
-    expect(version.className).toContain('text-xs');
-    expect(version.className).toContain('text-muted-foreground');
+    expect(aside?.lastElementChild).toBe(footer);
+    expect(footer?.className).toContain('text-xs');
+    expect(footer?.className).toContain('text-muted-foreground');
     expect(appVersionLabel).toMatch(/^v\d+\.\d+\.\d+/);
   });
 });

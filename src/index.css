@@ -36,6 +36,12 @@
   --sidebar-accent-foreground: #171717;
   --sidebar-border: #e5e5e5;
   --sidebar-ring: #0a0a0a;
+  /* Redesign tokens. The shell theme can override them; these are the fallbacks. */
+  --primary-ink: color-mix(in oklab, var(--primary) 62%, var(--foreground));
+  --success: #15803d;
+  --warning: #b45309;
+  --info: #1d4ed8;
+  --ease-out-soft: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .dark {
@@ -66,6 +72,10 @@
   --sidebar-accent-foreground: #fafafa;
   --sidebar-border: #262626;
   --sidebar-ring: #d4d4d4;
+  --primary-ink: var(--primary);
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --info: #93c5fd;
 }
 
 * {
@@ -145,4 +155,55 @@ a:hover {
 }
 .bg-muted-foreground\/50 {
   background-color: color-mix(in srgb, var(--muted-foreground) 50%, transparent);
+}
+
+/*
+ * Tones for status badges, alerts and callouts. They tint with color-mix so
+ * they follow any theme the shell pushes.
+ */
+@layer components {
+  .tone-success,
+  .tone-warning,
+  .tone-info,
+  .tone-destructive,
+  .tone-gold,
+  .tone-muted {
+    --tone: var(--muted-foreground);
+    color: var(--tone);
+    background-color: color-mix(in oklab, var(--tone) 10%, transparent);
+    border-color: color-mix(in oklab, var(--tone) 28%, transparent);
+  }
+  .tone-success {
+    --tone: var(--success);
+  }
+  .tone-warning {
+    --tone: var(--warning);
+  }
+  .tone-info {
+    --tone: var(--info);
+  }
+  .tone-destructive {
+    --tone: var(--destructive);
+  }
+  .tone-gold {
+    --tone: var(--primary-ink);
+    background-color: color-mix(in oklab, var(--primary) 12%, transparent);
+    border-color: color-mix(in oklab, var(--primary) 40%, transparent);
+  }
+  .tone-muted {
+    color: var(--muted-foreground);
+    background-color: var(--muted);
+    border-color: var(--border);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

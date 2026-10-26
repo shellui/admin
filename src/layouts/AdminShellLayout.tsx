@@ -18,13 +18,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { LOADING_OVERLAY_DURATION_MS } from '@/constants/loading';
 import {
   AppWindow,
+  ArrowUpRight,
   BarChart3,
   BookOpen,
   Building2,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
   Fingerprint,
   FolderOpen,
   KeyRound,
@@ -39,6 +39,7 @@ import {
   PanelLeft,
   PanelLeftClose,
   ScrollText,
+  Server,
   Tags,
   Users,
 } from 'lucide-react';
@@ -75,7 +76,7 @@ import { appVersionLabel } from '@/lib/appVersion';
 import { cn } from '@/lib/utils';
 
 const navLinkBase =
-  'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium no-underline transition-colors hover:no-underline';
+  'flex h-8 items-center gap-2.5 rounded-[7px] px-2.5 text-[13.5px] font-medium no-underline transition-colors duration-150 ease-soft hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring';
 
 function readSectionOpen(key: string, defaultOpen = true): boolean {
   try {
@@ -131,7 +132,7 @@ const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
   'email/templates': Mail,
   'email/broadcasts': Megaphone,
   'email/newsletters': Newspaper,
-  'email/provider': KeyRound,
+  'email/provider': Server,
   'email/link-hosts': Link2,
   'email/statistics': BarChart3,
   actions: SendHorizonal,
@@ -268,7 +269,7 @@ function adminNavLinkClassName(isActive: boolean) {
   return cn(
     navLinkBase,
     isActive
-      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+      ? 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90'
       : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
   );
 }
@@ -289,12 +290,10 @@ function NavSectionHeader({
   if (!collapsible) {
     return (
       <div className="px-3 pb-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {title}
-        </p>
+        <p className="text-xs font-semibold text-sidebar-foreground">{title}</p>
         {subtitle ? (
           <p
-            className="mt-0.5 truncate text-[11px] font-normal normal-case tracking-normal text-muted-foreground/80"
+            className="mt-0.5 truncate font-mono text-[11px] font-normal text-muted-foreground"
             title={subtitle}
           >
             {subtitle}
@@ -309,15 +308,13 @@ function NavSectionHeader({
       type="button"
       onClick={onToggle}
       aria-expanded={open}
-      className="flex w-full items-start gap-1 rounded-md px-3 pb-2 text-left transition-colors duration-150 hover:bg-sidebar-accent"
+      className="mb-1 flex w-full items-start gap-1 rounded-md px-2.5 py-1.5 text-left transition-colors duration-150 hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
     >
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {title}
-        </p>
+        <p className="text-xs font-semibold text-sidebar-foreground">{title}</p>
         {subtitle ? (
           <p
-            className="mt-0.5 truncate text-[11px] font-normal normal-case tracking-normal text-muted-foreground/80"
+            className="mt-0.5 truncate font-mono text-[11px] font-normal text-muted-foreground"
             title={subtitle}
           >
             {subtitle}
@@ -326,7 +323,7 @@ function NavSectionHeader({
       </div>
       <ChevronDown
         className={cn(
-          'mt-0.5 size-3.5 shrink-0 text-muted-foreground transition-transform',
+          'mt-0.5 size-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ease-soft',
           open ? 'rotate-0' : '-rotate-90',
         )}
         aria-hidden
@@ -382,8 +379,8 @@ function AdminSidebarLink({
         {!collapsed ? (
           <>
             <span className="min-w-0 flex-1 truncate">{text}</span>
-            <ExternalLink
-              className="size-3 shrink-0 opacity-40 transition-opacity duration-150 group-hover:opacity-70"
+            <ArrowUpRight
+              className="size-3.5 shrink-0 opacity-50 transition-opacity duration-150 group-hover:opacity-80"
               aria-hidden
             />
           </>
@@ -447,7 +444,7 @@ function AdminMobileNavLink({
             aria-hidden
           />
           <span className="min-w-0 flex-1 truncate">{text}</span>
-          <ExternalLink
+          <ArrowUpRight
             className="size-4 shrink-0 text-muted-foreground/50"
             aria-hidden
           />
@@ -498,7 +495,17 @@ function CollapsibleNavGroup({
   collapsed?: boolean;
   onNavigate?: () => void;
 }) {
+  const location = useLocation();
   const [open, setOpen] = useState(() => readSectionOpen(storageKey));
+  const containsActive = section.items.some(
+    (item) =>
+      item.to &&
+      item.to !== '/' &&
+      (location.pathname === item.to || location.pathname.startsWith(`${item.to}/`)),
+  );
+  useEffect(() => {
+    if (containsActive) setOpen(true);
+  }, [containsActive]);
 
   useEffect(() => {
     writeSectionOpen(storageKey, open);
@@ -522,7 +529,7 @@ function CollapsibleNavGroup({
   }
 
   return (
-    <div className="mt-4 border-t border-sidebar-border pt-3">
+    <div className="mt-4">
       <NavSectionHeader
         title={section.title}
         subtitle={section.subtitle}
@@ -531,7 +538,7 @@ function CollapsibleNavGroup({
         onToggle={() => setOpen((prev) => !prev)}
       />
       {open ? (
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-0.5">
           {section.items.map((item) => (
             <AdminSidebarLink
               key={item.to ?? item.key}
@@ -602,11 +609,12 @@ function AppVersionFooter({ collapsed = false }: { collapsed?: boolean }) {
   return (
     <footer
       className={cn(
-        'shrink-0 py-2 text-center text-xs leading-none text-muted-foreground',
-        collapsed ? 'px-0.5' : 'px-2',
+        'flex shrink-0 items-center py-3 text-xs leading-none text-muted-foreground',
+        collapsed ? 'justify-center px-0.5' : 'justify-between px-4',
       )}
     >
-      {appVersionLabel}
+      <span>{appVersionLabel}</span>
+      {!collapsed ? <span>Shellui</span> : null}
     </footer>
   );
 }
@@ -1004,10 +1012,20 @@ function AdminContentMain() {
     <main
       className={cn(
         'h-full w-full min-w-0 flex-1',
-        isFullBleed ? 'overflow-hidden p-0' : 'overflow-auto px-4 py-6 md:px-6 md:py-8 lg:px-8',
+        isFullBleed ? 'overflow-hidden p-0' : 'overflow-auto px-4 py-6 md:px-10 md:py-7',
       )}
     >
-      {showIdentityMissing ? <IdentityBackendMissing /> : <Outlet />}
+      {isFullBleed ? (
+        showIdentityMissing ? (
+          <IdentityBackendMissing />
+        ) : (
+          <Outlet />
+        )
+      ) : (
+        <div className="mx-auto w-full max-w-[1120px]">
+          {showIdentityMissing ? <IdentityBackendMissing /> : <Outlet />}
+        </div>
+      )}
     </main>
   );
 }
@@ -1280,8 +1298,8 @@ export function AdminShellLayout() {
         <aside
           data-collapsed={sidebarCollapsed ? 'true' : 'false'}
           className={cn(
-            'hidden h-full min-h-0 shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-linear md:flex',
-            sidebarCollapsed ? 'w-[3.25rem]' : 'w-64',
+            'hidden h-full min-h-0 shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-soft md:flex',
+            sidebarCollapsed ? 'w-[3.25rem]' : 'w-[248px]',
           )}
         >
           <div
@@ -1319,7 +1337,7 @@ export function AdminShellLayout() {
           </div>
           <nav
             className={cn(
-              'flex min-h-0 flex-1 flex-col gap-1 overflow-auto py-3',
+              'flex min-h-0 flex-1 flex-col gap-0.5 overflow-auto py-3',
               sidebarCollapsed ? 'px-1.5' : 'px-3',
             )}
             aria-label="Admin"

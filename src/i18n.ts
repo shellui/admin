@@ -4,6 +4,15 @@ import { initReactI18next } from 'react-i18next';
 const resources = {
   en: {
     translation: {
+      uiClose: 'Close',
+      uiPagination: 'Pagination',
+      uiPaginationPrevious: 'Previous',
+      uiPaginationNext: 'Next',
+      uiPaginationPreviousLabel: 'Go to the previous page',
+      uiPaginationNextLabel: 'Go to the next page',
+      uiPaginationMore: 'More pages',
+      uiBreadcrumb: 'Breadcrumb',
+      uiBreadcrumbMore: 'More',
       standaloneTitle: 'Open this app from Shellui',
       standaloneDescription:
         'The admin UI is loaded inside the main Shell application. You opened this URL directly in a browser tab.',
@@ -1799,6 +1808,15 @@ const resources = {
   },
   fr: {
     translation: {
+      uiClose: 'Fermer',
+      uiPagination: 'Pagination',
+      uiPaginationPrevious: 'Précédent',
+      uiPaginationNext: 'Suivant',
+      uiPaginationPreviousLabel: 'Aller à la page précédente',
+      uiPaginationNextLabel: 'Aller à la page suivante',
+      uiPaginationMore: 'Plus de pages',
+      uiBreadcrumb: 'Fil d’Ariane',
+      uiBreadcrumbMore: 'Plus',
       standaloneTitle: 'Ouvrir cette application depuis Shellui',
       standaloneDescription:
         'L’interface d’administration est chargée dans l’application Shell principale. Vous avez ouvert cette URL directement dans un onglet.',
