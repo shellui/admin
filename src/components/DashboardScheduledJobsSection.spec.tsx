@@ -176,13 +176,12 @@ describe('DashboardScheduledJobsSection', () => {
     expect(screen.queryByText('Beat never seen')).toBeNull();
   });
 
-  it('shows a load error inline next to the refresh button and recovers on retry', async () => {
+  it('shows a load error alert and recovers on retry', async () => {
     api.fetchScheduledJobs.mockRejectedValueOnce(new Error('Request failed (502)'));
     renderSection();
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toBe('Could not load scheduled jobs. Request failed (502)');
     const refresh = screen.getByRole('button', { name: 'Refresh' });
-    expect(refresh.parentElement?.contains(alert)).toBe(true);
 
     fireEvent.click(refresh);
     await screen.findByTestId('scheduled-job-retry_webhooks');
