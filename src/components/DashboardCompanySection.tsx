@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Building2, Loader2, Shield, UserPlus } from 'lucide-react';
+import { AtSign, Globe, Loader2, Mail, UserPlus } from 'lucide-react';
+import shellui from '@shellui/sdk';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { SettingsSection } from '@/components/admin/SettingsSection';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import {
@@ -20,6 +24,7 @@ type Props = {
 };
 
 const ACCESS_MODES: CompanyAccessMode[] = ['public', 'domain', 'invite'];
+const MODE_ICONS = { public: Globe, domain: AtSign, invite: Mail } as const;
 
 function domainsToText(domains: string[] | undefined): string {
   return (domains ?? []).join(', ');
@@ -108,6 +113,7 @@ export function DashboardCompanySection({ accessToken }: Props) {
       setAccessMode(updated.access_mode ?? 'public');
       setDomainsText(domainsToText(updated.allowed_email_domains));
       setSaveMessage(t('dashboardCompanySaved'));
+      shellui.toast({ type: 'success', title: t('dashboardCompanySaved') });
     } catch (e) {
       setSaveMessage(null);
       setError(e instanceof Error ? e.message : t('dashboardCompanySaveError'));
@@ -116,19 +122,38 @@ export function DashboardCompanySection({ accessToken }: Props) {
     }
   }, [accessToken, accessMode, company?.id, domainsText, name, t]);
 
-  if (loading) {
-    return (
-      <section
-        className="space-y-3"
-        aria-label={t('dashboardCompanySectionLabel')}
-      >
-        <div className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
+  const saveButton = (
+    <Button
+      type="button"
+      size="sm"
+      disabled={saving || !canSave}
+      onClick={() => void handleSave()}
+    >
+      {saving ? (
+        <>
           <Loader2
             className="size-4 animate-spin"
             aria-hidden
           />
-          {t('dashboardCompanyLoading')}
-        </div>
+          {t('dashboardCompanySaving')}
+        </>
+      ) : (
+        t('dashboardCompanySave')
+      )}
+    </Button>
+  );
+
+  if (loading) {
+    return (
+      <section
+        aria-label={t('dashboardCompanySectionLabel')}
+        aria-busy
+        className="space-y-3 rounded-xl border border-border bg-card p-5"
+      >
+        <span className="sr-only">{t('dashboardCompanyLoading')}</span>
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-9 w-full" />
+        <Skeleton className="h-9 w-full" />
       </section>
     );
   }
@@ -137,172 +162,164 @@ export function DashboardCompanySection({ accessToken }: Props) {
     return (
       <section aria-label={t('dashboardCompanySectionLabel')}>
         {error ? (
-          <Text className="font-mono text-sm text-destructive">{error}</Text>
+          <Alert variant="destructive">
+            <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+              <span>{error}</span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => void load()}
+              >
+                {t('usersRetry')}
+              </Button>
+            </AlertDescription>
+          </Alert>
         ) : (
-          <Text className="font-mono text-sm text-muted-foreground">
-            {t('dashboardCompanyMissing')}
-          </Text>
+          <Text className="text-sm text-muted-foreground">{t('dashboardCompanyMissing')}</Text>
         )}
       </section>
     );
   }
 
+  const status = error ? <span className="text-destructive">{error}</span> : (saveMessage ?? null);
+
   return (
     <section
-      className="space-y-4"
+      className="space-y-8"
       aria-label={t('dashboardCompanySectionLabel')}
     >
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader>
-          <CardTitle className="font-heading flex items-center gap-2 text-lg">
-            <Building2
-              className="size-4 text-muted-foreground"
-              aria-hidden
-            />
-            {t('dashboardCompanyTitle')}
-          </CardTitle>
-          <CardDescription className="font-mono text-xs">
-            {t('dashboardCompanyDescription')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <label
-              htmlFor="dashboard-company-name"
-              className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground"
-            >
-              {t('dashboardCompanyNameLabel')}
-            </label>
-            <Input
-              id="dashboard-company-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="font-mono text-sm"
-              autoComplete="organization"
-            />
-          </div>
-          <p className="font-mono text-[10px] text-muted-foreground">
-            <span className="text-muted-foreground/80">{t('dashboardCompanySlugLabel')}: </span>
-            {company.slug}
-          </p>
-        </CardContent>
-      </Card>
+      <SettingsSection
+        id="company-profile"
+        title={t('dashboardCompanyTitle')}
+        description={t('dashboardCompanyDescription')}
+        footerNote={<span className="font-mono">PATCH /api/v1/companies/{company.id}/</span>}
+        footerAction={saveButton}
+      >
+        <div className="space-y-2">
+          <label
+            htmlFor="dashboard-company-name"
+            className="text-sm font-medium"
+          >
+            {t('dashboardCompanyNameLabel')}
+          </label>
+          <Input
+            id="dashboard-company-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete="organization"
+          />
+        </div>
+        <div className="space-y-2">
+          <label
+            htmlFor="dashboard-company-slug"
+            className="text-sm font-medium"
+          >
+            {t('dashboardCompanySlugLabel')}
+          </label>
+          <Input
+            id="dashboard-company-slug"
+            value={company.slug}
+            readOnly
+            aria-readonly
+            className="bg-muted font-mono"
+          />
+        </div>
+      </SettingsSection>
 
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader>
-          <CardTitle className="font-heading flex items-center gap-2 text-lg">
-            <Shield
-              className="size-4 text-muted-foreground"
-              aria-hidden
-            />
-            {t('dashboardCompanyAccessTitle')}
-          </CardTitle>
-          <CardDescription className="font-mono text-xs">
-            {t('dashboardCompanyAccessDescription')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <fieldset className="space-y-3">
-            <legend className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-              {t('dashboardCompanyAccessModeLabel')}
-            </legend>
-            {ACCESS_MODES.map((mode) => (
-              <label
-                key={mode}
-                className="flex cursor-pointer items-start gap-3 rounded-md border border-border/70 px-3 py-2 hover:bg-muted/30"
-              >
-                <input
-                  type="radio"
-                  name="company-access-mode"
-                  className="mt-1"
-                  checked={accessMode === mode}
-                  onChange={() => setAccessMode(mode)}
-                />
-                <span className="min-w-0 space-y-0.5">
-                  <span className="block text-sm font-medium">
-                    {t(`dashboardCompanyAccessMode_${mode}`)}
+      <SettingsSection
+        id="company-access"
+        title={t('dashboardCompanyAccessTitle')}
+        description={t('dashboardCompanyAccessDescription')}
+        footerNote={status}
+        footerAction={saveButton}
+      >
+        <fieldset className="space-y-2">
+          <legend className="mb-2 text-sm font-medium">
+            {t('dashboardCompanyAccessModeLabel')}
+          </legend>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {ACCESS_MODES.map((mode) => {
+              const Icon = MODE_ICONS[mode];
+              const checked = accessMode === mode;
+              return (
+                <label
+                  key={mode}
+                  className={cn(
+                    'flex cursor-pointer flex-col gap-1 rounded-lg border border-border p-3 transition-colors hover:bg-muted/40 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring',
+                    checked && 'border-primary bg-primary/10',
+                  )}
+                >
+                  <span className="flex items-center gap-2 text-sm font-medium">
+                    <Icon
+                      className="size-4"
+                      aria-hidden
+                    />
+                    <span className="flex-1">{t(`dashboardCompanyAccessMode_${mode}`)}</span>
+                    <input
+                      type="radio"
+                      name="company-access-mode"
+                      className="accent-[var(--primary)]"
+                      checked={checked}
+                      onChange={() => setAccessMode(mode)}
+                    />
                   </span>
-                  <span className="block font-mono text-[11px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     {t(`dashboardCompanyAccessModeHint_${mode}`)}
                   </span>
-                </span>
-              </label>
-            ))}
-          </fieldset>
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
 
-          {accessMode === 'domain' ? (
-            <div className="space-y-2">
-              <label
-                htmlFor="dashboard-company-domains"
-                className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground"
-              >
-                {t('dashboardCompanyDomainsLabel')}
-              </label>
-              <Input
-                id="dashboard-company-domains"
-                value={domainsText}
-                onChange={(e) => setDomainsText(e.target.value)}
-                className="font-mono text-sm"
-                placeholder={t('dashboardCompanyDomainsPlaceholder')}
-                autoComplete="off"
+        {accessMode === 'domain' ? (
+          <div className="space-y-2">
+            <label
+              htmlFor="dashboard-company-domains"
+              className="text-sm font-medium"
+            >
+              {t('dashboardCompanyDomainsLabel')}
+            </label>
+            <Input
+              id="dashboard-company-domains"
+              value={domainsText}
+              onChange={(e) => setDomainsText(e.target.value)}
+              className="font-mono"
+              placeholder={t('dashboardCompanyDomainsPlaceholder')}
+              autoComplete="off"
+            />
+            <p className="text-xs text-muted-foreground">{t('dashboardCompanyDomainsHint')}</p>
+          </div>
+        ) : null}
+
+        {accessMode === 'invite' ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3 py-3">
+            <p className="min-w-0 flex-1 text-sm text-muted-foreground">
+              {t('dashboardCompanyInviteHint')}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <PendingInvitationsButton
+                accessToken={accessToken}
+                size="sm"
               />
-              <p className="font-mono text-[10px] text-muted-foreground">
-                {t('dashboardCompanyDomainsHint')}
-              </p>
-            </div>
-          ) : null}
-
-          {accessMode === 'invite' ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border/70 bg-muted/20 px-3 py-3">
-              <p className="min-w-0 flex-1 text-sm text-muted-foreground">
-                {t('dashboardCompanyInviteHint')}
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <PendingInvitationsButton
-                  accessToken={accessToken}
-                  size="sm"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={openInviteUserModal}
-                  className="inline-flex shrink-0 items-center gap-2"
-                >
-                  <UserPlus
-                    className="size-4"
-                    aria-hidden
-                  />
-                  {t('inviteAction')}
-                </Button>
-              </div>
-            </div>
-          ) : null}
-
-          {error ? <Text className="font-mono text-sm text-destructive">{error}</Text> : null}
-          {saveMessage ? (
-            <Text className="font-mono text-sm text-muted-foreground">{saveMessage}</Text>
-          ) : null}
-          <Button
-            type="button"
-            size="sm"
-            disabled={saving || !canSave}
-            onClick={() => void handleSave()}
-          >
-            {saving ? (
-              <>
-                <Loader2
-                  className="size-4 animate-spin"
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={openInviteUserModal}
+                className="inline-flex shrink-0 items-center gap-2"
+              >
+                <UserPlus
+                  className="size-4"
                   aria-hidden
                 />
-                {t('dashboardCompanySaving')}
-              </>
-            ) : (
-              t('dashboardCompanySave')
-            )}
-          </Button>
-        </CardContent>
-      </Card>
+                {t('inviteAction')}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </SettingsSection>
     </section>
   );
 }

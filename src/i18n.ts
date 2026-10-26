@@ -530,18 +530,17 @@ const resources = {
       actionsAttemptTrigger_dispatch: 'First try',
       actionsAttemptTrigger_automatic_retry: 'Automatic retry',
       actionsAttemptScheduledRun: 'Scheduled job run #{{id}}',
-      companyPageTitle: 'Organization',
+      companyPageTitle: 'Company',
       companyPageDescription:
         'Company owners edit the record and how people join. Owners and staff set desktop sign-in schemes.',
       companyPageForbidden:
         'You need to be a company owner to change these settings. Ask an owner to grant access, or use the Dashboard if you have staff privileges.',
       dashboardCompanySectionLabel: 'Company settings',
-      dashboardCompanyTitle: 'Organization',
-      dashboardCompanyDescription:
-        'Update your company record and how new users join this tenant (API: PATCH /api/v1/companies/…).',
+      dashboardCompanyTitle: 'Profile',
+      dashboardCompanyDescription: 'The name and slug of this company record.',
       dashboardCompanyNameLabel: 'Company name',
       dashboardCompanySlugLabel: 'Slug',
-      dashboardCompanyAccessTitle: 'Company access',
+      dashboardCompanyAccessTitle: 'Who can join',
       dashboardCompanyAccessDescription:
         'Choose how OAuth sign-ins grant access. Public is open; domain allow-lists matching emails; invitation-only waits for an admin to enable the account.',
       dashboardCompanyAccessModeLabel: 'Join mode',
@@ -955,7 +954,7 @@ const resources = {
       scimSecretCopy: 'Copy token',
       scimSecretCopied: 'Copied',
       scimSecretCopyError: 'Could not copy automatically. Copy the token manually.',
-      authMethodsTitle: 'Authentication methods',
+      authMethodsTitle: 'Sign-in methods',
       authMethodsDescription:
         'Control how members sign in. Magic link requires the global kill switch to stay on.',
       authMethodsLoading: 'Loading auth methods…',
@@ -2359,18 +2358,17 @@ const resources = {
       actionsAttemptTrigger_dispatch: 'Premier essai',
       actionsAttemptTrigger_automatic_retry: 'Relance automatique',
       actionsAttemptScheduledRun: 'Exécution de tâche planifiée n° {{id}}',
-      companyPageTitle: 'Organisation',
+      companyPageTitle: 'Entreprise',
       companyPageDescription:
         'Les propriétaires modifient la fiche et les règles d’accès. Les propriétaires et le staff définissent les schémas de connexion bureau.',
       companyPageForbidden:
         'Il faut être propriétaire de l’entreprise pour modifier ces paramètres. Demandez à un propriétaire, ou utilisez le tableau de bord si vous avez le statut staff.',
       dashboardCompanySectionLabel: 'Paramètres entreprise',
-      dashboardCompanyTitle: 'Organisation',
-      dashboardCompanyDescription:
-        'Mettez à jour la fiche entreprise et les règles d’accès des nouveaux utilisateurs (API : PATCH /api/v1/companies/…).',
+      dashboardCompanyTitle: 'Profil',
+      dashboardCompanyDescription: 'Le nom et le slug de cette entreprise.',
       dashboardCompanyNameLabel: 'Nom de l’entreprise',
       dashboardCompanySlugLabel: 'Identifiant (slug)',
-      dashboardCompanyAccessTitle: 'Accès entreprise',
+      dashboardCompanyAccessTitle: 'Qui peut rejoindre',
       dashboardCompanyAccessDescription:
         'Choisissez comment les connexions OAuth accordent l’accès. Public est ouvert ; le domaine autorise les e-mails correspondants ; invitation seule attend qu’un admin active le compte.',
       dashboardCompanyAccessModeLabel: 'Mode d’adhésion',
@@ -2797,7 +2795,7 @@ const resources = {
       scimSecretCopy: 'Copier le jeton',
       scimSecretCopied: 'Copié',
       scimSecretCopyError: 'Copie automatique impossible. Copiez le jeton manuellement.',
-      authMethodsTitle: 'Méthodes d’authentification',
+      authMethodsTitle: 'Méthodes de connexion',
       authMethodsDescription:
         'Contrôlez comment les membres se connectent. Le lien magique exige que l’interrupteur global reste activé.',
       authMethodsLoading: 'Chargement des méthodes…',

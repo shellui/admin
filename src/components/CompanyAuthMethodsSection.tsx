@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KeyRound, Loader2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { SettingsSection } from '@/components/admin/SettingsSection';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import { Text } from '@/components/ui/text';
 import {
   ApiUnavailableNotice,
@@ -65,99 +65,73 @@ export function CompanyAuthMethodsSection({ accessToken }: Props) {
   if (companyId == null) return null;
 
   return (
-    <Card className="border-border/80 shadow-sm">
-      <CardHeader>
-        <CardTitle className="font-heading flex items-center gap-2 text-lg">
-          <KeyRound
-            className="size-4 text-muted-foreground"
-            aria-hidden
-          />
-          {t('authMethodsTitle')}
-        </CardTitle>
-        <CardDescription className="font-mono text-xs">
-          {t('authMethodsDescription')}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {loading ? (
-          <div className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
-            <Loader2
-              className="size-4 animate-spin"
-              aria-hidden
-            />
-            {t('authMethodsLoading')}
-          </div>
-        ) : null}
+    <SettingsSection
+      id="company-auth-methods"
+      title={t('authMethodsTitle')}
+      description={t('authMethodsDescription')}
+      busy={loading}
+    >
+      {loading ? (
+        <div className="space-y-2">
+          <span className="sr-only">{t('authMethodsLoading')}</span>
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-3 w-72" />
+        </div>
+      ) : null}
 
-        {error && isApiUnavailableError(error) ? (
-          <ApiUnavailableNotice
-            error={error}
-            t={t}
-          />
-        ) : null}
-        {error && !isApiUnavailableError(error) ? (
-          <Text className="font-mono text-sm text-destructive">
-            {error instanceof Error ? error.message : t('authMethodsLoadError')}
-          </Text>
-        ) : null}
+      {error && isApiUnavailableError(error) ? (
+        <ApiUnavailableNotice
+          error={error}
+          t={t}
+        />
+      ) : null}
+      {error && !isApiUnavailableError(error) ? (
+        <Text className="text-sm text-destructive">
+          {error instanceof Error ? error.message : t('authMethodsLoadError')}
+        </Text>
+      ) : null}
 
-        {!loading && data ? (
-          <>
+      {!loading && data ? (
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={data.magic_link_globally_enabled ? 'secondary' : 'outline'}>
+              <label
+                htmlFor="company-magic-link"
+                className="text-sm font-medium"
+              >
+                {t('authMethodsMagicLinkLabel')}
+              </label>
+              <StatusBadge tone={data.magic_link_effective ? 'success' : 'muted'}>
+                {t('authMethodsEffective')}:{' '}
+                {data.magic_link_effective
+                  ? t('authMethodsEffectiveOn')
+                  : t('authMethodsEffectiveOff')}
+              </StatusBadge>
+              <StatusBadge tone={data.magic_link_globally_enabled ? 'info' : 'warning'}>
                 {data.magic_link_globally_enabled
                   ? t('authMethodsGlobalOn')
                   : t('authMethodsGlobalOff')}
-              </Badge>
-              <span className="font-mono text-[10px] text-muted-foreground">
-                {t('authMethodsGlobalHint')}
-              </span>
+              </StatusBadge>
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-3">
-              <div className="space-y-1">
-                <p className="text-sm font-medium">{t('authMethodsMagicLinkLabel')}</p>
-                <p className="font-mono text-[11px] text-muted-foreground">
-                  {t('authMethodsMagicLinkHint')}
-                </p>
-                <p className="font-mono text-[10px] text-muted-foreground">
-                  {t('authMethodsEffective')}:{' '}
-                  <span className="font-semibold">
-                    {data.magic_link_effective
-                      ? t('authMethodsEffectiveOn')
-                      : t('authMethodsEffectiveOff')}
-                  </span>
-                </p>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                variant={data.enable_magic_link ? 'secondary' : 'default'}
-                disabled={saving || !data.magic_link_globally_enabled}
-                onClick={() => void toggleMagicLink()}
-              >
-                {saving ? (
-                  <>
-                    <Loader2
-                      className="size-4 animate-spin"
-                      aria-hidden
-                    />
-                    {t('authMethodsSaving')}
-                  </>
-                ) : data.enable_magic_link ? (
-                  t('authMethodsDisableMagicLink')
-                ) : (
-                  t('authMethodsEnableMagicLink')
-                )}
-              </Button>
-            </div>
+            <p className="text-xs text-muted-foreground">{t('authMethodsMagicLinkHint')}</p>
+            <p className="text-xs text-muted-foreground">{t('authMethodsGlobalHint')}</p>
             {!data.magic_link_globally_enabled ? (
-              <Text className="font-mono text-[10px] text-muted-foreground">
-                {t('authMethodsGlobalKillSwitch')}
-              </Text>
+              <p className="text-xs text-muted-foreground">{t('authMethodsGlobalKillSwitch')}</p>
             ) : null}
-          </>
-        ) : null}
-      </CardContent>
-    </Card>
+          </div>
+          <Switch
+            id="company-magic-link"
+            checked={data.enable_magic_link}
+            disabled={saving || !data.magic_link_globally_enabled}
+            aria-label={
+              data.enable_magic_link
+                ? t('authMethodsDisableMagicLink')
+                : t('authMethodsEnableMagicLink')
+            }
+            onCheckedChange={() => void toggleMagicLink()}
+          />
+        </div>
+      ) : null}
+    </SettingsSection>
   );
 }
