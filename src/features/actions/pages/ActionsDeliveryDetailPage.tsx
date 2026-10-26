@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { StatusBadge, type StatusTone } from '@/components/admin/StatusBadge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Text } from '@/components/ui/text';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
-import { cn } from '@/lib/utils';
 import { ActionsSubNav } from '@/features/actions/components/ActionsSubNav';
 import {
   ApiUnavailableNotice,
@@ -18,19 +18,28 @@ import { useActionsApi } from '@/features/actions/useActionsApi';
 import { WebhookServiceUnavailable } from '@/features/actions/components/WebhookServiceUnavailable';
 import { useWebhookPageMeta } from '@/features/actions/useWebhookPageMeta';
 import type { ActionDeliveryDetail } from '@/features/actions/types';
-import { webhookDeliveriesPath } from '@/lib/webhookRoutePaths';
+import { webhookDeliveriesPath, webhookRuleEditPath } from '@/lib/webhookRoutePaths';
 import {
   ActionFeedback,
   feedbackFromThrown,
   type ActionFeedbackState,
 } from '@/features/email/components/ActionFeedback';
 
-function statusClassName(status: string) {
+function statusTone(status: string): StatusTone {
   const s = status.toLowerCase();
-  if (s === 'success') return 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200';
-  if (s === 'pending' || s === 'processing') return 'bg-sky-500/15 text-sky-900 dark:text-sky-100';
-  if (s === 'failed' || s === 'dead') return 'bg-destructive/15 text-destructive';
-  return 'bg-muted text-muted-foreground';
+  if (s === 'success') return 'success';
+  if (s === 'pending' || s === 'processing') return 'info';
+  if (s === 'failed' || s === 'dead') return 'destructive';
+  return 'muted';
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0 space-y-1">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="text-sm">{children}</dd>
+    </div>
+  );
 }
 
 export function ActionsDeliveryDetailPage() {
@@ -102,41 +111,41 @@ export function ActionsDeliveryDetailPage() {
 
   return (
     <div className="w-full space-y-6">
-      <header className="space-y-1">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            {t('actionsDeliveryDetailTitle', { id: id || '—' })}
-          </h1>
-          <Badge
-            variant="secondary"
-            className="font-mono text-[10px] uppercase"
-          >
-            {t(service.badgeKey)}
-          </Badge>
-        </div>
-        <Text className="max-w-3xl text-sm text-muted-foreground">
-          {t('actionsDeliveryDetailDescription')}
-        </Text>
-      </header>
+      <PageHeader
+        back={{ to: webhookDeliveriesPath(service.key), label: t('actionsBackToDeliveries') }}
+        title={t('actionsDeliveryDetailTitle', { id: id || '-' })}
+        service={t(service.badgeKey)}
+        description={t('actionsDeliveryDetailDescription')}
+        actions={
+          detail ? (
+            <div className="flex flex-col items-end gap-2">
+              <Button
+                type="button"
+                size="sm"
+                disabled={requeueBusy}
+                onClick={() => void onRequeue()}
+              >
+                {requeueBusy ? t('actionsRequeueLoading') : t('actionsRequeue')}
+              </Button>
+              <ActionFeedback feedback={requeueFeedback} />
+            </div>
+          ) : undefined
+        }
+      />
 
       <ActionsSubNav />
 
       {!serviceConfigured ? <WebhookServiceUnavailable serviceKey={service.key} /> : null}
 
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        asChild
-      >
-        <Link to={webhookDeliveriesPath(service.key)}>{t('actionsBackToDeliveries')}</Link>
-      </Button>
-
       {!accessToken && (
-        <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
+        <Alert variant="info">
+          <AlertDescription>{t('dashboardNoSession')}</AlertDescription>
+        </Alert>
       )}
       {accessToken && !isOwner && (
-        <Text className="font-mono text-sm text-muted-foreground">{t('actionsPageForbidden')}</Text>
+        <Alert variant="warning">
+          <AlertDescription>{t('actionsPageForbidden')}</AlertDescription>
+        </Alert>
       )}
 
       {error && isApiUnavailableError(error) ? (
@@ -146,127 +155,128 @@ export function ActionsDeliveryDetailPage() {
         />
       ) : null}
       {error && !isApiUnavailableError(error) ? (
-        <Text className="font-mono text-sm text-destructive">
-          {error instanceof Error ? error.message : t('actionsLoadError')}
-        </Text>
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>{error instanceof Error ? error.message : t('actionsLoadError')}</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void load()}
+            >
+              {t('usersRetry')}
+            </Button>
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       {loading ? (
-        <div className="flex items-center gap-2 py-8 text-muted-foreground">
-          <Loader2
-            className="size-5 animate-spin"
-            aria-hidden
-          />
-          <span className="text-sm">{t('actionsLoading')}</span>
+        <div
+          className="space-y-4"
+          aria-busy="true"
+          aria-label={t('actionsLoading')}
+        >
+          <Skeleton className="h-40 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
         </div>
       ) : null}
 
       {detail ? (
         <div className="space-y-6">
-          <Card className="border-border/80 shadow-sm">
-            <CardHeader>
-              <CardTitle className="font-heading text-lg">
+          <Card className="rounded-xl shadow-sm">
+            <CardHeader className="border-b border-border pb-4">
+              <CardTitle className="text-sm font-semibold">
                 {t('actionsDeliverySummaryTitle')}
               </CardTitle>
-              <CardDescription className="font-mono text-xs">
+              <CardDescription className="text-xs">
                 {t('actionsDeliverySummaryDescription')}
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-3 font-mono text-xs sm:grid-cols-2">
-              <p>
-                {t('actionsColStatus')}:{' '}
-                <span
-                  className={cn(
-                    'rounded px-1.5 py-0.5 font-medium',
-                    statusClassName(detail.status),
+            <CardContent className="pt-4">
+              <dl className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+                <Field label={t('actionsColStatus')}>
+                  <StatusBadge tone={statusTone(detail.status)}>{detail.status}</StatusBadge>
+                </Field>
+                <Field label={t('actionsColEvent')}>
+                  <span className="font-mono text-xs">{detail.event}</span>
+                </Field>
+                <Field label={t('actionsColRule')}>
+                  {detail.rule_id != null && detail.rule_id !== '' ? (
+                    <Link
+                      to={webhookRuleEditPath(service.key, detail.rule_id)}
+                      className="text-primary underline-offset-4 hover:underline"
+                    >
+                      {detail.rule_name || detail.rule_id}
+                    </Link>
+                  ) : (
+                    detail.rule_name || '-'
                   )}
-                >
-                  {detail.status}
-                </span>
-              </p>
-              <p>
-                {t('actionsColEvent')}: {detail.event}
-              </p>
-              <p>
-                {t('actionsColRule')}: {detail.rule_name || detail.rule_id}
-              </p>
-              <p>
-                {t('actionsColAttempts')}: {detail.attempts_count}
-              </p>
-              <p>
-                {t('actionsColCreated')}: {formatDate(detail.created_at)}
-              </p>
-              <p>
-                {t('actionsColUpdated')}: {formatDate(detail.updated_at)}
-              </p>
+                </Field>
+                <Field label={t('actionsColAttempts')}>
+                  <span className="tabular-nums">{detail.attempts_count}</span>
+                </Field>
+                <Field label={t('actionsColCreated')}>{formatDate(detail.created_at)}</Field>
+                <Field label={t('actionsColUpdated')}>{formatDate(detail.updated_at)}</Field>
+              </dl>
               {detail.last_error ? (
-                <p className="sm:col-span-2 text-destructive">
-                  {t('actionsColLastError')}: {detail.last_error}
-                </p>
+                <div className="mt-4 space-y-1">
+                  <p className="text-xs text-muted-foreground">{t('actionsColLastError')}</p>
+                  <pre className="overflow-auto whitespace-pre-wrap rounded-md border border-border bg-muted/40 p-3 font-mono text-xs text-destructive">
+                    {detail.last_error}
+                  </pre>
+                </div>
               ) : null}
             </CardContent>
           </Card>
 
-          <div className="space-y-2">
-            <Button
-              type="button"
-              size="sm"
-              disabled={requeueBusy}
-              onClick={() => void onRequeue()}
-            >
-              {requeueBusy ? t('actionsRequeueLoading') : t('actionsRequeue')}
-            </Button>
-            <ActionFeedback feedback={requeueFeedback} />
-          </div>
-
-          <Card className="border-border/80 shadow-sm">
-            <CardHeader>
-              <CardTitle className="font-heading text-lg">{t('actionsAttemptsTitle')}</CardTitle>
-              <CardDescription className="font-mono text-xs">
+          <Card className="rounded-xl shadow-sm">
+            <CardHeader className="border-b border-border pb-4">
+              <CardTitle className="text-sm font-semibold">{t('actionsAttemptsTitle')}</CardTitle>
+              <CardDescription className="text-xs">
                 {t('actionsAttemptsDescription')}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-4">
               {detail.attempts.length === 0 ? (
-                <Text className="font-mono text-sm text-muted-foreground">
-                  {t('actionsAttemptsEmpty')}
-                </Text>
+                <p className="text-sm text-muted-foreground">{t('actionsAttemptsEmpty')}</p>
               ) : (
-                <ol className="relative space-y-4 border-l border-border pl-4">
+                <ol className="relative space-y-4 border-l border-border pl-5">
                   {detail.attempts.map((attempt) => (
                     <li
                       key={attempt.id}
-                      className="space-y-1"
+                      className="relative space-y-1"
                     >
-                      <p className="font-mono text-xs text-muted-foreground">
-                        {formatDate(attempt.created_at)}
-                      </p>
-                      <p className="font-mono text-xs">
-                        <span
-                          className={cn('rounded px-1.5 py-0.5', statusClassName(attempt.status))}
-                        >
+                      <span
+                        className="absolute -left-[1.6rem] top-1.5 size-2.5 rounded-full border-2 border-background bg-border"
+                        aria-hidden
+                      />
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <StatusBadge tone={statusTone(attempt.status)}>
                           {attempt.status}
-                        </span>
+                        </StatusBadge>
                         {attempt.response_status != null ? (
-                          <span className="ml-2 text-muted-foreground">
+                          <span className="font-mono text-muted-foreground">
                             HTTP {attempt.response_status}
                           </span>
                         ) : null}
                         {attempt.trigger ? (
-                          <span className="ml-2 text-muted-foreground">
+                          <span className="text-muted-foreground">
                             {t(`actionsAttemptTrigger_${attempt.trigger}`, {
                               defaultValue: attempt.trigger,
                             })}
                           </span>
                         ) : null}
                         {attempt.scheduled_job_run_id != null ? (
-                          <span className="ml-2 text-muted-foreground">
+                          <span className="text-muted-foreground">
                             {t('actionsAttemptScheduledRun', { id: attempt.scheduled_job_run_id })}
                           </span>
                         ) : null}
-                      </p>
+                        <span className="text-muted-foreground">
+                          {formatDate(attempt.created_at)}
+                        </span>
+                      </div>
                       {attempt.error ? (
-                        <p className="font-mono text-[11px] text-destructive">{attempt.error}</p>
+                        <p className="font-mono text-xs text-destructive">{attempt.error}</p>
                       ) : null}
                     </li>
                   ))}
@@ -276,12 +286,12 @@ export function ActionsDeliveryDetailPage() {
           </Card>
 
           {detail.payload != null ? (
-            <Card className="border-border/80 shadow-sm">
-              <CardHeader>
-                <CardTitle className="font-heading text-lg">{t('actionsPayloadTitle')}</CardTitle>
+            <Card className="rounded-xl shadow-sm">
+              <CardHeader className="border-b border-border pb-4">
+                <CardTitle className="text-sm font-semibold">{t('actionsPayloadTitle')}</CardTitle>
               </CardHeader>
-              <CardContent>
-                <pre className="max-h-80 overflow-auto rounded-md bg-muted/40 p-3 font-mono text-[11px]">
+              <CardContent className="pt-4">
+                <pre className="max-h-80 overflow-auto rounded-md border border-border bg-muted/40 p-3 font-mono text-xs">
                   {JSON.stringify(detail.payload, null, 2)}
                 </pre>
               </CardContent>
