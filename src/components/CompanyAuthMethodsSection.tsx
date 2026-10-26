@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Loader2, TriangleAlert } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SettingsSection } from '@/components/admin/SettingsSection';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
-import { Text } from '@/components/ui/text';
 import {
   ApiUnavailableNotice,
   isApiUnavailableError,
@@ -86,9 +87,12 @@ export function CompanyAuthMethodsSection({ accessToken }: Props) {
         />
       ) : null}
       {error && !isApiUnavailableError(error) ? (
-        <Text className="text-sm text-destructive">
-          {error instanceof Error ? error.message : t('authMethodsLoadError')}
-        </Text>
+        <Alert variant="destructive">
+          <TriangleAlert aria-hidden />
+          <AlertDescription>
+            {error instanceof Error ? error.message : t('authMethodsLoadError')}
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       {!loading && data ? (
@@ -116,7 +120,13 @@ export function CompanyAuthMethodsSection({ accessToken }: Props) {
             <p className="text-xs text-muted-foreground">{t('authMethodsMagicLinkHint')}</p>
             <p className="text-xs text-muted-foreground">{t('authMethodsGlobalHint')}</p>
             {!data.magic_link_globally_enabled ? (
-              <p className="text-xs text-muted-foreground">{t('authMethodsGlobalKillSwitch')}</p>
+              <Alert
+                variant="destructive"
+                className="mt-2"
+              >
+                <TriangleAlert aria-hidden />
+                <AlertDescription>{t('authMethodsGlobalKillSwitch')}</AlertDescription>
+              </Alert>
             ) : null}
           </div>
           <Switch
@@ -131,6 +141,18 @@ export function CompanyAuthMethodsSection({ accessToken }: Props) {
             onCheckedChange={() => void toggleMagicLink()}
           />
         </div>
+      ) : null}
+      {data && saving ? (
+        <p
+          className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"
+          role="status"
+        >
+          <Loader2
+            className="size-3.5 animate-spin motion-reduce:animate-none"
+            aria-hidden
+          />
+          {t('authMethodsSaving')}
+        </p>
       ) : null}
     </SettingsSection>
   );

@@ -42,7 +42,7 @@ import shellui from '@shellui/sdk';
 import { confirmAction } from '@/lib/confirmAction';
 
 function formatDate(value: string | null, locale: string): string {
-  if (!value) return '—';
+  if (!value) return '-';
   try {
     return new Date(value).toLocaleString(locale);
   } catch {

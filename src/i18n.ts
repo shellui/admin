@@ -408,14 +408,14 @@ const resources = {
         'Users with last_seen_at in the current calendar month (timezone-aware, typically UTC).',
       dashboardExpositionTitle: 'Prometheus snapshot',
       dashboardExpositionDescription:
-        'Raw text/plain exposition. Collapsed by default — pick an endpoint when you need the scrape payload.',
+        'Raw text/plain exposition. Collapsed by default - pick an endpoint when you need the scrape payload.',
       dashboardExpositionSourceLabel: 'Endpoint',
-      dashboardExpositionSourceIdentity: 'Identity — GET /api/v1/metrics',
-      dashboardExpositionSourceStorage: 'Storage — GET /storage/v1/metrics',
-      dashboardExpositionSourceHosting: 'Hosting — GET /hosting/v1/metrics',
+      dashboardExpositionSourceIdentity: 'Identity - GET /api/v1/metrics',
+      dashboardExpositionSourceStorage: 'Storage - GET /storage/v1/metrics',
+      dashboardExpositionSourceHosting: 'Hosting - GET /hosting/v1/metrics',
       dashboardMetricsEndpointLink: 'Open metrics endpoint',
       dashboardMetricsEndpointHint:
-        'This URL expects an Authorization: Bearer header. A new tab may show 401 — copy the link for curl, Prometheus, or Grafana.',
+        'This URL expects an Authorization: Bearer header. A new tab may show 401 - copy the link for curl, Prometheus, or Grafana.',
       dashboardLoading: 'Loading metrics…',
       dashboardError: 'Could not load metrics.',
       dashboardForbidden:
@@ -2303,14 +2303,14 @@ const resources = {
         'Utilisateurs avec last_seen_at dans le mois civil courant (fuseau horaire du serveur, souvent UTC).',
       dashboardExpositionTitle: 'Instantané Prometheus',
       dashboardExpositionDescription:
-        'Exposition brute text/plain. Repliée par défaut — choisissez un point d’accès si vous avez besoin du payload de scrape.',
+        'Exposition brute text/plain. Repliée par défaut - choisissez un point d’accès si vous avez besoin du payload de scrape.',
       dashboardExpositionSourceLabel: 'Point d’accès',
-      dashboardExpositionSourceIdentity: 'Identité — GET /api/v1/metrics',
-      dashboardExpositionSourceStorage: 'Stockage — GET /storage/v1/metrics',
-      dashboardExpositionSourceHosting: 'Hébergement — GET /hosting/v1/metrics',
+      dashboardExpositionSourceIdentity: 'Identité - GET /api/v1/metrics',
+      dashboardExpositionSourceStorage: 'Stockage - GET /storage/v1/metrics',
+      dashboardExpositionSourceHosting: 'Hébergement - GET /hosting/v1/metrics',
       dashboardMetricsEndpointLink: 'Ouvrir le point métriques',
       dashboardMetricsEndpointHint:
-        'Cette URL attend un en-tête Authorization: Bearer. Un nouvel onglet peut afficher 401 — copiez le lien pour curl, Prometheus ou Grafana.',
+        'Cette URL attend un en-tête Authorization: Bearer. Un nouvel onglet peut afficher 401 - copiez le lien pour curl, Prometheus ou Grafana.',
       dashboardLoading: 'Chargement des métriques…',
       dashboardError: 'Impossible de charger les métriques.',
       dashboardForbidden:
