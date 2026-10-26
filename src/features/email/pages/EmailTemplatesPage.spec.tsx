@@ -12,6 +12,9 @@ const api = vi.hoisted(() => ({
   deleteLibraryTemplate: vi.fn(),
 }));
 
+const confirm = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/shelluiConfirm', () => ({ askShelluiConfirm: confirm }));
+
 vi.mock('@/hooks/useShelluiAccessToken', () => ({
   useShelluiAccessToken: () => 'token',
 }));
@@ -130,13 +133,12 @@ describe('EmailTemplatesPage', () => {
   it('deletes a company template after confirmation and filters by search', async () => {
     api.fetchLibrary.mockResolvedValue(library);
     api.deleteLibraryTemplate.mockResolvedValue(undefined);
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    confirm.mockResolvedValue(true);
     renderPage();
     await screen.findByText('Acme welcome');
     fireEvent.click(within(card('Acme welcome')).getByRole('button', { name: 'Delete' }));
     await waitFor(() => expect(api.deleteLibraryTemplate).toHaveBeenCalledWith(9));
     await waitFor(() => expect(screen.queryByText('Acme welcome')).toBeNull());
-    confirm.mockRestore();
 
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search templates' }), {
       target: { value: 'reset' },

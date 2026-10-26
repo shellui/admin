@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
-import { Loader2, Plus } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Loader2, Plus, SearchX } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { PageHeader } from '@/components/admin/PageHeader';
 import { Button } from '@/components/ui/button';
-import { Text } from '@/components/ui/text';
 import {
   ActionFeedback,
   feedbackFromError,
@@ -14,7 +16,7 @@ import { EmailLibraryGrid } from '@/features/email/components/EmailLibraryGrid';
 import { SearchField } from '@/features/email/components/SearchField';
 import { useEmailApi } from '@/features/email/useEmailApi';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
-import { confirmAction } from '@/lib/confirmAction';
+import { askShelluiConfirm } from '@/lib/shelluiConfirm';
 import { emailErrorText } from '@/lib/emailApiErrors';
 import { emailAssetsUrl } from '@/lib/emailLibrary';
 import { filterByQuery } from '@/lib/emailList';
@@ -85,12 +87,12 @@ export function EmailTemplatesPage() {
 
   async function remove(template: EmailLibraryTemplate) {
     if (!api) return;
-    const ok = await confirmAction({
+    const ok = await askShelluiConfirm({
       title: t('emailLibraryDeleteTitle'),
       description: t('emailLibraryDeleteDescription', { name: template.name }),
       okLabel: t('emailLibraryDelete'),
       cancelLabel: t('actionsCancel'),
-      danger: true,
+      mode: 'delete',
     });
     if (!ok) return;
     setBusyId(template.id);
@@ -108,59 +110,87 @@ export function EmailTemplatesPage() {
     }
   }
 
+  const ready = !loading && canManage && visible && !error;
   return (
     <div className="w-full space-y-6">
-      <header className="space-y-1">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            {t('emailTemplatesTitle')}
-          </h1>
-          <Badge
-            variant="secondary"
-            className="font-mono text-[10px] uppercase"
-          >
-            email-service
-          </Badge>
-        </div>
-        <Text className="max-w-3xl">{t('emailTemplatesDescription')}</Text>
-        <Text className="font-mono text-xs text-muted-foreground">{baseUrl}</Text>
-      </header>
-
-      {!accessToken ? <Text>{t('dashboardNoSession')}</Text> : null}
-      {accessToken && !canManage ? <Text>{t('emailForbidden')}</Text> : null}
-      {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          {t('emailLoading')}
-        </div>
-      ) : null}
-      {error ? (
-        <Text className="font-mono text-sm text-destructive">{emailErrorText(t, error)}</Text>
-      ) : null}
-
-      {!loading && canManage && visible && !error ? (
-        <>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <SearchField
-                value={query}
-                onChange={setQuery}
-                placeholder={t('emailTemplatesSearch')}
-                label={t('emailTemplatesSearch')}
-              />
-            </div>
+      <PageHeader
+        title={t('emailTemplatesTitle')}
+        service="email-service"
+        description={t('emailTemplatesDescription')}
+        actions={
+          ready ? (
             <Button
               type="button"
               onClick={() => void create()}
               disabled={busyId !== null}
             >
-              {busyId === 'new' ? <Loader2 className="animate-spin" /> : <Plus />}
+              {busyId === 'new' ? (
+                <Loader2 className="animate-spin motion-reduce:animate-none" />
+              ) : (
+                <Plus aria-hidden />
+              )}
               {t('emailLibraryNew')}
             </Button>
+          ) : null
+        }
+      />
+
+      {!accessToken ? (
+        <Alert>
+          <AlertDescription>{t('dashboardNoSession')}</AlertDescription>
+        </Alert>
+      ) : null}
+      {accessToken && !canManage ? (
+        <Alert>
+          <AlertDescription>{t('emailForbidden')}</AlertDescription>
+        </Alert>
+      ) : null}
+      {loading ? (
+        <div
+          className="grid grid-cols-[repeat(auto-fill,minmax(256px,1fr))] gap-4"
+          aria-busy
+        >
+          <span className="sr-only">{t('emailLoading')}</span>
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton
+              key={i}
+              className="h-80 rounded-xl"
+            />
+          ))}
+        </div>
+      ) : null}
+      {error ? (
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span className="font-mono text-sm">{emailErrorText(t, error)}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void load()}
+            >
+              {t('usersRetry')}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {ready ? (
+        <>
+          <div className="w-full sm:max-w-sm">
+            <SearchField
+              value={query}
+              onChange={setQuery}
+              placeholder={t('emailTemplatesSearch')}
+              label={t('emailTemplatesSearch')}
+            />
           </div>
           {feedback ? <ActionFeedback feedback={feedback} /> : null}
           {query && visible.templates.length === 0 ? (
-            <Text>{t('emailTemplatesEmpty')}</Text>
+            <EmptyState
+              icon={SearchX}
+              title={t('emailTemplatesEmpty')}
+            />
           ) : (
             <EmailLibraryGrid
               library={visible}
