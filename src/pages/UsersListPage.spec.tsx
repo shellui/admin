@@ -58,7 +58,7 @@ describe('UsersListPage', () => {
     await waitFor(() => expect(h.updateUser).toHaveBeenCalledWith('tok', 3, { is_active: true }));
     await waitFor(() =>
       expect(h.toast).toHaveBeenCalledWith(
-        expect.objectContaining({ title: 'Company access enabled. Jonas Weber gets an email.' }),
+        expect.objectContaining({ title: 'Company access enabled (user notified by email)' }),
       ),
     );
   });
