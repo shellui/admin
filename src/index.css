@@ -207,3 +207,11 @@ a:hover {
     scroll-behavior: auto !important;
   }
 }
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+}

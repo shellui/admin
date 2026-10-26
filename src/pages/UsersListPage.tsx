@@ -1,21 +1,27 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, createSearchParams, useSearchParams } from 'react-router-dom';
-import { Loader2, UserPlus } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Link, createSearchParams, useNavigate, useSearchParams } from 'react-router-dom';
+import shellui from '@shellui/sdk';
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+  AlertCircle,
+  Copy,
+  Loader2,
+  MoreHorizontal,
+  Search,
+  UserPlus,
+  Users,
+  X,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Text } from '@/components/ui/text';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Table,
   TableBody,
@@ -24,10 +30,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { DataTableCard, SkeletonRows, TablePager } from '@/components/admin/DataTableCard';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { InitialsAvatar } from '@/components/admin/InitialsAvatar';
+import { StatusBadge, TagPill } from '@/components/admin/StatusBadge';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import {
   fetchAdminUsers,
@@ -41,11 +48,15 @@ import { PendingInvitationsButton } from '@/components/PendingInvitationsButton'
 /** Page size for directory fetch; use `page` in URL for additional pages (full directory is all pages together). */
 const PAGE_SIZE = 50;
 
-const filterSchema = z.object({
-  query: z.string(),
-});
-
-type FilterValues = z.infer<typeof filterSchema>;
+const HEAD = 'h-10 text-[12.5px] font-medium text-muted-foreground';
+const SKELETON_COLUMNS = [
+  'w-[38%]',
+  'hidden lg:table-cell',
+  'hidden xl:table-cell',
+  'hidden md:table-cell',
+  '',
+  'w-12',
+];
 
 function avatarFromRow(row: AdminUserRow): string | null {
   const u = row.user_metadata?.avatar_url;
@@ -57,24 +68,33 @@ function lastSeenFromRow(row: AdminUserRow): string | null {
   return typeof v === 'string' && v.trim() ? v.trim() : null;
 }
 
+function displayName(row: AdminUserRow): string {
+  const meta = row.user_metadata ?? {};
+  if (typeof meta.full_name === 'string' && meta.full_name.trim()) return meta.full_name;
+  const combined = `${row.first_name} ${row.last_name}`.trim();
+  return combined || row.username || row.email;
+}
+
+function isTypingTarget(el: EventTarget | null): boolean {
+  if (!(el instanceof HTMLElement)) return false;
+  return el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
+}
+
 export function UsersListPage() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const accessToken = useShelluiAccessToken();
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const qParam = searchParams.get('q') ?? '';
   const pageParam = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
   const hasSearch = qParam.trim().length > 0;
 
-  const form = useForm<FilterValues>({
-    resolver: zodResolver(filterSchema),
-    defaultValues: { query: qParam },
-  });
-
-  const { reset: resetFilterForm } = form;
+  const [query, setQuery] = useState(qParam);
   useEffect(() => {
-    resetFilterForm({ query: qParam });
-  }, [qParam, resetFilterForm]);
+    setQuery(qParam);
+  }, [qParam]);
 
   const [data, setData] = useState<AdminUserListResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -108,52 +128,72 @@ export function UsersListPage() {
   useEffect(() => {
     void load();
   }, [load]);
-  function onSubmit(values: FilterValues) {
-    setSearchParams(
-      createSearchParams({
-        ...(values.query.trim() ? { q: values.query.trim() } : {}),
-        page: '1',
-      }),
-    );
+
+  // `/` focuses the search field, like most directories.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || isTypingTarget(e.target)) return;
+      e.preventDefault();
+      searchRef.current?.focus();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const q = query.trim();
+    setSearchParams(createSearchParams({ ...(q ? { q } : {}), page: '1' }));
   }
 
   function goToPage(nextPage: number) {
     setSearchParams(
-      createSearchParams({
-        ...(qParam ? { q: qParam } : {}),
-        page: String(nextPage),
-      }),
+      createSearchParams({ ...(qParam ? { q: qParam } : {}), page: String(nextPage) }),
     );
   }
 
   function clearSearch() {
-    // Remove `q` from URL and reset pagination to page 1.
-    setSearchParams(
-      createSearchParams({
-        page: '1',
-      }),
-    );
+    setQuery('');
+    setSearchParams(createSearchParams({ page: '1' }));
   }
 
   async function setAccess(row: AdminUserRow, enabled: boolean) {
     if (!accessToken || togglingId != null || row.is_active === enabled) return;
     setTogglingId(row.id);
-    setError(null);
+    const name = displayName(row);
     try {
-      const updated = await updateAdminUser(accessToken, row.id, {
-        is_active: enabled,
-      });
-      setData((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          results: prev.results.map((r) => (r.id === updated.id ? { ...r, ...updated } : r)),
-        };
+      const updated = await updateAdminUser(accessToken, row.id, { is_active: enabled });
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              results: prev.results.map((r) => (r.id === updated.id ? { ...r, ...updated } : r)),
+            }
+          : prev,
+      );
+      shellui.toast({
+        title: enabled
+          ? t('usersAccessEnabledToastNamed', { name })
+          : t('usersAccessDisabledToastNamed', { name }),
+        type: 'success',
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('usersErrorUnknown'));
+      shellui.toast({
+        title: t('usersAccessErrorToast'),
+        description: e instanceof Error ? e.message : t('usersErrorUnknown'),
+        type: 'error',
+      });
     } finally {
       setTogglingId(null);
+    }
+  }
+
+  async function copyEmail(email: string) {
+    try {
+      await navigator.clipboard.writeText(email);
+      shellui.toast({ title: t('usersEmailCopied'), type: 'success' });
+    } catch {
+      shellui.toast({ title: t('usersCopyFailed'), type: 'error' });
     }
   }
 
@@ -162,402 +202,355 @@ export function UsersListPage() {
     return Math.max(1, Math.ceil(data.count / PAGE_SIZE));
   }, [data?.count]);
 
-  const displayName = (row: {
-    first_name: string;
-    last_name: string;
-    user_metadata: Record<string, unknown>;
-  }) => {
-    const meta = row.user_metadata;
-    if (typeof meta.full_name === 'string' && meta.full_name.trim()) return meta.full_name;
-    const combined = `${row.first_name} ${row.last_name}`.trim();
-    return combined || '—';
-  };
-
   const formatShortDateTime = (iso: string | null) => {
-    if (!iso) return '—';
+    if (!iso) return t('usersNever');
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return iso;
     return new Intl.DateTimeFormat(i18n.language || 'en', {
-      dateStyle: 'short',
+      dateStyle: 'medium',
       timeStyle: 'short',
     }).format(d);
   };
 
   const rows = data?.results ?? [];
-  const shownCount = rows.length;
+  const showEmpty = !loading && data && rows.length === 0;
+
+  const toolbar = (
+    <>
+      <form
+        onSubmit={onSubmit}
+        role="search"
+        className="flex w-full min-w-0 items-center gap-2 sm:w-auto"
+      >
+        <label
+          htmlFor="users-search"
+          className="sr-only"
+        >
+          {t('usersFieldQuery')}
+        </label>
+        <div className="relative w-full sm:w-[22rem]">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
+            id="users-search"
+            ref={searchRef}
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t('usersFieldQueryPlaceholder')}
+            autoComplete="off"
+            aria-describedby="users-search-help"
+            className="h-9 pl-9 pr-9"
+          />
+          <kbd
+            className="pointer-events-none absolute right-2 top-1/2 hidden h-5 -translate-y-1/2 items-center rounded border border-border bg-muted px-1.5 font-mono text-[11px] text-muted-foreground sm:inline-flex"
+            title={t('usersSearchShortcut')}
+          >
+            /
+          </kbd>
+        </div>
+        <Button
+          type="submit"
+          variant="outline"
+          size="sm"
+          className="h-9"
+          disabled={loading}
+        >
+          {t('usersFormSearch')}
+        </Button>
+      </form>
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        {hasSearch ? (
+          <span className="inline-flex h-7 max-w-[22rem] items-center gap-1 rounded-full border border-border bg-muted pl-2.5 pr-1 text-xs">
+            <span className="truncate">{t('usersSearchActive', { q: qParam })}</span>
+            <button
+              type="button"
+              onClick={clearSearch}
+              aria-label={t('usersClearSearch')}
+              className="inline-flex size-5 items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <X
+                className="size-3.5"
+                aria-hidden
+              />
+            </button>
+          </span>
+        ) : null}
+        <p
+          id="users-search-help"
+          className="text-xs text-muted-foreground"
+        >
+          {t('usersSearchHelp')}
+        </p>
+      </div>
+    </>
+  );
 
   return (
     <div className="w-full space-y-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 space-y-1">
-          <div className="flex flex-wrap items-baseline gap-3">
-            <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-              {t('usersTitle')}
-            </h1>
-            <Badge
-              variant="secondary"
-              className="font-mono text-[10px] uppercase"
-            >
-              {t('usersSchemaBadge')}
-            </Badge>
-          </div>
-          <Text className="max-w-3xl text-sm text-muted-foreground">{t('usersDescription')}</Text>
-        </div>
-        {accessToken ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <PendingInvitationsButton accessToken={accessToken} />
+      <PageHeader
+        title={t('usersTitle')}
+        service={t('usersSchemaBadge')}
+        description={t('usersDescription')}
+        actions={
+          accessToken ? (
+            <>
+              <PendingInvitationsButton accessToken={accessToken} />
+              <Button
+                type="button"
+                onClick={openInviteUserModal}
+              >
+                <UserPlus aria-hidden />
+                {t('inviteAction')}
+              </Button>
+            </>
+          ) : null
+        }
+      />
+
+      {!accessToken ? (
+        <Alert variant="info">
+          <Loader2
+            className="size-4 animate-spin"
+            aria-hidden
+          />
+          <AlertDescription>{t('usersNoSession')}</AlertDescription>
+        </Alert>
+      ) : error ? (
+        <Alert variant="destructive">
+          <AlertCircle
+            className="size-4"
+            aria-hidden
+          />
+          <AlertTitle>{t('usersLoadErrorTitle')}</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>{error}</span>
             <Button
               type="button"
-              onClick={openInviteUserModal}
-              className="inline-flex shrink-0 items-center gap-2"
+              size="sm"
+              variant="outline"
+              onClick={() => void load()}
             >
-              <UserPlus
-                className="size-4"
-                aria-hidden
-              />
-              {t('inviteAction')}
+              {t('usersRetry')}
             </Button>
-          </div>
-        ) : null}
-      </header>
-
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader className="space-y-1 pb-4">
-          <CardTitle className="font-heading text-lg">{t('usersTableTitle')}</CardTitle>
-          <CardDescription className="text-sm">{t('usersTableDescription')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Filter toolbar — always above the data table */}
-          {!accessToken ? (
-            <p className="text-sm text-muted-foreground">{t('usersNoSession')}</p>
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <DataTableCard
+          label={t('usersTableTitle')}
+          busy={loading}
+          toolbar={toolbar}
+          footer={
+            data && data.count > 0 ? (
+              <TablePager
+                status={t('usersPageStatus', {
+                  page: pageParam,
+                  pages: totalPages,
+                  total: data.count,
+                })}
+                previousLabel={t('usersPrevPage')}
+                nextLabel={t('usersNextPage')}
+                canPrevious={pageParam > 1 && !loading}
+                canNext={pageParam < totalPages && !loading}
+                onPrevious={() => goToPage(pageParam - 1)}
+                onNext={() => goToPage(pageParam + 1)}
+              />
+            ) : null
+          }
+        >
+          {showEmpty ? (
+            hasSearch ? (
+              <EmptyState
+                icon={Search}
+                title={t('usersEmpty')}
+                actions={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={clearSearch}
+                  >
+                    {t('usersClearSearch')}
+                  </Button>
+                }
+              />
+            ) : (
+              <EmptyState
+                icon={Users}
+                title={t('usersEmptyTitle')}
+                description={t('usersEmptyDescription')}
+                actions={
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={openInviteUserModal}
+                  >
+                    <UserPlus aria-hidden />
+                    {t('inviteAction')}
+                  </Button>
+                }
+              />
+            )
           ) : (
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="w-full"
-              >
-                <FormField
-                  control={form.control}
-                  name="query"
-                  render={({ field }) => (
-                    <FormItem className="w-full">
-                      <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('usersFieldQuery')}
-                      </FormLabel>
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <FormControl className="w-full flex-1 sm:min-w-0">
-                          <Input
-                            className="w-full font-mono text-sm"
-                            placeholder={t('usersFieldQueryPlaceholder')}
-                            autoComplete="off"
-                            {...field}
+            <Table className="w-full">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className={`${HEAD} w-[38%] pl-4`}>{t('usersColUser')}</TableHead>
+                  <TableHead className={`${HEAD} hidden lg:table-cell`}>
+                    {t('usersColGroups')}
+                  </TableHead>
+                  <TableHead className={`${HEAD} hidden xl:table-cell`}>
+                    {t('usersColUsername')}
+                  </TableHead>
+                  <TableHead className={`${HEAD} hidden md:table-cell`}>
+                    {t('usersColLastSeen')}
+                  </TableHead>
+                  <TableHead className={HEAD}>{t('usersColAccess')}</TableHead>
+                  <TableHead className={`${HEAD} w-12`}>
+                    <span className="sr-only">{t('usersColActions')}</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading && !data ? <SkeletonRows columns={SKELETON_COLUMNS} /> : null}
+                {rows.map((row) => {
+                  const name = displayName(row);
+                  const groups = row.groups ?? [];
+                  const busy = togglingId === row.id;
+                  return (
+                    <TableRow
+                      key={row.id}
+                      className={`h-14 hover:bg-muted/60 ${loading ? 'opacity-60' : ''}`}
+                    >
+                      <TableCell className="min-w-0 p-0">
+                        <Link
+                          to={`/users/${row.id}`}
+                          className="group flex min-w-0 items-center gap-3 px-4 py-2 text-left no-underline outline-none hover:no-underline focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                          aria-label={t('usersRowOpenProfile', { name })}
+                        >
+                          <InitialsAvatar
+                            name={name}
+                            email={row.email}
+                            imageUrl={avatarFromRow(row)}
                           />
-                        </FormControl>
-                        <Button
-                          type="submit"
-                          variant="secondary"
-                          size="sm"
-                          disabled={loading}
-                          className="w-full shrink-0 sm:w-auto"
-                        >
-                          {t('usersFormSearch')}
-                        </Button>
-                      </div>
-                      <FormDescription className="text-xs">
-                        {t('usersFieldQueryHint')}
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </form>
-            </Form>
-          )}
-
-          {accessToken && hasSearch ? (
-            <div className="flex items-center gap-2">
-              <Badge
-                variant="secondary"
-                className="font-mono text-[11px]"
-              >
-                <span className="max-w-[26ch] truncate">
-                  {t('usersFilterBadgePrefix')}: {qParam}
-                </span>
-                <button
-                  type="button"
-                  onClick={clearSearch}
-                  className="ml-2 inline-flex size-4 items-center justify-center rounded border border-border/60 bg-background/50 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-                  aria-label={t('usersClearSearch')}
-                >
-                  ×
-                </button>
-              </Badge>
-            </div>
-          ) : null}
-
-          {accessToken && data && !loading ? (
-            <p className="text-xs text-muted-foreground">
-              {t('usersListingSummary', {
-                shown: shownCount,
-                total: data.count,
-                page: pageParam,
-                pages: totalPages,
-              })}
-            </p>
-          ) : null}
-
-          {error ? (
-            <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {error}
-            </p>
-          ) : null}
-
-          {/* Full-width array table */}
-          {accessToken && !error ? (
-            <div className="relative rounded-md border border-border">
-              {loading ? (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/65 backdrop-blur-[1px]">
-                  <Loader2
-                    className="size-8 animate-spin text-muted-foreground"
-                    aria-hidden
-                  />
-                  <span className="sr-only">{t('usersLoading')}</span>
-                </div>
-              ) : null}
-              <div className="w-full overflow-x-auto">
-                <Table className="w-full min-w-[min(100%,22rem)] table-fixed md:min-w-[44rem] lg:min-w-[56rem] xl:min-w-[72rem]">
-                  <TableHeader>
-                    <TableRow className="bg-muted/30 hover:bg-muted/30">
-                      <TableHead className="w-[3.5rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('usersColId')}
-                      </TableHead>
-                      <TableHead className="w-[38%] min-w-0 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('usersColUser')}
-                      </TableHead>
-                      <TableHead className="hidden lg:table-cell w-[18%] text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('usersColGroups')}
-                      </TableHead>
-                      <TableHead className="hidden md:table-cell w-[5rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('usersColOwner')}
-                      </TableHead>
-                      <TableHead className="hidden md:table-cell w-[7.5rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('usersColActive')}
-                      </TableHead>
-                      <TableHead className="hidden xl:table-cell w-[10%] text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('usersColUsername')}
-                      </TableHead>
-                      <TableHead className="hidden xl:table-cell w-[11rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('usersColLastSeen')}
-                      </TableHead>
-                      <TableHead className="hidden w-[4.5rem] text-right text-xs font-medium uppercase tracking-wide text-muted-foreground sm:table-cell">
-                        {t('usersColActions')}
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody className="font-mono text-xs">
-                    {loading && !data
-                      ? Array.from({ length: 6 }).map((_, i) => (
-                          <TableRow key={i}>
-                            <TableCell>
-                              <Skeleton className="h-4 w-8" />
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-2">
-                                <Skeleton className="hidden size-8 shrink-0 rounded-full sm:block" />
-                                <div className="min-w-0 flex-1 space-y-1">
-                                  <Skeleton className="h-4 w-full max-w-[12rem]" />
-                                  <Skeleton className="h-3 w-full max-w-[14rem]" />
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="hidden lg:table-cell">
-                              <Skeleton className="h-4 w-24" />
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell">
-                              <Skeleton className="h-4 w-8" />
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell">
-                              <Skeleton className="h-4 w-8" />
-                            </TableCell>
-                            <TableCell className="hidden xl:table-cell">
-                              <Skeleton className="h-4 w-20" />
-                            </TableCell>
-                            <TableCell className="hidden xl:table-cell">
-                              <Skeleton className="h-4 w-24" />
-                            </TableCell>
-                            <TableCell className="hidden sm:table-cell" />
-                          </TableRow>
-                        ))
-                      : null}
-                    {!loading && data && rows.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={8}
-                          className="py-12 text-center text-muted-foreground"
-                        >
-                          {t('usersEmpty')}
-                        </TableCell>
-                      </TableRow>
-                    ) : null}
-                    {rows.map((row) => {
-                      const av = avatarFromRow(row);
-                      return (
-                        <TableRow
-                          key={row.id}
-                          className="hover:bg-muted/40"
-                        >
-                          <TableCell className="tabular-nums text-muted-foreground">
-                            {row.id}
-                          </TableCell>
-                          <TableCell className="min-w-0 p-0">
-                            <Link
-                              to={`/users/${row.id}`}
-                              className="group flex items-start gap-2 rounded-md px-2 py-2 text-left no-underline outline-none transition-colors hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                              aria-label={t('usersRowOpenProfile', { name: displayName(row) })}
-                            >
-                              <div className="hidden shrink-0 sm:block">
-                                {av ? (
-                                  <img
-                                    src={av}
-                                    alt=""
-                                    className="size-8 rounded-full border border-border object-cover"
-                                  />
-                                ) : (
-                                  <div
-                                    className="flex size-8 items-center justify-center rounded-full border border-dashed border-border bg-muted text-[10px] font-medium text-muted-foreground"
-                                    aria-hidden
-                                  >
-                                    {displayName(row).slice(0, 1).toUpperCase()}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <div className="truncate font-sans text-sm font-medium text-primary underline-offset-4 group-hover:underline">
-                                  {displayName(row)}
-                                </div>
-                                <div
-                                  className="truncate font-mono text-[11px] text-muted-foreground"
-                                  title={row.email}
+                          <span className="min-w-0 flex-1">
+                            <span className="flex min-w-0 items-center gap-2">
+                              <span className="truncate text-sm font-medium text-foreground group-hover:underline group-hover:underline-offset-4">
+                                {name}
+                              </span>
+                              {row.is_company_owner ? (
+                                <StatusBadge
+                                  tone="gold"
+                                  dot={false}
                                 >
-                                  {row.email}
-                                </div>
-                              </div>
-                            </Link>
-                          </TableCell>
-                          <TableCell className="hidden align-top lg:table-cell">
-                            <div className="flex flex-wrap gap-1">
-                              {(row.groups ?? []).length ? (
-                                (row.groups ?? []).map((g) => (
-                                  <Badge
-                                    key={g.id}
-                                    variant="outline"
-                                    className="max-w-[10rem] truncate text-[10px] font-normal"
-                                    title={g.name}
-                                  >
-                                    {g.name}
-                                  </Badge>
-                                ))
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            <Badge
-                              variant={row.is_company_owner ? 'default' : 'outline'}
-                              className="text-[10px]"
+                                  {t('usersColOwner')}
+                                </StatusBadge>
+                              ) : null}
+                            </span>
+                            <span
+                              className="block truncate text-[12.5px] text-muted-foreground"
+                              title={row.email}
                             >
-                              {row.is_company_owner ? t('usersOwnerYes') : t('usersOwnerNo')}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            <div className="relative inline-flex items-center">
-                              <select
-                                className="h-7 appearance-none rounded-md border border-border/70 bg-background py-0 pl-2 pr-6 font-mono text-[10px] text-foreground outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
-                                value={row.is_active ? 'enabled' : 'disabled'}
-                                disabled={togglingId === row.id}
-                                aria-label={t('usersAccessSelectLabel', { name: displayName(row) })}
-                                onChange={(e) => {
-                                  void setAccess(row, e.target.value === 'enabled');
-                                }}
+                              {row.email}
+                            </span>
+                          </span>
+                        </Link>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {groups.length ? (
+                          <div className="flex flex-wrap gap-1">
+                            {groups.map((g) => (
+                              <TagPill
+                                key={g.id}
+                                title={g.name}
                               >
-                                <option value="enabled">{t('usersActiveYes')}</option>
-                                <option value="disabled">{t('usersActiveNo')}</option>
-                              </select>
-                              {togglingId === row.id ? (
-                                <Loader2
-                                  className="pointer-events-none absolute right-1.5 size-3 animate-spin text-muted-foreground"
-                                  aria-hidden
-                                />
-                              ) : (
-                                <span
-                                  className="pointer-events-none absolute right-1.5 text-[9px] leading-none text-muted-foreground"
-                                  aria-hidden
-                                >
-                                  ▾
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell
-                            className="hidden truncate xl:table-cell"
-                            title={row.username}
-                          >
-                            {row.username}
-                          </TableCell>
-                          <TableCell className="hidden whitespace-nowrap text-muted-foreground xl:table-cell">
-                            {formatShortDateTime(lastSeenFromRow(row))}
-                          </TableCell>
-                          <TableCell className="hidden text-right sm:table-cell">
-                            <Button
-                              variant="link"
-                              className="h-auto p-0 text-xs"
-                              asChild
+                                {g.name}
+                              </TagPill>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">{t('usersNone')}</span>
+                        )}
+                      </TableCell>
+                      <TableCell
+                        className="hidden max-w-[10rem] truncate font-mono text-xs text-muted-foreground xl:table-cell"
+                        title={row.username}
+                      >
+                        {row.username}
+                      </TableCell>
+                      <TableCell className="hidden whitespace-nowrap text-sm tabular-nums text-muted-foreground md:table-cell">
+                        {formatShortDateTime(lastSeenFromRow(row))}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2.5">
+                          <Switch
+                            checked={row.is_active}
+                            disabled={busy || togglingId != null}
+                            aria-label={t('usersAccessSelectLabel', { name })}
+                            onCheckedChange={(checked) => void setAccess(row, checked)}
+                          />
+                          {busy ? (
+                            <Loader2
+                              className="size-3.5 animate-spin text-muted-foreground"
+                              aria-hidden
+                            />
+                          ) : (
+                            <StatusBadge
+                              tone={row.is_active ? 'success' : 'muted'}
+                              className="hidden sm:inline-flex"
                             >
-                              <Link to={`/users/${row.id}`}>{t('usersActionView')}</Link>
+                              {row.is_active ? t('usersActiveYes') : t('usersActiveNo')}
+                            </StatusBadge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="pr-3 text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="size-8"
+                              aria-label={t('usersMoreActions', { name })}
+                            >
+                              <MoreHorizontal aria-hidden />
                             </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-              {!loading && data && data.count > 0 ? (
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-3 py-2">
-                  <p className="text-xs text-muted-foreground">
-                    {t('usersPageStatus', {
-                      page: pageParam,
-                      pages: totalPages,
-                      total: data.count,
-                    })}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={pageParam <= 1 || loading}
-                      onClick={() => goToPage(pageParam - 1)}
-                    >
-                      {t('usersPrevPage')}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={pageParam >= totalPages || loading}
-                      onClick={() => goToPage(pageParam + 1)}
-                    >
-                      {t('usersNextPage')}
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => navigate(`/users/${row.id}`)}>
+                              {t('usersOpenProfile')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => void copyEmail(row.email)}>
+                              <Copy
+                                className="size-4"
+                                aria-hidden
+                              />
+                              {t('usersCopyEmail')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={togglingId != null}
+                              onSelect={() => void setAccess(row, !row.is_active)}
+                            >
+                              {row.is_active ? t('usersActionDisable') : t('usersActionEnable')}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </DataTableCard>
+      )}
+
+      {accessToken ? (
+        <p className="font-mono text-[11.5px] text-muted-foreground">{t('usersApiNote')}</p>
+      ) : null}
     </div>
   );
 }
