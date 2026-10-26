@@ -20,7 +20,6 @@ const resources = {
       accessTokensRevokeConfirmDescription:
         'Apps and scripts using this token stop working right away. You cannot undo this.',
       accessTokensRevokeConfirmTitle: 'Revoke this access token?',
-      usersSearchActive: 'Showing results for “{{q}}”',
       usersApiNote:
         'Toggling access calls PUT /api/v1/users/{id} and emails the person when access is enabled.',
       usersEmptyDescription: 'Invite people to give them access to this company.',
@@ -28,8 +27,6 @@ const resources = {
       usersRetry: 'Try again',
       usersLoadErrorTitle: 'Could not load users',
       usersAccessErrorToast: 'Could not change company access.',
-      usersAccessDisabledToastNamed: 'Company access disabled for {{name}}.',
-      usersAccessEnabledToastNamed: 'Company access enabled. {{name}} gets an email.',
       usersCopyFailed: 'Could not copy the email.',
       usersEmailCopied: 'Email copied.',
       usersCopyEmail: 'Copy email',
@@ -1859,7 +1856,6 @@ const resources = {
       accessTokensRevokeConfirmDescription:
         'Les apps et scripts qui utilisent ce jeton cessent de fonctionner immédiatement. Cette action est définitive.',
       accessTokensRevokeConfirmTitle: "Révoquer ce jeton d'accès ?",
-      usersSearchActive: 'Résultats pour « {{q}} »',
       usersApiNote:
         'Changer l’accès appelle PUT /api/v1/users/{id} et envoie un e-mail à la personne quand l’accès est activé.',
       usersEmptyDescription: 'Invitez des personnes pour leur donner accès à cette entreprise.',
@@ -1867,8 +1863,6 @@ const resources = {
       usersRetry: 'Réessayer',
       usersLoadErrorTitle: 'Impossible de charger les utilisateurs',
       usersAccessErrorToast: 'Impossible de modifier l’accès entreprise.',
-      usersAccessDisabledToastNamed: 'Accès entreprise désactivé pour {{name}}.',
-      usersAccessEnabledToastNamed: 'Accès entreprise activé. {{name}} reçoit un e-mail.',
       usersCopyFailed: 'Impossible de copier l’e-mail.',
       usersEmailCopied: 'E-mail copié.',
       usersCopyEmail: 'Copier l’e-mail',

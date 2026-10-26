@@ -52,7 +52,7 @@ const HEAD = 'h-10 text-[12.5px] font-medium text-muted-foreground';
 const SKELETON_COLUMNS = [
   'w-[38%]',
   'hidden lg:table-cell',
-  'hidden xl:table-cell',
+  'hidden lg:table-cell',
   'hidden md:table-cell',
   '',
   'w-12',
@@ -160,7 +160,6 @@ export function UsersListPage() {
   async function setAccess(row: AdminUserRow, enabled: boolean) {
     if (!accessToken || togglingId != null || row.is_active === enabled) return;
     setTogglingId(row.id);
-    const name = displayName(row);
     try {
       const updated = await updateAdminUser(accessToken, row.id, { is_active: enabled });
       setData((prev) =>
@@ -172,9 +171,7 @@ export function UsersListPage() {
           : prev,
       );
       shellui.toast({
-        title: enabled
-          ? t('usersAccessEnabledToastNamed', { name })
-          : t('usersAccessDisabledToastNamed', { name }),
+        title: enabled ? t('usersAccessEnabledToast') : t('usersAccessDisabledToast'),
         type: 'success',
       });
     } catch (e) {
@@ -264,7 +261,9 @@ export function UsersListPage() {
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         {hasSearch ? (
           <span className="inline-flex h-7 max-w-[22rem] items-center gap-1 rounded-full border border-border bg-muted pl-2.5 pr-1 text-xs">
-            <span className="truncate">{t('usersSearchActive', { q: qParam })}</span>
+            <span className="truncate">
+              {t('usersFilterBadgePrefix')}: {qParam}
+            </span>
             <button
               type="button"
               onClick={clearSearch}
@@ -401,7 +400,7 @@ export function UsersListPage() {
                   <TableHead className={`${HEAD} hidden lg:table-cell`}>
                     {t('usersColGroups')}
                   </TableHead>
-                  <TableHead className={`${HEAD} hidden xl:table-cell`}>
+                  <TableHead className={`${HEAD} hidden lg:table-cell`}>
                     {t('usersColUsername')}
                   </TableHead>
                   <TableHead className={`${HEAD} hidden md:table-cell`}>
@@ -475,7 +474,7 @@ export function UsersListPage() {
                         )}
                       </TableCell>
                       <TableCell
-                        className="hidden max-w-[10rem] truncate font-mono text-xs text-muted-foreground xl:table-cell"
+                        className="hidden max-w-[10rem] truncate font-mono text-xs text-muted-foreground lg:table-cell"
                         title={row.username}
                       >
                         {row.username}
