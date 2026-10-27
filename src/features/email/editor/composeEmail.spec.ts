@@ -31,7 +31,9 @@ describe('composeEmailHtml', () => {
         ],
       },
     });
-    expect(html).toContain('<style>.title { color: red }</style>');
+    expect(html).toMatch(
+      /<style>a\[x-apple-data-detectors\][^<]*\n\.title \{ color: red \}<\/style>/,
+    );
     expect(html).toMatch(/max-width:\s*600px/);
     expect(html).toMatch(/<a[^>]+href="\{\{ action_url \}\}"[^>]*><img[^>]+alt="Logo"/);
     expect(html).toContain('width="120"');
@@ -104,5 +106,75 @@ describe('composeEmailHtml', () => {
     const plain = await composeEmailHtml({ head: '', preheader: '', document });
     expect(plain).toMatch(/color:\s*rgb\(20,\s*23,\s*30\)/);
     expect(plain).not.toContain('var(');
+  }, 30_000);
+
+  it('fills the page with the design color and keeps links in the text color', async () => {
+    const html = await composeEmailHtml({
+      head: '',
+      preheader: '',
+      colors: { background: '#f0f7ff', muted_foreground: '#4a6380' },
+      document: {
+        type: 'doc',
+        content: [
+          {
+            type: 'container',
+            content: [
+              {
+                type: 'table',
+                content: [
+                  {
+                    type: 'tableRow',
+                    content: [
+                      {
+                        type: 'tableCell',
+                        attrs: {
+                          style:
+                            'background-color:var(--email-background,rgb(243,244,246));margin:0px',
+                        },
+                        content: [
+                          {
+                            type: 'paragraph',
+                            attrs: {
+                              style: 'color:var(--email-muted-foreground,rgb(123,125,129))',
+                            },
+                            content: [
+                              {
+                                type: 'text',
+                                text: 'example.com',
+                                marks: [{ type: 'link', attrs: { href: 'https://example.com' } }],
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    });
+    expect(html).toMatch(/<html[^>]*style="background-color:#f0f7ff"/);
+    expect(html).toMatch(/<body[^>]*style="background-color:#f0f7ff/);
+    expect(html).toMatch(
+      /<td[^>]*style="margin:0;background-color:#f0f7ff;min-height:100%;padding-bottom:2rem"/,
+    );
+    expect(html).toMatch(/<a[^>]+href="https:\/\/example.com"[^>]*style="color:#4a6380/);
+    expect(html).toContain('a[x-apple-data-detectors]');
+  }, 30_000);
+
+  it('leaves the page alone without an outer cell and keeps the data detectors rule', async () => {
+    const html = await composeEmailHtml({
+      head: '',
+      preheader: '',
+      document: {
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hi' }] }],
+      },
+    });
+    expect(html).not.toMatch(/<html[^>]*style=/);
+    expect(html).toContain('a[x-apple-data-detectors]');
   }, 30_000);
 });

@@ -125,26 +125,84 @@ export const EmailLayoutContainer = BaseContainer.extend<
   },
 });
 
+// Apple Mail turns dates, phones, and domains into blue links. Keep them in the text's color.
+export const DATA_DETECTORS =
+  'a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important;font-size:inherit!important;font-family:inherit!important;font-weight:inherit!important;line-height:inherit!important}';
+
+const BACKGROUND = /(?:^|;)\s*background-color\s*:\s*([^;]+)/i;
+const COLOR = /(?:^|;)\s*color\s*:\s*([^;]+)/i;
+
+type StyledNode = {
+  type?: string;
+  attrs?: Record<string, unknown>;
+  marks?: { type: string; attrs?: Record<string, unknown> }[];
+  content?: StyledNode[];
+};
+
+function styleOf(attrs?: Record<string, unknown>): string {
+  return typeof attrs?.style === 'string' ? attrs.style : '';
+}
+
+/** The design's page color: the first table cell reached through the document's leading blocks. */
+export function pageBackground(document: StyledNode | undefined): string {
+  let node = document?.content?.[0];
+  while (node) {
+    if (node.type === 'tableCell') return styleOf(node.attrs).match(BACKGROUND)?.[1].trim() || '';
+    if (!['container', 'table', 'tableRow'].includes(node.type ?? '')) return '';
+    node = node.content?.[0];
+  }
+  return '';
+}
+
+/** Links without a color of their own take the surrounding text color, not React Email's default blue. */
+export function inheritLinkColors<T extends StyledNode>(node: T, color = ''): T {
+  const current = styleOf(node.attrs).match(COLOR)?.[1].trim() || color;
+  for (const mark of node.marks ?? []) {
+    const style = styleOf(mark.attrs);
+    if (mark.type === 'link' && current && !COLOR.test(style)) {
+      mark.attrs = {
+        ...mark.attrs,
+        style: style ? `color:${current};${style}` : `color:${current}`,
+      };
+    }
+  }
+  for (const child of node.content ?? []) inheritLinkColors(child, current);
+  return node;
+}
+
 function EmailDocumentTemplate({
   children,
   previewText,
   head,
+  page,
 }: {
   children?: ReactNode;
   previewText?: string;
   head: string;
+  page: string;
 }) {
+  // The page color goes on html, body, and the body table too, so it fills the whole
+  // window instead of stopping at the content, and clients that drop body styles keep it.
+  const pageStyle: CSSProperties = page ? { backgroundColor: page } : {};
   return (
-    <Html>
+    <Html style={pageStyle}>
       <Head>
         <meta
           content="width=device-width"
           name="viewport"
         />
         <meta name="x-apple-disable-message-reformatting" />
-        {head ? <style dangerouslySetInnerHTML={{ __html: head }} /> : null}
+        <style
+          dangerouslySetInnerHTML={{ __html: [DATA_DETECTORS, head].filter(Boolean).join('\n') }}
+        />
       </Head>
-      <Body style={{ margin: 0 }}>
+      <Body
+        style={
+          page
+            ? { margin: 0, ...pageStyle, minHeight: '100%', paddingBottom: '2rem' }
+            : { margin: 0 }
+        }
+      >
         {previewText ? <Preview>{previewText}</Preview> : null}
         {children}
       </Body>
@@ -152,7 +210,7 @@ function EmailDocumentTemplate({
   );
 }
 
-function serializer(head: string) {
+function serializer(head: string, page: string) {
   return Extension.create({
     name: 'shelluiSerializer',
     addOptions() {
@@ -163,6 +221,7 @@ function serializer(head: string) {
             <EmailDocumentTemplate
               {...props}
               head={head}
+              page={page}
             />
           ),
         },
@@ -172,12 +231,12 @@ function serializer(head: string) {
 }
 
 /** Nodes, marks, and the serializer a stored document needs. */
-export function emailDocumentExtensions(head = ''): Extensions {
+export function emailDocumentExtensions(head = '', page = ''): Extensions {
   return [
     StarterKit.configure({ Container: false }),
     EmailLayoutContainer,
     EmailImage,
     TextIdAttribute,
-    serializer(head),
+    serializer(head, page),
   ];
 }

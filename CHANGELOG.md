@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [Unreleased]
+
+### 🐛 Bug Fixes
+
+- **Email preview:** The design's page color fills the whole email, and links without their own color use the text color instead of blue, matching email-service.
+
 ## [0.8.0] - 2026-10-27
 
 ### ✨ Feature
