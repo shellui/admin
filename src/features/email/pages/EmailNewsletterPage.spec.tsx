@@ -4,6 +4,7 @@ import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import i18n from '@/i18n';
 import { EmailNewsletterPage } from '@/features/email/pages/EmailNewsletterPage';
+import { EmailApiError } from '@/lib/emailApiErrors';
 import { parseNewsletter, parseSubscriberAdded, parseSubscriberPage } from '@/lib/emailNewsletters';
 
 const api = vi.hoisted(() => ({
@@ -202,5 +203,58 @@ describe('EmailNewsletterPage', () => {
       expect.objectContaining({ description: expect.stringContaining('its 1 subscriber,') }),
     );
     expect(await screen.findByText('Newsletter list')).toBeTruthy();
+  });
+  it('renames from settings and updates the page header', async () => {
+    api.fetchNewsletter.mockResolvedValue(newsletter());
+    api.fetchSubscribers.mockResolvedValue(subscribers);
+    api.patchNewsletter.mockResolvedValue(newsletter({ name: 'Changelog' }));
+    renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Settings' }));
+    const field = document.getElementById('newsletter-name') as HTMLInputElement;
+    expect(field.value).toBe('Product news');
+    fireEvent.change(field, { target: { value: '  Changelog  ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() =>
+      expect(api.patchNewsletter).toHaveBeenCalledWith(
+        3,
+        expect.objectContaining({ name: 'Changelog' }),
+      ),
+    );
+    expect(await screen.findByText('Saved.')).toBeTruthy();
+    const header = screen
+      .getAllByLabelText('Name')
+      .find((el) => el.id !== 'newsletter-name') as HTMLInputElement;
+    expect(header.value).toBe('Changelog');
+    expect(field.value).toBe('Changelog');
+  });
+
+  it('shows an inline error and does not save an empty name', async () => {
+    api.fetchNewsletter.mockResolvedValue(newsletter());
+    api.fetchSubscribers.mockResolvedValue(subscribers);
+    renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Settings' }));
+    const field = document.getElementById('newsletter-name') as HTMLInputElement;
+    fireEvent.change(field, { target: { value: '   ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    const error = await screen.findByRole('alert');
+    expect(error.textContent).toBe('Give the newsletter a name first.');
+    expect(field.getAttribute('aria-invalid')).toBe('true');
+    expect(api.patchNewsletter).not.toHaveBeenCalled();
+
+    fireEvent.change(field, { target: { value: 'Changelog' } });
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('shows the API name error inline', async () => {
+    api.fetchNewsletter.mockResolvedValue(newsletter());
+    api.fetchSubscribers.mockResolvedValue(subscribers);
+    api.patchNewsletter.mockRejectedValue(
+      new EmailApiError('validation_failed', 400, { name: ['blank'] }),
+    );
+    renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Settings' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    const error = await screen.findByRole('alert');
+    expect(error.textContent).toBe('Give the newsletter a name first.');
   });
 });

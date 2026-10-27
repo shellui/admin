@@ -21,6 +21,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [0.8.1] - 2026-10-27
+
+### ✨ Feature
+
+- **Newsletters:** Rename a newsletter from its Settings tab. An empty name shows an error under the field, and the page header updates after you save.
+
+### 🐛 Bug Fixes
+
+- **Email preview:** The design's page color fills the whole email, and links without their own color use the text color instead of blue, matching email-service.
+
 ## [0.8.0] - 2026-10-27
 
 ### ✨ Feature
