@@ -3,6 +3,7 @@
 The administration app of Shellui, opened inside the shell at `/admin`.
 
 [![CI](https://github.com/shellui/admin/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/shellui/admin/actions/workflows/ci.yml)
+[![Docker Hub](https://img.shields.io/docker/v/shellui/admin?sort=semver&label=docker)](https://hub.docker.com/r/shellui/admin)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 Admin is a React app that company owners and staff use to run a Shellui workspace: users, groups, sign-in methods, OAuth apps, SCIM, webhooks and statistics on [identity-service](https://github.com/shellui/identity-service), plus Storage, Hosting and Email sections when the shell config has those services. It never runs on its own. The shell loads it in a frame and passes the session, theme, language and service URLs through the SDK.

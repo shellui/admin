@@ -21,6 +21,31 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [0.8.0] - 2026-10-27
+
+### ✨ Feature
+
+- **Redesign:** every admin page moves to a shared base: page headers, card tables, KPI rows, status badges, empty states and skeletons, in light and dark.
+- **Dashboard and statistics:** new layout for the dashboard and for Identity, Storage, Hosting and Email statistics, with an email by-day chart.
+- **Identity:** redesigned Company, Identity directory (Users), user detail, groups, SCIM, OAuth setup, log events and personal access tokens.
+- **Invitations:** the invite modal shows "already a member" and "already invited" inline, and pending invitations show status badges.
+- **Email:** redesigned templates, shared email editor, broadcasts, newsletters, provider, rule form and allowed link hosts.
+- **Email and webhooks:** redesigned rules list, webhook rule editor, delivery logs and delivery detail.
+- **Hosting:** redesigned apps list and app detail.
+- **Scheduled jobs:** status badges, a scheduler card and collapsible recent runs.
+- **Confirms:** revoking an access token and deleting a group ask for confirmation first.
+- **Translated errors:** the error and 404 pages are available in English and French.
+- **Loading bar:** a thin gold bar at the top of the content area that stays still under reduced motion.
+
+### 🐛 Bug Fixes
+
+- The magic link setting shows "Saving…" again while it saves, and the global kill switch shows as an alert.
+- Remaining em dashes in the interface are replaced with hyphens.
+
+### 📚 Documentation
+
+- Development notes list the Email routes, legacy redirects and invitation modals, and the Email section now needs `email.url`.
+
 ## [0.7.0] - 2026-10-26
 
 Requires email-service 0.5.0.
