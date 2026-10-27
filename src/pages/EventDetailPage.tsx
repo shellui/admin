@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader2 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { UserRound } from 'lucide-react';
+import { SkeletonRows } from '@/components/admin/DataTableCard';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Text } from '@/components/ui/text';
-import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { useEventLogSource } from '@/hooks/useEventRetention';
 import {
@@ -20,12 +21,11 @@ import {
   type EventLogRow,
 } from '@/lib/eventLogApi';
 import type { WebhookServiceKey } from '@/lib/webhookServices';
-import { cn } from '@/lib/utils';
 
 const SIBLING_PAGE_SIZE = 10;
 
 function formatValue(value: unknown): string {
-  if (value == null || value === '') return '—';
+  if (value == null || value === '') return '-';
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
 }
@@ -34,11 +34,9 @@ function detailField(label: string, value: unknown, key?: string) {
   return (
     <div
       key={key}
-      className="min-w-0 space-y-0.5"
+      className="grid min-w-0 gap-1 px-4 py-3 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-4"
     >
-      <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </dt>
+      <dt className="text-sm text-muted-foreground">{label}</dt>
       <dd className="break-words font-mono text-sm">{formatValue(value)}</dd>
     </div>
   );
@@ -137,189 +135,189 @@ export function EventDetailPage({ service = 'identity' }: { service?: WebhookSer
     ? Math.max(1, Math.ceil(siblings.count / SIBLING_PAGE_SIZE))
     : 1;
 
-  const backLink = (
-    <Link to={eventsListPath(service)}>
-      <ArrowLeft
-        className="mr-1 size-4"
-        aria-hidden
-      />
-      {t('eventsBackToList')}
-    </Link>
-  );
+  const back = { to: eventsListPath(service), label: t('eventsBackToList') };
+  const card =
+    'overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm';
 
   if (!Number.isFinite(idNum)) {
     return (
-      <div className="space-y-4">
-        <p className="text-sm text-destructive">{t('eventsInvalidId')}</p>
-        <Button
-          variant="outline"
-          size="sm"
-          asChild
-        >
-          {backLink}
-        </Button>
+      <div className="w-full space-y-6">
+        <PageHeader
+          back={back}
+          title={t('eventsDetailPayloadTitle')}
+        />
+        <Alert variant="destructive">
+          <AlertDescription>{t('eventsInvalidId')}</AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   return (
     <div className="w-full space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="-ml-2 h-8 px-2"
-          asChild
-        >
-          {backLink}
-        </Button>
-      </div>
+      {!event ? (
+        <PageHeader
+          back={back}
+          title={
+            loadingEvent && accessToken ? (
+              <Skeleton className="h-8 w-64" />
+            ) : (
+              t('eventsDetailPayloadTitle')
+            )
+          }
+        />
+      ) : (
+        <PageHeader
+          back={back}
+          title={<span className="break-all font-mono text-xl">{event.event_type}</span>}
+          description={
+            <span className="flex flex-wrap items-center gap-2">
+              <span>{event.label}</span>
+              {isFailureEvent(event) ? (
+                <StatusBadge tone="destructive">{t('eventsFailureBadge')}</StatusBadge>
+              ) : null}
+              <span aria-hidden>·</span>
+              <time dateTime={event.created_at}>{formatDateTime(event.created_at)}</time>
+            </span>
+          }
+          actions={
+            event.user_id != null ? (
+              <Button
+                variant="outline"
+                asChild
+              >
+                <Link to={`/users/${event.user_id}`}>
+                  <UserRound aria-hidden />
+                  {t('eventsOpenUserProfile')}
+                </Link>
+              </Button>
+            ) : null
+          }
+        />
+      )}
 
       {!accessToken ? (
-        <p className="text-sm text-muted-foreground">{t('eventsNoSession')}</p>
+        <Alert>
+          <AlertDescription>{t('eventsNoSession')}</AlertDescription>
+        </Alert>
       ) : null}
 
       {accessToken && loadingEvent && !event ? (
-        <div className="flex items-center gap-2 py-12 text-muted-foreground">
-          <Loader2
-            className="size-5 animate-spin"
-            aria-hidden
-          />
-          <span className="text-sm">{t('eventsDetailLoading')}</span>
+        <div
+          className={`${card} space-y-3 p-4`}
+          aria-busy="true"
+          aria-label={t('eventsDetailLoading')}
+        >
+          <Skeleton className="h-4 w-1/3" />
+          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-4 w-2/5" />
         </div>
       ) : null}
 
       {eventError ? (
-        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {eventError}
-        </p>
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>{eventError}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void loadEvent()}
+            >
+              {t('usersRetry')}
+            </Button>
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       {event ? (
         <>
-          <header className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-                {event.label}
-              </h1>
-              <Badge
-                variant="secondary"
-                className="font-mono text-[10px]"
-              >
-                {event.event_type}
-              </Badge>
-              {isFailureEvent(event) ? (
-                <span className="rounded bg-destructive/15 px-2 py-0.5 text-xs font-medium text-destructive">
-                  {t('eventsFailureBadge')}
-                </span>
-              ) : null}
-            </div>
-            <Text className="text-sm text-muted-foreground">
-              {formatDateTime(event.created_at)}
-            </Text>
-            {event.user_id != null ? (
-              <Button
-                variant="link"
-                className="h-auto p-0 text-sm"
-                asChild
-              >
-                <Link to={`/users/${event.user_id}`}>{t('eventsOpenUserProfile')}</Link>
-              </Button>
-            ) : null}
-          </header>
+          <dl className={`${card} divide-y divide-border`}>
+            {detailField(t('eventsDetailId'), event.id)}
+            {detailField(t('eventsDetailUserEmail'), event.user_email)}
+            {detailField(t('eventsDetailUserId'), event.user_id)}
+          </dl>
 
-          <Card className="border-border/80 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="font-heading text-lg">
-                {t('eventsDetailPayloadTitle')}
-              </CardTitle>
-              <CardDescription className="text-sm">
+          <section className={card}>
+            <div className="space-y-1 border-b border-border px-4 py-3">
+              <h2 className="text-sm font-semibold">{t('eventsDetailPayloadTitle')}</h2>
+              <p className="text-xs text-muted-foreground">
                 {t(
                   service === 'identity'
                     ? 'eventsDetailPayloadHint'
                     : 'eventsDetailPayloadHintService',
                 )}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {detailField(t('eventsDetailId'), event.id)}
-                {detailField(t('eventsDetailUserEmail'), event.user_email)}
-                {detailField(t('eventsDetailUserId'), event.user_id)}
+              </p>
+            </div>
+            {Object.keys(event.data).length ? (
+              <dl className="divide-y divide-border">
                 {Object.entries(event.data).map(([key, value]) => detailField(key, value, key))}
               </dl>
-            </CardContent>
-          </Card>
+            ) : (
+              <p className="px-4 py-3 text-sm text-muted-foreground">-</p>
+            )}
+          </section>
 
-          <section className="space-y-3">
-            <div className="space-y-1">
-              <h2 className="font-heading text-lg font-semibold">{t('eventsSiblingTitle')}</h2>
-              <Text className="text-sm text-muted-foreground">{t('eventsSiblingHint')}</Text>
+          <section className={card}>
+            <div className="space-y-1 border-b border-border px-4 py-3">
+              <h2 className="text-sm font-semibold">{t('eventsSiblingTitle')}</h2>
+              <p className="text-xs text-muted-foreground">{t('eventsSiblingHint')}</p>
             </div>
-            <Separator />
 
             {event.user_id == null ? (
-              <p className="text-sm text-muted-foreground">{t('eventsSiblingNoUser')}</p>
+              <p className="px-4 py-6 text-sm text-muted-foreground">{t('eventsSiblingNoUser')}</p>
             ) : siblingsError ? (
-              <p className="text-sm text-destructive">{siblingsError}</p>
-            ) : loadingSiblings && !siblings ? (
-              <div className="flex items-center gap-2 py-8 text-muted-foreground">
-                <Loader2
-                  className="size-4 animate-spin"
-                  aria-hidden
-                />
-                <span className="text-sm">{t('eventsLoading')}</span>
+              <div className="p-4">
+                <Alert variant="destructive">
+                  <AlertDescription>{siblingsError}</AlertDescription>
+                </Alert>
               </div>
+            ) : loadingSiblings && !siblings ? (
+              <SkeletonRows
+                rows={4}
+                columns={['w-40', 'w-56', 'w-24']}
+              />
             ) : siblingRows.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t('eventsSiblingEmpty')}</p>
+              <p className="px-4 py-6 text-sm text-muted-foreground">{t('eventsSiblingEmpty')}</p>
             ) : (
               <>
-                <ul className="space-y-2">
+                <ul className="divide-y divide-border">
                   {siblingRows.map((ev) => {
                     const summary = eventSummary(ev);
                     return (
                       <li key={ev.id}>
                         <Link
                           to={eventDetailPath(service, ev.id)}
-                          className={cn(
-                            'block rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted/50',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                          )}
+                          className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none"
                         >
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="min-w-0 space-y-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span
-                                  className={cn(
-                                    'rounded px-1.5 py-0.5 text-[11px] font-medium',
-                                    isFailureEvent(ev)
-                                      ? 'bg-destructive/15 text-destructive'
-                                      : 'bg-muted text-foreground',
-                                  )}
-                                >
-                                  {ev.label}
+                          <span className="min-w-0 space-y-0.5">
+                            <span className="flex flex-wrap items-center gap-2">
+                              <span className="font-mono text-xs">{ev.label}</span>
+                              {isFailureEvent(ev) ? (
+                                <StatusBadge tone="destructive">
+                                  {t('eventsFailureBadge')}
+                                </StatusBadge>
+                              ) : null}
+                              {summary ? (
+                                <span className="truncate text-xs text-muted-foreground">
+                                  {summary}
                                 </span>
-                                {summary ? (
-                                  <span className="truncate text-xs text-muted-foreground">
-                                    {summary}
-                                  </span>
-                                ) : null}
-                              </div>
-                              <p className="text-xs text-muted-foreground">
-                                {formatDateTime(ev.created_at)}
-                              </p>
-                            </div>
-                            <span className="shrink-0 text-xs text-primary">
-                              {t('eventsOpenDetail')}
+                              ) : null}
                             </span>
-                          </div>
+                            <span className="block text-xs text-muted-foreground">
+                              {formatDateTime(ev.created_at)}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-xs font-medium text-primary-ink">
+                            {t('eventsOpenDetail')}
+                          </span>
                         </Link>
                       </li>
                     );
                   })}
                 </ul>
                 {siblingTotalPages > 1 ? (
-                  <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-2.5">
                     <p className="text-xs text-muted-foreground">
                       {t('eventsPageStatus', {
                         page: siblingPage,

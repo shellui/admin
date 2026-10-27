@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Loader2, Trash2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { StatusBadge } from '@/components/admin/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Text } from '@/components/ui/text';
 import {
   ActionFeedback,
   feedbackFromError,
@@ -18,7 +20,7 @@ import {
 } from '@/features/email/components/EmailTemplateEditor';
 import { useEmailApi } from '@/features/email/useEmailApi';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
-import { confirmAction } from '@/lib/confirmAction';
+import { askShelluiConfirm } from '@/lib/shelluiConfirm';
 import { emailErrorText } from '@/lib/emailApiErrors';
 import { emailAssetsUrl } from '@/lib/emailLibrary';
 import type { EmailLibraryDetail } from '@/lib/emailTypes';
@@ -102,12 +104,12 @@ export function EmailLibraryTemplatePage() {
 
   async function remove() {
     if (!api || !detail) return;
-    const ok = await confirmAction({
+    const ok = await askShelluiConfirm({
       title: t('emailLibraryDeleteTitle'),
       description: t('emailLibraryDeleteDescription', { name: detail.name }),
       okLabel: t('emailLibraryDelete'),
       cancelLabel: t('actionsCancel'),
-      danger: true,
+      mode: 'delete',
     });
     if (!ok) return;
     setBusy('delete');
@@ -125,58 +127,72 @@ export function EmailLibraryTemplatePage() {
 
   return (
     <div className="w-full space-y-6">
-      <header className="space-y-2">
-        <Link
-          to="/email/templates"
-          className="font-mono text-xs text-primary underline-offset-2 hover:underline"
-        >
-          {t('emailBackToTemplates')}
-        </Link>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            {detail?.name || t('emailTemplatesTitle')}
-          </h1>
-          {detail ? (
-            <Badge variant="outline">
-              {builtIn ? t('emailLibraryBuiltInBadge') : t('emailLibraryCustomBadge')}
-            </Badge>
-          ) : null}
-          {detail && !builtIn ? (
+      <PageHeader
+        back={{ to: '/email/templates', label: t('emailBackToTemplates') }}
+        title={detail?.name || t('emailTemplatesTitle')}
+        service="email-service"
+        description={
+          <span className="flex flex-wrap items-center gap-2">
+            {detail ? (
+              <StatusBadge tone={builtIn ? 'muted' : 'gold'}>
+                {builtIn ? t('emailLibraryBuiltInBadge') : t('emailLibraryCustomBadge')}
+              </StatusBadge>
+            ) : null}
+            <span>{builtIn ? t('emailLibraryBuiltInHint') : t('emailLibraryCustomHint')}</span>
+          </span>
+        }
+        actions={
+          detail && !builtIn ? (
             <Button
               type="button"
-              size="sm"
-              variant="ghost"
-              className="ml-auto text-destructive"
+              variant="destructive"
               disabled={busy !== null}
               onClick={() => void remove()}
             >
-              {busy === 'delete' ? <Loader2 className="animate-spin" /> : null}
+              {busy === 'delete' ? (
+                <Loader2 className="animate-spin motion-reduce:animate-none" />
+              ) : (
+                <Trash2 aria-hidden />
+              )}
               {t('emailLibraryDelete')}
             </Button>
-          ) : null}
-        </div>
-        <Text className="max-w-3xl">
-          {builtIn ? t('emailLibraryBuiltInHint') : t('emailLibraryCustomHint')}
-        </Text>
-        <ActionFeedback feedback={feedback} />
-      </header>
+          ) : null
+        }
+      />
+      <ActionFeedback feedback={feedback} />
 
-      {!accessToken ? <Text>{t('dashboardNoSession')}</Text> : null}
-      {accessToken && !canManage ? <Text>{t('emailForbidden')}</Text> : null}
+      {!accessToken ? (
+        <Alert>
+          <AlertDescription>{t('dashboardNoSession')}</AlertDescription>
+        </Alert>
+      ) : null}
+      {accessToken && !canManage ? (
+        <Alert>
+          <AlertDescription>{t('emailForbidden')}</AlertDescription>
+        </Alert>
+      ) : null}
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          {t('emailLoading')}
+        <div
+          className="space-y-3"
+          aria-busy
+        >
+          <span className="sr-only">{t('emailLoading')}</span>
+          <Skeleton className="h-9 w-full max-w-md" />
+          <Skeleton className="h-[28rem] w-full rounded-xl" />
         </div>
       ) : null}
       {error ? (
-        <Text className="font-mono text-sm text-destructive">{emailErrorText(t, error)}</Text>
+        <Alert variant="destructive">
+          <AlertDescription className="font-mono text-sm">
+            {emailErrorText(t, error)}
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       {!loading && detail && draft ? (
         <>
           {builtIn ? null : (
-            <div className="max-w-md space-y-1.5">
+            <div className="max-w-md space-y-1.5 rounded-xl border border-border bg-card p-4 shadow-sm">
               <Label htmlFor="email-library-name">{t('emailLibraryName')}</Label>
               <Input
                 id="email-library-name"

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AppWindow, ExternalLink, Loader2 } from 'lucide-react';
+import { ExternalLink, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { SettingsSection } from '@/components/admin/SettingsSection';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
@@ -170,176 +170,165 @@ export function CompanyDesktopSchemesSection({ accessToken, canEdit = true }: Pr
   }
 
   return (
-    <section
-      className="space-y-4"
-      aria-label={t('companyDesktopSchemesLabel')}
+    <SettingsSection
+      id="company-desktop-schemes"
+      title={t('companyDesktopSchemesLabel')}
     >
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader>
-          <CardTitle className="font-heading flex items-center gap-2 text-lg">
-            <AppWindow
-              className="size-4 text-muted-foreground"
-              aria-hidden
-            />
-            {t('companyDesktopSchemesLabel')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            {schemes.map((scheme, index) => {
-              const issue = issues[index];
-              const rowError = issue ? t(desktopSchemeIssueMessageKey(issue)) : '';
-              return (
-                <div
-                  key={index}
-                  className="flex items-start gap-2"
-                >
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <label
-                      htmlFor={`company-desktop-scheme-${index}`}
-                      className="sr-only"
-                    >
-                      {t('companyDesktopSchemesLabel')} {index + 1}
-                    </label>
-                    <Input
-                      id={`company-desktop-scheme-${index}`}
-                      value={scheme}
-                      onChange={(e) => updateScheme(index, e.target.value)}
-                      className="font-mono text-sm"
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      readOnly={!canEdit}
-                      disabled={!canEdit}
-                      aria-invalid={Boolean(rowError || fieldError)}
-                      aria-describedby="company-desktop-schemes-help"
-                    />
-                    {rowError ? (
-                      <Text className="font-mono text-xs text-destructive">{rowError}</Text>
-                    ) : null}
-                  </div>
-                  {canEdit ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => {
-                        setSchemes((prev) => prev.filter((_, i) => i !== index));
-                        setFieldError(null);
-                        setSaveMessage(null);
-                      }}
-                    >
-                      {t('companyDesktopSchemeRemove')}
-                    </Button>
+      <div className="space-y-4">
+        <div className="space-y-3">
+          {schemes.map((scheme, index) => {
+            const issue = issues[index];
+            const rowError = issue ? t(desktopSchemeIssueMessageKey(issue)) : '';
+            return (
+              <div
+                key={index}
+                className="flex items-start gap-2"
+              >
+                <div className="min-w-0 flex-1 space-y-1">
+                  <label
+                    htmlFor={`company-desktop-scheme-${index}`}
+                    className="sr-only"
+                  >
+                    {t('companyDesktopSchemesLabel')} {index + 1}
+                  </label>
+                  <Input
+                    id={`company-desktop-scheme-${index}`}
+                    value={scheme}
+                    onChange={(e) => updateScheme(index, e.target.value)}
+                    className="font-mono text-sm"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    readOnly={!canEdit}
+                    disabled={!canEdit}
+                    aria-invalid={Boolean(rowError || fieldError)}
+                    aria-describedby="company-desktop-schemes-help"
+                  />
+                  {rowError ? (
+                    <Text className="font-mono text-xs text-destructive">{rowError}</Text>
                   ) : null}
                 </div>
-              );
-            })}
-            {canEdit ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => {
-                  setSchemes((prev) => [...prev, '']);
-                  setFieldError(null);
-                  setSaveMessage(null);
-                }}
-              >
-                {t('companyDesktopSchemeAdd')}
-              </Button>
-            ) : null}
-          </div>
-          <div className="flex items-start justify-between gap-3 rounded-md border border-border/70 px-3 py-3">
-            <div className="min-w-0 space-y-1">
-              <Label
-                id="company-desktop-dev-scheme-label"
-                htmlFor="company-desktop-dev-scheme"
-              >
-                {t('companyDesktopDevSchemeLabel')}
-              </Label>
-              <Text
-                id="company-desktop-dev-scheme-help"
-                className="font-mono text-[10px] text-muted-foreground"
-              >
-                {t('companyDesktopDevSchemeHelp')}
-              </Text>
-            </div>
-            <button
-              id="company-desktop-dev-scheme"
-              type="button"
-              role="switch"
-              aria-checked={allowDev}
-              aria-labelledby="company-desktop-dev-scheme-label"
-              aria-describedby="company-desktop-dev-scheme-help"
-              aria-readonly={devSchemeReadOnly || undefined}
-              disabled={devSchemeDisabled}
-              onClick={toggleDevScheme}
-              className={cn(
-                'inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                allowDev ? 'bg-primary' : 'bg-input',
-                devSchemeDisabled && 'cursor-not-allowed opacity-60',
-              )}
-            >
-              <span
-                className={cn(
-                  'pointer-events-none block size-4 rounded-full bg-background shadow-sm transition-transform',
-                  allowDev ? 'translate-x-4' : 'translate-x-0',
-                )}
-              />
-            </button>
-          </div>
-          <Text
-            id="company-desktop-schemes-help"
-            className="font-mono text-[10px] text-muted-foreground"
-          >
-            {t('companyDesktopSchemesHelp')}{' '}
-            <code className="text-foreground">{deepLinkText(schemes)}</code>
-            {'. '}
-            {t('companyDesktopSchemesDocsLead')}{' '}
-            <a
-              href={IDENTITY_DESKTOP_APPS_DOCS_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary underline-offset-2 hover:underline"
-            >
-              {t('companyDesktopSchemesDocs')}
-              <ExternalLink
-                className="ml-0.5 inline h-3 w-3"
-                aria-hidden
-              />
-            </a>
-            {'.'}
-          </Text>
-          {fieldError ? (
-            <Text className="font-mono text-xs text-destructive">{fieldError}</Text>
-          ) : null}
-          {error ? <Text className="font-mono text-sm text-destructive">{error}</Text> : null}
-          {saveMessage ? (
-            <Text className="font-mono text-sm text-muted-foreground">{saveMessage}</Text>
-          ) : null}
+                {canEdit ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setSchemes((prev) => prev.filter((_, i) => i !== index));
+                      setFieldError(null);
+                      setSaveMessage(null);
+                    }}
+                  >
+                    {t('companyDesktopSchemeRemove')}
+                  </Button>
+                ) : null}
+              </div>
+            );
+          })}
           {canEdit ? (
             <Button
               type="button"
               size="sm"
-              disabled={saving || !dirty || hasIssue}
-              onClick={() => void handleSave()}
+              variant="secondary"
+              onClick={() => {
+                setSchemes((prev) => [...prev, '']);
+                setFieldError(null);
+                setSaveMessage(null);
+              }}
             >
-              {saving ? (
-                <>
-                  <Loader2
-                    className="size-4 animate-spin"
-                    aria-hidden
-                  />
-                  {t('dashboardCompanySaving')}
-                </>
-              ) : (
-                t('dashboardCompanySave')
-              )}
+              {t('companyDesktopSchemeAdd')}
             </Button>
           ) : null}
-        </CardContent>
-      </Card>
-    </section>
+        </div>
+        <div className="flex items-start justify-between gap-3 rounded-md border border-border/70 px-3 py-3">
+          <div className="min-w-0 space-y-1">
+            <Label
+              id="company-desktop-dev-scheme-label"
+              htmlFor="company-desktop-dev-scheme"
+            >
+              {t('companyDesktopDevSchemeLabel')}
+            </Label>
+            <Text
+              id="company-desktop-dev-scheme-help"
+              className="font-mono text-[10px] text-muted-foreground"
+            >
+              {t('companyDesktopDevSchemeHelp')}
+            </Text>
+          </div>
+          <button
+            id="company-desktop-dev-scheme"
+            type="button"
+            role="switch"
+            aria-checked={allowDev}
+            aria-labelledby="company-desktop-dev-scheme-label"
+            aria-describedby="company-desktop-dev-scheme-help"
+            aria-readonly={devSchemeReadOnly || undefined}
+            disabled={devSchemeDisabled}
+            onClick={toggleDevScheme}
+            className={cn(
+              'inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+              allowDev ? 'bg-primary' : 'bg-input',
+              devSchemeDisabled && 'cursor-not-allowed opacity-60',
+            )}
+          >
+            <span
+              className={cn(
+                'pointer-events-none block size-4 rounded-full bg-background shadow-sm transition-transform',
+                allowDev ? 'translate-x-4' : 'translate-x-0',
+              )}
+            />
+          </button>
+        </div>
+        <Text
+          id="company-desktop-schemes-help"
+          className="font-mono text-[10px] text-muted-foreground"
+        >
+          {t('companyDesktopSchemesHelp')}{' '}
+          <code className="text-foreground">{deepLinkText(schemes)}</code>
+          {'. '}
+          {t('companyDesktopSchemesDocsLead')}{' '}
+          <a
+            href={IDENTITY_DESKTOP_APPS_DOCS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline-offset-2 hover:underline"
+          >
+            {t('companyDesktopSchemesDocs')}
+            <ExternalLink
+              className="ml-0.5 inline h-3 w-3"
+              aria-hidden
+            />
+          </a>
+          {'.'}
+        </Text>
+        {fieldError ? (
+          <Text className="font-mono text-xs text-destructive">{fieldError}</Text>
+        ) : null}
+        {error ? <Text className="font-mono text-sm text-destructive">{error}</Text> : null}
+        {saveMessage ? (
+          <Text className="font-mono text-sm text-muted-foreground">{saveMessage}</Text>
+        ) : null}
+        {canEdit ? (
+          <Button
+            type="button"
+            size="sm"
+            disabled={saving || !dirty || hasIssue}
+            onClick={() => void handleSave()}
+          >
+            {saving ? (
+              <>
+                <Loader2
+                  className="size-4 animate-spin"
+                  aria-hidden
+                />
+                {t('dashboardCompanySaving')}
+              </>
+            ) : (
+              t('dashboardCompanySave')
+            )}
+          </Button>
+        ) : null}
+      </div>
+    </SettingsSection>
   );
 }

@@ -1,12 +1,24 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { AppWindow, Clock, Loader2, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import {
+  AppWindow,
+  Clock,
+  ExternalLink,
+  Loader2,
+  RefreshCw,
+  RotateCcw,
+  Trash2,
+} from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { DataTableCard, SkeletonRows } from '@/components/admin/DataTableCard';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Table,
   TableBody,
@@ -30,7 +42,7 @@ import shellui from '@shellui/sdk';
 import { confirmAction } from '@/lib/confirmAction';
 
 function formatDate(value: string | null, locale: string): string {
-  if (!value) return '—';
+  if (!value) return '-';
   try {
     return new Date(value).toLocaleString(locale);
   } catch {
@@ -111,17 +123,22 @@ function WaitlistBanner({
 
   if (access.status === 'approved') return null;
 
-  const variant =
-    access.status === 'denied' ? 'outline' : access.status === 'pending' ? 'secondary' : 'muted';
+  const tone =
+    access.status === 'denied' ? 'destructive' : access.status === 'pending' ? 'warning' : 'muted';
 
   return (
-    <Card className="border-border/80 bg-muted/30 shadow-sm">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">{t('hostingWaitlistTitle')}</CardTitle>
-        <CardDescription>{t('hostingWaitlistDescription')}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-wrap items-center gap-3">
-        <Badge variant={variant}>{t(`hostingAccessStatus_${access.status}`)}</Badge>
+    <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-sm font-semibold">{t('hostingWaitlistTitle')}</h2>
+        <StatusBadge
+          tone={tone}
+          dot
+        >
+          {t(`hostingAccessStatus_${access.status}`)}
+        </StatusBadge>
+      </div>
+      <p className="mt-1 text-[13px] text-muted-foreground">{t('hostingWaitlistDescription')}</p>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
         {access.status === 'none' ? (
           <Button
             type="button"
@@ -129,21 +146,31 @@ function WaitlistBanner({
             disabled={requesting}
             onClick={onRequest}
           >
-            {requesting ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+            {requesting ? (
+              <Loader2 className="mr-2 size-4 animate-spin motion-reduce:animate-none" />
+            ) : null}
             {t('hostingWaitlistRequest')}
           </Button>
         ) : null}
         {access.status === 'pending' ? (
           <Text className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <Clock className="size-3.5" />
+            <Clock
+              aria-hidden
+              className="size-3.5"
+            />
             {t('hostingWaitlistPendingHint')}
           </Text>
         ) : null}
-        {access.status === 'denied' && access.notes ? (
-          <Text className="text-sm text-muted-foreground">{access.notes}</Text>
-        ) : null}
-      </CardContent>
-    </Card>
+      </div>
+      {access.status === 'denied' && access.notes ? (
+        <Alert
+          variant="destructive"
+          className="mt-3"
+        >
+          <AlertDescription>{access.notes}</AlertDescription>
+        </Alert>
+      ) : null}
+    </section>
   );
 }
 
@@ -246,44 +273,58 @@ export function HostingAppsPage() {
 
   if (!hostingBaseUrl) {
     return (
-      <div className="mx-auto flex max-w-lg flex-col gap-3 px-4 py-8 md:px-6">
-        <h1 className="text-xl font-semibold tracking-tight">{t('hostingMissingTitle')}</h1>
-        <p className="text-sm text-muted-foreground">{t('hostingMissingDescription')}</p>
+      <div className="w-full space-y-6">
+        <PageHeader
+          title={t('hostingAppsTitle')}
+          service={t('hostingAppsBadge')}
+        />
+        <Alert variant="warning">
+          <AlertTitle>{t('hostingMissingTitle')}</AlertTitle>
+          <AlertDescription>{t('hostingMissingDescription')}</AlertDescription>
+        </Alert>
       </div>
     );
   }
 
+  const cols = ['pl-4', 'hidden md:table-cell', '', 'hidden md:table-cell', 'pr-4'];
+
   return (
-    <div className="w-full space-y-8">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-baseline gap-3">
-            <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-              {t('hostingAppsTitle')}
-            </h1>
-            <Badge
-              variant="secondary"
-              className="font-mono text-[10px] uppercase"
-            >
-              {t('hostingAppsBadge')}
-            </Badge>
-          </div>
-          <Text className="max-w-3xl font-mono text-sm">{t('hostingAppsDescription')}</Text>
-          <Text className="font-mono text-xs text-muted-foreground">{hostingBaseUrl}</Text>
-        </div>
-        <button
-          type="button"
-          onClick={() => void load()}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm hover:bg-muted"
-          disabled={loading}
-        >
-          <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
-          {t('hostingRefresh')}
-        </button>
-      </header>
+    <div className="w-full space-y-6">
+      <PageHeader
+        title={t('hostingAppsTitle')}
+        service={t('hostingAppsBadge')}
+        description={
+          <>
+            <span className="block">{t('hostingAppsDescription')}</span>
+            <span className="mt-1 block font-mono text-xs text-muted-foreground">
+              {hostingBaseUrl}
+            </span>
+          </>
+        }
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void load()}
+            disabled={loading}
+          >
+            <RefreshCw
+              aria-hidden
+              className={cn(
+                'mr-1.5 size-3.5',
+                loading && 'animate-spin motion-reduce:animate-none',
+              )}
+            />
+            {t('hostingRefresh')}
+          </Button>
+        }
+      />
 
       {!accessToken && (
-        <Text className="font-mono text-sm text-muted-foreground">{t('hostingNoSession')}</Text>
+        <Alert variant="info">
+          <AlertDescription>{t('hostingNoSession')}</AlertDescription>
+        </Alert>
       )}
 
       {access ? (
@@ -294,117 +335,142 @@ export function HostingAppsPage() {
         />
       ) : null}
 
-      {accessToken && loading && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          {t('hostingAppsLoading')}
-        </div>
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription className="font-mono text-sm">{error}</AlertDescription>
+        </Alert>
       )}
 
-      {error && <Text className="font-mono text-sm text-destructive">{error}</Text>}
-
-      {accessToken && !loading && (
-        <Card className="border-border/80 shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <AppWindow className="size-4" />
-              {t('hostingAppsListTitle')}
-            </CardTitle>
-            <CardDescription>{t('hostingAppsListDescription')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {apps.length === 0 ? (
-              <Text className="text-sm text-muted-foreground">{t('hostingAppsEmpty')}</Text>
-            ) : (
+      {accessToken && (
+        <DataTableCard
+          label={t('hostingAppsListTitle')}
+          busy={loading}
+          toolbar={
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold">{t('hostingAppsListTitle')}</h2>
+              <p className="text-xs text-muted-foreground">{t('hostingAppsListDescription')}</p>
+            </div>
+          }
+        >
+          {loading ? <span className="sr-only">{t('hostingAppsLoading')}</span> : null}
+          {!loading && apps.length === 0 ? (
+            <EmptyState
+              icon={AppWindow}
+              title={t('hostingAppsEmpty')}
+            />
+          ) : (
+            <TooltipProvider delayDuration={200}>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t('hostingColApp')}</TableHead>
-                    <TableHead>{t('hostingColSlug')}</TableHead>
+                    <TableHead className={cols[0]}>{t('hostingColApp')}</TableHead>
+                    <TableHead className={cols[1]}>{t('hostingColSlug')}</TableHead>
                     <TableHead>{t('hostingColExpires')}</TableHead>
-                    <TableHead>{t('hostingColUpdated')}</TableHead>
-                    <TableHead className="text-right">{t('hostingColActions')}</TableHead>
+                    <TableHead className={cols[3]}>{t('hostingColUpdated')}</TableHead>
+                    <TableHead className="pr-4 text-right">{t('hostingColActions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {apps.map((app) => (
-                    <TableRow key={app.id}>
-                      <TableCell>
-                        <Link
-                          to={`/hosting/apps/${app.name}`}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {app.display_name || app.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {app.urls?.url ? (
-                          <a
-                            href={app.urls.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-primary hover:underline"
+                  {loading ? (
+                    <SkeletonRows
+                      rows={4}
+                      columns={cols}
+                    />
+                  ) : null}
+                  {!loading &&
+                    apps.map((app) => (
+                      <TableRow key={app.id}>
+                        <TableCell className="pl-4">
+                          <Link
+                            to={`/hosting/apps/${app.name}`}
+                            className="flex min-w-0 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
-                            {app.slug}
-                          </a>
-                        ) : (
-                          app.slug
-                        )}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {isPreviewApp(app) ? (
-                          <div className="space-y-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span>{formatDate(app.expires_at ?? null, i18n.language)}</span>
+                            <span
+                              aria-hidden
+                              className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground"
+                            >
+                              <AppWindow className="size-4" />
+                            </span>
+                            <span className="truncate font-medium text-foreground hover:underline">
+                              {app.display_name || app.name}
+                            </span>
+                          </Link>
+                        </TableCell>
+                        <TableCell className="hidden font-mono text-xs md:table-cell">
+                          {app.urls?.url ? (
+                            <a
+                              href={app.urls.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 whitespace-nowrap text-primary hover:underline"
+                            >
+                              {app.slug}
+                              <ExternalLink
+                                aria-hidden
+                                className="size-3"
+                              />
+                              <span className="sr-only">{t('navOpensExternally')}</span>
+                            </a>
+                          ) : (
+                            app.slug
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {isPreviewApp(app) ? (
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-center gap-2 font-mono">
+                                <span>{formatDate(app.expires_at ?? null, i18n.language)}</span>
+                                {isPreviewExpired(app.expires_at) ? (
+                                  <StatusBadge tone="destructive">
+                                    {t('hostingExpiresExpired')}
+                                  </StatusBadge>
+                                ) : null}
+                              </div>
                               {isPreviewExpired(app.expires_at) ? (
-                                <Badge variant="outline">{t('hostingExpiresExpired')}</Badge>
+                                <Text className="text-xs text-muted-foreground">
+                                  {t('hostingExpiresExpiredHint')}
+                                </Text>
                               ) : null}
                             </div>
-                            {isPreviewExpired(app.expires_at) ? (
-                              <Text className="text-xs text-muted-foreground">
-                                {t('hostingExpiresExpiredHint')}
-                              </Text>
+                          ) : (
+                            <StatusBadge tone="muted">{t('hostingExpiresNever')}</StatusBadge>
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden font-mono text-xs text-muted-foreground md:table-cell">
+                          {formatDate(app.updated_at, i18n.language)}
+                        </TableCell>
+                        <TableCell className="pr-4 text-right">
+                          <div className="inline-flex items-center justify-end gap-2">
+                            {isPreviewApp(app) ? (
+                              <PreviewRenewButton
+                                app={app}
+                                renewingId={renewingId}
+                                onRenew={() => void handleRenewExpiry(app)}
+                              />
                             ) : null}
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={deletingId != null || renewingId != null}
+                              onClick={() => void handleDelete(app)}
+                            >
+                              {deletingId === app.id ? (
+                                <Loader2 className="mr-1.5 size-3.5 animate-spin motion-reduce:animate-none" />
+                              ) : (
+                                <Trash2 className="mr-1.5 size-3.5" />
+                              )}
+                              {t('hostingDelete')}
+                            </Button>
                           </div>
-                        ) : (
-                          <Text className="text-muted-foreground">{t('hostingExpiresNever')}</Text>
-                        )}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {formatDate(app.updated_at, i18n.language)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="inline-flex flex-wrap items-center justify-end gap-2">
-                          {isPreviewApp(app) ? (
-                            <PreviewRenewButton
-                              app={app}
-                              renewingId={renewingId}
-                              onRenew={() => void handleRenewExpiry(app)}
-                            />
-                          ) : null}
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={deletingId != null || renewingId != null}
-                            onClick={() => void handleDelete(app)}
-                          >
-                            {deletingId === app.id ? (
-                              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="mr-1.5 size-3.5" />
-                            )}
-                            {t('hostingDelete')}
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                      </TableRow>
+                    ))}
                 </TableBody>
               </Table>
-            )}
-          </CardContent>
-        </Card>
+            </TooltipProvider>
+          )}
+        </DataTableCard>
       )}
     </div>
   );

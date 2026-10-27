@@ -1,12 +1,22 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
-import { Loader2, Plus } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Loader2, Newspaper, Plus } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { DataTableCard, SkeletonRows } from '@/components/admin/DataTableCard';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { PageHeader } from '@/components/admin/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Text } from '@/components/ui/text';
 import { useLang } from '@/contexts/LangContext';
 import {
   ActionFeedback,
@@ -74,120 +84,176 @@ export function EmailNewslettersPage() {
     }
   }
 
+  const newButton =
+    canManage && !creating ? (
+      <Button
+        type="button"
+        onClick={() => setCreating(true)}
+      >
+        <Plus aria-hidden />
+        {t('emailNewsletterNew')}
+      </Button>
+    ) : null;
+  const ready = !loading && canManage && newsletters && !error;
+  const cols = [
+    'pl-4',
+    'text-right',
+    'hidden text-right md:table-cell',
+    'hidden pr-4 text-right md:table-cell',
+  ];
+
   return (
     <div className="w-full space-y-6">
-      <header className="space-y-1">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            {t('emailNewslettersTitle')}
-          </h1>
-          <Badge
-            variant="secondary"
-            className="font-mono text-[10px] uppercase"
-          >
-            email-service
-          </Badge>
-        </div>
-        <Text className="max-w-3xl">{t('emailNewslettersDescription')}</Text>
-      </header>
+      <PageHeader
+        title={t('emailNewslettersTitle')}
+        service="email-service"
+        description={t('emailNewslettersDescription')}
+        actions={ready && newsletters.length > 0 ? newButton : null}
+      />
 
-      {!accessToken ? <Text>{t('dashboardNoSession')}</Text> : null}
-      {accessToken && !canManage ? <Text>{t('emailForbidden')}</Text> : null}
-      {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          {t('emailLoading')}
-        </div>
+      {!accessToken ? (
+        <Alert variant="info">
+          <AlertDescription>{t('dashboardNoSession')}</AlertDescription>
+        </Alert>
+      ) : null}
+      {accessToken && !canManage ? (
+        <Alert variant="warning">
+          <AlertDescription>{t('emailForbidden')}</AlertDescription>
+        </Alert>
       ) : null}
       {error ? (
-        <Text className="font-mono text-sm text-destructive">{emailErrorText(t, error)}</Text>
-      ) : null}
-
-      {!loading && canManage && newsletters && !error ? (
-        <>
-          {creating ? (
-            <form
-              className="max-w-md space-y-3 rounded-lg border border-border bg-card p-4"
-              onSubmit={(ev) => void create(ev)}
-            >
-              <div className="space-y-1.5">
-                <Label htmlFor="newsletter-name">{t('emailNewsletterName')}</Label>
-                <Input
-                  id="newsletter-name"
-                  value={name}
-                  maxLength={120}
-                  autoFocus
-                  placeholder={t('emailNewsletterNamePlaceholder')}
-                  onChange={(ev) => setName(ev.target.value)}
-                />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="submit"
-                  disabled={busy}
-                >
-                  {busy ? <Loader2 className="animate-spin" /> : null}
-                  {t('emailNewsletterCreate')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setCreating(false)}
-                >
-                  {t('actionsCancel')}
-                </Button>
-              </div>
-              <ActionFeedback feedback={feedback} />
-            </form>
-          ) : (
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span className="font-mono text-sm">{emailErrorText(t, error)}</span>
             <Button
               type="button"
-              onClick={() => setCreating(true)}
+              size="sm"
+              variant="outline"
+              onClick={() => void load()}
             >
-              <Plus />
-              {t('emailNewsletterNew')}
+              {t('usersRetry')}
             </Button>
-          )}
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
-          {newsletters.length === 0 ? (
-            <Text>{t('emailNewslettersEmpty')}</Text>
+      {creating && canManage ? (
+        <form
+          className="max-w-xl overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+          onSubmit={(ev) => void create(ev)}
+        >
+          <div className="space-y-3 p-4 sm:p-5">
+            <h2 className="text-sm font-semibold">{t('emailNewsletterNew')}</h2>
+            <div className="space-y-1.5">
+              <Label htmlFor="newsletter-name">{t('emailNewsletterName')}</Label>
+              <Input
+                id="newsletter-name"
+                value={name}
+                maxLength={120}
+                aria-required
+                autoFocus
+                placeholder={t('emailNewsletterNamePlaceholder')}
+                onChange={(ev) => setName(ev.target.value)}
+              />
+            </div>
+            <ActionFeedback feedback={feedback} />
+          </div>
+          <div className="flex flex-wrap justify-end gap-2 border-t border-border bg-muted/30 px-4 py-3 sm:px-5">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setCreating(false)}
+            >
+              {t('actionsCancel')}
+            </Button>
+            <Button
+              type="submit"
+              disabled={busy}
+            >
+              {busy ? <Loader2 className="animate-spin motion-reduce:animate-none" /> : null}
+              {t('emailNewsletterCreate')}
+            </Button>
+          </div>
+        </form>
+      ) : null}
+
+      {canManage && !error && (loading || newsletters) ? (
+        <DataTableCard
+          label={t('emailNewslettersTitle')}
+          busy={loading}
+        >
+          {loading ? <span className="sr-only">{t('emailLoading')}</span> : null}
+          {ready && newsletters.length === 0 ? (
+            <EmptyState
+              icon={Newspaper}
+              title={t('emailNewslettersEmpty')}
+              actions={newButton}
+            />
           ) : (
-            <ul className="divide-y divide-border rounded-lg border border-border">
-              {newsletters.map((newsletter) => (
-                <li key={newsletter.id}>
-                  <Link
-                    to={emailNewsletterPath(newsletter.id)}
-                    className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-muted/40"
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium">{newsletter.name}</span>
-                      {newsletter.description ? (
-                        <span className="block truncate text-xs text-muted-foreground">
-                          {newsletter.description}
-                        </span>
-                      ) : null}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {t('emailNewsletterConfirmedCount', { count: newsletter.counts.confirmed })}
-                    </span>
-                    {newsletter.counts.pending ? (
-                      <span className="text-xs text-muted-foreground">
-                        {t('emailNewsletterPendingCount', { count: newsletter.counts.pending })}
-                      </span>
-                    ) : null}
-                    {newsletter.counts.unsubscribed ? (
-                      <span className="text-xs text-muted-foreground">
-                        {t('emailNewsletterUnsubscribedCount', {
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className={cols[0]}>{t('emailBroadcastsColName')}</TableHead>
+                  <TableHead className={cols[1]}>{t('emailNewsletterStatus_confirmed')}</TableHead>
+                  <TableHead className={cols[2]}>{t('emailNewsletterStatus_pending')}</TableHead>
+                  <TableHead className={cols[3]}>
+                    {t('emailNewsletterStatus_unsubscribed')}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <SkeletonRows
+                    rows={3}
+                    columns={cols}
+                  />
+                ) : null}
+                {!loading &&
+                  (newsletters ?? []).map((newsletter) => (
+                    <TableRow key={newsletter.id}>
+                      <TableCell className="pl-4">
+                        <Link
+                          to={emailNewsletterPath(newsletter.id)}
+                          className="font-medium text-foreground hover:underline"
+                        >
+                          {newsletter.name}
+                        </Link>
+                        {newsletter.description ? (
+                          <span className="block max-w-md truncate text-xs text-muted-foreground">
+                            {newsletter.description}
+                          </span>
+                        ) : null}
+                      </TableCell>
+                      <TableCell
+                        className="text-right font-mono tabular-nums"
+                        title={t('emailNewsletterConfirmedCount', {
+                          count: newsletter.counts.confirmed,
+                        })}
+                      >
+                        {newsletter.counts.confirmed}
+                      </TableCell>
+                      <TableCell
+                        className="hidden text-right font-mono tabular-nums text-muted-foreground md:table-cell"
+                        title={t('emailNewsletterPendingCount', {
+                          count: newsletter.counts.pending,
+                        })}
+                      >
+                        {newsletter.counts.pending}
+                      </TableCell>
+                      <TableCell
+                        className="hidden pr-4 text-right font-mono tabular-nums text-muted-foreground md:table-cell"
+                        title={t('emailNewsletterUnsubscribedCount', {
                           count: newsletter.counts.unsubscribed,
                         })}
-                      </span>
-                    ) : null}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+                      >
+                        {newsletter.counts.unsubscribed}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
           )}
-        </>
+        </DataTableCard>
       ) : null}
     </div>
   );

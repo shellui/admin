@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Trash2 } from 'lucide-react';
+import { CircleAlert, Loader2, Mail, Trash2 } from 'lucide-react';
 import shellui from '@shellui/sdk';
-import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { IdentityBackendMissing } from '@/components/ServiceUrlMissing';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
@@ -140,12 +142,20 @@ export function PendingInvitationsPage() {
       ) : null}
 
       {error ? (
-        <p
-          role="alert"
-          className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          {error}
-        </p>
+        <Alert variant="destructive">
+          <CircleAlert aria-hidden />
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+            <span>{error}</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void load()}
+            >
+              {t('usersRetry')}
+            </Button>
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       {accessToken && invitations == null && !error ? (
@@ -159,51 +169,50 @@ export function PendingInvitationsPage() {
       ) : null}
 
       {invitations && invitations.length === 0 ? (
-        <p className="rounded-md border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
-          {t('invitationsEmpty')}
-        </p>
+        <EmptyState
+          icon={Mail}
+          title={t('invitationsEmpty')}
+        />
       ) : null}
 
       {invitations && invitations.length > 0 ? (
-        <ul className="max-h-[60vh] divide-y divide-border overflow-y-auto rounded-md border border-border">
+        <ul className="max-h-[60vh] divide-y divide-border overflow-y-auto border-y border-border">
           {invitations.map((invitation) => {
             const revoked = invitation.status === 'revoked';
             return (
               <li
                 key={invitation.id}
-                className="flex items-center gap-3 px-3 py-2.5"
+                className="flex items-center gap-3 py-3"
               >
                 <div className="min-w-0 flex-1">
-                  <p
-                    className="truncate font-mono text-sm"
-                    title={invitation.email}
-                  >
-                    {invitation.email}
+                  <p className="flex min-w-0 items-center gap-2">
+                    <span
+                      className="truncate text-sm font-medium"
+                      title={invitation.email}
+                    >
+                      {invitation.email}
+                    </span>
+                    <StatusBadge
+                      tone={revoked ? 'muted' : 'warning'}
+                      dot
+                    >
+                      {t(`invitationsStatus_${invitation.status}`)}
+                    </StatusBadge>
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
                     {t('invitationsRowMeta', {
                       language: t(`inviteLanguage_${invitation.language}`),
                       date: formatDate(invitation.created_at),
-                      inviter: invitation.invited_by?.name ?? '—',
+                      inviter: invitation.invited_by?.name ?? '-',
                     })}
                   </p>
                 </div>
-                <Badge
-                  variant={revoked ? 'muted' : 'secondary'}
-                  className="shrink-0 text-[10px]"
-                >
-                  {t(`invitationsStatus_${invitation.status}`)}
-                </Badge>
                 <Button
                   type="button"
-                  variant={revoked ? 'outline' : 'ghost'}
+                  variant="outline"
                   size="sm"
                   disabled={busyId != null}
-                  className={
-                    revoked
-                      ? 'h-7 shrink-0 text-xs'
-                      : 'h-7 shrink-0 text-xs text-destructive hover:text-destructive'
-                  }
+                  className="h-7 shrink-0 text-xs"
                   onClick={() => void (revoked ? inviteAgain(invitation) : revoke(invitation))}
                 >
                   {busyId === invitation.id ? (
@@ -240,7 +249,7 @@ export function PendingInvitationsPage() {
       <div className="flex justify-end">
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           onClick={() => shellui.closeModal()}
         >
           {t('invitationsClose')}

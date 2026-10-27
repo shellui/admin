@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { ChevronDown, ChevronRight, Clock, Loader2, RefreshCw } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { ChevronDown, ChevronRight, Loader2, RefreshCw } from 'lucide-react';
+import { StatusBadge, type StatusTone } from '@/components/admin/StatusBadge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -40,20 +42,22 @@ import { webhookDeliveryDetailPath } from '@/lib/webhookRoutePaths';
 
 const RECENT_RUNS = 10;
 
-function healthClassName(health: string): string {
-  if (health === 'healthy')
-    return 'border-transparent bg-emerald-500/15 text-emerald-800 dark:text-emerald-200';
-  if (health === 'failing') return 'border-transparent bg-destructive/15 text-destructive';
-  if (health === 'overdue')
-    return 'border-transparent bg-amber-500/15 text-amber-900 dark:text-amber-100';
-  return 'border-border bg-muted/50 text-muted-foreground';
+function healthTone(health: string): StatusTone {
+  if (health === 'healthy') return 'success';
+  if (health === 'failing') return 'destructive';
+  if (health === 'overdue') return 'warning';
+  return 'muted';
 }
 
 function runStatusClassName(status: string): string {
-  if (status === 'succeeded') return 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200';
-  if (status === 'running') return 'bg-sky-500/15 text-sky-900 dark:text-sky-100';
-  if (status === 'failed') return 'bg-destructive/15 text-destructive';
-  return 'bg-muted text-muted-foreground';
+  return `tone-${runStatusTone(status)} rounded border px-1.5 py-0.5`;
+}
+
+function runStatusTone(status: string): StatusTone {
+  if (status === 'succeeded') return 'success';
+  if (status === 'running') return 'info';
+  if (status === 'failed') return 'destructive';
+  return 'muted';
 }
 
 function useDateFormatters() {
@@ -75,12 +79,10 @@ function useDateFormatters() {
 
 function Fact({ label, value, title }: { label: string; value: string; title?: string }) {
   return (
-    <div className="space-y-0.5">
-      <dt className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-        {label}
-      </dt>
+    <div className="min-w-0 space-y-0.5">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd
-        className="font-mono text-sm tabular-nums"
+        className="text-sm font-medium tabular-nums"
         title={title}
       >
         {value}
@@ -93,9 +95,7 @@ function CountsList({ job, counts }: { job: string; counts: ScheduledJobRun['cou
   const { t } = useTranslation();
   const rows = orderedCounts(job, counts);
   if (rows.length === 0) {
-    return (
-      <Text className="font-mono text-xs text-muted-foreground">{t('scheduledJobsNoCounts')}</Text>
-    );
+    return <p className="text-sm text-muted-foreground">{t('scheduledJobsNoCounts')}</p>;
   }
   return (
     <ul className="grid gap-x-6 gap-y-1 font-mono text-xs sm:grid-cols-2">
@@ -292,9 +292,7 @@ function RunsTable({
   const [openRunId, setOpenRunId] = useState<number | null>(null);
 
   if (runs.length === 0) {
-    return (
-      <Text className="font-mono text-xs text-muted-foreground">{t('scheduledJobsNoRuns')}</Text>
-    );
+    return <p className="px-3 py-4 text-sm text-muted-foreground">{t('scheduledJobsNoRuns')}</p>;
   }
   return (
     <Table>
@@ -302,9 +300,9 @@ function RunsTable({
         <TableRow>
           <TableHead>{t('scheduledJobsColStarted')}</TableHead>
           <TableHead>{t('scheduledJobsColStatus')}</TableHead>
-          <TableHead>{t('scheduledJobsColTrigger')}</TableHead>
+          <TableHead className="hidden sm:table-cell">{t('scheduledJobsColTrigger')}</TableHead>
           <TableHead>{t('scheduledJobsColDuration')}</TableHead>
-          <TableHead>{t('scheduledJobsColCounts')}</TableHead>
+          <TableHead className="hidden md:table-cell">{t('scheduledJobsColCounts')}</TableHead>
           <TableHead>{t('scheduledJobsColError')}</TableHead>
           <TableHead className="text-right">{t('scheduledJobsColCorrelation')}</TableHead>
         </TableRow>
@@ -317,28 +315,23 @@ function RunsTable({
           return [
             <TableRow key={run.id}>
               <TableCell
-                className="whitespace-nowrap font-mono text-xs"
+                className="whitespace-nowrap text-xs"
                 title={fmt.absolute(run.started_at)}
               >
                 {fmt.relative(run.started_at) ?? '-'}
               </TableCell>
               <TableCell>
-                <span
-                  className={cn(
-                    'rounded px-1.5 py-0.5 font-mono text-xs',
-                    runStatusClassName(run.status),
-                  )}
-                >
+                <StatusBadge tone={runStatusTone(run.status)}>
                   {t(runStatusLabelKey(run.status))}
-                </span>
+                </StatusBadge>
               </TableCell>
-              <TableCell className="font-mono text-xs">
+              <TableCell className="hidden text-xs sm:table-cell">
                 {t(`scheduledJobsTrigger_${run.trigger}`, { defaultValue: run.trigger })}
               </TableCell>
               <TableCell className="font-mono text-xs tabular-nums">
                 {fmt.duration(run.duration_ms) ?? '-'}
               </TableCell>
-              <TableCell className="font-mono text-xs">
+              <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
                 {nonZero.length === 0
                   ? t('scheduledJobsNothingToDo')
                   : nonZero
@@ -349,7 +342,7 @@ function RunsTable({
                       .join(', ')}
               </TableCell>
               <TableCell
-                className="font-mono text-xs text-destructive"
+                className="text-xs text-destructive"
                 title={[run.error_class, run.error_message].filter(Boolean).join(': ') || undefined}
               >
                 {errorKey ? t(errorKey) : ''}
@@ -378,7 +371,10 @@ function RunsTable({
               </TableCell>
             </TableRow>,
             open ? (
-              <TableRow key={`${run.id}-detail`}>
+              <TableRow
+                key={`${run.id}-detail`}
+                className="bg-muted/30 hover:bg-muted/30"
+              >
                 <TableCell colSpan={7}>
                   <RunCorrelation
                     run={run}
@@ -417,29 +413,31 @@ function JobCard({
   const descriptionKeyForJob = service === 'email' && i18n.exists(emailKey) ? emailKey : genericKey;
   return (
     <Card
-      className="border-border/80 shadow-sm"
+      className="overflow-hidden rounded-xl border-border shadow-sm"
       data-testid={`scheduled-job-${status.job}`}
     >
-      <CardHeader className="space-y-1.5">
+      <CardHeader className="space-y-1.5 border-b border-border pb-4">
         <div className="flex flex-wrap items-center gap-2">
-          <CardTitle className="font-heading text-base">{t(jobLabelKey(status.job))}</CardTitle>
+          <CardTitle className="text-sm font-semibold">{t(jobLabelKey(status.job))}</CardTitle>
           <code className="font-mono text-[11px] text-muted-foreground">{status.job}</code>
-          <Badge className={healthClassName(status.health)}>
+          <StatusBadge tone={healthTone(status.health)}>
             {t(healthLabelKey(status.health))}
-          </Badge>
+          </StatusBadge>
           {status.overdue && status.health === 'failing' && (
-            <Badge className={healthClassName('overdue')}>{t('scheduledJobsHealth_overdue')}</Badge>
+            <StatusBadge tone={healthTone('overdue')}>
+              {t('scheduledJobsHealth_overdue')}
+            </StatusBadge>
           )}
         </div>
-        <CardDescription className="font-mono text-xs">
+        <CardDescription className="text-xs">
           {t(descriptionKeyForJob, {
             defaultValue: '',
             minutes: Math.round(status.overdue_after_seconds / 60),
           })}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-5">
-        <dl className="grid gap-4 sm:grid-cols-3 xl:grid-cols-6">
+      <CardContent className="space-y-5 pt-4">
+        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
           <Fact
             label={t('scheduledJobsLastRun')}
             value={
@@ -477,7 +475,7 @@ function JobCard({
           />
         </dl>
         <div className="space-y-2">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             {t('scheduledJobsLastCounts')}
           </p>
           <CountsList
@@ -485,18 +483,25 @@ function JobCard({
             counts={status.last_counts}
           />
         </div>
-        <div className="space-y-2">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+        <details className="group rounded-lg border border-border">
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-medium marker:content-none [&::-webkit-details-marker]:hidden">
+            <ChevronRight
+              className="size-4 text-muted-foreground transition-transform group-open:rotate-90 motion-reduce:transition-none"
+              aria-hidden
+            />
             {t('scheduledJobsRecentRuns')}
-          </p>
-          <RunsTable
-            job={status.job}
-            runs={runs}
-            companyId={companyId}
-            baseUrl={baseUrl}
-            service={service}
-          />
-        </div>
+            <span className="text-xs font-normal text-muted-foreground">{runs.length}</span>
+          </summary>
+          <div className="border-t border-border">
+            <RunsTable
+              job={status.job}
+              runs={runs}
+              companyId={companyId}
+              baseUrl={baseUrl}
+              service={service}
+            />
+          </div>
+        </details>
       </CardContent>
     </Card>
   );
@@ -516,15 +521,15 @@ function SchedulerBadges({ overview }: { overview: ScheduledJobsOverview }) {
       className="flex flex-wrap items-center gap-2"
       aria-label={t('scheduledJobsSchedulerStatus')}
     >
-      <Badge className={healthClassName(overview.scheduler_enabled ? 'healthy' : 'disabled')}>
+      <StatusBadge tone={healthTone(overview.scheduler_enabled ? 'healthy' : 'disabled')}>
         {t(
           overview.scheduler_enabled
             ? 'scheduledJobsSchedulerEnabled'
             : 'scheduledJobsSchedulerDisabled',
         )}
-      </Badge>
-      <Badge
-        className={healthClassName(
+      </StatusBadge>
+      <StatusBadge
+        tone={healthTone(
           overview.redis_reachable === false
             ? 'failing'
             : overview.redis_reachable
@@ -533,10 +538,10 @@ function SchedulerBadges({ overview }: { overview: ScheduledJobsOverview }) {
         )}
       >
         {t(redisKey)}
-      </Badge>
+      </StatusBadge>
       {overview.scheduler_enabled && (
-        <Badge
-          className={healthClassName(overview.beat_stale ? 'overdue' : 'healthy')}
+        <StatusBadge
+          tone={healthTone(overview.beat_stale ? 'overdue' : 'healthy')}
           title={fmt.absolute(overview.beat_last_seen_at)}
         >
           {overview.beat_last_seen_at
@@ -544,7 +549,7 @@ function SchedulerBadges({ overview }: { overview: ScheduledJobsOverview }) {
                 when: fmt.relative(overview.beat_last_seen_at),
               })
             : t('scheduledJobsBeatNever')}
-        </Badge>
+        </StatusBadge>
       )}
     </div>
   );
@@ -622,24 +627,19 @@ export function DashboardScheduledJobsSection({
       className="space-y-4"
       aria-labelledby="scheduled-jobs-heading"
     >
-      <div className="flex flex-wrap items-baseline gap-3">
-        <h2
-          id="scheduled-jobs-heading"
-          className="font-heading text-lg font-semibold tracking-tight"
-        >
-          {t('scheduledJobsTitle')}
-        </h2>
-        <Badge
-          variant="secondary"
-          className="font-mono text-[10px] uppercase"
-        >
-          {t('scheduledJobsStaffBadge')}
-        </Badge>
-      </div>
-      <Text className="max-w-3xl font-mono text-sm">{t(descriptionKey(service))}</Text>
-
-      <div className="flex flex-wrap items-center gap-3">
-        {overview && <SchedulerBadges overview={overview} />}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2
+              id="scheduled-jobs-heading"
+              className="font-heading text-lg font-semibold tracking-tight"
+            >
+              {t('scheduledJobsTitle')}
+            </h2>
+            <StatusBadge tone="gold">{t('scheduledJobsStaffBadge')}</StatusBadge>
+          </div>
+          <p className="max-w-3xl text-sm text-muted-foreground">{t(descriptionKey(service))}</p>
+        </div>
         <Button
           type="button"
           variant="outline"
@@ -649,7 +649,7 @@ export function DashboardScheduledJobsSection({
         >
           {loading ? (
             <Loader2
-              className="size-3.5 animate-spin"
+              className="size-3.5 animate-spin motion-reduce:animate-none"
               aria-hidden
             />
           ) : (
@@ -660,25 +660,33 @@ export function DashboardScheduledJobsSection({
           )}
           {t('scheduledJobsRefresh')}
         </Button>
-        {error && (
-          <Text
-            role="alert"
-            className="font-mono text-xs text-destructive"
-          >
-            {t('scheduledJobsError')} {error}
-          </Text>
-        )}
       </div>
 
-      {!overview && loading && (
-        <div className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
-          <Clock
-            className="size-4"
-            aria-hidden
-          />
-          {t('scheduledJobsLoading')}
+      {error ? (
+        <Alert variant="destructive">
+          <AlertDescription>
+            {t('scheduledJobsError')} {error}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {overview ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
+          <span className="text-sm font-medium">{t('scheduledJobsSchedulerStatus')}</span>
+          <SchedulerBadges overview={overview} />
         </div>
-      )}
+      ) : null}
+
+      {!overview && loading ? (
+        <div
+          className="space-y-3"
+          aria-busy="true"
+          aria-label={t('scheduledJobsLoading')}
+        >
+          <Skeleton className="h-12 w-full rounded-xl" />
+          <Skeleton className="h-40 w-full rounded-xl" />
+        </div>
+      ) : null}
 
       {overview && (
         <div className="grid gap-4">

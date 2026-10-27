@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
@@ -76,19 +75,6 @@ export function OAuthCredentialsForm({
 
   return (
     <div className="space-y-6">
-      {mode === 'edit' ? (
-        <Link
-          to="/oauth"
-          className="inline-flex items-center font-mono text-xs text-muted-foreground hover:text-foreground"
-        >
-          <ChevronLeft
-            className="mr-0.5 h-3.5 w-3.5"
-            aria-hidden
-          />
-          {t('oauthWizardBackToList')}
-        </Link>
-      ) : null}
-
       <div className="flex flex-wrap items-center gap-3">
         <OAuthProviderIconFromCatalog
           provider={provider}
@@ -97,7 +83,7 @@ export function OAuthCredentialsForm({
         />
         <div>
           <h2 className="font-heading text-lg font-semibold">{provider.name}</h2>
-          <Text className="font-mono text-xs text-muted-foreground">
+          <Text className="text-xs text-muted-foreground">
             {mode === 'edit' ? t('oauthWizardEditHint') : t('oauthWizardCredentialsIntro')}
           </Text>
         </div>
@@ -105,11 +91,11 @@ export function OAuthCredentialsForm({
 
       {formError ? (
         <div className="space-y-1">
-          <Text className="font-mono text-sm text-destructive">{formError}</Text>
+          <p className="text-sm text-destructive">{formError}</p>
           {formErrorExistingAppId != null ? (
             <Link
               to={`/oauth/apps/${formErrorExistingAppId}/edit`}
-              className="font-mono text-xs text-primary underline-offset-2 hover:underline"
+              className="text-xs text-primary-ink underline underline-offset-2"
             >
               {t('oauthErrorDuplicateOpenExisting')}
             </Link>
@@ -126,9 +112,7 @@ export function OAuthCredentialsForm({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1 sm:col-span-2">
-          <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-            {t('oauthClientsClientId')}
-          </label>
+          <label className="text-sm font-medium">{t('oauthClientsClientId')}</label>
           <Input
             value={values.client_id}
             onChange={(e) => onChange({ ...values, client_id: e.target.value })}
@@ -136,13 +120,11 @@ export function OAuthCredentialsForm({
             aria-invalid={Boolean(fieldErrors.client_id)}
           />
           {fieldErrors.client_id ? (
-            <Text className="font-mono text-xs text-destructive">{fieldErrors.client_id}</Text>
+            <Text className="text-xs text-destructive">{fieldErrors.client_id}</Text>
           ) : null}
         </div>
         <div className="space-y-1 sm:col-span-2">
-          <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-            {t('oauthClientsClientSecret')}
-          </label>
+          <label className="text-sm font-medium">{t('oauthClientsClientSecret')}</label>
           <Input
             type="password"
             data-1p-ignore
@@ -155,14 +137,12 @@ export function OAuthCredentialsForm({
             aria-invalid={Boolean(fieldErrors.client_secret)}
           />
           {fieldErrors.client_secret ? (
-            <Text className="font-mono text-xs text-destructive">{fieldErrors.client_secret}</Text>
+            <Text className="text-xs text-destructive">{fieldErrors.client_secret}</Text>
           ) : null}
         </div>
         {tenantVisible ? (
           <div className="space-y-1 sm:col-span-2">
-            <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-              {t('oauthClientsTenant')}
-            </label>
+            <label className="text-sm font-medium">{t('oauthClientsTenant')}</label>
             <Input
               value={values.tenant}
               onChange={(e) => onChange({ ...values, tenant: e.target.value })}
@@ -170,7 +150,7 @@ export function OAuthCredentialsForm({
               aria-invalid={Boolean(fieldErrors.tenant)}
             />
             {fieldErrors.tenant ? (
-              <Text className="font-mono text-xs text-destructive">{fieldErrors.tenant}</Text>
+              <Text className="text-xs text-destructive">{fieldErrors.tenant}</Text>
             ) : null}
           </div>
         ) : null}
@@ -182,7 +162,7 @@ export function OAuthCredentialsForm({
               key={field.name}
               className="space-y-1 sm:col-span-2"
             >
-              <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+              <label className="text-sm font-medium">
                 {extraSettingLabel(t, field.name)}
                 {field.required ? ' *' : ''}
               </label>
@@ -202,7 +182,7 @@ export function OAuthCredentialsForm({
                   {extraSettingHelp(t, field.name)}
                 </Text>
               ) : null}
-              {err ? <Text className="font-mono text-xs text-destructive">{err}</Text> : null}
+              {err ? <Text className="text-xs text-destructive">{err}</Text> : null}
             </div>
           );
         })}
@@ -227,8 +207,8 @@ export function OAuthCredentialsForm({
           mode === 'edit' && onDelete ? (
             <Button
               type="button"
-              size="sm"
-              variant="destructive"
+              variant="outline"
+              className="text-destructive hover:text-destructive"
               disabled={busy}
               onClick={onDelete}
             >

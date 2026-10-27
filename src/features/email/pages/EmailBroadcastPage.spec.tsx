@@ -120,7 +120,7 @@ describe('EmailBroadcastPage', () => {
     api.patchBroadcast.mockImplementation(async (_id, body) => draft({ audience: body.audience }));
     renderPage();
     fireEvent.click(await screen.findByRole('tab', { name: 'Audience' }));
-    fireEvent.click(await screen.findByRole('tab', { name: 'Newsletter subscribers' }));
+    fireEvent.click(await screen.findByRole('radio', { name: 'Newsletter subscribers' }));
     await waitFor(() =>
       expect(api.previewBroadcast).toHaveBeenLastCalledWith(
         5,

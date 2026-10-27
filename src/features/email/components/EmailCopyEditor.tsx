@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { useLang } from '@/contexts/LangContext';
@@ -314,23 +316,46 @@ export function EmailCopyEditor({
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" />
-        {t('emailLoading')}
+      <div
+        className="space-y-4"
+        aria-busy="true"
+        aria-label={t('emailLoading')}
+      >
+        <Skeleton className="h-12 w-full rounded-xl" />
+        <Skeleton className="h-28 w-full rounded-xl" />
+        <Skeleton className="h-80 w-full rounded-xl" />
       </div>
     );
   }
   if (error || !row) {
-    return <Text className="font-mono text-sm text-destructive">{emailErrorText(t, error)}</Text>;
+    return (
+      <Alert variant="destructive">
+        <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+          <span>{emailErrorText(t, error)}</span>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => void load()}
+          >
+            {t('usersRetry')}
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
   }
 
   const assetsUrl = emailAssetsUrl(baseUrl);
 
   return (
     <div className="space-y-5">
-      {unpublished ? <Text className="text-sm">{t('emailCopyUnpublished')}</Text> : null}
+      {unpublished ? (
+        <Alert variant="warning">
+          <AlertDescription>{t('emailCopyUnpublished')}</AlertDescription>
+        </Alert>
+      ) : null}
       {picking ? (
-        <section className="space-y-4 rounded-lg border border-border bg-card p-4">
+        <section className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-1">
               <h2 className="text-base font-semibold tracking-tight">{t('emailStartOverPick')}</h2>
@@ -345,9 +370,9 @@ export function EmailCopyEditor({
             </Button>
           </div>
           {pickError ? (
-            <Text className="font-mono text-sm text-destructive">
-              {emailErrorText(t, pickError)}
-            </Text>
+            <Alert variant="destructive">
+              <AlertDescription>{emailErrorText(t, pickError)}</AlertDescription>
+            </Alert>
           ) : null}
           {library ? (
             <EmailLibraryGrid

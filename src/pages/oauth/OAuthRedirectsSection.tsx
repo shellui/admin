@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Lock } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
-import { Text } from '@/components/ui/text';
+import { Skeleton } from '@/components/ui/skeleton';
+import { askShelluiConfirm } from '@/lib/shelluiConfirm';
 import {
   createOAuthRedirect,
   deleteOAuthRedirect,
@@ -77,6 +79,14 @@ export function OAuthRedirectsSection({ accessToken }: Props) {
 
   async function onDeleteRedirect(row: OAuthRedirectRow) {
     if (!accessToken) return;
+    const confirmed = await askShelluiConfirm({
+      title: t('loginRedirectsDeleteConfirmTitle'),
+      description: t('loginRedirectsDeleteConfirmDescription', { url: row.base_url }),
+      okLabel: t('loginRedirectsDelete'),
+      cancelLabel: t('groupsCancelEdit'),
+      mode: 'delete',
+    });
+    if (!confirmed) return;
     setRedirectBusy(true);
     setRedirectError(null);
     try {
@@ -89,133 +99,135 @@ export function OAuthRedirectsSection({ accessToken }: Props) {
     }
   }
 
+  const card = 'overflow-hidden rounded-xl border border-border bg-card shadow-sm';
+  const loadingRows = (
+    <div className="space-y-2 p-4">
+      <span className="sr-only">{t('loginRedirectsLoading')}</span>
+      <Skeleton className="h-8 w-full" />
+      <Skeleton className="h-8 w-full" />
+    </div>
+  );
   return (
     <>
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader>
-          <CardTitle className="font-heading text-lg">{t('loginRedirectsTitle')}</CardTitle>
-          <CardDescription className="font-mono text-xs">
-            {t('loginRedirectsDescription')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {redirectError ? (
-            <Text className="font-mono text-sm text-destructive">{redirectError}</Text>
-          ) : null}
-          {redirectsLoading ? (
-            <Text className="font-mono text-sm text-muted-foreground">
-              {t('loginRedirectsLoading')}
-            </Text>
-          ) : null}
-          {!redirectsLoading && manualRedirectRows.length === 0 ? (
-            <Text className="font-mono text-sm text-muted-foreground">
-              {t('loginRedirectsEmpty')}
-            </Text>
-          ) : null}
-          {!redirectsLoading && manualRedirectRows.length > 0 ? (
-            <ul className="divide-y divide-border rounded-md border border-border">
-              {manualRedirectRows.map((row) => (
-                <li
-                  key={row.id}
-                  className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
-                >
+      <section className={card}>
+        <div className="space-y-1 border-b border-border px-4 py-3 sm:px-5">
+          <h2 className="text-sm font-semibold">{t('loginRedirectsTitle')}</h2>
+          <p className="text-xs text-muted-foreground">{t('loginRedirectsDescription')}</p>
+        </div>
+        {redirectError ? (
+          <div className="p-4">
+            <Alert variant="destructive">
+              <AlertDescription>{redirectError}</AlertDescription>
+            </Alert>
+          </div>
+        ) : null}
+        {redirectsLoading ? loadingRows : null}
+        {!redirectsLoading && manualRedirectRows.length === 0 ? (
+          <p className="px-4 py-6 text-center text-sm text-muted-foreground sm:px-5">
+            {t('loginRedirectsEmpty')}
+          </p>
+        ) : null}
+        {!redirectsLoading && manualRedirectRows.length > 0 ? (
+          <ul className="divide-y divide-border">
+            {manualRedirectRows.map((row) => (
+              <li
+                key={row.id}
+                className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-5"
+              >
+                <div className="flex min-w-0 items-center gap-2">
                   <div className="min-w-0 space-y-0.5">
                     <p className="truncate font-mono text-xs">{row.base_url}</p>
                     {row.label ? (
-                      <p className="font-mono text-[10px] text-muted-foreground">{row.label}</p>
+                      <p className="text-xs text-muted-foreground">{row.label}</p>
                     ) : null}
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    disabled={redirectBusy}
-                    onClick={() => void onDeleteRedirect(row)}
-                  >
-                    {t('loginRedirectsDelete')}
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          <div className="space-y-2 rounded-md border border-border/70 p-3">
-            <p className="font-mono text-[10px] text-muted-foreground">
-              {t('loginRedirectsAddHint')}
-            </p>
-            <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-              <Input
-                value={newRedirectUrl}
-                onChange={(e) => setNewRedirectUrl(e.target.value)}
-                placeholder="https://app.example.com"
-                className="font-mono text-xs"
-                aria-label={t('loginRedirectsBaseUrlLabel')}
-              />
-              <Input
-                value={newRedirectLabel}
-                onChange={(e) => setNewRedirectLabel(e.target.value)}
-                placeholder={t('loginRedirectsLabelPlaceholder')}
-                className="font-mono text-xs sm:col-span-1"
-                aria-label={t('loginRedirectsLabelField')}
-              />
-            </div>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive"
+                  disabled={redirectBusy}
+                  onClick={() => void onDeleteRedirect(row)}
+                >
+                  {t('loginRedirectsDelete')}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <div className="space-y-2 border-t border-border bg-muted/30 px-4 py-3 sm:px-5">
+          <p className="text-xs text-muted-foreground">{t('loginRedirectsAddHint')}</p>
+          <div className="grid gap-2 sm:grid-cols-[2fr_1fr_auto]">
+            <Input
+              value={newRedirectUrl}
+              onChange={(e) => setNewRedirectUrl(e.target.value)}
+              placeholder="https://app.example.com"
+              className="font-mono text-xs"
+              aria-label={t('loginRedirectsBaseUrlLabel')}
+            />
+            <Input
+              value={newRedirectLabel}
+              onChange={(e) => setNewRedirectLabel(e.target.value)}
+              placeholder={t('loginRedirectsLabelPlaceholder')}
+              aria-label={t('loginRedirectsLabelField')}
+            />
             <Button
               type="button"
-              size="sm"
               disabled={redirectBusy || !newRedirectUrl.trim()}
               onClick={() => void onAddRedirect()}
             >
               {redirectBusy ? t('loginRedirectsAdding') : t('loginRedirectsAdd')}
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader>
-          <CardTitle className="font-heading text-lg">{t('loginRedirectsHostingTitle')}</CardTitle>
-          <CardDescription className="font-mono text-xs">
-            {t('loginRedirectsHostingDescription')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {redirectsLoading ? (
-            <Text className="font-mono text-sm text-muted-foreground">
-              {t('loginRedirectsLoading')}
-            </Text>
-          ) : null}
-          {!redirectsLoading && hostingRedirectRows.length === 0 ? (
-            <Text className="font-mono text-sm text-muted-foreground">
-              {t('loginRedirectsHostingEmpty')}
-            </Text>
-          ) : null}
-          {!redirectsLoading && hostingRedirectRows.length > 0 ? (
-            <ul className="divide-y divide-border rounded-md border border-border">
-              {hostingRedirectRows.map((row) => (
-                <li
-                  key={row.id}
-                  className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
-                >
+      <section className={card}>
+        <div className="space-y-1 border-b border-border px-4 py-3 sm:px-5">
+          <h2 className="text-sm font-semibold">{t('loginRedirectsHostingTitle')}</h2>
+          <p className="text-xs text-muted-foreground">{t('loginRedirectsHostingDescription')}</p>
+        </div>
+        {redirectsLoading ? loadingRows : null}
+        {!redirectsLoading && hostingRedirectRows.length === 0 ? (
+          <p className="px-4 py-6 text-center text-sm text-muted-foreground sm:px-5">
+            {t('loginRedirectsHostingEmpty')}
+          </p>
+        ) : null}
+        {!redirectsLoading && hostingRedirectRows.length > 0 ? (
+          <ul className="divide-y divide-border">
+            {hostingRedirectRows.map((row) => (
+              <li
+                key={row.id}
+                className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-5"
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <Lock
+                    aria-hidden
+                    className="size-3.5 shrink-0 text-muted-foreground"
+                  />
                   <div className="min-w-0 space-y-0.5">
                     <p className="truncate font-mono text-xs">{row.base_url}</p>
                     {row.label ? (
-                      <p className="font-mono text-[10px] text-muted-foreground">{row.label}</p>
+                      <p className="text-xs text-muted-foreground">{row.label}</p>
                     ) : null}
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    disabled={redirectBusy}
-                    onClick={() => void onDeleteRedirect(row)}
-                  >
-                    {t('loginRedirectsDelete')}
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </CardContent>
-      </Card>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive"
+                  disabled={redirectBusy}
+                  onClick={() => void onDeleteRedirect(row)}
+                >
+                  {t('loginRedirectsDelete')}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
     </>
   );
 }

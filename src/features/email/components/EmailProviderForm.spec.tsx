@@ -123,7 +123,7 @@ describe('EmailProviderForm', () => {
 
   it('disables SMTP unless the provider payload says company SMTP is allowed', () => {
     renderForm();
-    const smtp = screen.getByRole('option', { name: /SMTP/ }) as HTMLOptionElement;
+    const smtp = screen.getByRole('radio', { name: /SMTP/ }) as HTMLInputElement;
     expect(smtp.disabled).toBe(true);
     expect(screen.queryByLabelText('Test recipient')).toBeNull();
     cleanup();
@@ -140,9 +140,7 @@ describe('EmailProviderForm', () => {
         />
       </I18nextProvider>,
     );
-    expect((screen.getByRole('option', { name: 'SMTP' }) as HTMLOptionElement).disabled).toBe(
-      false,
-    );
+    expect((screen.getByRole('radio', { name: 'SMTP' }) as HTMLInputElement).disabled).toBe(false);
   });
 
   it('does not redisplay a key after the parent passes a new hint', () => {
@@ -271,7 +269,7 @@ describe('EmailProviderForm with Amazon SES', () => {
   }
 
   function chooseSes() {
-    fireEvent.change(screen.getByLabelText('Provider'), { target: { value: 'ses' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Amazon SES' }));
   }
 
   it('sends SES credentials with the Zurich default region', async () => {

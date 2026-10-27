@@ -2,7 +2,7 @@
 
 Detailed notes for people working on this app. The [README](../README.md) has the short version.
 
-Administration UI for Shellui: a React app embedded in the main shell (route `/admin`). This repo is **only the Vite + React app**-no Shellui shell wrapper.
+Administration UI for Shellui: a React app embedded in the main shell (route `/admin`). This repo is **only the Vite + React app**, with no Shellui shell wrapper.
 
 ## Architecture
 
@@ -15,15 +15,15 @@ External menus (host custom apps, storage files, Swagger/ReDoc) are opened as ab
 
 ## What the panel covers
 
-| Area            | When it appears                                         | Highlights                                                                                                                                                                                                                            |
-| --------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Dashboard**   | Always                                                  | Company-scoped KPIs from identity (`GET /api/v1/metrics`). Optional storage and hosting Prometheus metrics when those services are configured. Email delivery counts from `GET /api/v1/stats` when Email is shown.                    |
-| **Identity**    | Always (with `backend.url`)                             | Company (incl. magic link toggle), users, groups, login events, OAuth apps, SCIM, webhooks (rules + delivery logs), personal access tokens, statistics; staff Django admin link.                                                      |
-| **Storage**     | Host `storage.url` set                                  | Statistics (`GET /storage/v1/stats`); optional Files explorer via `storage.filesUrl`; staff Django admin.                                                                                                                             |
-| **Hosting**     | Host `hosting.url` set and `showInAdmin` is not `false` | Apps list/detail, statistics, dashboard hosting KPIs (`GET /hosting/v1/metrics`); staff Django admin.                                                                                                                                 |
-| **Email**       | Always (default `https://email.shellui.com`)            | Last sidebar section: company theme and templates, provider settings, statistics; staff Django admin. Identity, Storage, and Hosting each keep an Email and webhooks page that lists that service's webhook and email rules together. |
-| **Custom apps** | Host `administration` set                               | Extra sidebar links below Dashboard (iframe or external).                                                                                                                                                                             |
-| **API docs**    | Shell developer mode                                    | Swagger / ReDoc for identity (and storage / hosting when those sections are on).                                                                                                                                                      |
+| Area            | When it appears                                         | Highlights                                                                                                                                                                                                             |
+| --------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Dashboard**   | Always                                                  | Company-scoped KPIs from identity (`GET /api/v1/metrics`). Optional storage and hosting Prometheus metrics when those services are configured. Email delivery counts from `GET /api/v1/stats` when Email is shown.     |
+| **Identity**    | Always (with `backend.url`)                             | Company (incl. magic link toggle), users and invitations, groups, log events, OAuth apps, SCIM, email and webhooks (rules + delivery logs), personal access tokens, statistics; staff Django admin link.               |
+| **Storage**     | Host `storage.url` set                                  | Statistics (`GET /storage/v1/stats`); optional Files explorer via `storage.filesUrl`; staff Django admin.                                                                                                              |
+| **Hosting**     | Host `hosting.url` set and `showInAdmin` is not `false` | Apps list/detail, statistics, dashboard hosting KPIs (`GET /hosting/v1/metrics`); staff Django admin.                                                                                                                  |
+| **Email**       | Host `email.url` set and `showInAdmin` is not `false`   | Last sidebar section: templates, broadcasts, newsletters, provider, allowed link hosts, statistics; staff Django admin. Each service keeps an Email and webhooks page that lists its webhook and email rules together. |
+| **Custom apps** | Host `administration` set                               | Extra sidebar links below Dashboard (iframe or external).                                                                                                                                                              |
+| **API docs**    | Shell developer mode                                    | Swagger / ReDoc for identity (and storage / hosting when those sections are on).                                                                                                                                       |
 
 ## Prerequisites
 
@@ -40,7 +40,7 @@ pnpm start
 
 This runs the app on **http://localhost:5174** (see `vite.config.ts`).
 
-If you open that URL **directly in a browser**, you will see a short message: the admin UI is meant to load **inside an iframe** from the main Shellui app. Configure the main app’s `shellui.config.json` (or `shellui.config.ts`) with `backend.adminUrl` pointing at this URL, then open **`/admin`** in the shell (as a staff user or company owner).
+If you open that URL **directly in a browser**, you will see a short message: the admin UI is meant to load **inside an iframe** from the main Shellui app. Configure the main app's `shellui.config.json` (or `shellui.config.ts`) with `backend.adminUrl` pointing at this URL, then open **`/admin`** in the shell (as a staff user or company owner).
 
 **Run together with the main Shellui app**
 
@@ -87,19 +87,23 @@ Point `backend.url` at a local or deployed **identity-service** (for example `ht
 | `#/company`                      | `GET/PATCH /api/v1/auth-methods` (`enable_magic_link`, read-only global kill switch)                                                                                                                                    |
 | `#/identity/webhooks`            | Identity email and webhooks (sidebar: Identity → Email and webhooks). One list of webhook and email rules, ordered by event then created date. Webhook API on **identity-service**. Email rules call **email-service**. |
 | `#/email/templates`              | Company theme (Barebone, Matte, Protocol, Arcane, Studio) and the company template list. Open a template by id to edit subject, preheader, and blocks.                                                                  |
-| `#/email/provider`               | Company provider (Resend). SMTP stays disabled when `smtp_allowed` is false. Untouched optional fields are omitted on save. The API key is write-only.                                                                  |
+| `#/email/provider`               | Company provider (Resend or Amazon SES). SMTP stays disabled when `smtp_allowed` is false. Untouched optional fields are omitted on save. The API key is write-only.                                                    |
 | `#/email/statistics`             | Delivery stats (including skipped events) and Prometheus metrics from email-service.                                                                                                                                    |
 | `#/hosting/webhooks`             | Hosting email and webhooks when `hosting.url` is set. Same combined rule list as identity. Webhooks call **hosting-service** `/api/v1/actions/*`.                                                                       |
 | `#/storage/webhooks`             | Storage email and webhooks when `storage.url` is set. Same combined rule list as identity. Webhooks call **storage-service** `/api/v1/actions/*`.                                                                       |
 | `#/identity/webhooks/deliveries` | Delivery log for the active service (`GET /api/v1/actions/deliveries`, detail + `POST …/requeue`).                                                                                                                      |
+| `#/email/webhooks`               | Email-service email and webhooks when `email.url` is set. Same combined rule list as identity.                                                                                                                          |
+| `#/email/broadcasts`             | Broadcasts: compose, preview and send a one-off email to a newsletter audience.                                                                                                                                         |
+| `#/email/newsletters`            | Newsletters, their subscribers and the confirmation email.                                                                                                                                                              |
+| `#/email/link-hosts`             | Allowed link hosts for sign-in links: effective list, extra hosts (editable), application and platform hosts (read-only).                                                                                               |
 
-Legacy `#/webhooks` and `#/actions/...` redirect to `#/identity/webhooks/...`.
+Legacy `#/webhooks` and `#/actions/...` redirect to `#/identity/webhooks/...`, `#/access-tokens` to `#/personal-access-tokens` and `#/login-events` to `#/events`.
 
 In the Shellui shell, the address bar uses path URLs (for example `/admin/storage/webhooks`); the admin chrome maps those to the same hash routes above.
 
 The webhooks UI lives in **`src/features/actions/`** with a shared `ActionsApiClient` in `src/lib/actionsApi.ts`. The client takes a service base URL (identity, hosting, or storage) and sends the same Shellui access token (`Authorization: Bearer …`) and `company_id` query parameter identity already uses.
 
-If a service does not yet expose webhook endpoints (404), the UI shows a clear “Webhooks API not available on this service version” banner for that tab only.
+If a service does not yet expose webhook endpoints (404), the UI shows a "Webhooks API is not available on this service version" banner for that tab only.
 
 ## OAuth setup and redirect allowlist
 
@@ -144,7 +148,7 @@ Set `safeForAuthToken: true` on an administration item to share the session acce
 
 ## Company access
 
-**Organization** (company owners) can set join mode: public, domain allow list, or invitation only. The **Users** directory Enable / Disable actions toggle access for **this company only** (`CompanyMembership.is_enabled` via `PUT /api/v1/users/<id>`).
+On the **Company** page, company owners set the join mode: public, domain allow list, or invitation only. In the **Identity directory** (Users), the Company access switch turns access on or off for **this company only** (`CompanyMembership.is_enabled` via `PUT /api/v1/users/<id>`). Invite user and Pending invitations open as shell modals (`#/invite`, `#/invitations`). `is_staff` and `is_superuser` are changed in Django admin only.
 
 ## Tests
 

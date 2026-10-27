@@ -74,6 +74,11 @@ function renderPage() {
   );
 }
 
+async function clickMenuItem(trigger: HTMLElement, name: string) {
+  fireEvent.keyDown(trigger, { key: 'Enter' });
+  fireEvent.click(await screen.findByRole('menuitem', { name }));
+}
+
 describe('ActionsRulesListPage action feedback', () => {
   afterEach(async () => {
     cleanup();
@@ -101,7 +106,7 @@ describe('ActionsRulesListPage action feedback', () => {
     fireEvent.click(toggle);
     const failure = await screen.findByText('Webhook refused.');
     expect(failure.className).toContain('text-destructive');
-    expect(toggle.closest('li')?.contains(failure)).toBe(true);
+    expect(toggle.closest('tr')?.contains(failure)).toBe(true);
     expect(screen.getAllByText('Webhook refused.')).toHaveLength(1);
 
     api.updateRule.mockResolvedValueOnce({ ...rule, enabled: false });
@@ -109,7 +114,7 @@ describe('ActionsRulesListPage action feedback', () => {
     fireEvent.click(screen.getByRole('switch', { name: 'Deploy hook' }));
     const sent = await screen.findByText('Webhook disabled.');
     expect(sent.className).not.toContain('text-destructive');
-    expect(screen.getByRole('switch', { name: 'Deploy hook' }).closest('li')?.contains(sent)).toBe(
+    expect(screen.getByRole('switch', { name: 'Deploy hook' }).closest('tr')?.contains(sent)).toBe(
       true,
     );
     expect(screen.queryByText('Webhook refused.')).toBeNull();
@@ -120,18 +125,22 @@ describe('ActionsRulesListPage action feedback', () => {
     api.fetchRules.mockResolvedValue([rule]);
     api.deleteRule.mockRejectedValueOnce(new Error('Delete refused.'));
     renderPage();
-    const remove = await screen.findByRole('button', { name: 'Delete' });
-    fireEvent.click(remove);
+    const trigger = await screen.findByRole('button', { name: 'More actions for Deploy hook' });
+    const remove = trigger;
+    await clickMenuItem(trigger, 'Delete');
     const failure = await screen.findByText('Delete refused.');
-    expect(remove.closest('li')?.contains(failure)).toBe(true);
+    expect(remove.closest('tr')?.contains(failure)).toBe(true);
     expect(screen.getAllByText('Delete refused.')).toHaveLength(1);
 
     api.deleteRule.mockResolvedValueOnce(undefined);
     api.fetchRules.mockResolvedValueOnce([]);
-    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    await clickMenuItem(
+      screen.getByRole('button', { name: 'More actions for Deploy hook' }),
+      'Delete',
+    );
     const sent = await screen.findByText('Webhook deleted.');
     expect(sent.className).not.toContain('text-destructive');
-    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'More actions for Deploy hook' })).toBeNull();
     expect(screen.queryByText('Delete refused.')).toBeNull();
     vi.mocked(window.confirm).mockRestore();
   });
@@ -175,9 +184,14 @@ describe('ActionsRulesListPage action feedback', () => {
     renderPage();
     const badge = await screen.findByText('Built in');
     expect(badge.getAttribute('title')).toBe('Built-in rules stay on.');
-    const row = badge.closest('li');
+    const row = badge.closest('tr');
     expect(row ? within(row).queryByRole('switch') : null).toBeNull();
-    expect(row ? within(row).queryByRole('button', { name: 'Delete' }) : null).toBeNull();
+    const more = row ? within(row).getByRole('button', { name: /More actions for/ }) : null;
+    if (more) {
+      fireEvent.keyDown(more, { key: 'Enter' });
+    }
+    expect(await screen.findByRole('menuitem', { name: 'Edit' })).toBeTruthy();
+    expect(screen.queryByRole('menuitem', { name: 'Delete' })).toBeNull();
     expect(emailState.api.patchRule).not.toHaveBeenCalled();
   });
 

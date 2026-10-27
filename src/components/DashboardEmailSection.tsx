@@ -1,45 +1,12 @@
+import { KpiCard, KpiRow, KpiSkeletonRow, ServiceSectionHeader } from '@/components/admin/Kpi';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Component, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
-import type { LucideIcon } from 'lucide-react';
-import { Ban, Loader2, Mail, MailCheck, MailWarning, MailX, ShieldAlert } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
-import { Text } from '@/components/ui/text';
+import { Ban, Mail, MailCheck, MailWarning, MailX, ShieldAlert } from 'lucide-react';
 import { useEmailAdminEnabled, useEmailApi } from '@/features/email/useEmailApi';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { loadEmailDashboardSnapshot, type EmailDashboardQuiet } from '@/lib/dashboardEmail';
 import type { EmailStats } from '@/lib/emailTypes';
-
-function StatBlock({
-  label,
-  value,
-  hint,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  hint: string;
-  icon: LucideIcon;
-}) {
-  return (
-    <Card className="border-border/80 shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardDescription className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-          {label}
-        </CardDescription>
-        <Icon
-          className="size-4 text-muted-foreground"
-          aria-hidden
-        />
-      </CardHeader>
-      <CardContent>
-        <p className="font-mono text-2xl font-semibold tabular-nums tracking-tight">{value}</p>
-        <Text className="mt-1 font-mono text-xs">{hint}</Text>
-      </CardContent>
-    </Card>
-  );
-}
 
 function formatInt(n: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.round(n));
@@ -51,7 +18,11 @@ function quietMessage(t: (key: string) => string, quiet: EmailDashboardQuiet): s
 
 function DashboardEmailQuiet({ quiet }: { quiet: EmailDashboardQuiet }) {
   const { t } = useTranslation();
-  return <Text className="font-mono text-sm text-muted-foreground">{quietMessage(t, quiet)}</Text>;
+  return (
+    <Alert variant="info">
+      <AlertDescription>{quietMessage(t, quiet)}</AlertDescription>
+    </Alert>
+  );
 }
 
 class DashboardEmailBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
@@ -102,86 +73,69 @@ function DashboardEmailSectionInner() {
   const totals = stats?.totals;
 
   return (
-    <section className="space-y-4">
-      <div className="flex flex-wrap items-baseline gap-3">
-        <h2 className="font-heading text-lg font-semibold tracking-tight">
-          {t('dashboardEmailSection')}
-        </h2>
-        <Badge
-          variant="secondary"
-          className="font-mono text-[10px] uppercase"
-        >
-          {t('dashboardEmailBadge')}
-        </Badge>
-      </div>
-      <Text className="max-w-3xl font-mono text-sm">{t('dashboardEmailDescription')}</Text>
-      {stats ? (
-        <Text className="font-mono text-xs">
-          {t('emailStatsWindow', { from: stats.from, to: stats.to })}
-        </Text>
-      ) : null}
-      <Link
-        to="/email/statistics"
-        className="inline-flex items-center gap-1.5 font-mono text-xs text-primary underline-offset-4 hover:underline"
-      >
-        {t('dashboardEmailOpen')}
-      </Link>
-
+    <section aria-labelledby="dashboard-email-title">
+      <ServiceSectionHeader
+        id="dashboard-email-title"
+        title={t('dashboardEmailSection')}
+        service={t('dashboardEmailBadge')}
+        link={{ to: '/email/statistics', label: t('dashboardEmailOpen') }}
+      />
       {loading ? (
-        <div className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
-          <Loader2
-            className="size-4 animate-spin"
-            aria-hidden
-          />
-          {t('dashboardEmailLoading')}
-        </div>
+        <KpiSkeletonRow
+          columns={6}
+          label={t('dashboardEmailLoading')}
+        />
       ) : null}
 
       {!loading && quiet ? <DashboardEmailQuiet quiet={quiet} /> : null}
 
       {!loading && !quiet && totals ? (
-        <div
-          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
-          aria-label={t('dashboardEmailSection')}
+        <KpiRow
+          columns={6}
+          label={t('dashboardEmailSection')}
         >
-          <StatBlock
+          <KpiCard
             label={t('dashboardStatEmailSent')}
             value={formatInt(totals.sent)}
             hint={t('dashboardStatEmailSentHint')}
             icon={Mail}
           />
-          <StatBlock
+          <KpiCard
             label={t('dashboardStatEmailDelivered')}
             value={formatInt(totals.delivered)}
             hint={t('dashboardStatEmailDeliveredHint')}
             icon={MailCheck}
           />
-          <StatBlock
+          <KpiCard
             label={t('dashboardStatEmailBounced')}
             value={formatInt(totals.bounced)}
             hint={t('dashboardStatEmailBouncedHint')}
             icon={MailWarning}
           />
-          <StatBlock
+          <KpiCard
             label={t('dashboardStatEmailFailed')}
             value={formatInt(totals.failed)}
             hint={t('dashboardStatEmailFailedHint')}
             icon={MailX}
           />
-          <StatBlock
+          <KpiCard
             label={t('dashboardStatEmailComplaints')}
             value={formatInt(totals.complained)}
             hint={t('dashboardStatEmailComplaintsHint')}
             icon={ShieldAlert}
           />
-          <StatBlock
+          <KpiCard
             label={t('dashboardStatEmailSuppressed')}
             value={formatInt(totals.suppressed)}
             hint={t('dashboardStatEmailSuppressedHint')}
             icon={Ban}
           />
-        </div>
+        </KpiRow>
       ) : null}
+      <p className="mt-2 text-xs text-muted-foreground">
+        {t('dashboardEmailDescription')}
+        {stats ? ` ${t('emailStatsWindow', { from: stats.from, to: stats.to })}` : ''}
+      </p>
     </section>
   );
 }

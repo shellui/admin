@@ -111,7 +111,15 @@ export function EmailTranslationNotice({
   const main = t(`emailLangInline_${mainLang}`);
   const missing = status.todo - status.outdated.length;
   return (
-    <div className="space-y-2 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
+    <div
+      role="status"
+      className={cn(
+        'space-y-2 rounded-xl border px-4 py-3 text-sm',
+        status.todo > 0
+          ? 'border-amber-500/40 bg-amber-500/5 dark:border-amber-400/30'
+          : 'border-border bg-muted/30',
+      )}
+    >
       <p>{t('emailTranslationEditing', { lang: t(`emailLangInline_${lang}`), main })}</p>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
         {status.todo === 0 ? (
@@ -136,8 +144,8 @@ export function EmailTranslationNotice({
             <Button
               type="button"
               size="sm"
-              variant="ghost"
-              className="h-6 px-2 text-xs"
+              variant="outline"
+              className="h-7 px-2.5 text-xs"
               onClick={onMarkCurrent}
             >
               {t('emailTranslationMarkCurrent')}

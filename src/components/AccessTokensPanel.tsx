@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2 } from 'lucide-react';
+import { Copy, KeyRound, Loader2 } from 'lucide-react';
+import { DataTableCard, SkeletonRows } from '@/components/admin/DataTableCard';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Label } from '@/components/ui/label';
 import shellui from '@shellui/sdk';
+import { askShelluiConfirm } from '@/lib/shelluiConfirm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -21,7 +27,7 @@ import {
 import { getIsStaffFromJwt, getUserIdFromJwt } from '@/lib/jwtCompany';
 
 function formatDateTime(iso: string | undefined, locale: string): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return new Intl.DateTimeFormat(locale, {
@@ -56,7 +62,9 @@ export function AccessTokensPanel({ accessToken }: AccessTokensPanelProps) {
     setError(null);
     try {
       const kr = await fetchPersonalAccessTokens(accessToken);
-      setRows(kr.results.filter((r) => r.revoked_at == null));
+      setRows(
+        [...kr.results].sort((a, b) => Number(a.revoked_at != null) - Number(b.revoked_at != null)),
+      );
     } catch (e) {
       setRows([]);
       setError(e instanceof Error ? e.message : t('accessTokensError'));
@@ -100,8 +108,19 @@ export function AccessTokensPanel({ accessToken }: AccessTokensPanelProps) {
     }
   }
 
-  async function onRevoke(keyId: string) {
+  async function onRevoke(keyId: string, name?: string | null) {
     if (!accessToken) return;
+    const label = name?.trim();
+    const confirmed = await askShelluiConfirm({
+      title: label
+        ? t('accessTokensRevokeConfirmTitleNamed', { name: label })
+        : t('accessTokensRevokeConfirmTitle'),
+      description: t('accessTokensRevokeConfirmDescription'),
+      okLabel: t('accessTokensRevokeConfirmOk'),
+      cancelLabel: t('actionsCancel'),
+      mode: 'delete',
+    });
+    if (!confirmed) return;
     setRevokingId(keyId);
     try {
       await revokePersonalAccessToken(accessToken, keyId);
@@ -126,204 +145,266 @@ export function AccessTokensPanel({ accessToken }: AccessTokensPanelProps) {
     }
   }
 
+  const card =
+    'overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm';
+
   if (!accessToken) {
-    return <p className="text-sm text-muted-foreground">{t('usersNoSession')}</p>;
+    return (
+      <Alert>
+        <AlertDescription>{t('usersNoSession')}</AlertDescription>
+      </Alert>
+    );
   }
 
   if (currentUserId == null) {
-    return <p className="text-sm text-muted-foreground">{t('accessTokensSessionUserError')}</p>;
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>{t('accessTokensSessionUserError')}</AlertDescription>
+      </Alert>
+    );
   }
 
   return (
-    <div className="space-y-4">
-      {error ? (
-        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
+    <div className="space-y-6">
       {pendingToken ? (
-        <div
-          className="space-y-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-4 dark:bg-amber-950/30"
+        <Alert
+          variant="gold"
           role="status"
         >
-          <p className="text-sm font-medium">{t('accessTokensOnceTitle')}</p>
-          <p className="text-xs text-muted-foreground">{t('accessTokensOnceHint')}</p>
-          <div className="flex flex-wrap items-center gap-2">
-            <code className="max-w-full min-w-0 flex-1 break-all rounded bg-muted px-2 py-1.5 font-mono text-xs">
-              {pendingToken}
-            </code>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => void copyPending()}
-            >
-              {t('accessTokensCopy')}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setPendingToken(null)}
-            >
-              {t('accessTokensDismiss')}
-            </Button>
+          <KeyRound aria-hidden />
+          <AlertTitle>{t('accessTokensOnceTitle')}</AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p>{t('accessTokensOnceHint')}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <code className="min-w-0 max-w-full flex-1 break-all rounded-md border border-border bg-background px-2.5 py-1.5 font-mono text-xs">
+                {pendingToken}
+              </code>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => void copyPending()}
+              >
+                <Copy aria-hidden />
+                {t('accessTokensCopy')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setPendingToken(null)}
+              >
+                {t('accessTokensDismiss')}
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      <section
+        className={card}
+        aria-labelledby="pat-create-title"
+      >
+        <div className="space-y-1 border-b border-border px-4 py-3">
+          <h2
+            id="pat-create-title"
+            className="text-sm font-semibold"
+          >
+            {t('accessTokensCreateTitle')}
+          </h2>
+          <p className="text-xs text-muted-foreground">{t('accessTokensHint')}</p>
+        </div>
+        <div className="space-y-4 p-4">
+          <div className="max-w-md space-y-1.5">
+            <Label htmlFor="pat-name">{t('accessTokensNameLabel')}</Label>
+            <Input
+              id="pat-name"
+              placeholder={t('accessTokensNamePlaceholder')}
+              value={tokenLabel}
+              onChange={(ev) => setTokenLabel(ev.target.value)}
+              maxLength={200}
+            />
+          </div>
+          <div className="divide-y divide-border rounded-lg border border-border">
+            <label className="flex cursor-pointer items-start gap-3 p-3 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5 size-4 rounded border accent-primary"
+                checked={readOnlyToken}
+                onChange={(ev) => setReadOnlyToken(ev.target.checked)}
+              />
+              <span>
+                <span className="font-medium">{t('accessTokensReadOnlyLabel')}</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  {t('accessTokensReadOnlyHint')}
+                </span>
+              </span>
+            </label>
+            {canGlobalMetrics ? (
+              <label className="flex cursor-pointer items-start gap-3 p-3 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 size-4 rounded border accent-primary"
+                  checked={accessGlobalMetrics}
+                  onChange={(ev) => setAccessGlobalMetrics(ev.target.checked)}
+                />
+                <span>
+                  <span className="flex flex-wrap items-center gap-2 font-medium">
+                    {t('accessTokensGlobalMetricsLabel')}
+                    <StatusBadge tone="gold">{t('scheduledJobsStaffBadge')}</StatusBadge>
+                  </span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {t('accessTokensGlobalMetricsHint')}
+                  </span>
+                </span>
+              </label>
+            ) : null}
           </div>
         </div>
-      ) : null}
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-        <div className="flex min-w-[12rem] max-w-lg flex-1 flex-col gap-1">
-          <label
-            className="text-sm font-medium"
-            htmlFor="pat-name"
+        <div className="flex justify-end border-t border-border bg-muted/30 px-4 py-3">
+          <Button
+            type="button"
+            disabled={creating || loading}
+            onClick={() => void onCreate()}
           >
-            {t('accessTokensNameLabel')}
-          </label>
-          <Input
-            id="pat-name"
-            placeholder={t('accessTokensNamePlaceholder')}
-            value={tokenLabel}
-            onChange={(ev) => setTokenLabel(ev.target.value)}
-            maxLength={200}
-          />
+            {creating ? (
+              <>
+                <Loader2
+                  className="animate-spin motion-reduce:animate-none"
+                  aria-hidden
+                />
+                {t('accessTokensCreating')}
+              </>
+            ) : (
+              t('accessTokensCreate')
+            )}
+          </Button>
         </div>
-        <label className="flex max-w-lg cursor-pointer items-start gap-2 text-sm">
-          <input
-            type="checkbox"
-            className="mt-1 size-4 rounded border"
-            checked={readOnlyToken}
-            onChange={(ev) => setReadOnlyToken(ev.target.checked)}
-          />
-          <span>
-            <span className="font-medium">{t('accessTokensReadOnlyLabel')}</span>
-            <span className="mt-0.5 block text-xs text-muted-foreground">
-              {t('accessTokensReadOnlyHint')}
-            </span>
-          </span>
-        </label>
-        {canGlobalMetrics ? (
-          <label className="flex max-w-lg cursor-pointer items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="mt-1 size-4 rounded border"
-              checked={accessGlobalMetrics}
-              onChange={(ev) => setAccessGlobalMetrics(ev.target.checked)}
-            />
-            <span>
-              <span className="font-medium">{t('accessTokensGlobalMetricsLabel')}</span>
-              <span className="mt-0.5 block text-xs text-muted-foreground">
-                {t('accessTokensGlobalMetricsHint')}
-              </span>
-            </span>
-          </label>
-        ) : null}
-        <Button
-          type="button"
-          disabled={creating || loading}
-          onClick={() => void onCreate()}
-          className="sm:ml-auto"
+      </section>
+
+      {error ? (
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>{error}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void loadRows()}
+            >
+              {t('usersRetry')}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      <section aria-labelledby="pat-active-title">
+        <h2
+          id="pat-active-title"
+          className="mb-3 text-sm font-semibold"
         >
-          {creating ? (
-            <>
-              <Loader2
-                className="mr-2 size-4 animate-spin"
-                aria-hidden
-              />
-              {t('accessTokensCreating')}
-            </>
+          {t('accessTokensActiveTitle')}
+        </h2>
+        <DataTableCard
+          label={t('accessTokensActiveTitle')}
+          busy={loading}
+        >
+          {loading && rows.length === 0 ? (
+            <SkeletonRows
+              rows={3}
+              columns={['w-32', 'w-20', 'w-24', 'w-28', 'w-28', 'w-16']}
+            />
+          ) : rows.length === 0 ? (
+            <EmptyState
+              icon={KeyRound}
+              title={t('accessTokensEmpty')}
+            />
           ) : (
-            t('accessTokensCreate')
-          )}
-        </Button>
-      </div>
-      {loading ? (
-        <div className="flex items-center gap-2 py-4 text-muted-foreground">
-          <Loader2
-            className="size-4 animate-spin"
-            aria-hidden
-          />
-          <span className="text-sm">{t('accessTokensLoading')}</span>
-        </div>
-      ) : rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t('accessTokensEmpty')}</p>
-      ) : (
-        <div className="w-full overflow-x-auto rounded-md border border-border">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/30 hover:bg-muted/30">
-                <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {t('accessTokensColName')}
-                </TableHead>
-                <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {t('accessTokensColAccess')}
-                </TableHead>
-                <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {t('accessTokensColMetrics')}
-                </TableHead>
-                <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {t('accessTokensColCreated')}
-                </TableHead>
-                <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {t('accessTokensColLastUsed')}
-                </TableHead>
-                <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {t('accessTokensColActions')}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="text-sm">
-              {rows.map((mk) => {
-                const created =
-                  typeof mk.created_at === 'string' ? formatDateTime(mk.created_at, locale) : '—';
-                const lastUsed =
-                  mk.last_used_at && typeof mk.last_used_at === 'string'
-                    ? formatDateTime(mk.last_used_at, locale)
-                    : '—';
-                return (
-                  <TableRow key={mk.id}>
-                    <TableCell className="max-w-[12rem] truncate font-medium">
-                      {mk.name?.trim() ? mk.name : '—'}
-                    </TableCell>
-                    <TableCell>
-                      {mk.read_only
-                        ? t('accessTokensAccessReadOnly')
-                        : t('accessTokensAccessReadWrite')}
-                    </TableCell>
-                    <TableCell>
-                      {mk.access_global_metrics
-                        ? t('accessTokensMetricsGlobal')
-                        : t('accessTokensMetricsCompany')}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap text-muted-foreground">
-                      {created}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap text-muted-foreground">
-                      {lastUsed}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={revokingId === mk.id}
-                        onClick={() => void onRevoke(mk.id)}
-                      >
-                        {revokingId === mk.id ? (
-                          <>
-                            <Loader2 className="mr-1 size-3 animate-spin" />
-                            {t('accessTokensRevoking')}
-                          </>
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>{t('accessTokensColName')}</TableHead>
+                  <TableHead>{t('accessTokensColAccess')}</TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    {t('accessTokensColMetrics')}
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    {t('accessTokensColCreated')}
+                  </TableHead>
+                  <TableHead>{t('accessTokensColLastUsed')}</TableHead>
+                  <TableHead className="text-right">
+                    <span className="sr-only">{t('accessTokensColActions')}</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="text-sm">
+                {rows.map((mk) => {
+                  const revoked = mk.revoked_at != null;
+                  const created =
+                    typeof mk.created_at === 'string' ? formatDateTime(mk.created_at, locale) : '-';
+                  const lastUsed =
+                    mk.last_used_at && typeof mk.last_used_at === 'string'
+                      ? formatDateTime(mk.last_used_at, locale)
+                      : '-';
+                  return (
+                    <TableRow
+                      key={mk.id}
+                      className={revoked ? 'text-muted-foreground' : undefined}
+                    >
+                      <TableCell className="max-w-[12rem] truncate font-medium">
+                        {mk.name?.trim() ? mk.name : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge tone={mk.read_only ? 'muted' : 'warning'}>
+                          {mk.read_only
+                            ? t('accessTokensAccessReadOnly')
+                            : t('accessTokensAccessReadWrite')}
+                        </StatusBadge>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {mk.access_global_metrics
+                          ? t('accessTokensMetricsGlobal')
+                          : t('accessTokensMetricsCompany')}
+                      </TableCell>
+                      <TableCell className="hidden whitespace-nowrap text-muted-foreground md:table-cell">
+                        {created}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                        {lastUsed}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {revoked ? (
+                          <StatusBadge tone="muted">{t('accessTokensStatusRevoked')}</StatusBadge>
                         ) : (
-                          t('accessTokensRevoke')
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            disabled={revokingId === mk.id}
+                            onClick={() => void onRevoke(mk.id, mk.name)}
+                          >
+                            {revokingId === mk.id ? (
+                              <>
+                                <Loader2
+                                  className="animate-spin motion-reduce:animate-none"
+                                  aria-hidden
+                                />
+                                {t('accessTokensRevoking')}
+                              </>
+                            ) : (
+                              t('accessTokensRevoke')
+                            )}
+                          </Button>
                         )}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </DataTableCard>
+      </section>
     </div>
   );
 }

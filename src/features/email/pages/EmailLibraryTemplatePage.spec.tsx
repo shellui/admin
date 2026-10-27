@@ -21,6 +21,9 @@ const api = vi.hoisted(() => ({
   deleteLibraryTemplate: vi.fn(),
 }));
 
+const confirm = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/shelluiConfirm', () => ({ askShelluiConfirm: confirm }));
+
 vi.mock('@/hooks/useShelluiAccessToken', () => ({
   useShelluiAccessToken: () => 'token',
 }));
@@ -157,10 +160,9 @@ describe('EmailLibraryTemplatePage', () => {
     );
     expect(await screen.findByRole('heading', { level: 1, name: 'Acme hello' })).toBeTruthy();
 
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    confirm.mockResolvedValue(true);
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     expect(await screen.findByText('Library')).toBeTruthy();
     expect(api.deleteLibraryTemplate).toHaveBeenCalledWith(12);
-    confirm.mockRestore();
   });
 });

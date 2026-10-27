@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft } from 'lucide-react';
+import { Check, ChevronLeft } from 'lucide-react';
 import shellui from '@shellui/sdk';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Text } from '@/components/ui/text';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import {
   OAuthCredentialsForm,
   type OAuthCredentialsFormValues,
@@ -21,7 +21,7 @@ import {
 import { OAuthWizardStepActions } from '@/components/oauth/OAuthWizardStepActions';
 import { useDocumentColorScheme } from '@/hooks/useDocumentColorScheme';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
-import { confirmAction } from '@/lib/confirmAction';
+import { askShelluiConfirm } from '@/lib/shelluiConfirm';
 import { visibleCatalogProviders } from '@/lib/oauthCatalogDisplay';
 import {
   OAuthApiRequestError,
@@ -160,14 +160,16 @@ export function OAuthWizardRoute() {
 
   if (!accessToken) {
     return (
-      <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
+      <Alert>
+        <AlertDescription>{t('dashboardNoSession')}</AlertDescription>
+      </Alert>
     );
   }
   if (!canManage || companyId == null) {
     return (
-      <Text className="font-mono text-sm text-muted-foreground">
-        {t('oauthSetupPageForbidden')}
-      </Text>
+      <Alert>
+        <AlertDescription>{t('oauthSetupPageForbidden')}</AlertDescription>
+      </Alert>
     );
   }
 
@@ -260,12 +262,12 @@ export function OAuthWizardRoute() {
 
   async function onDelete() {
     if (!accessToken || companyId == null || !editingApp) return;
-    const ok = await confirmAction({
+    const ok = await askShelluiConfirm({
       title: t('oauthSetupDeleteAction'),
       description: t('oauthWizardDeleteConfirm'),
       okLabel: t('oauthSetupDeleteAction'),
       cancelLabel: t('oauthSetupDiscardCancel'),
-      danger: true,
+      mode: 'delete',
     });
     if (!ok) return;
     setBusy(true);
@@ -282,48 +284,96 @@ export function OAuthWizardRoute() {
   const wizardTitle = isEdit ? t('oauthWizardEditTitle') : t('oauthWizardCreateTitle');
   const effectiveCallback = callbackUrl || selectedProvider?.callback_url || '';
 
+  const stepKeys = ['pick', 'console', 'credentials', 'summary'] as const;
+  const stepIndex = stepKeys.indexOf(step as (typeof stepKeys)[number]);
+  const stepLabels = {
+    pick: t('oauthWizardStepPick'),
+    console: t('oauthWizardStepConsole'),
+    credentials: t('oauthWizardStepCredentials'),
+    summary: t('oauthWizardStepSummary'),
+  };
+
   return (
-    <Card className="border-border/80 shadow-sm">
-      <CardHeader>
-        <div className="space-y-2">
-          <Link
-            to="/oauth"
-            className="inline-flex items-center font-mono text-xs text-muted-foreground hover:text-foreground"
-          >
-            <ChevronLeft
-              className="mr-0.5 h-3.5 w-3.5"
-              aria-hidden
-            />
-            {t('oauthWizardBackToList')}
-          </Link>
-          <div>
-            <CardTitle className="font-heading text-lg">{wizardTitle}</CardTitle>
-            <CardDescription className="font-mono text-xs">
-              {isEdit ? t('oauthWizardEditStepsHint') : t('oauthWizardStepsHint')}
-            </CardDescription>
-          </div>
+    <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      <div className="space-y-3 border-b border-border px-4 py-4 sm:px-5">
+        <Link
+          to="/oauth"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ChevronLeft
+            className="size-4"
+            aria-hidden
+          />
+          {t('oauthWizardBackToList')}
+        </Link>
+        <div className="space-y-1">
+          <h2 className="font-heading text-lg font-semibold">{wizardTitle}</h2>
+          <p className="text-sm text-muted-foreground">
+            {isEdit ? t('oauthWizardEditStepsHint') : t('oauthWizardStepsHint')}
+          </p>
         </div>
         {!isEdit ? (
-          <div className="flex flex-wrap gap-2 pt-2">
-            <Badge variant={step === 'pick' ? 'default' : 'outline'}>
-              1. {t('oauthWizardStepPick')}
-            </Badge>
-            <Badge variant={step === 'console' ? 'default' : 'outline'}>
-              2. {t('oauthWizardStepConsole')}
-            </Badge>
-            <Badge variant={step === 'credentials' ? 'default' : 'outline'}>
-              3. {t('oauthWizardStepCredentials')}
-            </Badge>
-            <Badge variant={step === 'summary' ? 'default' : 'outline'}>
-              4. {t('oauthWizardStepSummary')}
-            </Badge>
-          </div>
+          <ol className="flex flex-wrap items-center gap-x-2 gap-y-2 pt-1 text-sm">
+            {stepKeys.map((key, i) => {
+              const done = i < stepIndex;
+              const current = i === stepIndex;
+              return (
+                <li
+                  key={key}
+                  className="flex items-center gap-2"
+                  aria-current={current ? 'step' : undefined}
+                >
+                  <span
+                    className={cn(
+                      'flex size-6 items-center justify-center rounded-full border text-xs font-medium tabular-nums',
+                      current && 'border-primary bg-primary text-primary-foreground',
+                      done && 'border-primary text-primary-ink',
+                      !current && !done && 'border-border text-muted-foreground',
+                    )}
+                  >
+                    {done ? (
+                      <Check
+                        className="size-3.5"
+                        aria-hidden
+                      />
+                    ) : (
+                      i + 1
+                    )}
+                  </span>
+                  <span className={current ? 'font-medium' : 'text-muted-foreground'}>
+                    {stepLabels[key]}
+                  </span>
+                  {i < stepKeys.length - 1 ? (
+                    <span
+                      aria-hidden
+                      className="mx-1 hidden h-px w-6 bg-border sm:inline-block"
+                    />
+                  ) : null}
+                </li>
+              );
+            })}
+          </ol>
         ) : null}
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {loadError ? <Text className="font-mono text-sm text-destructive">{loadError}</Text> : null}
+      </div>
+      <div className="space-y-4 p-4 sm:p-5">
+        {loadError ? (
+          <Alert variant="destructive">
+            <AlertDescription>{loadError}</AlertDescription>
+          </Alert>
+        ) : null}
         {loading ? (
-          <Text className="font-mono text-sm text-muted-foreground">{t('oauthSetupLoading')}</Text>
+          <div className="space-y-3">
+            <span className="sr-only">{t('oauthSetupLoading')}</span>
+            <Skeleton className="h-9 w-full" />
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[0, 1, 2, 3].map((i) => (
+                <Skeleton
+                  key={i}
+                  className="h-24"
+                />
+              ))}
+            </div>
+          </div>
         ) : null}
 
         {!loading && step === 'pick' && !isEdit ? (
@@ -380,15 +430,15 @@ export function OAuthWizardRoute() {
                 <h2 className="font-heading text-lg font-semibold">
                   {t('oauthWizardSummaryTitle')}
                 </h2>
-                <Text className="font-mono text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   {t('oauthWizardSummaryBody', { provider: selectedProvider.name })}
-                </Text>
+                </p>
               </div>
             </div>
-            <dl className="grid gap-2 font-mono text-xs sm:grid-cols-2">
+            <dl className="grid gap-2 rounded-lg border border-border bg-muted/30 p-3 text-sm sm:grid-cols-2">
               <div>
                 <dt className="text-muted-foreground">{t('oauthClientsClientId')}</dt>
-                <dd className="break-all">{savedSummary.client_id}</dd>
+                <dd className="break-all font-mono text-xs">{savedSummary.client_id}</dd>
               </div>
             </dl>
             <OAuthWizardStepActions
@@ -401,11 +451,11 @@ export function OAuthWizardRoute() {
         ) : null}
 
         {!loading && routeDocsSlug && !selectedProvider && !isEdit ? (
-          <Text className="font-mono text-sm text-destructive">
-            {t('oauthWizardUnknownProvider')}
-          </Text>
+          <Alert variant="destructive">
+            <AlertDescription>{t('oauthWizardUnknownProvider')}</AlertDescription>
+          </Alert>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }

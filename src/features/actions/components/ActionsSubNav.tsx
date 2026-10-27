@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -9,7 +10,10 @@ import {
 } from '@/lib/webhookRoutePaths';
 import { cn } from '@/lib/utils';
 
-export function ActionsSubNav() {
+export function ActionsSubNav({
+  rulesCount,
+  aside,
+}: { rulesCount?: number; aside?: ReactNode } = {}) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const serviceKey = resolveWebhookServiceFromPathname(pathname);
@@ -31,24 +35,33 @@ export function ActionsSubNav() {
   ];
 
   return (
-    <nav
-      className="flex flex-wrap gap-2 border-b border-border/80 pb-3"
-      aria-label={t('actionsSubNavAria')}
-    >
-      {links.map(({ to, labelKey, active }) => (
-        <Link
-          key={to}
-          to={to}
-          className={cn(
-            'rounded-md px-3 py-1.5 font-mono text-xs transition-colors',
-            active
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-          )}
-        >
-          {t(labelKey)}
-        </Link>
-      ))}
-    </nav>
+    <div className="flex flex-wrap items-end gap-3 border-b border-border">
+      <nav
+        className="-mb-px flex gap-1"
+        aria-label={t('actionsSubNavAria')}
+      >
+        {links.map(({ to, labelKey, active }) => (
+          <Link
+            key={to}
+            to={to}
+            aria-current={active ? 'page' : undefined}
+            className={cn(
+              'inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium no-underline transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              active
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {t(labelKey)}
+            {labelKey === 'actionsNavRules' && rulesCount != null ? (
+              <span className="rounded-full bg-muted px-1.5 text-[11px] tabular-nums text-muted-foreground">
+                {rulesCount}
+              </span>
+            ) : null}
+          </Link>
+        ))}
+      </nav>
+      {aside ? <div className="mb-2 ml-auto">{aside}</div> : null}
+    </div>
   );
 }

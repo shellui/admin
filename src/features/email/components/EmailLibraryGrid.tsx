@@ -1,8 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Text } from '@/components/ui/text';
+import { StatusBadge } from '@/components/admin/StatusBadge';
 import { SegmentedControl } from '@/features/email/components/SegmentedControl';
 import { libraryPreviewHtml, librarySections } from '@/lib/emailLibrary';
 import type { EmailLibrary, EmailLibraryTemplate } from '@/lib/emailTypes';
@@ -12,7 +11,12 @@ const ALL = 'all';
 
 function Thumbnail({ html, title }: { html: string; title: string }) {
   return (
-    <div className="relative h-60 overflow-hidden rounded-t-md border-b border-border bg-white">
+    <div
+      className={cn(
+        'relative h-60 overflow-hidden border-b border-border',
+        html ? 'bg-white' : 'bg-muted/50',
+      )}
+    >
       {html ? (
         <iframe
           title={title}
@@ -22,7 +26,18 @@ function Thumbnail({ html, title }: { html: string; title: string }) {
           srcDoc={html}
           className="pointer-events-none absolute left-0 top-0 h-[1500px] w-[640px] origin-top-left scale-[0.4]"
         />
-      ) : null}
+      ) : (
+        <div
+          aria-hidden
+          className="space-y-3 p-6"
+        >
+          <div className="mx-auto h-4 w-1/3 rounded bg-muted" />
+          <div className="h-3 w-full rounded bg-muted" />
+          <div className="h-3 w-5/6 rounded bg-muted" />
+          <div className="h-3 w-2/3 rounded bg-muted" />
+          <div className="mx-auto mt-6 h-8 w-1/3 rounded bg-muted" />
+        </div>
+      )}
     </div>
   );
 }
@@ -50,7 +65,12 @@ export function EmailLibraryGrid({
   );
   const visible = filter === ALL ? sections : sections.filter((section) => section.key === filter);
 
-  if (!sections.length) return <Text>{t('emailLibraryEmpty')}</Text>;
+  if (!sections.length)
+    return (
+      <p className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+        {t('emailLibraryEmpty')}
+      </p>
+    );
 
   return (
     <div className="space-y-6">
@@ -73,7 +93,7 @@ export function EmailLibraryGrid({
           className="space-y-3"
           aria-label={section.name}
         >
-          <h2 className="text-lg font-semibold tracking-tight">{section.name}</h2>
+          <h2 className="text-sm font-semibold">{section.name}</h2>
           <ul className="grid grid-cols-[repeat(auto-fill,minmax(256px,1fr))] gap-4">
             {section.templates.map((template) => {
               const selected = selectedId === template.id;
@@ -89,15 +109,18 @@ export function EmailLibraryGrid({
                       <p className="truncate font-mono text-xs text-muted-foreground">
                         {template.key}
                       </p>
+                      <StatusBadge tone={template.builtIn ? 'muted' : 'gold'}>
+                        {template.builtIn
+                          ? t('emailLibraryBuiltInBadge')
+                          : t('emailLibraryCustomBadge')}
+                      </StatusBadge>
                     </div>
                     {selected ? (
                       <Check
                         aria-hidden
-                        className="size-4 shrink-0 text-primary"
+                        className="size-4 shrink-0 text-primary-ink"
                       />
-                    ) : template.builtIn ? null : (
-                      <Badge variant="outline">{t('emailLibraryCustomBadge')}</Badge>
-                    )}
+                    ) : null}
                   </div>
                 </>
               );
@@ -105,7 +128,7 @@ export function EmailLibraryGrid({
                 <li
                   key={template.id}
                   className={cn(
-                    'overflow-hidden rounded-md border bg-card',
+                    'flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm',
                     selected ? 'border-primary ring-1 ring-primary' : 'border-border',
                   )}
                 >
@@ -122,7 +145,9 @@ export function EmailLibraryGrid({
                     card
                   )}
                   {actions ? (
-                    <div className="flex flex-wrap gap-2 px-3 pb-3">{actions(template)}</div>
+                    <div className="mt-auto flex flex-wrap gap-2 border-t border-border px-3 py-2.5">
+                      {actions(template)}
+                    </div>
                   ) : null}
                 </li>
               );

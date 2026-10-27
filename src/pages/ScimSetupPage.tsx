@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Badge } from '@/components/ui/badge';
+import { Check, Copy, KeyRound, Loader2, Plus } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Text } from '@/components/ui/text';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { SettingsSection } from '@/components/admin/SettingsSection';
+import { StatusBadge } from '@/components/admin/StatusBadge';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { isApiUnavailableError } from '@/features/actions/components/ApiUnavailableNotice';
 import {
@@ -21,7 +26,7 @@ import {
   partitionScimTokens,
   scimSetupPhase,
 } from '@/lib/scimSetupView';
-import { confirmAction } from '@/lib/confirmAction';
+import { askShelluiConfirm } from '@/lib/shelluiConfirm';
 import { getCompanyIdFromJwt, getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
 import shellui from '@shellui/sdk';
 
@@ -107,12 +112,12 @@ export function ScimSetupPage() {
   async function onRevoke(row: ScimTokenRow) {
     if (!accessToken || companyId == null) return;
     const label = row.label || row.token_prefix;
-    const confirmed = await confirmAction({
+    const confirmed = await askShelluiConfirm({
       title: t('scimRevokeTitle'),
       description: t('scimRevokeConfirm', { label }),
       okLabel: t('scimRevoke'),
       cancelLabel: t('scimRevokeCancel'),
-      danger: true,
+      mode: 'delete',
     });
     if (!confirmed) return;
     setBusy(true);
@@ -140,179 +145,224 @@ export function ScimSetupPage() {
 
   const showOwnerSetup = accessToken && isOwner && companyId != null && !showDeploymentOff;
 
+  const card = 'overflow-hidden rounded-xl border border-border bg-card shadow-sm';
   return (
-    <div className="w-full space-y-8">
-      <header className="space-y-1">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            {t('scimPageTitle')}
-          </h1>
-          <Badge
-            variant="secondary"
-            className="font-mono text-[10px] uppercase"
-          >
-            {t('dashboardEnvBadge')}
-          </Badge>
-        </div>
-        <Text className="max-w-4xl font-mono text-sm">{t('scimPageDescription')}</Text>
-      </header>
+    <div className="w-full space-y-6">
+      <PageHeader
+        title={t('scimPageTitle')}
+        service={t('dashboardEnvBadge')}
+        description={t('scimPageDescription')}
+      />
 
-      {!accessToken && (
-        <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
-      )}
-      {accessToken && !isOwner && (
-        <Text className="font-mono text-sm text-muted-foreground">{t('scimPageForbidden')}</Text>
-      )}
-
+      {!accessToken ? (
+        <Alert>
+          <AlertDescription>{t('dashboardNoSession')}</AlertDescription>
+        </Alert>
+      ) : null}
+      {accessToken && !isOwner ? (
+        <Alert>
+          <AlertDescription>{t('scimPageForbidden')}</AlertDescription>
+        </Alert>
+      ) : null}
       {showDeploymentOff ? (
-        <Text className="font-mono text-sm text-muted-foreground">
-          {t('scimDeploymentUnavailable')}
-        </Text>
+        <Alert variant="warning">
+          <AlertDescription>{t('scimDeploymentUnavailable')}</AlertDescription>
+        </Alert>
       ) : null}
-
       {error && !isApiUnavailableError(error) ? (
-        <Text className="font-mono text-sm text-destructive">
-          {error instanceof Error ? error.message : t('scimLoadError')}
-        </Text>
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>{error instanceof Error ? error.message : t('scimLoadError')}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void load()}
+            >
+              {t('usersRetry')}
+            </Button>
+          </AlertDescription>
+        </Alert>
       ) : null}
 
-      {showOwnerSetup ? (
-        <Card className="border-border/80 shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-heading text-lg">{t('scimTokensTitle')}</CardTitle>
-            <CardDescription className="font-mono text-xs">
+      {showOwnerSetup && loading ? (
+        <div
+          className={card + ' space-y-3 p-5'}
+          aria-busy
+        >
+          <span className="sr-only">{t('scimLoading')}</span>
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-full" />
+        </div>
+      ) : null}
+
+      {showOwnerSetup && !loading && phase === 'active' && config?.base_url ? (
+        <SettingsSection
+          title={t('scimBaseUrlLabel')}
+          description={t('scimEndpointHint')}
+        >
+          <CopyRow value={config.base_url} />
+        </SettingsSection>
+      ) : null}
+
+      {showOwnerSetup && !loading ? (
+        <section className={card}>
+          <div className="space-y-1 border-b border-border px-4 py-3 sm:px-5">
+            <h2 className="text-sm font-semibold">{t('scimTokensTitle')}</h2>
+            <p className="text-xs text-muted-foreground">
               {phase === 'no_token'
                 ? t('scimTokensDescriptionNoToken')
                 : phase === 'revoked_only'
                   ? t('scimTokensDescriptionRevoked')
                   : t('scimTokensDescriptionActive')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {loading ? (
-              <Text className="font-mono text-sm text-muted-foreground">{t('scimLoading')}</Text>
-            ) : null}
+            </p>
+          </div>
 
-            {!loading && phase === 'active' && config?.base_url ? (
-              <div className="space-y-2 rounded-md border border-border/70 bg-muted/30 p-3">
-                <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {t('scimBaseUrlLabel')}
-                </p>
-                <Input
-                  value={config.base_url}
-                  readOnly
-                  className="font-mono text-xs"
-                />
-                <Text className="font-mono text-xs text-muted-foreground">
-                  {t('scimEndpointHint')}
-                </Text>
-              </div>
-            ) : null}
-
-            {createdSecret?.token ? (
-              <div className="space-y-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3">
-                <p className="font-mono text-xs font-semibold text-amber-950 dark:text-amber-100">
-                  {t('scimSecretOnceTitle')}
-                </p>
-                <Input
-                  value={createdSecret.token}
-                  readOnly
-                  className="font-mono text-xs"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => void onCopySecret()}
-                >
-                  {copyState === 'done' ? t('scimSecretCopied') : t('scimSecretCopy')}
-                </Button>
-                {copyState === 'error' ? (
-                  <Text className="font-mono text-xs text-destructive">
-                    {t('scimSecretCopyError')}
-                  </Text>
-                ) : null}
-              </div>
-            ) : null}
-
-            {!loading && phase === 'no_token' ? (
-              <Text className="font-mono text-sm text-muted-foreground">{t('scimNoTokenYet')}</Text>
-            ) : null}
-
-            {activeTokens.length > 0 ? (
-              <ul className="divide-y divide-border rounded-md border border-border">
-                {activeTokens.map((row) => (
-                  <li
-                    key={row.id}
-                    className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
-                  >
-                    <div className="min-w-0 space-y-0.5">
-                      <p className="font-mono text-xs">{row.label || t('scimTokenUnlabeled')}</p>
-                      <p className="font-mono text-[10px] text-muted-foreground">
-                        {row.token_prefix}… · {row.created_at}
-                      </p>
-                    </div>
+          {createdSecret?.token ? (
+            <div className="border-b border-border p-4 sm:px-5">
+              <Alert variant="gold">
+                <KeyRound aria-hidden />
+                <AlertDescription className="space-y-2">
+                  <p className="font-medium">{t('scimSecretOnceTitle')}</p>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Input
+                      value={createdSecret.token}
+                      readOnly
+                      aria-label={t('scimSecretOnceTitle')}
+                      className="font-mono text-xs"
+                    />
                     <Button
                       type="button"
                       size="sm"
-                      variant="destructive"
-                      disabled={busy}
-                      onClick={() => void onRevoke(row)}
+                      variant="outline"
+                      onClick={() => void onCopySecret()}
                     >
-                      {t('scimRevoke')}
+                      {copyState === 'done' ? <Check aria-hidden /> : <Copy aria-hidden />}
+                      {copyState === 'done' ? t('scimSecretCopied') : t('scimSecretCopy')}
                     </Button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
+                  </div>
+                  {copyState === 'error' ? (
+                    <p className="text-xs text-destructive">{t('scimSecretCopyError')}</p>
+                  ) : null}
+                </AlertDescription>
+              </Alert>
+            </div>
+          ) : null}
 
-            {!loading && revokedTokens.length > 0 ? (
-              <div className="space-y-2">
-                <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {t('scimRevokedSectionTitle')}
-                </p>
-                <ul className="divide-y divide-border rounded-md border border-border/80">
-                  {revokedTokens.map((row) => (
-                    <li
-                      key={row.id}
-                      className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 opacity-80"
-                    >
-                      <div className="min-w-0 space-y-0.5">
-                        <p className="font-mono text-xs">{row.label || t('scimTokenUnlabeled')}</p>
-                        <p className="font-mono text-[10px] text-muted-foreground">
-                          {row.token_prefix}…
-                          {row.revoked_at
-                            ? ` · ${t('scimRevokedAt', { date: row.revoked_at })}`
-                            : null}
-                        </p>
-                      </div>
-                      <Badge variant="outline">{t('scimRevokedBadge')}</Badge>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
+          {phase === 'no_token' ? (
+            <EmptyState
+              icon={KeyRound}
+              title={t('scimNoTokenYet')}
+            />
+          ) : null}
 
-            <div className="space-y-2 rounded-md border border-border/70 p-3">
-              <p className="font-mono text-[10px] text-muted-foreground">{t('scimCreateHint')}</p>
+          {activeTokens.length > 0 ? (
+            <ul className="divide-y divide-border">
+              {activeTokens.map((row) => (
+                <li
+                  key={row.id}
+                  className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-5"
+                >
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="text-sm font-medium">{row.label || t('scimTokenUnlabeled')}</p>
+                    <p className="font-mono text-xs text-muted-foreground">
+                      {row.token_prefix}... · {row.created_at}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive hover:text-destructive"
+                    disabled={busy}
+                    onClick={() => void onRevoke(row)}
+                  >
+                    {t('scimRevoke')}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          <div className="flex flex-col gap-2 border-t border-border bg-muted/30 px-4 py-3 sm:flex-row sm:items-end sm:px-5">
+            <div className="flex-1 space-y-1.5">
+              <Label htmlFor="scim-new-label">{t('scimCreateHint')}</Label>
               <Input
+                id="scim-new-label"
                 value={newLabel}
                 onChange={(e) => setNewLabel(e.target.value)}
                 placeholder={t('scimCreateLabelPlaceholder')}
-                className="font-mono text-xs"
               />
-              <Button
-                type="button"
-                size="sm"
-                disabled={busy || loading}
-                onClick={() => void onCreateToken()}
-              >
-                {busy ? t('scimCreateLoading') : t('scimCreateAction')}
-              </Button>
             </div>
-          </CardContent>
-        </Card>
+            <Button
+              type="button"
+              disabled={busy || loading}
+              onClick={() => void onCreateToken()}
+            >
+              {busy ? (
+                <Loader2 className="animate-spin motion-reduce:animate-none" />
+              ) : (
+                <Plus aria-hidden />
+              )}
+              {busy ? t('scimCreateLoading') : t('scimCreateAction')}
+            </Button>
+          </div>
+        </section>
       ) : null}
+
+      {showOwnerSetup && !loading && revokedTokens.length > 0 ? (
+        <section className={card}>
+          <h2 className="border-b border-border px-4 py-3 text-sm font-semibold sm:px-5">
+            {t('scimRevokedSectionTitle')}
+          </h2>
+          <ul className="divide-y divide-border">
+            {revokedTokens.map((row) => (
+              <li
+                key={row.id}
+                className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-muted-foreground sm:px-5"
+              >
+                <div className="min-w-0 space-y-0.5">
+                  <p className="text-sm">{row.label || t('scimTokenUnlabeled')}</p>
+                  <p className="font-mono text-xs">
+                    {row.token_prefix}...
+                    {row.revoked_at ? ` · ${t('scimRevokedAt', { date: row.revoked_at })}` : null}
+                  </p>
+                </div>
+                <StatusBadge tone="muted">{t('scimRevokedBadge')}</StatusBadge>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+function CopyRow({ value }: { value: string }) {
+  const { t } = useTranslation();
+  const [done, setDone] = useState(false);
+  return (
+    <div className="flex gap-2">
+      <Input
+        value={value}
+        readOnly
+        aria-label={t('scimBaseUrlLabel')}
+        className="font-mono text-xs"
+      />
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => {
+          void navigator.clipboard
+            .writeText(value)
+            .then(() => setDone(true))
+            .catch(() => setDone(false));
+        }}
+      >
+        {done ? <Check aria-hidden /> : <Copy aria-hidden />}
+        {done ? t('scimSecretCopied') : t('oauthWizardCopy')}
+      </Button>
     </div>
   );
 }

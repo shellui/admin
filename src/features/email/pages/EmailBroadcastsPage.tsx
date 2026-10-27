@@ -1,12 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
-import { Loader2, Plus } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Megaphone, Plus } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { DataTableCard, SkeletonRows } from '@/components/admin/DataTableCard';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { PageHeader } from '@/components/admin/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Text } from '@/components/ui/text';
 import { useLang } from '@/contexts/LangContext';
 import {
   ActionFeedback,
@@ -98,119 +109,171 @@ export function EmailBroadcastsPage() {
     }
   }
 
+  const newButton =
+    canManage && !creating ? (
+      <Button
+        type="button"
+        onClick={() => void openCreate()}
+      >
+        <Plus aria-hidden />
+        {t('emailBroadcastNew')}
+      </Button>
+    ) : null;
+  const cols = ['pl-4', '', 'hidden text-right md:table-cell', 'hidden pr-4 md:table-cell'];
+
   return (
     <div className="w-full space-y-6">
-      <header className="space-y-1">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            {t('emailBroadcastsTitle')}
-          </h1>
-          <Badge
-            variant="secondary"
-            className="font-mono text-[10px] uppercase"
-          >
-            email-service
-          </Badge>
-        </div>
-        <Text className="max-w-3xl">{t('emailBroadcastsDescription')}</Text>
-      </header>
+      <PageHeader
+        title={t('emailBroadcastsTitle')}
+        service="email-service"
+        description={t('emailBroadcastsDescription')}
+        actions={!loading && broadcasts && broadcasts.length > 0 && !error ? newButton : null}
+      />
 
-      {!accessToken ? <Text>{t('dashboardNoSession')}</Text> : null}
-      {accessToken && !canManage ? <Text>{t('emailForbidden')}</Text> : null}
-      {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          {t('emailLoading')}
-        </div>
+      {!accessToken ? (
+        <Alert variant="info">
+          <AlertDescription>{t('dashboardNoSession')}</AlertDescription>
+        </Alert>
+      ) : null}
+      {accessToken && !canManage ? (
+        <Alert variant="warning">
+          <AlertDescription>{t('emailForbidden')}</AlertDescription>
+        </Alert>
       ) : null}
       {error ? (
-        <Text className="font-mono text-sm text-destructive">{emailErrorText(t, error)}</Text>
-      ) : null}
-
-      {!loading && canManage && broadcasts && !error ? (
-        <>
-          {creating ? (
-            <section className="space-y-4 rounded-lg border border-border bg-card p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold tracking-tight">
-                    {t('emailBroadcastNew')}
-                  </h2>
-                  <Text className="text-xs">{t('emailBroadcastNewHint')}</Text>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setCreating(false)}
-                >
-                  {t('actionsCancel')}
-                </Button>
-              </div>
-              <div className="max-w-md space-y-1.5">
-                <Label htmlFor="broadcast-name">{t('emailBroadcastName')}</Label>
-                <Input
-                  id="broadcast-name"
-                  value={name}
-                  maxLength={120}
-                  placeholder={t('emailBroadcastNamePlaceholder')}
-                  onChange={(ev) => setName(ev.target.value)}
-                />
-              </div>
-              <ActionFeedback feedback={feedback} />
-              {library ? (
-                <EmailLibraryGrid
-                  library={library}
-                  assetsUrl={emailAssetsUrl(baseUrl)}
-                  selectedId={null}
-                  onSelect={(template) => void create(template)}
-                />
-              ) : feedback ? null : (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="size-4 animate-spin" />
-                  {t('emailLoading')}
-                </div>
-              )}
-            </section>
-          ) : (
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span className="font-mono text-sm">{emailErrorText(t, error)}</span>
             <Button
               type="button"
-              onClick={() => void openCreate()}
+              size="sm"
+              variant="outline"
+              onClick={() => void load()}
             >
-              <Plus />
-              {t('emailBroadcastNew')}
+              {t('usersRetry')}
             </Button>
-          )}
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
-          {broadcasts.length === 0 ? (
-            <Text>{t('emailBroadcastsEmpty')}</Text>
-          ) : (
-            <ul className="divide-y divide-border rounded-lg border border-border">
-              {broadcasts.map((broadcast) => (
-                <li key={broadcast.id}>
-                  <Link
-                    to={emailBroadcastPath(broadcast.id)}
-                    className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-muted/40"
-                  >
-                    <span className="min-w-0 flex-1 truncate font-medium">{broadcast.name}</span>
-                    {broadcast.counts ? (
-                      <span className="text-xs text-muted-foreground">
-                        {t('emailBroadcastRecipients', { count: broadcast.counts.total })}
-                      </span>
-                    ) : null}
-                    <span className="text-xs text-muted-foreground">
-                      {broadcast.sentAt
-                        ? t('emailBroadcastSentOn', { date: formatDate(broadcast.sentAt, lang) })
-                        : t('emailBroadcastCreatedOn', {
-                            date: formatDate(broadcast.createdAt, lang),
-                          })}
-                    </span>
-                    <BroadcastStateBadge state={broadcast.state} />
-                  </Link>
-                </li>
+      {creating && canManage ? (
+        <section className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <h2 className="text-sm font-semibold">{t('emailBroadcastNew')}</h2>
+              <p className="text-[13px] text-muted-foreground">{t('emailBroadcastNewHint')}</p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setCreating(false)}
+            >
+              {t('actionsCancel')}
+            </Button>
+          </div>
+          <div className="max-w-md space-y-1.5">
+            <Label htmlFor="broadcast-name">{t('emailBroadcastName')}</Label>
+            <Input
+              id="broadcast-name"
+              value={name}
+              maxLength={120}
+              aria-required
+              placeholder={t('emailBroadcastNamePlaceholder')}
+              onChange={(ev) => setName(ev.target.value)}
+            />
+          </div>
+          <ActionFeedback feedback={feedback} />
+          {library ? (
+            <EmailLibraryGrid
+              library={library}
+              assetsUrl={emailAssetsUrl(baseUrl)}
+              selectedId={null}
+              onSelect={(template) => void create(template)}
+            />
+          ) : feedback ? null : (
+            <div
+              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 motion-safe:animate-pulse"
+              aria-busy
+            >
+              <span className="sr-only">{t('emailLoading')}</span>
+              {[0, 1, 2].map((i) => (
+                <Skeleton
+                  key={i}
+                  className="h-40 rounded-lg"
+                />
               ))}
-            </ul>
+            </div>
           )}
-        </>
+        </section>
+      ) : null}
+
+      {canManage && !error && (loading || broadcasts) ? (
+        <DataTableCard
+          label={t('emailBroadcastsTitle')}
+          busy={loading}
+        >
+          {loading ? <span className="sr-only">{t('emailLoading')}</span> : null}
+          {!loading && broadcasts && broadcasts.length === 0 ? (
+            <EmptyState
+              icon={Megaphone}
+              title={t('emailBroadcastsEmpty')}
+              actions={newButton}
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className={cols[0]}>{t('emailBroadcastsColName')}</TableHead>
+                  <TableHead>{t('emailBroadcastsColStatus')}</TableHead>
+                  <TableHead className={cols[2]}>{t('emailBroadcastsColRecipients')}</TableHead>
+                  <TableHead className={cols[3]}>{t('emailBroadcastsColDate')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <SkeletonRows
+                    rows={4}
+                    columns={cols}
+                  />
+                ) : null}
+                {!loading &&
+                  (broadcasts ?? []).map((broadcast) => (
+                    <TableRow key={broadcast.id}>
+                      <TableCell className="pl-4">
+                        <Link
+                          to={emailBroadcastPath(broadcast.id)}
+                          className="font-medium text-foreground hover:underline"
+                        >
+                          {broadcast.name}
+                        </Link>
+                        <span className="block text-xs text-muted-foreground md:hidden">
+                          {broadcast.counts
+                            ? t('emailBroadcastRecipients', { count: broadcast.counts.total })
+                            : null}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <BroadcastStateBadge state={broadcast.state} />
+                      </TableCell>
+                      <TableCell className="hidden text-right text-xs text-muted-foreground md:table-cell">
+                        {broadcast.counts
+                          ? t('emailBroadcastRecipients', { count: broadcast.counts.total })
+                          : '-'}
+                      </TableCell>
+                      <TableCell className="hidden pr-4 text-xs text-muted-foreground md:table-cell">
+                        {broadcast.sentAt
+                          ? t('emailBroadcastSentOn', { date: formatDate(broadcast.sentAt, lang) })
+                          : t('emailBroadcastCreatedOn', {
+                              date: formatDate(broadcast.createdAt, lang),
+                            })}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          )}
+        </DataTableCard>
       ) : null}
     </div>
   );

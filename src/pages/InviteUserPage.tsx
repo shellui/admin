@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2 } from 'lucide-react';
+import { AlertTriangle, CircleAlert, Loader2, Send } from 'lucide-react';
 import shellui from '@shellui/sdk';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,7 +27,9 @@ export function InviteUserPage() {
   const [email, setEmail] = useState('');
   const [language, setLanguage] = useState<InviteLanguage>(() => defaultLanguage(i18n.language));
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; tone: 'warning' | 'destructive' } | null>(
+    null,
+  );
 
   useEffect(() => shellui.overlay.autoSize({ target: rootRef.current }), []);
 
@@ -48,11 +51,14 @@ export function InviteUserPage() {
       shellui.closeModal();
     } catch (e) {
       if (e instanceof AdminApiError && e.code === 'already_member') {
-        setError(t('inviteAlreadyMember', { email: address }));
+        setError({ message: t('inviteAlreadyMember', { email: address }), tone: 'warning' });
       } else if (e instanceof AdminApiError && e.code === 'already_invited') {
-        setError(t('inviteAlreadyInvited', { email: address }));
+        setError({ message: t('inviteAlreadyInvited', { email: address }), tone: 'warning' });
       } else {
-        setError(e instanceof Error ? e.message : t('usersErrorUnknown'));
+        setError({
+          message: e instanceof Error ? e.message : t('usersErrorUnknown'),
+          tone: 'destructive',
+        });
       }
       setSending(false);
     }
@@ -84,7 +90,11 @@ export function InviteUserPage() {
               autoFocus
               autoComplete="off"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              aria-invalid={error ? true : undefined}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (error) setError(null);
+              }}
               placeholder={t('inviteEmailPlaceholder')}
             />
           </div>
@@ -111,18 +121,16 @@ export function InviteUserPage() {
       )}
 
       {error ? (
-        <p
-          role="alert"
-          className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          {error}
-        </p>
+        <Alert variant={error.tone}>
+          {error.tone === 'warning' ? <AlertTriangle aria-hidden /> : <CircleAlert aria-hidden />}
+          <AlertDescription>{error.message}</AlertDescription>
+        </Alert>
       ) : null}
 
       <div className="flex justify-end gap-2">
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           onClick={() => shellui.closeModal()}
         >
           {t('inviteCancel')}
@@ -141,7 +149,13 @@ export function InviteUserPage() {
               {t('inviteSending')}
             </>
           ) : (
-            t('inviteSend')
+            <>
+              <Send
+                className="size-4"
+                aria-hidden
+              />
+              {t('inviteSend')}
+            </>
           )}
         </Button>
       </div>

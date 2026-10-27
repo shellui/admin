@@ -33,6 +33,13 @@ export default {
         'sidebar-accent-foreground': 'var(--sidebar-accent-foreground)',
         'sidebar-border': 'var(--sidebar-border)',
         'sidebar-ring': 'var(--sidebar-ring)',
+        'primary-ink': 'var(--primary-ink)',
+        success: 'var(--success)',
+        warning: 'var(--warning)',
+        info: 'var(--info)',
+      },
+      transitionTimingFunction: {
+        soft: 'var(--ease-out-soft, cubic-bezier(0.32, 0.72, 0, 1))',
       },
       borderRadius: {
         lg: 'var(--radius)',

@@ -56,9 +56,10 @@ describe('EmailNewslettersPage', () => {
     renderPage();
     const link = await screen.findByRole('link', { name: /Product news/ });
     expect(link.getAttribute('href')).toBe('/email/newsletters/3');
-    expect(link.textContent).toContain('12 subscribers');
-    expect(link.textContent).toContain('2 waiting for confirmation');
-    expect(link.textContent).not.toContain('unsubscribed');
+    const row = link.closest('tr') as HTMLElement;
+    expect(row.querySelector('[title="12 subscribers"]')?.textContent).toBe('12');
+    expect(row.querySelector('[title="2 waiting for confirmation"]')?.textContent).toBe('2');
+    expect(row.querySelector('[title="0 unsubscribed"]')?.textContent).toBe('0');
   });
 
   it('asks for a name, then creates the newsletter and opens it', async () => {

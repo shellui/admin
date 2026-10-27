@@ -4,6 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
+import { Switch } from '@/components/ui/switch';
+import { SettingsSection } from '@/components/admin/SettingsSection';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { cn } from '@/lib/utils';
 import { EmailApiError } from '@/lib/emailApiErrors';
 import {
   ActionFeedback,
@@ -209,9 +213,10 @@ export function EmailProviderForm({
     }
   }
 
+  const providerName = t(`emailProvider_${provider}`);
   return (
     <form
-      className="space-y-6"
+      className="space-y-8"
       onChange={() => {
         setSaveFeedback(null);
         setTestFeedback(null);
@@ -221,280 +226,333 @@ export function EmailProviderForm({
         void submit();
       }}
     >
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="email-provider">{t('emailFieldProvider')}</Label>
-          <select
-            id="email-provider"
-            className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-transparent px-3 text-sm"
-            value={provider}
-            onChange={(event) => {
-              setProvider(event.target.value);
-              clearSecrets();
-              setSesErrors({});
-            }}
-          >
+      <SettingsSection
+        id="email-provider"
+        title={t('emailProviderSecProvider')}
+        description={t('emailProviderSecProviderHint')}
+      >
+        <fieldset className="space-y-3">
+          <legend className="sr-only">{t('emailFieldProvider')}</legend>
+          <div className="grid gap-3 sm:grid-cols-2">
             {EMAIL_PROVIDER_CATALOG.map((item) => {
               const enabled = providerOptionEnabled(item, settings);
+              const checked = provider === item.id;
               return (
-                <option
+                <label
                   key={item.id}
-                  value={item.id}
-                  disabled={!enabled}
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg border px-3 py-3 text-sm transition-colors motion-reduce:transition-none has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring',
+                    checked ? 'border-primary bg-primary/5' : 'border-border',
+                    enabled ? 'cursor-pointer hover:bg-muted/60' : 'cursor-not-allowed opacity-60',
+                  )}
                 >
-                  {t(`emailProvider_${item.id}`)}
-                  {enabled ? '' : ` (${t('emailProviderUnavailable')})`}
-                </option>
+                  <input
+                    type="radio"
+                    name="email-provider"
+                    value={item.id}
+                    checked={checked}
+                    disabled={!enabled}
+                    className="size-4 accent-[var(--primary)]"
+                    onChange={() => {
+                      setProvider(item.id);
+                      clearSecrets();
+                      setSesErrors({});
+                    }}
+                  />
+                  <span className="font-medium">{t(`emailProvider_${item.id}`)}</span>
+                  {enabled ? null : (
+                    <StatusBadge
+                      tone="muted"
+                      dot={false}
+                      className="ml-auto"
+                    >
+                      {t('emailProviderUnavailable')}
+                    </StatusBadge>
+                  )}
+                </label>
               );
             })}
-          </select>
+          </div>
           {!settings.smtpAllowed ? (
-            <Text className="font-mono text-xs">{t('emailSmtpDisabled')}</Text>
+            <p className="text-xs text-muted-foreground">{t('emailSmtpDisabled')}</p>
           ) : null}
-          {settings.authLinkHosts.length ? (
-            <Text className="font-mono text-xs">
-              {t('emailAuthLinkHosts', { hosts: settings.authLinkHosts.join(', ') })}{' '}
-              <a
-                className="underline underline-offset-4"
-                href="#/email/link-hosts"
-              >
-                {t('navEmailLinkHosts')}
-              </a>
-            </Text>
-          ) : null}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="email-from">{t('emailFieldFromEmail')}</Label>
-          <Input
-            id="email-from"
-            type="email"
-            autoComplete="off"
-            value={fromEmail}
-            onChange={(event) => setFromEmail(event.target.value)}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="email-from-name">{t('emailFieldFromName')}</Label>
-          <Input
-            id="email-from-name"
-            value={fromName}
-            onChange={(event) => setFromName(event.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="email-domain">{t('emailFieldSendingDomain')}</Label>
-          <Input
-            id="email-domain"
-            value={sendingDomain}
-            onChange={(event) => setSendingDomain(event.target.value)}
-          />
-        </div>
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="email-bulk-from">{t('emailFieldBulkFrom')}</Label>
-          <Input
-            id="email-bulk-from"
-            type="email"
-            value={bulkFromEmail}
-            onChange={(event) => setBulkFromEmail(event.target.value)}
-          />
-        </div>
-      </div>
+        </fieldset>
+      </SettingsSection>
 
-      {definition?.credentialKind === 'smtp' ? (
+      <SettingsSection
+        id="email-sender"
+        title={t('emailProviderSecSender')}
+        description={t('emailProviderSecSenderHint')}
+      >
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="email-smtp-host">{t('emailSmtpHost')}</Label>
+            <Label htmlFor="email-from">{t('emailFieldFromEmail')}</Label>
             <Input
-              id="email-smtp-host"
-              value={smtp.host}
-              onChange={(event) => setSmtp((prev) => ({ ...prev, host: event.target.value }))}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email-smtp-port">{t('emailSmtpPort')}</Label>
-            <Input
-              id="email-smtp-port"
-              inputMode="numeric"
-              value={smtp.port}
-              onChange={(event) => setSmtp((prev) => ({ ...prev, port: event.target.value }))}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email-smtp-user">{t('emailSmtpUsername')}</Label>
-            <Input
-              id="email-smtp-user"
+              id="email-from"
+              type="email"
               autoComplete="off"
-              value={smtp.username}
-              onChange={(event) => setSmtp((prev) => ({ ...prev, username: event.target.value }))}
+              value={fromEmail}
+              onChange={(event) => setFromEmail(event.target.value)}
+              required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email-smtp-password">{t('emailSmtpPassword')}</Label>
+            <Label htmlFor="email-from-name">{t('emailFieldFromName')}</Label>
             <Input
-              id="email-smtp-password"
-              name="smtpPassword"
-              type="password"
-              data-1p-ignore
-              data-lpignore="true"
-              autoComplete="new-password"
-              value={smtpPassword}
-              placeholder={t('emailSecretPlaceholder')}
-              onChange={(event) => setSmtpPassword(event.target.value)}
+              id="email-from-name"
+              value={fromName}
+              onChange={(event) => setFromName(event.target.value)}
             />
           </div>
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="cursor-pointer"
-              checked={smtp.useTls}
-              onChange={(event) => setSmtp((prev) => ({ ...prev, useTls: event.target.checked }))}
+          <div className="space-y-2">
+            <Label htmlFor="email-domain">{t('emailFieldSendingDomain')}</Label>
+            <Input
+              id="email-domain"
+              value={sendingDomain}
+              onChange={(event) => setSendingDomain(event.target.value)}
             />
-            {t('emailSmtpTls')}
-          </label>
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="cursor-pointer"
-              checked={smtp.useSsl}
-              onChange={(event) => setSmtp((prev) => ({ ...prev, useSsl: event.target.checked }))}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email-bulk-from">{t('emailFieldBulkFrom')}</Label>
+            <Input
+              id="email-bulk-from"
+              type="email"
+              value={bulkFromEmail}
+              aria-describedby="email-bulk-from-help"
+              onChange={(event) => setBulkFromEmail(event.target.value)}
             />
-            {t('emailSmtpSsl')}
-          </label>
+            <p
+              id="email-bulk-from-help"
+              className="text-xs text-muted-foreground"
+            >
+              {t('emailSesBulkNote')}
+            </p>
+          </div>
         </div>
-      ) : definition?.credentialKind === 'ses' ? (
-        <div className="space-y-4">
+      </SettingsSection>
+
+      <SettingsSection
+        id="email-credentials"
+        title={t('emailProviderSecCreds', { provider: providerName })}
+        description={t('emailProviderCredsHint')}
+        footerAction={
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <ActionFeedback feedback={saveFeedback} />
+            <Button
+              type="submit"
+              disabled={saving}
+            >
+              {saving ? t('emailProviderSaving') : t('emailProviderSave')}
+            </Button>
+          </div>
+        }
+      >
+        {definition?.credentialKind === 'smtp' ? (
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="email-ses-access-key">{t('emailSesAccessKeyId')}</Label>
+              <Label htmlFor="email-smtp-host">{t('emailSmtpHost')}</Label>
               <Input
-                id="email-ses-access-key"
-                autoComplete="off"
-                spellCheck={false}
-                value={ses.accessKeyId}
-                aria-invalid={Boolean(sesErrors.access_key_id)}
-                onChange={(event) =>
-                  setSes((prev) => ({ ...prev, accessKeyId: event.target.value }))
-                }
+                id="email-smtp-host"
+                value={smtp.host}
+                onChange={(event) => setSmtp((prev) => ({ ...prev, host: event.target.value }))}
               />
-              <SesFieldError text={fieldErrorText('access_key_id')} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email-ses-secret">{t('emailSesSecretAccessKey')}</Label>
+              <Label htmlFor="email-smtp-port">{t('emailSmtpPort')}</Label>
               <Input
-                id="email-ses-secret"
-                name="sesSecretAccessKey"
+                id="email-smtp-port"
+                inputMode="numeric"
+                value={smtp.port}
+                onChange={(event) => setSmtp((prev) => ({ ...prev, port: event.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email-smtp-user">{t('emailSmtpUsername')}</Label>
+              <Input
+                id="email-smtp-user"
+                autoComplete="off"
+                value={smtp.username}
+                onChange={(event) => setSmtp((prev) => ({ ...prev, username: event.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email-smtp-password">{t('emailSmtpPassword')}</Label>
+              <Input
+                id="email-smtp-password"
+                name="smtpPassword"
                 type="password"
                 data-1p-ignore
                 data-lpignore="true"
                 autoComplete="new-password"
-                value={sesSecret}
+                value={smtpPassword}
                 placeholder={t('emailSecretPlaceholder')}
-                aria-invalid={Boolean(sesErrors.secret_access_key)}
-                onChange={(event) => setSesSecret(event.target.value)}
+                onChange={(event) => setSmtpPassword(event.target.value)}
               />
-              <SesFieldError text={fieldErrorText('secret_access_key')} />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email-ses-region">{t('emailSesRegion')}</Label>
-              <select
-                id="email-ses-region"
-                className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-transparent px-3 text-sm"
-                value={sesOtherRegion ? SES_OTHER_REGION : ses.region}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  if (value === SES_OTHER_REGION) {
-                    setSesOtherRegion(true);
-                    setSes((prev) => ({ ...prev, region: '' }));
-                  } else {
-                    setSesOtherRegion(false);
-                    setSes((prev) => ({ ...prev, region: value }));
-                  }
+            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5 text-sm">
+              {t('emailSmtpTls')}
+              <Switch
+                checked={smtp.useTls}
+                onCheckedChange={(checked) => {
+                  setSaveFeedback(null);
+                  setSmtp((prev) => ({ ...prev, useTls: checked }));
                 }}
-              >
-                {SES_REGIONS.map((region) => (
-                  <option
-                    key={region}
-                    value={region}
-                  >
-                    {region === SES_DEFAULT_REGION ? t('emailSesRegionZurich', { region }) : region}
-                  </option>
-                ))}
-                <option value={SES_OTHER_REGION}>{t('emailSesRegionOther')}</option>
-              </select>
-              {sesOtherRegion ? (
+              />
+            </label>
+            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5 text-sm">
+              {t('emailSmtpSsl')}
+              <Switch
+                checked={smtp.useSsl}
+                onCheckedChange={(checked) => {
+                  setSaveFeedback(null);
+                  setSmtp((prev) => ({ ...prev, useSsl: checked }));
+                }}
+              />
+            </label>
+          </div>
+        ) : definition?.credentialKind === 'ses' ? (
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="email-ses-access-key">{t('emailSesAccessKeyId')}</Label>
                 <Input
-                  id="email-ses-region-other"
-                  aria-label={t('emailSesRegionCustom')}
-                  placeholder="ap-south-1"
+                  id="email-ses-access-key"
                   autoComplete="off"
                   spellCheck={false}
-                  value={ses.region}
-                  aria-invalid={Boolean(sesErrors.region)}
-                  onChange={(event) => setSes((prev) => ({ ...prev, region: event.target.value }))}
+                  value={ses.accessKeyId}
+                  aria-invalid={Boolean(sesErrors.access_key_id)}
+                  onChange={(event) =>
+                    setSes((prev) => ({ ...prev, accessKeyId: event.target.value }))
+                  }
                 />
-              ) : null}
-              <SesFieldError text={fieldErrorText('region')} />
+                <SesFieldError text={fieldErrorText('access_key_id')} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email-ses-secret">{t('emailSesSecretAccessKey')}</Label>
+                <Input
+                  id="email-ses-secret"
+                  name="sesSecretAccessKey"
+                  type="password"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  autoComplete="new-password"
+                  value={sesSecret}
+                  placeholder={t('emailSecretPlaceholder')}
+                  aria-invalid={Boolean(sesErrors.secret_access_key)}
+                  onChange={(event) => setSesSecret(event.target.value)}
+                />
+                <SesFieldError text={fieldErrorText('secret_access_key')} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email-ses-region">{t('emailSesRegion')}</Label>
+                <select
+                  id="email-ses-region"
+                  className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  value={sesOtherRegion ? SES_OTHER_REGION : ses.region}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    if (value === SES_OTHER_REGION) {
+                      setSesOtherRegion(true);
+                      setSes((prev) => ({ ...prev, region: '' }));
+                    } else {
+                      setSesOtherRegion(false);
+                      setSes((prev) => ({ ...prev, region: value }));
+                    }
+                  }}
+                >
+                  {SES_REGIONS.map((region) => (
+                    <option
+                      key={region}
+                      value={region}
+                    >
+                      {region === SES_DEFAULT_REGION
+                        ? t('emailSesRegionZurich', { region })
+                        : region}
+                    </option>
+                  ))}
+                  <option value={SES_OTHER_REGION}>{t('emailSesRegionOther')}</option>
+                </select>
+                {sesOtherRegion ? (
+                  <Input
+                    id="email-ses-region-other"
+                    aria-label={t('emailSesRegionCustom')}
+                    placeholder="ap-south-1"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={ses.region}
+                    aria-invalid={Boolean(sesErrors.region)}
+                    onChange={(event) =>
+                      setSes((prev) => ({ ...prev, region: event.target.value }))
+                    }
+                  />
+                ) : null}
+                <SesFieldError text={fieldErrorText('region')} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email-ses-config-set">{t('emailSesConfigurationSet')}</Label>
+                <Input
+                  id="email-ses-config-set"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={ses.configurationSet}
+                  aria-invalid={Boolean(sesErrors.configuration_set)}
+                  onChange={(event) =>
+                    setSes((prev) => ({ ...prev, configurationSet: event.target.value }))
+                  }
+                />
+                <SesFieldError text={fieldErrorText('configuration_set')} />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email-ses-config-set">{t('emailSesConfigurationSet')}</Label>
-              <Input
-                id="email-ses-config-set"
-                autoComplete="off"
-                spellCheck={false}
-                value={ses.configurationSet}
-                aria-invalid={Boolean(sesErrors.configuration_set)}
-                onChange={(event) =>
-                  setSes((prev) => ({ ...prev, configurationSet: event.target.value }))
-                }
-              />
-              <SesFieldError text={fieldErrorText('configuration_set')} />
-            </div>
+            <Text className="text-xs text-muted-foreground">
+              {hint && providerUnchanged
+                ? t('emailSesCredentialsHint', { hint })
+                : t('emailCredentialsEmpty')}
+            </Text>
           </div>
-          <Text className="font-mono text-xs">
-            {hint && providerUnchanged
-              ? t('emailSesCredentialsHint', { hint })
-              : t('emailCredentialsEmpty')}
-          </Text>
-          <Text className="text-xs">{t('emailSesBulkNote')}</Text>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <Label htmlFor="email-api-key">{t('emailFieldApiKey')}</Label>
-          <Input
-            id="email-api-key"
-            name="apiKey"
-            type="password"
-            data-1p-ignore
-            data-lpignore="true"
-            autoComplete="new-password"
-            value={apiKey}
-            placeholder={t('emailSecretPlaceholder')}
-            onChange={(event) => setApiKey(event.target.value)}
-          />
-          <Text className="font-mono text-xs">
-            {hint ? t('emailCredentialsHint', { hint }) : t('emailCredentialsEmpty')}
-          </Text>
-        </div>
-      )}
+        ) : (
+          <div className="space-y-2">
+            <Label htmlFor="email-api-key">{t('emailFieldApiKey')}</Label>
+            <Input
+              id="email-api-key"
+              name="apiKey"
+              type="password"
+              data-1p-ignore
+              data-lpignore="true"
+              autoComplete="new-password"
+              value={apiKey}
+              placeholder={t('emailSecretPlaceholder')}
+              onChange={(event) => setApiKey(event.target.value)}
+            />
+            <Text className="text-xs text-muted-foreground">
+              {hint ? t('emailCredentialsHint', { hint }) : t('emailCredentialsEmpty')}
+            </Text>
+          </div>
+        )}
 
-      {definition?.credentialKind === 'smtp' && hint ? (
-        <Text className="font-mono text-xs">{t('emailCredentialsHint', { hint })}</Text>
+        {definition?.credentialKind === 'smtp' && hint ? (
+          <Text className="text-xs text-muted-foreground">
+            {t('emailCredentialsHint', { hint })}
+          </Text>
+        ) : null}
+      </SettingsSection>
+
+      {settings.authLinkHosts.length ? (
+        <p className="text-xs text-muted-foreground">
+          {t('emailAuthLinkHosts', { hosts: settings.authLinkHosts.join(', ') })}{' '}
+          <a
+            className="font-medium text-primary-ink underline-offset-4 hover:underline"
+            href="#/email/link-hosts"
+          >
+            {t('navEmailLinkHosts')}
+          </a>
+        </p>
       ) : null}
 
-      <div className="space-y-2">
-        <Button
-          type="submit"
-          disabled={saving}
-        >
-          {saving ? t('emailProviderSaving') : t('emailProviderSave')}
-        </Button>
-        <ActionFeedback feedback={saveFeedback} />
-      </div>
-
-      <div className="space-y-3 border-t border-border/80 pt-4">
-        <h2 className="text-base font-semibold tracking-tight">{t('emailTestSend')}</h2>
-        <Text>{isStaff ? t('emailTestStaffHint') : t('emailTestOwnerHint')}</Text>
+      <SettingsSection
+        id="email-test"
+        title={t('emailTestSend')}
+        description={t('emailProviderTestHint')}
+      >
         <div className="flex flex-wrap items-end gap-2">
           {isStaff ? (
             <div className="min-w-[16rem] flex-1 space-y-2">
@@ -505,6 +563,13 @@ export function EmailProviderForm({
                 value={testTo}
                 onChange={(event) => setTestTo(event.target.value)}
               />
+            </div>
+          ) : jwtEmail ? (
+            <div className="min-w-[16rem] flex-1 space-y-2">
+              <p className="text-sm font-medium">{t('emailTestTo')}</p>
+              <p className="flex h-9 items-center rounded-md border border-input bg-muted px-3 text-sm text-muted-foreground">
+                {jwtEmail}
+              </p>
             </div>
           ) : null}
           <Button
@@ -517,12 +582,12 @@ export function EmailProviderForm({
           </Button>
         </div>
         <ActionFeedback feedback={testFeedback} />
-      </div>
+      </SettingsSection>
     </form>
   );
 }
 
 function SesFieldError({ text }: { text: string }) {
   if (!text) return null;
-  return <Text className="font-mono text-xs text-destructive">{text}</Text>;
+  return <Text className="text-xs text-destructive">{text}</Text>;
 }

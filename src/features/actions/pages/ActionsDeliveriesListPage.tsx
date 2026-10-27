@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, createSearchParams, useSearchParams } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Send } from 'lucide-react';
+import { DataTableCard, SkeletonRows } from '@/components/admin/DataTableCard';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { StatusBadge, type StatusTone } from '@/components/admin/StatusBadge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,10 +17,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Text } from '@/components/ui/text';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
-import { cn } from '@/lib/utils';
 import { ActionsSubNav } from '@/features/actions/components/ActionsSubNav';
 import {
   ApiUnavailableNotice,
@@ -30,12 +32,12 @@ import { webhookDeliveryDetailPath } from '@/lib/webhookRoutePaths';
 
 const PAGE_SIZE = 20;
 
-function statusClassName(status: string) {
+function deliveryStatusTone(status: string): StatusTone {
   const s = status.toLowerCase();
-  if (s === 'success') return 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200';
-  if (s === 'pending' || s === 'processing') return 'bg-sky-500/15 text-sky-900 dark:text-sky-100';
-  if (s === 'failed' || s === 'dead') return 'bg-destructive/15 text-destructive';
-  return 'bg-muted text-muted-foreground';
+  if (s === 'success') return 'success';
+  if (s === 'pending' || s === 'processing') return 'info';
+  if (s === 'failed' || s === 'dead') return 'destructive';
+  return 'muted';
 }
 
 export function ActionsDeliveriesListPage() {
@@ -127,34 +129,29 @@ export function ActionsDeliveriesListPage() {
     setSearchParams(createSearchParams(next));
   }
 
+  const canList = Boolean(serviceConfigured && accessToken && isOwner && api);
+
   return (
     <div className="w-full space-y-6">
-      <header className="space-y-1">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            {t(service.deliveriesPageTitleKey)}
-          </h1>
-          <Badge
-            variant="secondary"
-            className="font-mono text-[10px] uppercase"
-          >
-            {t(service.badgeKey)}
-          </Badge>
-        </div>
-        <Text className="max-w-3xl text-sm text-muted-foreground">
-          {t('actionsDeliveriesDescription')}
-        </Text>
-      </header>
+      <PageHeader
+        title={t(service.deliveriesPageTitleKey)}
+        service={t(service.badgeKey)}
+        description={t('actionsDeliveriesDescription')}
+      />
 
       <ActionsSubNav />
 
       {!serviceConfigured ? <WebhookServiceUnavailable serviceKey={service.key} /> : null}
 
       {!accessToken && (
-        <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
+        <Alert variant="info">
+          <AlertDescription>{t('dashboardNoSession')}</AlertDescription>
+        </Alert>
       )}
       {accessToken && !isOwner && (
-        <Text className="font-mono text-sm text-muted-foreground">{t('actionsPageForbidden')}</Text>
+        <Alert variant="warning">
+          <AlertDescription>{t('actionsPageForbidden')}</AlertDescription>
+        </Alert>
       )}
 
       {error && isApiUnavailableError(error) ? (
@@ -164,149 +161,158 @@ export function ActionsDeliveriesListPage() {
         />
       ) : null}
       {error && !isApiUnavailableError(error) ? (
-        <Text className="font-mono text-sm text-destructive">
-          {error instanceof Error ? error.message : t('actionsLoadError')}
-        </Text>
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>{error instanceof Error ? error.message : t('actionsLoadError')}</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void load()}
+            >
+              {t('usersRetry')}
+            </Button>
+          </AlertDescription>
+        </Alert>
       ) : null}
 
-      {serviceConfigured && accessToken && isOwner && api ? (
-        <div className="grid gap-3 rounded-md border border-border/80 p-4 sm:grid-cols-4">
-          <Input
-            value={draftStatus}
-            onChange={(e) => setDraftStatus(e.target.value)}
-            placeholder={t('actionsFilterStatus')}
-            className="font-mono text-xs"
-          />
-          <Input
-            value={draftEvent}
-            onChange={(e) => setDraftEvent(e.target.value)}
-            placeholder={t('actionsFilterEvent')}
-            className="font-mono text-xs"
-          />
-          <Input
-            value={draftRuleId}
-            onChange={(e) => setDraftRuleId(e.target.value)}
-            placeholder={t('actionsFilterRuleId')}
-            className="font-mono text-xs"
-          />
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={applyFilters}
-          >
-            {t('eventsApplyFilters')}
-          </Button>
-        </div>
-      ) : null}
-
-      {loading ? (
-        <div className="flex items-center gap-2 py-8 text-muted-foreground">
-          <Loader2
-            className="size-5 animate-spin"
-            aria-hidden
-          />
-          <span className="text-sm">{t('actionsLoading')}</span>
-        </div>
-      ) : null}
-
-      {serviceConfigured &&
-      !loading &&
-      rows.length === 0 &&
-      accessToken &&
-      isOwner &&
-      api &&
-      !isApiUnavailableError(error) ? (
-        <Text className="py-8 text-center font-mono text-sm text-muted-foreground">
-          {t('actionsDeliveriesEmpty')}
-        </Text>
-      ) : null}
-
-      {rows.length > 0 ? (
-        <>
-          <div className="rounded-md border border-border">
+      {canList ? (
+        <DataTableCard
+          label={t(service.deliveriesPageTitleKey)}
+          busy={loading}
+          toolbar={
+            <form
+              className="grid w-full gap-2 sm:grid-cols-[1fr_1fr_10rem_auto]"
+              onSubmit={(e) => {
+                e.preventDefault();
+                applyFilters();
+              }}
+            >
+              <Input
+                value={draftStatus}
+                onChange={(e) => setDraftStatus(e.target.value)}
+                placeholder={t('actionsFilterStatus')}
+                aria-label={t('actionsFilterStatus')}
+                className="h-8 font-mono text-xs"
+              />
+              <Input
+                value={draftEvent}
+                onChange={(e) => setDraftEvent(e.target.value)}
+                placeholder={t('actionsFilterEvent')}
+                aria-label={t('actionsFilterEvent')}
+                className="h-8 font-mono text-xs"
+              />
+              <Input
+                value={draftRuleId}
+                onChange={(e) => setDraftRuleId(e.target.value)}
+                placeholder={t('actionsFilterRuleId')}
+                aria-label={t('actionsFilterRuleId')}
+                className="h-8 font-mono text-xs"
+              />
+              <Button
+                type="submit"
+                size="sm"
+              >
+                {t('eventsApplyFilters')}
+              </Button>
+            </form>
+          }
+          footer={
+            totalPages > 1 ? (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  {t('eventsPageStatus', { page: pageParam, pages: totalPages, total })}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={pageParam <= 1 || loading}
+                    onClick={() => goToPage(pageParam - 1)}
+                  >
+                    {t('usersPrevPage')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={pageParam >= totalPages || loading}
+                    onClick={() => goToPage(pageParam + 1)}
+                  >
+                    {t('usersNextPage')}
+                  </Button>
+                </div>
+              </>
+            ) : undefined
+          }
+        >
+          {loading && rows.length === 0 ? (
+            <SkeletonRows
+              rows={6}
+              columns={['w-16', 'w-20', 'w-40', 'w-24', 'w-28']}
+            />
+          ) : rows.length === 0 ? (
+            isApiUnavailableError(error) ? null : (
+              <EmptyState
+                icon={Send}
+                title={t('actionsDeliveriesEmpty')}
+              />
+            )
+          ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/30 hover:bg-muted/30">
-                  <TableHead className="text-xs uppercase">{t('usersColId')}</TableHead>
-                  <TableHead className="text-xs uppercase">{t('actionsColStatus')}</TableHead>
-                  <TableHead className="text-xs uppercase">{t('actionsColEvent')}</TableHead>
-                  <TableHead className="text-xs uppercase">{t('actionsColRule')}</TableHead>
-                  <TableHead className="text-xs uppercase">{t('actionsColAttempts')}</TableHead>
-                  <TableHead className="text-xs uppercase">{t('actionsColCreated')}</TableHead>
-                  <TableHead className="text-xs uppercase">{t('actionsColLastError')}</TableHead>
-                  <TableHead className="text-right text-xs uppercase">
-                    {t('usersColActions')}
-                  </TableHead>
+                <TableRow>
+                  <TableHead className="hidden md:table-cell">{t('usersColId')}</TableHead>
+                  <TableHead>{t('actionsColStatus')}</TableHead>
+                  <TableHead>{t('actionsColEvent')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('actionsColRule')}</TableHead>
+                  <TableHead>{t('actionsColAttempts')}</TableHead>
+                  <TableHead className="hidden lg:table-cell">{t('actionsColCreated')}</TableHead>
+                  <TableHead className="hidden lg:table-cell">{t('actionsColLastError')}</TableHead>
+                  <TableHead className="text-right">{t('usersColActions')}</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody className="font-mono text-xs">
+              <TableBody>
                 {rows.map((row) => (
                   <TableRow key={row.id}>
-                    <TableCell>{row.id}</TableCell>
-                    <TableCell>
-                      <span
-                        className={cn(
-                          'rounded px-1.5 py-0.5 font-medium',
-                          statusClassName(row.status),
-                        )}
-                      >
-                        {row.status}
-                      </span>
+                    <TableCell className="hidden font-mono text-xs text-muted-foreground md:table-cell">
+                      {row.id}
                     </TableCell>
-                    <TableCell>{row.event}</TableCell>
-                    <TableCell>{row.rule_name || row.rule_id}</TableCell>
-                    <TableCell>{row.attempts_count}</TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell>
+                      <StatusBadge tone={deliveryStatusTone(row.status)}>{row.status}</StatusBadge>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">{row.event}</TableCell>
+                    <TableCell className="hidden text-sm md:table-cell">
+                      {row.rule_name || row.rule_id}
+                    </TableCell>
+                    <TableCell className="tabular-nums">{row.attempts_count}</TableCell>
+                    <TableCell className="hidden whitespace-nowrap text-xs text-muted-foreground lg:table-cell">
                       {formatDate(row.created_at)}
                     </TableCell>
                     <TableCell
-                      className="max-w-[12rem] truncate"
+                      className="hidden max-w-[14rem] truncate font-mono text-xs text-muted-foreground lg:table-cell"
                       title={row.last_error || undefined}
                     >
-                      {row.last_error || '—'}
+                      {row.last_error || '-'}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Link
-                        to={webhookDeliveryDetailPath(service.key, row.id)}
-                        className="text-primary underline-offset-2 hover:underline"
+                      <Button
+                        asChild
+                        variant="ghost"
+                        size="sm"
                       >
-                        {t('eventsOpenDetail')}
-                      </Link>
+                        <Link to={webhookDeliveryDetailPath(service.key, row.id)}>
+                          {t('eventsOpenDetail')}
+                        </Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </div>
-          {totalPages > 1 ? (
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs text-muted-foreground">
-                {t('eventsPageStatus', { page: pageParam, pages: totalPages, total })}
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={pageParam <= 1 || loading}
-                  onClick={() => goToPage(pageParam - 1)}
-                >
-                  {t('usersPrevPage')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={pageParam >= totalPages || loading}
-                  onClick={() => goToPage(pageParam + 1)}
-                >
-                  {t('usersNextPage')}
-                </Button>
-              </div>
-            </div>
-          ) : null}
-        </>
+          )}
+        </DataTableCard>
       ) : null}
     </div>
   );

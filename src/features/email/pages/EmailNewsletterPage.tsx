@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { ChevronLeft, Trash2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Text } from '@/components/ui/text';
 import {
   ActionFeedback,
   feedbackFromError,
@@ -103,66 +104,106 @@ export function EmailNewsletterPage() {
 
   return (
     <div className="w-full space-y-6">
-      <header className="space-y-2">
+      <header className="space-y-3">
         <Link
           to="/email/newsletters"
-          className="font-mono text-xs text-primary underline-offset-2 hover:underline"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
-          {t('emailNewsletterBack')}
-        </Link>
-        {newsletter ? (
-          <Input
-            aria-label={t('emailNewsletterName')}
-            className="h-auto max-w-xl border-transparent px-1 font-heading text-2xl font-semibold tracking-tight shadow-none hover:border-input md:text-3xl"
-            value={name}
-            maxLength={120}
-            onChange={(ev) => setName(ev.target.value)}
-            onBlur={() => void saveName()}
-            onKeyDown={(ev) => {
-              if (ev.key === 'Enter') ev.currentTarget.blur();
-            }}
+          <ChevronLeft
+            aria-hidden
+            className="size-4"
           />
-        ) : (
-          <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            {t('emailNewslettersTitle')}
-          </h1>
-        )}
+          {t('emailNewslettersAll')}
+        </Link>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex flex-wrap items-center gap-3">
+              {newsletter ? (
+                <Input
+                  aria-label={t('emailNewsletterName')}
+                  className="h-auto max-w-full border-transparent bg-transparent px-1 font-heading text-2xl font-semibold tracking-tight shadow-none [field-sizing:content] hover:border-input focus-visible:border-input md:text-3xl"
+                  value={name}
+                  maxLength={120}
+                  onChange={(ev) => setName(ev.target.value)}
+                  onBlur={() => void saveName()}
+                  onKeyDown={(ev) => {
+                    if (ev.key === 'Enter') ev.currentTarget.blur();
+                  }}
+                />
+              ) : (
+                <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
+                  {t('emailNewslettersTitle')}
+                </h1>
+              )}
+              <span className="rounded-md border border-border px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+                email-service
+              </span>
+            </div>
+            {newsletter ? (
+              <p className="px-1 text-sm text-muted-foreground">
+                {[
+                  t('emailNewsletterConfirmedCount', { count: newsletter.counts.confirmed }),
+                  t('emailNewsletterPendingCount', { count: newsletter.counts.pending }),
+                  t('emailNewsletterUnsubscribedCount', { count: newsletter.counts.unsubscribed }),
+                ].join(' · ')}
+              </p>
+            ) : null}
+          </div>
+          {newsletter ? (
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              disabled={deleting}
+              onClick={() => void remove()}
+            >
+              <Trash2 aria-hidden />
+              {t('emailNewsletterDelete')}
+            </Button>
+          ) : null}
+        </div>
       </header>
 
-      {!accessToken ? <Text>{t('dashboardNoSession')}</Text> : null}
-      {accessToken && !canManage ? <Text>{t('emailForbidden')}</Text> : null}
+      {!accessToken ? (
+        <Alert variant="info">
+          <AlertDescription>{t('dashboardNoSession')}</AlertDescription>
+        </Alert>
+      ) : null}
+      {accessToken && !canManage ? (
+        <Alert variant="warning">
+          <AlertDescription>{t('emailForbidden')}</AlertDescription>
+        </Alert>
+      ) : null}
       {loadError ? (
-        <Text className="font-mono text-sm text-destructive">{emailErrorText(t, loadError)}</Text>
+        <Alert variant="destructive">
+          <AlertDescription className="font-mono text-sm">
+            {emailErrorText(t, loadError)}
+          </AlertDescription>
+        </Alert>
       ) : null}
       {!newsletter && !loadError && canManage ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          {t('emailLoading')}
+        <div
+          className="space-y-3 motion-safe:animate-pulse"
+          aria-busy
+        >
+          <span className="sr-only">{t('emailLoading')}</span>
+          <Skeleton className="h-10 w-72" />
+          <Skeleton className="h-64 w-full rounded-xl" />
         </div>
       ) : null}
 
       {newsletter && api && accessToken ? (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <SegmentedControl
-              label={t('emailNewslettersTitle')}
-              value={tab}
-              options={tabs}
-              onChange={(next) => {
-                setFeedback(null);
-                setTab(next);
-              }}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              className="text-destructive"
-              disabled={deleting}
-              onClick={() => void remove()}
-            >
-              {t('emailNewsletterDelete')}
-            </Button>
-          </div>
+          <SegmentedControl
+            variant="underline"
+            label={t('emailNewslettersTitle')}
+            value={tab}
+            options={tabs}
+            onChange={(next) => {
+              setFeedback(null);
+              setTab(next);
+            }}
+          />
           <ActionFeedback feedback={feedback} />
 
           {tab === 'subscribers' ? (
@@ -181,7 +222,9 @@ export function EmailNewsletterPage() {
           ) : null}
           {tab === 'confirmation' ? (
             <div className="space-y-3">
-              <Text className="max-w-3xl text-sm">{t('emailNewsletterConfirmationHint')}</Text>
+              <Alert variant="info">
+                <AlertDescription>{t('emailNewsletterConfirmationHint')}</AlertDescription>
+              </Alert>
               <EmailCopyEditor
                 api={api}
                 baseUrl={baseUrl}

@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Pencil, Trash2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Loader2, Pencil, Plus, Trash2, UsersRound } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Label } from '@/components/ui/label';
+import { DataTableCard, SkeletonRows } from '@/components/admin/DataTableCard';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { askShelluiConfirm } from '@/lib/shelluiConfirm';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Text } from '@/components/ui/text';
 import {
   Table,
   TableBody,
@@ -15,7 +19,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import {
   createAdminGroup,
@@ -107,8 +110,17 @@ export function GroupsListPage() {
     }
   }
 
-  async function onDelete(id: number) {
+  async function onDelete(row: AdminGroupRow) {
     if (!accessToken) return;
+    const id = row.id;
+    const confirmed = await askShelluiConfirm({
+      title: t('groupsDeleteConfirmTitle', { name: row.display_name }),
+      description: t('groupsDeleteConfirmDescription'),
+      okLabel: t('groupsDelete'),
+      cancelLabel: t('groupsCancelEdit'),
+      mode: 'delete',
+    });
+    if (!confirmed) return;
     setDeletingId(id);
     try {
       await deleteAdminGroup(accessToken, id);
@@ -125,244 +137,215 @@ export function GroupsListPage() {
     }
   }
 
+  const cols = ['w-[5rem] hidden sm:table-cell', '', 'w-[6.5rem]', 'w-[10rem]'];
   return (
     <div className="w-full space-y-6">
-      <header className="space-y-1">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-          {t('groupsTitle')}
-        </h1>
-        <Text className="max-w-3xl text-sm text-muted-foreground">{t('groupsDescription')}</Text>
-      </header>
+      <PageHeader
+        title={t('groupsTitle')}
+        service={t('usersSchemaBadge')}
+        description={t('groupsDescription')}
+      />
 
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader className="space-y-1 pb-4">
-          <CardTitle className="font-heading text-lg">{t('groupsCreateTitle')}</CardTitle>
-          <CardDescription className="text-sm">{t('groupsCreateDescription')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!accessToken ? (
-            <Text className="text-sm text-muted-foreground">{t('usersNoSession')}</Text>
-          ) : (
-            <form
-              onSubmit={(e) => void onCreate(e)}
-              className="flex flex-col gap-2 sm:flex-row sm:items-end"
-            >
-              <div className="flex-1 space-y-1">
-                <label
-                  htmlFor="new-group-name"
-                  className="text-xs font-medium text-muted-foreground"
-                >
-                  {t('groupsFieldName')}
-                </label>
-                <Input
-                  id="new-group-name"
-                  value={newName}
-                  onChange={(ev) => setNewName(ev.target.value)}
-                  placeholder={t('groupsFieldNamePlaceholder')}
-                  autoComplete="off"
-                  disabled={creating}
-                />
-              </div>
-              <Button
-                type="submit"
-                variant="secondary"
-                disabled={creating || !newName.trim()}
-              >
-                {creating ? t('groupsCreating') : t('groupsCreate')}
-              </Button>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader className="space-y-1 pb-4">
-          <CardTitle className="font-heading text-lg">{t('groupsTableTitle')}</CardTitle>
-          <CardDescription className="text-sm">{t('groupsTableDescription')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {error ? (
-            <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {error}
-            </p>
-          ) : null}
-
-          {accessToken && !error ? (
-            <div className="relative rounded-md border border-border">
-              {loading ? (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/65 backdrop-blur-[1px]">
-                  <Loader2
-                    className="size-8 animate-spin text-muted-foreground"
-                    aria-hidden
-                  />
-                  <span className="sr-only">{t('groupsLoading')}</span>
-                </div>
-              ) : null}
-              <div className="w-full overflow-x-auto">
-                <Table className="w-full min-w-[480px]">
-                  <TableHeader>
-                    <TableRow className="bg-muted/30 hover:bg-muted/30">
-                      <TableHead className="w-[5rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('groupsColId')}
-                      </TableHead>
-                      <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('groupsColName')}
-                      </TableHead>
-                      <TableHead className="w-[6.5rem] text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('groupsColMembers')}
-                      </TableHead>
-                      <TableHead className="w-[8rem] text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('groupsColActions')}
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody className="font-mono text-xs">
-                    {loading && !rows.length
-                      ? Array.from({ length: 4 }).map((_, i) => (
-                          <TableRow key={i}>
-                            <TableCell>
-                              <Skeleton className="h-4 w-10" />
-                            </TableCell>
-                            <TableCell>
-                              <Skeleton className="h-4 w-full max-w-[16rem]" />
-                            </TableCell>
-                            <TableCell>
-                              <Skeleton className="h-4 w-8" />
-                            </TableCell>
-                            <TableCell />
-                          </TableRow>
-                        ))
-                      : null}
-                    {!loading && rows.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={4}
-                          className="py-12 text-center text-muted-foreground"
-                        >
-                          {t('groupsEmpty')}
-                        </TableCell>
-                      </TableRow>
-                    ) : null}
-                    {rows.map((row) => {
-                      const isScim = row.source === 'scim';
-                      return (
-                        <TableRow
-                          key={row.id}
-                          className="hover:bg-muted/40"
-                        >
-                          <TableCell className="tabular-nums text-muted-foreground">
-                            {row.id}
-                          </TableCell>
-                          <TableCell>
-                            {editingId === row.id ? (
-                              <Input
-                                value={editName}
-                                onChange={(ev) => setEditName(ev.target.value)}
-                                className="h-8 font-mono text-xs"
-                                autoComplete="off"
-                                disabled={savingId === row.id}
-                              />
-                            ) : (
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-medium text-foreground">
-                                  {row.display_name}
-                                </span>
-                                {isScim ? (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Badge
-                                        variant="outline"
-                                        className="font-sans text-[10px] font-normal normal-case"
-                                      >
-                                        {t('groupsScimBadge')}
-                                      </Badge>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="max-w-xs text-xs">
-                                      {t('groupsScimTooltip')}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                ) : null}
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell
-                            className="tabular-nums text-muted-foreground"
-                            title={t('groupsColMembers')}
-                          >
-                            {typeof row.user_count === 'number' ? row.user_count : '—'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {editingId === row.id ? (
-                              <div className="flex justify-end gap-1">
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="secondary"
-                                  className="h-7 px-2 text-[11px]"
-                                  disabled={savingId === row.id || !editName.trim()}
-                                  onClick={() => void onSaveEdit(row.id)}
-                                >
-                                  {savingId === row.id ? (
-                                    <Loader2 className="size-3 animate-spin" />
-                                  ) : (
-                                    t('groupsSave')
-                                  )}
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 px-2 text-[11px]"
-                                  disabled={savingId === row.id}
-                                  onClick={() => setEditingId(null)}
-                                >
-                                  {t('groupsCancelEdit')}
-                                </Button>
-                              </div>
-                            ) : isScim ? (
-                              <span className="text-[11px] text-muted-foreground">
-                                {t('groupsScimActionsNote')}
-                              </span>
-                            ) : (
-                              <div className="flex justify-end gap-1">
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 w-7 p-0 text-muted-foreground"
-                                  aria-label={t('groupsRename')}
-                                  onClick={() => startEdit(row)}
-                                >
-                                  <Pencil className="size-3.5" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                                  aria-label={t('groupsDelete')}
-                                  disabled={deletingId === row.id}
-                                  onClick={() => void onDelete(row.id)}
-                                >
-                                  {deletingId === row.id ? (
-                                    <Loader2 className="size-3.5 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="size-3.5" />
-                                  )}
-                                </Button>
-                              </div>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+      <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        <div className="mb-3 space-y-1">
+          <h2 className="text-sm font-semibold">{t('groupsCreateTitle')}</h2>
+          <p className="text-sm text-muted-foreground">{t('groupsCreateDescription')}</p>
+        </div>
+        {!accessToken ? (
+          <Alert>
+            <AlertDescription>{t('usersNoSession')}</AlertDescription>
+          </Alert>
+        ) : (
+          <form
+            onSubmit={(e) => void onCreate(e)}
+            className="flex flex-col gap-2 sm:flex-row sm:items-end"
+          >
+            <div className="flex-1 space-y-1.5">
+              <Label htmlFor="new-group-name">{t('groupsFieldName')}</Label>
+              <Input
+                id="new-group-name"
+                value={newName}
+                onChange={(ev) => setNewName(ev.target.value)}
+                placeholder={t('groupsFieldNamePlaceholder')}
+                autoComplete="off"
+                disabled={creating}
+              />
             </div>
-          ) : null}
-        </CardContent>
-      </Card>
+            <Button
+              type="submit"
+              disabled={creating || !newName.trim()}
+            >
+              {creating ? (
+                <Loader2 className="animate-spin motion-reduce:animate-none" />
+              ) : (
+                <Plus aria-hidden />
+              )}
+              {creating ? t('groupsCreating') : t('groupsCreate')}
+            </Button>
+          </form>
+        )}
+      </section>
+
+      {error ? (
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>{error}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void load()}
+            >
+              {t('usersRetry')}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {accessToken && !error ? (
+        <DataTableCard
+          label={t('groupsTableTitle')}
+          busy={loading}
+          toolbar={
+            <div className="space-y-0.5">
+              <h2 className="text-sm font-semibold">{t('groupsTableTitle')}</h2>
+              <p className="text-xs text-muted-foreground">{t('groupsTableDescription')}</p>
+            </div>
+          }
+        >
+          {loading && !rows.length ? <span className="sr-only">{t('groupsLoading')}</span> : null}
+          {!loading && rows.length === 0 ? (
+            <EmptyState
+              icon={UsersRound}
+              title={t('groupsEmpty')}
+            />
+          ) : (
+            <Table className="w-full">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className={cols[0]}>{t('groupsColId')}</TableHead>
+                  <TableHead>{t('groupsColName')}</TableHead>
+                  <TableHead className={cols[2]}>{t('groupsColMembers')}</TableHead>
+                  <TableHead className={cols[3] + ' text-right'}>{t('groupsColActions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading && !rows.length ? (
+                  <SkeletonRows
+                    rows={4}
+                    columns={cols}
+                  />
+                ) : null}
+                {rows.map((row) => {
+                  const isScim = row.source === 'scim';
+                  const editing = editingId === row.id;
+                  return (
+                    <TableRow key={row.id}>
+                      <TableCell className="hidden font-mono text-xs tabular-nums text-muted-foreground sm:table-cell">
+                        {row.id}
+                      </TableCell>
+                      <TableCell>
+                        {editing ? (
+                          <form
+                            className="flex flex-wrap items-center gap-2"
+                            onSubmit={(ev) => {
+                              ev.preventDefault();
+                              void onSaveEdit(row.id);
+                            }}
+                          >
+                            <Input
+                              value={editName}
+                              aria-label={t('groupsFieldName')}
+                              onChange={(ev) => setEditName(ev.target.value)}
+                              className="h-8 max-w-xs"
+                              autoComplete="off"
+                              autoFocus
+                              disabled={savingId === row.id}
+                            />
+                            <Button
+                              type="submit"
+                              size="sm"
+                              disabled={savingId === row.id || !editName.trim()}
+                            >
+                              {savingId === row.id ? (
+                                <Loader2 className="animate-spin motion-reduce:animate-none" />
+                              ) : null}
+                              {t('groupsSave')}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              disabled={savingId === row.id}
+                              onClick={() => setEditingId(null)}
+                            >
+                              {t('groupsCancelEdit')}
+                            </Button>
+                          </form>
+                        ) : (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium">{row.display_name}</span>
+                            {isScim ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span tabIndex={0}>
+                                    <StatusBadge tone="info">{t('groupsScimBadge')}</StatusBadge>
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs text-xs">
+                                  {t('groupsScimTooltip')}
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : null}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="tabular-nums text-muted-foreground">
+                        {typeof row.user_count === 'number' ? row.user_count : '-'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {editing ? null : isScim ? (
+                          <span className="whitespace-nowrap text-xs text-muted-foreground">
+                            {t('groupsScimActionsNote')}
+                          </span>
+                        ) : (
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="size-8 text-muted-foreground"
+                              aria-label={t('groupsRename')}
+                              onClick={() => startEdit(row)}
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="size-8 text-destructive hover:text-destructive"
+                              aria-label={t('groupsDelete')}
+                              disabled={deletingId === row.id}
+                              onClick={() => void onDelete(row)}
+                            >
+                              {deletingId === row.id ? (
+                                <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
+                              ) : (
+                                <Trash2 className="size-4" />
+                              )}
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </DataTableCard>
+      ) : null}
     </div>
   );
 }

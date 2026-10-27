@@ -1,43 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { LucideIcon } from 'lucide-react';
-import { AppWindow, BarChart3, HardDrive, Loader2, RefreshCw, Rocket } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Text } from '@/components/ui/text';
+import { AppWindow, HardDrive, RefreshCw, Rocket } from 'lucide-react';
+import { KpiCard, KpiRow, KpiSkeletonRow } from '@/components/admin/Kpi';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { StatTableCard } from '@/components/admin/StatsParts';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { DashboardScheduledJobsSection } from '@/components/DashboardScheduledJobsSection';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { fetchHostingStats, useHostingBaseUrl, type HostingStatsSnapshot } from '@/lib/hostingApi';
-
-function StatBlock({
-  label,
-  value,
-  hint,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  icon: LucideIcon;
-}) {
-  return (
-    <Card className="border-border/80 shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardDescription className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-          {label}
-        </CardDescription>
-        <Icon
-          className="size-4 text-muted-foreground"
-          aria-hidden
-        />
-      </CardHeader>
-      <CardContent>
-        <p className="font-mono text-2xl font-semibold tabular-nums tracking-tight">{value}</p>
-        {hint ? <Text className="mt-1 font-mono text-xs">{hint}</Text> : null}
-      </CardContent>
-    </Card>
-  );
-}
+import { cn } from '@/lib/utils';
 
 function formatInt(n: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.round(n));
@@ -86,11 +58,53 @@ export function HostingStatisticsPage() {
     void load();
   }, [load]);
 
+  const header = (
+    <PageHeader
+      title={t('hostingStatsTitle')}
+      service={t('hostingStatsBadge')}
+      description={
+        hostingBaseUrl ? (
+          <>
+            <span className="block">{t('hostingStatsDescription')}</span>
+            <span className="mt-1 block font-mono text-xs text-muted-foreground">
+              {hostingBaseUrl}
+            </span>
+          </>
+        ) : (
+          t('hostingStatsDescription')
+        )
+      }
+      actions={
+        hostingBaseUrl ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void load()}
+            disabled={loading}
+          >
+            <RefreshCw
+              aria-hidden
+              className={cn(
+                'mr-1.5 size-3.5',
+                loading && 'animate-spin motion-reduce:animate-none',
+              )}
+            />
+            {t('hostingStatsRefresh')}
+          </Button>
+        ) : undefined
+      }
+    />
+  );
+
   if (!hostingBaseUrl) {
     return (
-      <div className="mx-auto flex max-w-lg flex-col gap-3 px-4 py-8 md:px-6">
-        <h1 className="text-xl font-semibold tracking-tight">{t('hostingStatsMissingTitle')}</h1>
-        <p className="text-sm text-muted-foreground">{t('hostingStatsMissingDescription')}</p>
+      <div className="w-full space-y-6">
+        {header}
+        <Alert variant="warning">
+          <AlertTitle>{t('hostingStatsMissingTitle')}</AlertTitle>
+          <AlertDescription>{t('hostingStatsMissingDescription')}</AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -98,137 +112,86 @@ export function HostingStatisticsPage() {
   const statusRows = snapshot
     ? Object.entries(snapshot.deployments_by_status).sort(([a], [b]) => a.localeCompare(b))
     : [];
+  const countCols = [
+    { label: t('hostingColStatus') },
+    { label: t('hostingColCount'), className: 'text-right' },
+  ];
 
   return (
-    <div className="w-full space-y-8">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-baseline gap-3">
-            <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-              {t('hostingStatsTitle')}
-            </h1>
-            <Badge
-              variant="secondary"
-              className="font-mono text-[10px] uppercase"
-            >
-              {t('hostingStatsBadge')}
-            </Badge>
-          </div>
-          <Text className="max-w-3xl font-mono text-sm">{t('hostingStatsDescription')}</Text>
-          <Text className="font-mono text-xs text-muted-foreground">{hostingBaseUrl}</Text>
-        </div>
-        <button
-          type="button"
-          onClick={() => void load()}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm hover:bg-muted"
-          disabled={loading}
-        >
-          <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
-          {t('hostingStatsRefresh')}
-        </button>
-      </header>
+    <div className="w-full space-y-6">
+      {header}
 
       {!accessToken && (
-        <Text className="font-mono text-sm text-muted-foreground">{t('hostingNoSession')}</Text>
+        <Alert variant="info">
+          <AlertDescription>{t('hostingNoSession')}</AlertDescription>
+        </Alert>
       )}
 
       {accessToken && loading && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          {t('hostingStatsLoading')}
-        </div>
+        <KpiSkeletonRow
+          columns={3}
+          label={t('hostingStatsLoading')}
+        />
       )}
 
-      {error && <Text className="font-mono text-sm text-destructive">{error}</Text>}
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription className="font-mono text-sm">{error}</AlertDescription>
+        </Alert>
+      )}
 
       {snapshot && !loading && (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <StatBlock
+          <KpiRow
+            columns={3}
+            label={t('hostingStatsTitle')}
+          >
+            <KpiCard
               label={t('hostingStatsApps')}
               value={formatInt(snapshot.apps)}
               icon={AppWindow}
             />
-            <StatBlock
+            <KpiCard
               label={t('hostingStatsDeployments')}
               value={formatInt(snapshot.deployments)}
               hint={t('hostingStatsActiveHint', { count: snapshot.active_deployments })}
               icon={Rocket}
             />
-            <StatBlock
+            <KpiCard
               label={t('hostingStatsArtifacts')}
               value={formatBytes(snapshot.artifact_bytes)}
               hint={t('hostingStatsArtifactsHint')}
               icon={HardDrive}
             />
-          </div>
+          </KpiRow>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card className="border-border/80 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <BarChart3 className="size-4" />
-                  {t('hostingStatsByStatusTitle')}
-                </CardTitle>
-                <CardDescription>{t('hostingStatsByStatusDescription')}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {statusRows.length === 0 ? (
-                  <Text className="text-sm text-muted-foreground">{t('hostingStatsEmpty')}</Text>
-                ) : (
-                  <table className="w-full text-left text-sm">
-                    <thead className="text-xs uppercase text-muted-foreground">
-                      <tr className="border-b border-border">
-                        <th className="py-1.5 font-medium">{t('hostingColStatus')}</th>
-                        <th className="py-1.5 font-medium">{t('hostingColCount')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {statusRows.map(([status, count]) => (
-                        <tr
-                          key={status}
-                          className="border-b border-border/60"
-                        >
-                          <td className="py-1.5 font-mono text-xs">{status}</td>
-                          <td className="py-1.5 font-mono tabular-nums">{count}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="border-border/80 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base">{t('hostingStatsAccessTitle')}</CardTitle>
-                <CardDescription>{t('hostingStatsAccessDescription')}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <table className="w-full text-left text-sm">
-                  <thead className="text-xs uppercase text-muted-foreground">
-                    <tr className="border-b border-border">
-                      <th className="py-1.5 font-medium">{t('hostingColStatus')}</th>
-                      <th className="py-1.5 font-medium">{t('hostingColCount')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-b border-border/60">
-                      <td className="py-1.5">{t('hostingAccessStatus_pending')}</td>
-                      <td className="py-1.5 font-mono tabular-nums">{snapshot.access.pending}</td>
-                    </tr>
-                    <tr className="border-b border-border/60">
-                      <td className="py-1.5">{t('hostingAccessStatus_approved')}</td>
-                      <td className="py-1.5 font-mono tabular-nums">{snapshot.access.approved}</td>
-                    </tr>
-                    <tr className="border-b border-border/60">
-                      <td className="py-1.5">{t('hostingAccessStatus_denied')}</td>
-                      <td className="py-1.5 font-mono tabular-nums">{snapshot.access.denied}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
+            <StatTableCard
+              title={t('hostingStatsByStatusTitle')}
+              description={t('hostingStatsByStatusDescription')}
+              columns={countCols}
+              rows={statusRows.map(([status, count]) => ({
+                key: status,
+                cells: [
+                  <span className="font-mono text-xs">{status}</span>,
+                  <span className="tabular-nums">{formatInt(count)}</span>,
+                ],
+              }))}
+              empty={t('hostingStatsEmpty')}
+            />
+            <StatTableCard
+              title={t('hostingStatsAccessTitle')}
+              description={t('hostingStatsAccessDescription')}
+              columns={countCols}
+              rows={(['pending', 'approved', 'denied'] as const).map((k) => ({
+                key: k,
+                cells: [
+                  t(`hostingAccessStatus_${k}`),
+                  <span className="tabular-nums">{formatInt(snapshot.access[k])}</span>,
+                ],
+              }))}
+              empty={t('hostingStatsEmpty')}
+            />
           </div>
         </>
       )}

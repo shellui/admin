@@ -1,8 +1,6 @@
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Text } from '@/components/ui/text';
 import type { OAuthCatalogProvider } from '@/lib/oauthProviderCatalogTypes';
 import { OAuthCallbackUrlCopy } from '@/components/oauth/OAuthCallbackUrlCopy';
 import { OAuthConsoleUrlList } from '@/components/oauth/OAuthConsoleUrlList';
@@ -29,17 +27,6 @@ export function OAuthProviderConsoleStep({
 
   return (
     <div className="space-y-6">
-      <Link
-        to="/oauth"
-        className="inline-flex items-center font-mono text-xs text-muted-foreground hover:text-foreground"
-      >
-        <ChevronLeft
-          className="mr-0.5 h-3.5 w-3.5"
-          aria-hidden
-        />
-        {t('oauthWizardBackToList')}
-      </Link>
-
       <div className="flex flex-wrap items-center gap-3">
         <OAuthProviderIconFromCatalog
           provider={provider}
@@ -48,13 +35,13 @@ export function OAuthProviderConsoleStep({
         />
         <div>
           <h2 className="font-heading text-lg font-semibold">{provider.name}</h2>
-          <Text className="font-mono text-xs text-muted-foreground">{provider.protocol}</Text>
+          <p className="font-mono text-xs text-muted-foreground">{provider.protocol}</p>
         </div>
       </div>
 
-      <Text className="font-mono text-sm">
+      <p className="max-w-2xl text-sm">
         {t('oauthWizardConsoleIntro', { provider: provider.name })}
-      </Text>
+      </p>
 
       <OAuthConsoleUrlList provider={provider} />
 
@@ -63,7 +50,6 @@ export function OAuthProviderConsoleStep({
           type="button"
           variant="outline"
           size="sm"
-          className="font-mono text-xs"
           asChild
         >
           <a
@@ -72,7 +58,11 @@ export function OAuthProviderConsoleStep({
             rel="noopener noreferrer"
           >
             {t('oauthWizardAllauthDocs')}
-            <ExternalLink className="ml-2 h-3.5 w-3.5" />
+            <ExternalLink
+              aria-hidden
+              className="size-3.5"
+            />
+            <span className="sr-only">{t('navOpensExternally')}</span>
           </a>
         </Button>
       ) : null}

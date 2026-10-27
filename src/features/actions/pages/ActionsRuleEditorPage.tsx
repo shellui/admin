@@ -1,16 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import shellui from '@shellui/sdk';
+import { RotateCw, ScrollText, Send } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { SettingsSection, SettingRow } from '@/components/admin/SettingsSection';
+import { CodeBlock } from '@/components/admin/Extras';
+import { SHELLUI_N8N_WEBHOOK_DOCS_URL } from '@/lib/webhookDocsUrls';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Text } from '@/components/ui/text';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { confirmAction } from '@/lib/confirmAction';
 import { getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
-import { ActionsSubNav } from '@/features/actions/components/ActionsSubNav';
 import { WebhookSecretOnceCallout } from '@/features/actions/components/WebhookSecretOnceCallout';
 import {
   ApiUnavailableNotice,
@@ -266,10 +271,9 @@ export function ActionsRuleEditorPage() {
     setSendTestFeedback(null);
     try {
       const result = await api.sendRuleTest(numericId);
-      setSendTestFeedback({
-        tone: 'success',
-        text: t('actionsSendTestSuccess', { webhook_id: result.webhook_id }),
-      });
+      const text = t('actionsSendTestSuccess', { webhook_id: result.webhook_id });
+      setSendTestFeedback({ tone: 'success', text });
+      shellui.toast({ title: text, type: 'success' });
     } catch (e) {
       setSendTestFeedback(feedbackFromThrown(e, t('actionsSendTestError')));
     } finally {
@@ -287,35 +291,60 @@ export function ActionsRuleEditorPage() {
     return t('webhooksSecretHintNone');
   }, [hasStoredSecret, storedSecretHint, t]);
 
+  const ready = serviceConfigured && accessToken && isOwner && api && !loading && !error;
+  const field = 'space-y-1.5';
+  const help = 'text-xs text-muted-foreground';
+
   return (
     <div className="w-full space-y-6">
-      <header className="space-y-1">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
-            {t(service.pageTitleKey)}
-          </h1>
-          <Badge
-            variant="secondary"
-            className="font-mono text-[10px] uppercase"
-          >
-            {t(service.badgeKey)}
-          </Badge>
-        </div>
-        <Text className="max-w-3xl text-sm text-muted-foreground">
-          {t('actionsRuleEditorDescription', { scope: t(service.eventScopeKey) })}
-        </Text>
-      </header>
-
-      <ActionsSubNav />
+      <PageHeader
+        back={{ to: webhookRulesListPath(service.key), label: t('actionsNavRules') }}
+        title={isCreate ? t('actionsRuleCreate') : name.trim() || t(service.pageTitleKey)}
+        service={t(service.badgeKey)}
+        description={t('ruleEditorTypeLine')}
+        actions={
+          ready && !isCreate && numericId != null ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                asChild
+              >
+                <Link to={deliveryLogHref}>
+                  <ScrollText aria-hidden />
+                  {t('actionsNavDeliveries')}
+                </Link>
+              </Button>
+              <div className="flex flex-col items-end gap-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={sendTestLoading || saving || !enabled}
+                  title={!enabled ? t('actionsSendTestDisabledRule') : undefined}
+                  onClick={() => void onSendTest()}
+                >
+                  <Send aria-hidden />
+                  {sendTestLoading ? t('actionsSendTestLoading') : t('actionsSendTestEvent')}
+                </Button>
+                <ActionFeedback feedback={sendTestFeedback} />
+              </div>
+            </>
+          ) : undefined
+        }
+      />
 
       {!serviceConfigured ? <WebhookServiceUnavailable serviceKey={service.key} /> : null}
 
-      {!accessToken && (
-        <Text className="font-mono text-sm text-muted-foreground">{t('dashboardNoSession')}</Text>
-      )}
-      {accessToken && !isOwner && (
-        <Text className="font-mono text-sm text-muted-foreground">{t('actionsPageForbidden')}</Text>
-      )}
+      {!accessToken ? (
+        <Alert variant="info">
+          <AlertDescription>{t('dashboardNoSession')}</AlertDescription>
+        </Alert>
+      ) : null}
+      {accessToken && !isOwner ? (
+        <Alert variant="info">
+          <AlertDescription>{t('actionsPageForbidden')}</AlertDescription>
+        </Alert>
+      ) : null}
 
       {error && isApiUnavailableError(error) ? (
         <ApiUnavailableNotice
@@ -324,232 +353,245 @@ export function ActionsRuleEditorPage() {
         />
       ) : null}
       {error && !isApiUnavailableError(error) ? (
-        <Text className="font-mono text-sm text-destructive">
-          {error instanceof Error ? error.message : t('actionsLoadError')}
-        </Text>
+        <Alert variant="destructive">
+          <AlertDescription>
+            {error instanceof Error ? error.message : t('actionsLoadError')}
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       {loading ? (
-        <div className="flex items-center gap-2 py-8 text-muted-foreground">
-          <Loader2
-            className="size-5 animate-spin"
-            aria-hidden
-          />
-          <span className="text-sm">{t('actionsLoading')}</span>
+        <div
+          className="space-y-4 motion-safe:animate-pulse"
+          aria-busy
+        >
+          <span className="sr-only">{t('actionsLoading')}</span>
+          {[0, 1].map((i) => (
+            <div
+              key={i}
+              className="grid gap-4 md:grid-cols-[260px_minmax(0,1fr)] md:gap-8"
+              aria-hidden
+            >
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-40" />
+              </div>
+              <div className="space-y-3 rounded-xl border border-border bg-card p-5">
+                <Skeleton className="h-9 w-full" />
+                <Skeleton className="h-9 w-full" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : null}
 
-      {serviceConfigured && accessToken && isOwner && api && !loading && !error ? (
-        <div className="space-y-6">
-          {revealedSecret ? (
-            <WebhookSecretOnceCallout
-              secret={revealedSecret}
-              onDismiss={() => setRevealedSecret(null)}
-            />
-          ) : null}
-
-          <Card className="border-border/80 shadow-sm">
-            <CardHeader>
-              <CardTitle className="font-heading text-lg">{t('actionsRuleBasicsTitle')}</CardTitle>
-              <CardDescription className="font-mono text-xs">
-                {t('actionsRuleBasicsDescription', { scope: t(service.eventScopeKey) })}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1 sm:col-span-2">
-                <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                  {t('actionsColName')}
-                </label>
-                <Input
-                  value={name}
-                  onChange={(e) => {
-                    clearActionFeedback();
-                    setName(e.target.value);
-                  }}
-                  className="font-mono text-sm"
-                />
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                  {t('actionsColEvent')}
-                </label>
+      {ready ? (
+        <div className="space-y-8">
+          <SettingsSection
+            id="rule"
+            title={t('ruleEditorSecRule')}
+            description={t('ruleEditorSecRuleHint')}
+          >
+            <div className={field}>
+              <Label htmlFor="webhook-rule-name">{t('actionsColName')}</Label>
+              <Input
+                id="webhook-rule-name"
+                value={name}
+                onChange={(e) => {
+                  clearActionFeedback();
+                  setName(e.target.value);
+                }}
+              />
+            </div>
+            <div className={field}>
+              <Label htmlFor="webhook-rule-event">{t('actionsColEvent')}</Label>
+              <select
+                id="webhook-rule-event"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={eventKey}
+                onChange={(e) => {
+                  clearActionFeedback();
+                  setEventKey(e.target.value);
+                }}
+              >
+                {events.map((ev) => (
+                  <option
+                    key={ev.key}
+                    value={ev.key}
+                  >
+                    {ev.label || ev.key}
+                  </option>
+                ))}
+              </select>
+              <p className={help}>
+                {selectedEvent?.description ||
+                  t('actionsRuleBasicsDescription', { scope: t(service.eventScopeKey) })}
+              </p>
+            </div>
+            {isNewsletterEvent ? (
+              <div className={field}>
+                <Label htmlFor="webhook-newsletter-filter">{t('webhooksNewsletterFilter')}</Label>
                 <select
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 font-mono text-sm"
-                  value={eventKey}
+                  id="webhook-newsletter-filter"
+                  className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  value={newsletterId == null ? '' : String(newsletterId)}
                   onChange={(e) => {
                     clearActionFeedback();
-                    setEventKey(e.target.value);
+                    setNewsletterId(e.target.value ? Number(e.target.value) : null);
                   }}
                 >
-                  {events.map((ev) => (
+                  <option value="">{t('webhooksNewsletterFilterAll')}</option>
+                  {newsletterId != null && !newsletters.some((n) => n.id === newsletterId) ? (
+                    <option value={String(newsletterId)}>#{newsletterId}</option>
+                  ) : null}
+                  {newsletters.map((n) => (
                     <option
-                      key={ev.key}
-                      value={ev.key}
+                      key={n.id}
+                      value={String(n.id)}
                     >
-                      {ev.label || ev.key}
+                      {n.name}
                     </option>
                   ))}
                 </select>
-                {selectedEvent?.description ? (
-                  <p className="font-mono text-[10px] text-muted-foreground">
-                    {selectedEvent.description}
-                  </p>
-                ) : null}
+                <p className={help}>{t('webhooksNewsletterFilterHint')}</p>
               </div>
-              {isNewsletterEvent ? (
-                <div className="space-y-1 sm:col-span-2">
-                  <label
-                    htmlFor="webhook-newsletter-filter"
-                    className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground"
-                  >
-                    {t('webhooksNewsletterFilter')}
-                  </label>
-                  <select
-                    id="webhook-newsletter-filter"
-                    className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-transparent px-3 py-1 font-mono text-sm"
-                    value={newsletterId == null ? '' : String(newsletterId)}
-                    onChange={(e) => {
-                      clearActionFeedback();
-                      setNewsletterId(e.target.value ? Number(e.target.value) : null);
-                    }}
-                  >
-                    <option value="">{t('webhooksNewsletterFilterAll')}</option>
-                    {newsletterId != null && !newsletters.some((n) => n.id === newsletterId) ? (
-                      <option value={String(newsletterId)}>#{newsletterId}</option>
-                    ) : null}
-                    {newsletters.map((n) => (
-                      <option
-                        key={n.id}
-                        value={String(n.id)}
-                      >
-                        {n.name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="font-mono text-[10px] text-muted-foreground">
-                    {t('webhooksNewsletterFilterHint')}
-                  </p>
-                </div>
-              ) : null}
-              <label className="flex items-center gap-2 sm:col-span-2">
-                <input
-                  type="checkbox"
+            ) : null}
+            <SettingRow
+              titleId="webhook-rule-enabled-label"
+              title={t('actionsRuleEnabledLabel')}
+              description={t('ruleEditorEnabledHint')}
+              control={
+                <Switch
                   checked={enabled}
-                  onChange={(e) => {
+                  aria-labelledby="webhook-rule-enabled-label"
+                  onCheckedChange={(next) => {
                     clearActionFeedback();
-                    setEnabled(e.target.checked);
+                    setEnabled(next);
                   }}
                 />
-                <span className="font-mono text-xs">{t('actionsRuleEnabledLabel')}</span>
-              </label>
-            </CardContent>
-          </Card>
+              }
+            />
+          </SettingsSection>
 
           {sampleEnvelopeText ? (
-            <Card className="border-border/80 shadow-sm">
-              <CardHeader>
-                <CardTitle className="font-heading text-lg">
-                  {t('actionsSampleEnvelopeTitle')}
-                </CardTitle>
-                <CardDescription className="font-mono text-xs">
-                  {t('actionsSampleEnvelopeDescription', { scope: t(service.eventScopeKey) })}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <pre className="max-h-80 overflow-auto rounded-md border border-border bg-muted/30 p-3 font-mono text-[11px] leading-relaxed">
-                  {sampleEnvelopeText}
-                </pre>
-              </CardContent>
-            </Card>
+            <SettingsSection
+              id="sample"
+              title={t('ruleEditorSecSample')}
+              description={t('ruleEditorSecSampleHint', { event: eventKey })}
+            >
+              <CodeBlock>{sampleEnvelopeText}</CodeBlock>
+            </SettingsSection>
           ) : null}
 
-          <Card className="border-border/80 shadow-sm">
-            <CardHeader>
-              <CardTitle className="font-heading text-lg">
-                {t('actionsWebhookConfigTitle')}
-              </CardTitle>
-              <CardDescription className="font-mono text-xs">
+          <SettingsSection
+            id="delivery"
+            title={t('ruleEditorSecDelivery')}
+            description={t('ruleEditorSecDeliveryHint')}
+            docs={{ href: SHELLUI_N8N_WEBHOOK_DOCS_URL, label: t('webhooksN8nDocLink') }}
+            footerAction={
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  asChild
+                >
+                  <Link to={webhookRulesListPath(service.key)}>{t('actionsCancel')}</Link>
+                </Button>
+                <div className="flex items-center gap-3">
+                  <ActionFeedback feedback={saveFeedback} />
+                  <Button
+                    type="button"
+                    disabled={saving || !name.trim() || !webhookUrl.trim()}
+                    onClick={() => void onSave()}
+                  >
+                    {saving ? t('actionsSaving') : t('actionsSave')}
+                  </Button>
+                </div>
+              </>
+            }
+          >
+            {revealedSecret ? (
+              <WebhookSecretOnceCallout
+                secret={revealedSecret}
+                onDismiss={() => setRevealedSecret(null)}
+              />
+            ) : null}
+            <div className={field}>
+              <Label htmlFor="webhook-rule-url">URL</Label>
+              <Input
+                id="webhook-rule-url"
+                value={webhookUrl}
+                onChange={(e) => {
+                  clearActionFeedback();
+                  setWebhookUrl(e.target.value);
+                }}
+                className="font-mono"
+                placeholder="https://hooks.example.com/shellui"
+                inputMode="url"
+              />
+              <p className={help}>
                 {t('actionsWebhookConfigDescription', { service: t(service.labelKey) })}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1 sm:col-span-2">
-                <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                  URL
-                </label>
+              </p>
+            </div>
+            {isCreate ? (
+              <div className={field}>
+                <Label htmlFor="webhook-rule-secret">{t('actionsWebhookSecret')}</Label>
                 <Input
-                  value={webhookUrl}
+                  id="webhook-rule-secret"
+                  type="password"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  value={webhookSecret}
                   onChange={(e) => {
                     clearActionFeedback();
-                    setWebhookUrl(e.target.value);
+                    setWebhookSecret(e.target.value);
                   }}
-                  className="font-mono text-sm"
-                  placeholder="https://hooks.example.com/shellui"
+                  className="font-mono"
+                  placeholder="whsec_..."
+                  autoComplete="new-password"
                 />
+                <p className={help}>{t('webhooksSecretGenerateHelp')}</p>
               </div>
-              {isCreate ? (
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                    {t('actionsWebhookSecret')}
-                  </label>
-                  <Input
-                    type="password"
-                    data-1p-ignore
-                    data-lpignore="true"
-                    value={webhookSecret}
-                    onChange={(e) => {
-                      clearActionFeedback();
-                      setWebhookSecret(e.target.value);
-                    }}
-                    className="font-mono text-sm"
-                    placeholder="whsec_…"
-                    autoComplete="new-password"
-                  />
-                  <p className="font-mono text-[10px] text-muted-foreground">
-                    {t('webhooksSecretGenerateHelp')}
-                  </p>
+            ) : (
+              <div className={field}>
+                <p className="text-sm font-medium">{t('actionsWebhookSecret')}</p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="font-mono text-xs text-muted-foreground">{secretHintLabel}</p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive"
+                    disabled={rotateLoading || saving}
+                    onClick={() => void onRotateSecret()}
+                  >
+                    <RotateCw aria-hidden />
+                    {rotateLoading ? t('webhooksRotateLoading') : t('webhooksRotateSecret')}
+                  </Button>
                 </div>
-              ) : (
-                <div className="space-y-3 sm:col-span-2">
-                  <div className="space-y-1">
-                    <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                      {t('actionsWebhookSecret')}
-                    </p>
-                    <p className="font-mono text-xs text-muted-foreground">{secretHintLabel}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="destructive"
-                      disabled={rotateLoading || saving}
-                      onClick={() => void onRotateSecret()}
-                    >
-                      {rotateLoading ? t('webhooksRotateLoading') : t('webhooksRotateSecret')}
-                    </Button>
-                    <ActionFeedback feedback={rotateFeedback} />
-                  </div>
-                </div>
-              )}
-              <div className="space-y-1">
-                <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                  {t('actionsWebhookAuthHeaderName')}
-                </label>
+                <ActionFeedback feedback={rotateFeedback} />
+              </div>
+            )}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className={field}>
+                <Label htmlFor="webhook-rule-auth-name">{t('actionsWebhookAuthHeaderName')}</Label>
                 <Input
+                  id="webhook-rule-auth-name"
                   value={authHeaderName}
                   onChange={(e) => {
                     clearActionFeedback();
                     setAuthHeaderName(e.target.value);
                   }}
-                  className="font-mono text-sm"
+                  className="font-mono"
                   placeholder="Authorization"
                 />
               </div>
-              <div className="space-y-1">
-                <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+              <div className={field}>
+                <Label htmlFor="webhook-rule-auth-value">
                   {t('actionsWebhookAuthHeaderValue')}
-                </label>
+                </Label>
                 <Input
+                  id="webhook-rule-auth-value"
                   type="password"
                   data-1p-ignore
                   data-lpignore="true"
@@ -558,57 +600,12 @@ export function ActionsRuleEditorPage() {
                     clearActionFeedback();
                     setAuthHeaderValue(e.target.value);
                   }}
-                  className="font-mono text-sm"
+                  className="font-mono"
                   autoComplete="new-password"
                 />
               </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex flex-wrap items-start gap-4">
-            <div className="space-y-2">
-              <Button
-                type="button"
-                size="sm"
-                disabled={saving || !name.trim() || !webhookUrl.trim()}
-                onClick={() => void onSave()}
-              >
-                {saving ? t('actionsSaving') : t('actionsSave')}
-              </Button>
-              <ActionFeedback feedback={saveFeedback} />
             </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              asChild
-            >
-              <Link to={webhookRulesListPath(service.key)}>{t('actionsCancel')}</Link>
-            </Button>
-            {!isCreate && numericId != null ? (
-              <div className="space-y-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  disabled={sendTestLoading || saving || !enabled}
-                  title={!enabled ? t('actionsSendTestDisabledRule') : undefined}
-                  onClick={() => void onSendTest()}
-                >
-                  {sendTestLoading ? t('actionsSendTestLoading') : t('actionsSendTestEvent')}
-                </Button>
-                <ActionFeedback feedback={sendTestFeedback} />
-                {sendTestFeedback?.tone === 'success' ? (
-                  <Link
-                    to={deliveryLogHref}
-                    className="font-mono text-xs text-primary underline-offset-2 hover:underline"
-                  >
-                    {t('actionsViewDeliveryLogs')}
-                  </Link>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
+          </SettingsSection>
         </div>
       ) : null}
     </div>

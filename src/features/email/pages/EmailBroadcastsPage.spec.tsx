@@ -83,9 +83,11 @@ describe('EmailBroadcastsPage', () => {
     renderPage();
     const launch = await screen.findByRole('link', { name: /Launch/ });
     expect(launch.getAttribute('href')).toBe('/email/broadcasts/2');
-    expect(launch.textContent).toContain('12 recipients');
-    expect(launch.textContent).toContain('Sent');
-    expect(screen.getByRole('link', { name: /Draft news/ }).textContent).toContain('Draft');
+    expect(launch.closest('tr')?.textContent).toContain('12 recipients');
+    expect(launch.closest('tr')?.textContent).toContain('Sent');
+    expect(screen.getByRole('link', { name: /Draft news/ }).closest('tr')?.textContent).toContain(
+      'Draft',
+    );
   });
 
   it('asks for a name, then creates from the picked design and opens it', async () => {
