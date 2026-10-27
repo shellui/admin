@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import {
 } from '@/features/email/components/ActionFeedback';
 import { SegmentedControl } from '@/features/email/components/SegmentedControl';
 import type { EmailApiClient } from '@/lib/emailApi';
+import { EmailApiError } from '@/lib/emailApiErrors';
 import { EMAIL_LANGS } from '@/lib/emailTranslations';
 import { parseOrigins, type Newsletter, type NewsletterWrite } from '@/lib/emailNewsletters';
 
@@ -29,6 +30,8 @@ export function NewsletterSettingsPanel({
   onChange: (next: Newsletter) => void;
 }) {
   const { t } = useTranslation();
+  const [name, setName] = useState(newsletter.name);
+  const [nameError, setNameError] = useState<string | null>(null);
   const [description, setDescription] = useState(newsletter.description);
   const [language, setLanguage] = useState(newsletter.defaultLanguage === 'fr' ? 'fr' : 'en');
   const [origins, setOrigins] = useState(newsletter.allowedOrigins.join('\n'));
@@ -40,10 +43,23 @@ export function NewsletterSettingsPanel({
   const [feedback, setFeedback] = useState<ActionFeedbackState | null>(null);
   const parsed = parseOrigins(origins);
 
+  // The page header can rename the list too, so follow the saved name.
+  useEffect(() => {
+    setName(newsletter.name);
+  }, [newsletter.name]);
+
   async function save(ev: FormEvent) {
     ev.preventDefault();
     if (busy || parsed.invalid.length) return;
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setNameError(t('emailNewsletterNameRequired'));
+      setFeedback(null);
+      return;
+    }
+    setNameError(null);
     const body: NewsletterWrite = {
+      name: trimmedName,
       description: description.trim(),
       default_language: language,
       allowed_origins: parsed.origins,
@@ -57,12 +73,17 @@ export function NewsletterSettingsPanel({
     try {
       const saved = await api.patchNewsletter(newsletter.id, body);
       onChange(saved);
+      setName(saved.name);
       setOrigins(saved.allowedOrigins.join('\n'));
       setSecret('');
       setClearSecret(false);
       setFeedback({ tone: 'success', text: t('emailNewsletterSaved') });
     } catch (err) {
-      setFeedback(feedbackFromError(t, err));
+      if (err instanceof EmailApiError && err.fieldErrors.name?.length) {
+        setNameError(t('emailNewsletterNameRequired'));
+      } else {
+        setFeedback(feedbackFromError(t, err));
+      }
     } finally {
       setBusy(false);
     }
@@ -74,6 +95,38 @@ export function NewsletterSettingsPanel({
       onSubmit={(ev) => void save(ev)}
     >
       <div className="space-y-5 p-4 sm:p-5">
+        <div className="space-y-1.5">
+          <Label htmlFor="newsletter-name">{t('emailNewsletterName')}</Label>
+          <Input
+            id="newsletter-name"
+            value={name}
+            maxLength={120}
+            placeholder={t('emailNewsletterNamePlaceholder')}
+            aria-invalid={nameError ? true : undefined}
+            aria-describedby={nameError ? 'newsletter-name-error' : 'newsletter-name-hint'}
+            onChange={(ev) => {
+              setName(ev.target.value);
+              if (nameError && ev.target.value.trim()) setNameError(null);
+            }}
+          />
+          {nameError ? (
+            <Text
+              id="newsletter-name-error"
+              role="alert"
+              className="text-xs text-destructive"
+            >
+              {nameError}
+            </Text>
+          ) : (
+            <Text
+              id="newsletter-name-hint"
+              className="text-xs"
+            >
+              {t('emailNewsletterNameHint')}
+            </Text>
+          )}
+        </div>
+
         <div className="space-y-1.5">
           <Label htmlFor="newsletter-description">{t('emailNewsletterDescription')}</Label>
           <Input

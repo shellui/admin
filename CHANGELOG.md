@@ -23,6 +23,10 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **Newsletters:** Rename a newsletter from its Settings tab. An empty name shows an error under the field, and the page header updates after you save.
+
 ### 🐛 Bug Fixes
 
 - **Email preview:** The design's page color fills the whole email, and links without their own color use the text color instead of blue, matching email-service.
