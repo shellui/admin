@@ -77,8 +77,7 @@ export function consoleKindI18nKey(kind: OAuthConsoleUrlKind): string {
 }
 
 export type ConsoleUrlSegment =
-  | { type: 'text'; value: string }
-  | { type: 'placeholder'; value: string };
+  { type: 'text'; value: string } | { type: 'placeholder'; value: string };
 
 export function splitConsoleUrlTemplate(url: string): ConsoleUrlSegment[] {
   const segments: ConsoleUrlSegment[] = [];

@@ -338,18 +338,16 @@ export const EmailInlineEditor = forwardRef<
             .run();
         },
       },
-      ...([2, 3, 4] as const).map(
-        (count): SlashCommandItem => ({
-          title: t(`emailBlock_columns${count}`),
-          description: t('emailSlash_columns'),
-          icon: createElement(COLUMN_ICONS[count], ICON),
-          category: blocks,
-          searchTerms: ['columns', 'colonnes', 'layout', 'grid', String(count)],
-          command: ({ editor: e, range }) => {
-            e.chain().focus().deleteRange(range).insertColumns(count).run();
-          },
-        }),
-      ),
+      ...([2, 3, 4] as const).map((count): SlashCommandItem => ({
+        title: t(`emailBlock_columns${count}`),
+        description: t('emailSlash_columns'),
+        icon: createElement(COLUMN_ICONS[count], ICON),
+        category: blocks,
+        searchTerms: ['columns', 'colonnes', 'layout', 'grid', String(count)],
+        command: ({ editor: e, range }) => {
+          e.chain().focus().deleteRange(range).insertColumns(count).run();
+        },
+      })),
     ];
     const variableCategory = t('emailSlashVariables');
     const variableItems: SlashCommandItem[] = variables.map((variable) => ({

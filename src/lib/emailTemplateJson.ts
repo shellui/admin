@@ -10,9 +10,7 @@ export type EmailTemplateJson = {
 };
 
 export type EmailTemplateJsonError =
-  | { code: 'invalid_json' }
-  | { code: 'not_object' }
-  | { code: 'invalid_field'; field: string };
+  { code: 'invalid_json' } | { code: 'not_object' } | { code: 'invalid_field'; field: string };
 
 export function templateJsonText(value: EmailTemplateJson): string {
   return JSON.stringify(value, null, 2);
