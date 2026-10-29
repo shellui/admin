@@ -271,7 +271,9 @@ export function ActionsRuleEditorPage() {
     setSendTestFeedback(null);
     try {
       const result = await api.sendRuleTest(numericId);
-      const text = t('actionsSendTestSuccess', { webhook_id: result.webhook_id });
+      const text = result.queued
+        ? t('actionsSendTestQueued')
+        : t('actionsSendTestSuccess', { webhook_id: result.webhook_id });
       setSendTestFeedback({ tone: 'success', text });
       shellui.toast({ title: text, type: 'success' });
     } catch (e) {

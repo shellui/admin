@@ -43,6 +43,8 @@ export type ActionRuleSendTestResult = {
   ok: boolean;
   webhook_id: string;
   event_type: string;
+  /** True when the service queued the test event instead of sending it inline (email-service). */
+  queued?: boolean;
 };
 
 export type ActionDeliveryStatus =
