@@ -5,8 +5,7 @@ import type { EmailStats } from '@/lib/emailTypes';
 export type EmailDashboardQuiet = 'unavailable' | 'no_provider';
 
 export type EmailDashboardSnapshot =
-  | { stats: EmailStats; quiet: null }
-  | { stats: null; quiet: EmailDashboardQuiet };
+  { stats: EmailStats; quiet: null } | { stats: null; quiet: EmailDashboardQuiet };
 
 function isNoProvider(error: unknown): boolean {
   return error instanceof EmailApiError && error.errorCode === 'provider_not_configured';

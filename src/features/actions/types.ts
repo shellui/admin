@@ -46,12 +46,7 @@ export type ActionRuleSendTestResult = {
 };
 
 export type ActionDeliveryStatus =
-  | 'pending'
-  | 'processing'
-  | 'success'
-  | 'failed'
-  | 'dead'
-  | string;
+  'pending' | 'processing' | 'success' | 'failed' | 'dead' | string;
 
 export type ActionDelivery = {
   id: string;
