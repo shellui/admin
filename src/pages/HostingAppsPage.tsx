@@ -40,6 +40,8 @@ import {
 } from '@/lib/hostingApi';
 import shellui from '@shellui/sdk';
 import { confirmAction } from '@/lib/confirmAction';
+import { HostingDeployTokensPanel } from '@/components/HostingDeployTokensPanel';
+import { getIsCompanyOwnerFromJwt, getIsStaffFromJwt } from '@/lib/jwtCompany';
 
 function formatDate(value: string | null, locale: string): string {
   if (!value) return '-';
@@ -178,6 +180,9 @@ export function HostingAppsPage() {
   const { t, i18n } = useTranslation();
   const accessToken = useShelluiAccessToken();
   const hostingBaseUrl = useHostingBaseUrl();
+  const canManageTokens = Boolean(
+    accessToken && (getIsCompanyOwnerFromJwt(accessToken) || getIsStaffFromJwt(accessToken)),
+  );
   const [apps, setApps] = useState<HostingApp[]>([]);
   const [access, setAccess] = useState<HostingAccess | null>(null);
   const [loading, setLoading] = useState(true);
@@ -472,6 +477,13 @@ export function HostingAppsPage() {
           )}
         </DataTableCard>
       )}
+
+      {accessToken && canManageTokens && access?.status === 'approved' ? (
+        <HostingDeployTokensPanel
+          hostingBaseUrl={hostingBaseUrl}
+          accessToken={accessToken}
+        />
+      ) : null}
     </div>
   );
 }
