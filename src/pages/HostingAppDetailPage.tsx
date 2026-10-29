@@ -36,10 +36,9 @@ import {
   type HostingApp,
   type HostingDeployment,
 } from '@/lib/hostingApi';
-import { getIsCompanyOwnerFromJwt, getIsStaffFromJwt } from '@/lib/jwtCompany';
+import { getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
 import shellui from '@shellui/sdk';
 import { confirmAction } from '@/lib/confirmAction';
-import { HostingDeployTokensPanel } from '@/components/HostingDeployTokensPanel';
 
 function formatDate(value: string | null, locale: string): string {
   if (!value) return '-';
@@ -93,7 +92,6 @@ export function HostingAppDetailPage() {
   const accessToken = useShelluiAccessToken();
   const hostingBaseUrl = useHostingBaseUrl();
   const isOwner = Boolean(accessToken && getIsCompanyOwnerFromJwt(accessToken));
-  const canManageTokens = isOwner || Boolean(accessToken && getIsStaffFromJwt(accessToken));
   const [app, setApp] = useState<HostingApp | null>(null);
   const [deployments, setDeployments] = useState<HostingDeployment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -565,14 +563,6 @@ export function HostingAppDetailPage() {
             </Table>
           )}
         </DataTableCard>
-      ) : null}
-
-      {accessToken && app && !isPreviewApp(app) && canManageTokens ? (
-        <HostingDeployTokensPanel
-          hostingBaseUrl={hostingBaseUrl}
-          accessToken={accessToken}
-          appRef={app.name}
-        />
       ) : null}
     </div>
   );

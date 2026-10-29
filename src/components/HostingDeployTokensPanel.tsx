@@ -29,7 +29,6 @@ import {
 type Props = {
   hostingBaseUrl: string;
   accessToken: string;
-  appRef: string;
 };
 
 function formatDate(value: string | null, locale: string): string {
@@ -53,7 +52,7 @@ async function copyText(value: string, ok: string, fail: string) {
   }
 }
 
-export function HostingDeployTokensPanel({ hostingBaseUrl, accessToken, appRef }: Props) {
+export function HostingDeployTokensPanel({ hostingBaseUrl, accessToken }: Props) {
   const { t, i18n } = useTranslation();
   const [rows, setRows] = useState<HostingDeployToken[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,14 +68,14 @@ export function HostingDeployTokensPanel({ hostingBaseUrl, accessToken, appRef }
     setLoading(true);
     setError(null);
     try {
-      setRows(await fetchHostingDeployTokens(hostingBaseUrl, accessToken, appRef));
+      setRows(await fetchHostingDeployTokens(hostingBaseUrl, accessToken));
     } catch (e) {
       setRows([]);
       setError(e instanceof Error ? e.message : t('deployTokensError'));
     } finally {
       setLoading(false);
     }
-  }, [accessToken, appRef, hostingBaseUrl, t]);
+  }, [accessToken, hostingBaseUrl, t]);
 
   useEffect(() => {
     void load();
@@ -87,7 +86,7 @@ export function HostingDeployTokensPanel({ hostingBaseUrl, accessToken, appRef }
     setCreating(true);
     try {
       const parsedDays = Number.parseInt(days, 10);
-      const created = await createHostingDeployToken(hostingBaseUrl, accessToken, appRef, {
+      const created = await createHostingDeployToken(hostingBaseUrl, accessToken, {
         name: name.trim(),
         ...(Number.isFinite(parsedDays) ? { expires_in_days: parsedDays } : {}),
       });
@@ -116,7 +115,7 @@ export function HostingDeployTokensPanel({ hostingBaseUrl, accessToken, appRef }
     if (!confirmed) return;
     setRevokingId(row.id);
     try {
-      await revokeHostingDeployToken(hostingBaseUrl, accessToken, appRef, row.id);
+      await revokeHostingDeployToken(hostingBaseUrl, accessToken, row.id);
       await load();
     } catch (e) {
       shellui.toast({
@@ -325,7 +324,7 @@ export function HostingDeployTokensPanel({ hostingBaseUrl, accessToken, appRef }
           >
             {t('deployCliTitle')}
           </h2>
-          <p className="text-xs text-muted-foreground">{t('deployCliHint', { app: appRef })}</p>
+          <p className="text-xs text-muted-foreground">{t('deployCliHint')}</p>
         </div>
         <div className="space-y-3 p-4">
           <pre className="overflow-x-auto rounded-md border border-border bg-muted/40 p-3 font-mono text-xs">

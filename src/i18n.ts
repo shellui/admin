@@ -203,10 +203,11 @@ const resources = {
       hostingCurrent: 'Current',
       hostingRollback: 'Rollback',
       deployTokensTitle: 'Deploy tokens',
-      deployTokensDescription: 'Tokens for CI. Each one can only deploy this app.',
+      deployTokensDescription:
+        'Company tokens for CI. They can only create and update 7-day previews.',
       deployTokensCreateTitle: 'Create a deploy token',
       deployTokensHint:
-        'Use it as SHELLUI_DEPLOY_TOKEN in CI. It can create, upload, finalize and promote deployments of this app, nothing else.',
+        'Use it as SHELLUI_DEPLOY_TOKEN in CI. It can create a preview or redeploy any preview of your company, nothing else.',
       deployTokensNameLabel: 'Name',
       deployTokensNamePlaceholder: 'GitHub Actions',
       deployTokensExpiresLabel: 'Expires after (days)',
@@ -230,10 +231,10 @@ const resources = {
       deployTokensRevoked: 'Revoked',
       deployTokensExpired: 'Expired',
       deployTokensRevokeTitle: 'Revoke {{name}}?',
-      deployTokensRevokeDescription: 'CI jobs using this token stop deploying right away.',
+      deployTokensRevokeDescription: 'CI jobs using this token stop deploying previews right away.',
       deployCliTitle: 'CLI and CI',
       deployCliHint:
-        'Set hosting.app to "{{app}}" in shellui.config.json, run shellui deploy --prod, or add this workflow and a SHELLUI_DEPLOY_TOKEN secret.',
+        'Run shellui deploy once to save hosting.slug in shellui.config.json and commit it. Then add this workflow and a SHELLUI_DEPLOY_TOKEN secret to update that preview on every push.',
       deployCliCopy: 'Copy workflow',
       hostingOpenVersion: 'Open',
       hostingRollbackError: 'Rollback failed.',
@@ -2129,10 +2130,11 @@ const resources = {
       hostingCurrent: 'Actuel',
       hostingRollback: 'Restaurer',
       deployTokensTitle: 'Jetons de déploiement',
-      deployTokensDescription: 'Jetons pour la CI. Chacun ne peut déployer que cette app.',
+      deployTokensDescription:
+        "Jetons d'entreprise pour la CI. Ils ne peuvent que créer et mettre à jour des aperçus de 7 jours.",
       deployTokensCreateTitle: 'Créer un jeton de déploiement',
       deployTokensHint:
-        "Utilisez-le comme SHELLUI_DEPLOY_TOKEN en CI. Il peut créer, envoyer, finaliser et promouvoir les déploiements de cette app, rien d'autre.",
+        "Utilisez-le comme SHELLUI_DEPLOY_TOKEN en CI. Il peut créer un aperçu ou redéployer tout aperçu de votre entreprise, rien d'autre.",
       deployTokensNameLabel: 'Nom',
       deployTokensNamePlaceholder: 'GitHub Actions',
       deployTokensExpiresLabel: 'Expire après (jours)',
@@ -2157,10 +2159,10 @@ const resources = {
       deployTokensExpired: 'Expiré',
       deployTokensRevokeTitle: 'Révoquer {{name}} ?',
       deployTokensRevokeDescription:
-        'Les jobs CI qui utilisent ce jeton ne pourront plus déployer.',
+        "Les jobs CI qui utilisent ce jeton ne pourront plus déployer d'aperçus.",
       deployCliTitle: 'CLI et CI',
       deployCliHint:
-        'Mettez hosting.app à "{{app}}" dans shellui.config.json, lancez shellui deploy --prod, ou ajoutez ce workflow et un secret SHELLUI_DEPLOY_TOKEN.',
+        'Lancez shellui deploy une fois pour enregistrer hosting.slug dans shellui.config.json et committez-le. Ajoutez ensuite ce workflow et un secret SHELLUI_DEPLOY_TOKEN pour mettre à jour cet aperçu à chaque push.',
       deployCliCopy: 'Copier le workflow',
       hostingOpenVersion: 'Ouvrir',
       hostingRollbackError: 'Échec de la restauration.',

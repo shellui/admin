@@ -19,7 +19,6 @@ vi.mock('@/lib/shelluiConfirm', () => ({ askShelluiConfirm: vi.fn(async () => tr
 
 const row = {
   id: 't1',
-  app_id: 'a1',
   name: 'GitHub Actions',
   prefix: 'shellui_dt_abcd1234',
   created_by_id: 1,
@@ -35,7 +34,6 @@ function renderPanel() {
       <HostingDeployTokensPanel
         hostingBaseUrl="https://hosting.test"
         accessToken="jwt"
-        appRef="my-app"
       />
     </I18nextProvider>,
   );
@@ -47,11 +45,12 @@ afterEach(() => {
 });
 
 describe('HostingDeployTokensPanel', () => {
-  it('lists tokens and the CI workflow', async () => {
+  it('lists tokens and the preview CI workflow', async () => {
     api.fetchHostingDeployTokens.mockResolvedValue([row]);
     renderPanel();
     expect(await screen.findByText('GitHub Actions')).toBeTruthy();
     expect(screen.getByText(/SHELLUI_DEPLOY_TOKEN: \$\{\{ secrets/)).toBeTruthy();
+    expect(screen.queryByText(/--prod/)).toBeNull();
   });
 
   it('shows a new token once and clears it on dismiss', async () => {
@@ -61,14 +60,9 @@ describe('HostingDeployTokensPanel', () => {
     fireEvent.change(await screen.findByLabelText('Name'), { target: { value: 'CI' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create token' }));
     expect(await screen.findByText('shellui_dt_secret')).toBeTruthy();
-    expect(api.createHostingDeployToken).toHaveBeenCalledWith(
-      'https://hosting.test',
-      'jwt',
-      'my-app',
-      {
-        name: 'CI',
-      },
-    );
+    expect(api.createHostingDeployToken).toHaveBeenCalledWith('https://hosting.test', 'jwt', {
+      name: 'CI',
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));
     await waitFor(() => expect(screen.queryByText('shellui_dt_secret')).toBeNull());
   });
@@ -82,7 +76,6 @@ describe('HostingDeployTokensPanel', () => {
       expect(api.revokeHostingDeployToken).toHaveBeenCalledWith(
         'https://hosting.test',
         'jwt',
-        'my-app',
         't1',
       ),
     );
