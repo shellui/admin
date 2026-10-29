@@ -51,7 +51,7 @@
     "lucide-react": "^0.468.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "react-email": "6.9.3",
+    "react-email": "6.11.3",
     "react-hook-form": "^7.54.2",
     "react-i18next": "^15.1.1",
     "react-router": "^7.18.3",
