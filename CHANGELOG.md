@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [Unreleased]
+
+### 🐛 Bug Fixes
+
+- **Webhooks:** The email-service Email and webhooks page loads its rules, events, deliveries and test sends again instead of showing "Unexpected actions rules response.".
+
 ## [0.9.0] - 2026-10-29
 
 Requires hosting-service 0.9.0.
