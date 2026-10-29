@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [Unreleased]
+
+### ✨ Feature
+
+- **Hosting:** A Deploy tokens section on the Hosting page lets company owners and staff create company tokens for CI (shown once, with a copy button), list them and revoke them. Tokens can only create and update 7-day previews. A CLI and CI panel shows a GitHub Actions workflow that updates the preview saved in `hosting.slug`.
+
 ## [0.8.1] - 2026-10-27
 
 ### ✨ Feature

@@ -188,3 +188,73 @@ export async function fetchHostingStats(
 ): Promise<HostingStatsSnapshot> {
   return hostingFetch(hostingBaseUrl, accessToken, '/stats');
 }
+
+export type HostingDeployToken = {
+  id: string;
+  name: string;
+  prefix: string;
+  created_by_id: number | null;
+  created_at: string | null;
+  last_used_at: string | null;
+  expires_at: string | null;
+  revoked_at: string | null;
+};
+
+export type HostingDeployTokenCreated = HostingDeployToken & { token: string };
+
+export async function fetchHostingDeployTokens(
+  hostingBaseUrl: string,
+  accessToken: string,
+): Promise<HostingDeployToken[]> {
+  return hostingFetch(hostingBaseUrl, accessToken, '/deploy-tokens');
+}
+
+export async function createHostingDeployToken(
+  hostingBaseUrl: string,
+  accessToken: string,
+  body: { name: string; expires_in_days?: number },
+): Promise<HostingDeployTokenCreated> {
+  return hostingFetch(hostingBaseUrl, accessToken, '/deploy-tokens', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function revokeHostingDeployToken(
+  hostingBaseUrl: string,
+  accessToken: string,
+  tokenId: string,
+): Promise<HostingDeployToken> {
+  return hostingFetch(
+    hostingBaseUrl,
+    accessToken,
+    `/deploy-tokens/${encodeURIComponent(tokenId)}/revoke`,
+    { method: 'POST' },
+  );
+}
+
+/** GitHub Actions workflow that updates the preview in hosting.slug with a deploy token secret. */
+export function buildDeployWorkflowSnippet(): string {
+  return [
+    'name: Preview',
+    'on:',
+    '  push:',
+    '    branches: [main]',
+    'jobs:',
+    '  preview:',
+    '    runs-on: ubuntu-latest',
+    '    permissions:',
+    '      contents: read',
+    '    steps:',
+    '      - uses: actions/checkout@v4',
+    '      - uses: actions/setup-node@v4',
+    '        with:',
+    '          node-version: 22',
+    '      - run: npm ci',
+    '      # Updates the preview saved in hosting.slug (shellui.config.json)',
+    '      - run: npx shellui deploy --build',
+    '        env:',
+    '          SHELLUI_DEPLOY_TOKEN: ${{ secrets.SHELLUI_DEPLOY_TOKEN }}',
+    '',
+  ].join('\n');
+}
