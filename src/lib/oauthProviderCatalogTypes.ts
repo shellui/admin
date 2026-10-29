@@ -1,11 +1,7 @@
 export type OAuthProviderTier = 'popular' | 'generic' | 'other';
 
 export type OAuthConsoleUrlKind =
-  | 'app_registration'
-  | 'developer_console'
-  | 'app_settings'
-  | 'docs'
-  | 'other';
+  'app_registration' | 'developer_console' | 'app_settings' | 'docs' | 'other';
 
 export type OAuthConsoleUrlEntry = {
   kind: OAuthConsoleUrlKind;
