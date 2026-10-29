@@ -21,7 +21,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
-## [Unreleased]
+## [0.9.1] - 2026-10-29
+
+### 🔒 Security
+
+- **Dependencies:** Dependabot updates: react-email 6.11.3, @vitejs/plugin-react 5.2.0 and prettier 3.9.10, plus the Docker login, setup-qemu, setup-buildx and metadata actions and actions/checkout in CI.
 
 ### 🐛 Bug Fixes
 
