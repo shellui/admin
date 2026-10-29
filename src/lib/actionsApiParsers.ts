@@ -75,8 +75,17 @@ export function parseIdentityRule(raw: unknown): ActionRule {
   };
 }
 
-export function parseRulesList(body: unknown): ActionRule[] {
+/** Arrays under `results` (identity, hosting, storage) or a service-specific key (email-service). */
+function unwrapListBody(body: unknown, key: string): unknown[] | null {
   const rows = unwrapResultsArray(body);
+  if (rows != null) return rows;
+  if (!body || typeof body !== 'object') return null;
+  const keyed = (body as Record<string, unknown>)[key];
+  return Array.isArray(keyed) ? keyed : null;
+}
+
+export function parseRulesList(body: unknown): ActionRule[] {
+  const rows = unwrapListBody(body, 'rules');
   if (rows == null) {
     throw new Error('Unexpected actions rules response.');
   }
@@ -84,13 +93,7 @@ export function parseRulesList(body: unknown): ActionRule[] {
 }
 
 export function parseEventsList(body: unknown): ActionEventCatalogEntry[] {
-  let rows: unknown[] | null = unwrapResultsArray(body);
-  if (body && typeof body === 'object') {
-    const root = body as Record<string, unknown>;
-    if (rows == null && Array.isArray(root.events)) {
-      rows = root.events;
-    }
-  }
+  const rows = unwrapListBody(body, 'events');
   if (rows == null) {
     throw new Error('Unexpected actions events response.');
   }
@@ -102,7 +105,14 @@ function parseEventEntry(raw: unknown): ActionEventCatalogEntry {
     return { key: '' };
   }
   const o = raw as Record<string, unknown>;
-  const key = typeof o.type === 'string' ? o.type : typeof o.key === 'string' ? o.key : '';
+  const key =
+    typeof o.type === 'string'
+      ? o.type
+      : typeof o.key === 'string'
+        ? o.key
+        : typeof o.id === 'string'
+          ? o.id
+          : '';
   const sample_envelope =
     o.sample_envelope !== undefined && o.sample_envelope !== null ? o.sample_envelope : undefined;
   return {
@@ -120,6 +130,10 @@ export function parseSendTestResult(body: unknown): ActionRuleSendTestResult {
   const o = body as Record<string, unknown>;
   const webhook_id = typeof o.webhook_id === 'string' ? o.webhook_id : '';
   const event_type = typeof o.event_type === 'string' ? o.event_type : '';
+  // email-service queues the test event and answers `{ status: 'queued' }`.
+  if (!webhook_id && o.status === 'queued') {
+    return { ok: true, webhook_id: '', event_type, queued: true };
+  }
   if (!webhook_id) {
     throw new Error('Unexpected send-test response.');
   }
@@ -175,7 +189,12 @@ function parseAttemptRow(raw: unknown): ActionDeliveryAttempt {
   }
   const o = raw as Record<string, unknown>;
   return {
-    id: typeof o.id === 'number' || typeof o.id === 'string' ? o.id : String(o.id ?? ''),
+    id:
+      typeof o.id === 'number' || typeof o.id === 'string'
+        ? o.id
+        : typeof o.attempt_number === 'number'
+          ? o.attempt_number
+          : String(o.id ?? ''),
     status: typeof o.status === 'string' ? o.status : 'unknown',
     created_at: isoString(o.created_at),
     error:
@@ -183,7 +202,9 @@ function parseAttemptRow(raw: unknown): ActionDeliveryAttempt {
         ? o.error_message
         : typeof o.error === 'string'
           ? o.error
-          : null,
+          : typeof o.error_code === 'string' && o.error_code
+            ? o.error_code
+            : null,
     response_status:
       typeof o.http_status === 'number'
         ? o.http_status
@@ -201,7 +222,7 @@ export function parseDeliveriesList(body: unknown): ActionDeliveriesListResponse
     throw new Error('Unexpected deliveries response.');
   }
   const o = body as Record<string, unknown>;
-  const rawResults = Array.isArray(o.results) ? o.results : (unwrapResultsArray(body) ?? []);
+  const rawResults = unwrapListBody(body, 'deliveries') ?? [];
   const results = rawResults.map(parseDeliveryRow);
   const count = typeof o.count === 'number' ? o.count : results.length;
   return { count, results };
