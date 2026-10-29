@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [Unreleased]
+
+### ✨ Feature
+
+- **Hosting:** Production apps get a Deploy tokens section to create a token for CI (shown once, with a copy button), list tokens and revoke them, plus a CLI and CI panel with a GitHub Actions workflow for `shellui deploy --prod`.
+
 ## [0.8.1] - 2026-10-27
 
 ### ✨ Feature

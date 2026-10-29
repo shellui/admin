@@ -188,3 +188,82 @@ export async function fetchHostingStats(
 ): Promise<HostingStatsSnapshot> {
   return hostingFetch(hostingBaseUrl, accessToken, '/stats');
 }
+
+export type HostingDeployToken = {
+  id: string;
+  app_id: string;
+  name: string;
+  prefix: string;
+  created_by_id: number | null;
+  created_at: string | null;
+  last_used_at: string | null;
+  expires_at: string | null;
+  revoked_at: string | null;
+};
+
+export type HostingDeployTokenCreated = HostingDeployToken & { token: string };
+
+export async function fetchHostingDeployTokens(
+  hostingBaseUrl: string,
+  accessToken: string,
+  appRef: string,
+): Promise<HostingDeployToken[]> {
+  return hostingFetch(
+    hostingBaseUrl,
+    accessToken,
+    `/apps/${encodeURIComponent(appRef)}/deploy-tokens`,
+  );
+}
+
+export async function createHostingDeployToken(
+  hostingBaseUrl: string,
+  accessToken: string,
+  appRef: string,
+  body: { name: string; expires_in_days?: number },
+): Promise<HostingDeployTokenCreated> {
+  return hostingFetch(
+    hostingBaseUrl,
+    accessToken,
+    `/apps/${encodeURIComponent(appRef)}/deploy-tokens`,
+    { method: 'POST', body: JSON.stringify(body) },
+  );
+}
+
+export async function revokeHostingDeployToken(
+  hostingBaseUrl: string,
+  accessToken: string,
+  appRef: string,
+  tokenId: string,
+): Promise<HostingDeployToken> {
+  return hostingFetch(
+    hostingBaseUrl,
+    accessToken,
+    `/apps/${encodeURIComponent(appRef)}/deploy-tokens/${encodeURIComponent(tokenId)}/revoke`,
+    { method: 'POST' },
+  );
+}
+
+/** GitHub Actions workflow for `shellui deploy --prod` with a deploy token secret. */
+export function buildDeployWorkflowSnippet(): string {
+  return [
+    'name: Deploy',
+    'on:',
+    '  push:',
+    '    branches: [main]',
+    'jobs:',
+    '  deploy:',
+    '    runs-on: ubuntu-latest',
+    '    permissions:',
+    '      contents: read',
+    '    steps:',
+    '      - uses: actions/checkout@v4',
+    '      - uses: actions/setup-node@v4',
+    '        with:',
+    '          node-version: 22',
+    '      - run: npm ci',
+    '      - run: npx shellui deploy --prod --build',
+    '        env:',
+    '          SHELLUI_DEPLOY_TOKEN: ${{ secrets.SHELLUI_DEPLOY_TOKEN }}',
+    '',
+  ].join('\n');
+}
