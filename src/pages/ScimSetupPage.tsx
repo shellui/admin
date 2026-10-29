@@ -145,7 +145,7 @@ export function ScimSetupPage() {
 
   const showOwnerSetup = accessToken && isOwner && companyId != null && !showDeploymentOff;
 
-  const card = 'overflow-hidden rounded-xl border border-border bg-card shadow-sm';
+  const card = 'overflow-hidden rounded-xl border border-border bg-card shadow-xs';
   return (
     <div className="w-full space-y-6">
       <PageHeader

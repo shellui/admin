@@ -355,7 +355,7 @@ export function EmailCopyEditor({
         </Alert>
       ) : null}
       {picking ? (
-        <section className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm">
+        <section className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-xs">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-1">
               <h2 className="text-base font-semibold tracking-tight">{t('emailStartOverPick')}</h2>

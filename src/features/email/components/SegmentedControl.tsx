@@ -34,14 +34,14 @@ export function SegmentedControl<T extends string>({
             aria-selected={selected}
             className={cn(
               variant === 'underline'
-                ? '-mb-px inline-flex h-10 items-center gap-1.5 border-b-2 px-0.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none [&_svg]:size-4'
+                ? '-mb-px inline-flex h-10 items-center gap-1.5 border-b-2 px-0.5 text-sm transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none [&_svg]:size-4'
                 : 'inline-flex h-8 items-center gap-1.5 rounded px-3 text-sm transition-colors [&_svg]:size-4',
               variant === 'underline'
                 ? selected
                   ? 'border-primary font-medium text-foreground'
                   : 'border-transparent text-muted-foreground hover:text-foreground'
                 : selected
-                  ? 'bg-background font-medium text-foreground shadow-sm'
+                  ? 'bg-background font-medium text-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground',
             )}
             onClick={() => onChange(option.value)}

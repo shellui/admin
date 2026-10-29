@@ -24,7 +24,7 @@ export function StatTableCard({
   return (
     <section
       className={cn(
-        'min-w-0 overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm',
+        'min-w-0 overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-xs',
         className,
       )}
     >
@@ -105,7 +105,7 @@ export function BarSeriesCard({
   return (
     <section
       className={cn(
-        'min-w-0 rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm',
+        'min-w-0 rounded-xl border border-border bg-card p-4 text-card-foreground shadow-xs',
         className,
       )}
     >

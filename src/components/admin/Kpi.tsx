@@ -18,7 +18,7 @@ export function KpiCard({
   icon?: LucideIcon;
 }) {
   return (
-    <div className="min-w-0 rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm">
+    <div className="min-w-0 rounded-xl border border-border bg-card p-4 text-card-foreground shadow-xs">
       <p className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
         {Icon ? (
           <Icon

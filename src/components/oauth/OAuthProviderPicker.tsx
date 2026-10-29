@@ -49,9 +49,9 @@ export function OAuthProviderPicker({
     const multiConfigured = multi && linkedApps.length > 0;
 
     const tileClass = cn(
-      'flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card p-3 text-center shadow-sm transition-colors motion-reduce:transition-none',
-      large ? 'min-h-[7rem]' : 'min-h-[4.5rem] p-2',
-      'hover:border-primary/60 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+      'flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card p-3 text-center shadow-xs transition-colors motion-reduce:transition-none',
+      large ? 'min-h-28' : 'min-h-18 p-2',
+      'hover:border-primary/60 hover:bg-muted/40 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
     );
 
     const iconBlock = (
