@@ -184,13 +184,13 @@ export function EmailThemeSelect({
         aria-controls={open ? listId : undefined}
         title={t('emailThemeHint')}
         className={cn(
-          'inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          'inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
           open && 'bg-muted/60 text-foreground',
         )}
         onClick={() => setOpen((was) => !was)}
       >
         <Dots colors={current.colors} />
-        <span className="max-w-[11rem] truncate">{current.label}</span>
+        <span className="max-w-44 truncate">{current.label}</span>
         <ChevronDown
           aria-hidden
           className={cn('size-3.5 opacity-70 transition-transform', open && 'rotate-180')}
@@ -198,7 +198,7 @@ export function EmailThemeSelect({
       </button>
       {open ? (
         <div
-          className="absolute right-0 top-full z-50 mt-2 w-[26rem] max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-lg"
+          className="absolute right-0 top-full z-50 mt-2 w-104 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-lg"
           onKeyDown={moveFocus}
         >
           <p className="px-0.5 pb-2.5 text-xs text-muted-foreground">{t('emailThemeHint')}</p>
@@ -206,7 +206,7 @@ export function EmailThemeSelect({
             id={listId}
             role="listbox"
             aria-label={t('emailTheme')}
-            className="-m-1 grid max-h-[22rem] grid-cols-3 gap-2.5 overflow-y-auto p-1"
+            className="-m-1 grid max-h-88 grid-cols-3 gap-2.5 overflow-y-auto p-1"
           >
             {choices.map((choice, index) => {
               const isSelected = index === selected;
@@ -220,7 +220,7 @@ export function EmailThemeSelect({
                   role="option"
                   aria-selected={isSelected}
                   className={cn(
-                    'group min-w-0 rounded-lg p-1 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    'group min-w-0 rounded-lg p-1 text-left transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
                     isSelected ? 'bg-muted' : 'hover:bg-muted/60',
                   )}
                   onClick={() => pick(choice)}

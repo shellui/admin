@@ -207,7 +207,7 @@ export function UsersListPage() {
         >
           {t('usersFieldQuery')}
         </label>
-        <div className="relative w-full sm:w-[22rem]">
+        <div className="relative w-full sm:w-88">
           <Search
             className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden
@@ -242,7 +242,7 @@ export function UsersListPage() {
       </form>
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         {hasSearch ? (
-          <span className="inline-flex h-7 max-w-[22rem] items-center gap-1 rounded-full border border-border bg-muted pl-2.5 pr-1 text-xs">
+          <span className="inline-flex h-7 max-w-88 items-center gap-1 rounded-full border border-border bg-muted pl-2.5 pr-1 text-xs">
             <span className="truncate">
               {t('usersFilterBadgePrefix')}: {qParam}
             </span>
@@ -250,7 +250,7 @@ export function UsersListPage() {
               type="button"
               onClick={clearSearch}
               aria-label={t('usersClearSearch')}
-              className="inline-flex size-5 items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex size-5 items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
             >
               <X
                 className="size-3.5"
@@ -422,7 +422,7 @@ export function UsersListPage() {
                       <TableCell className="min-w-0 p-0">
                         <Link
                           to={`/users/${row.id}`}
-                          className="group flex min-w-0 items-center gap-3 px-4 py-2 text-left no-underline outline-none hover:no-underline focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                          className="group flex min-w-0 items-center gap-3 px-4 py-2 text-left no-underline outline-hidden hover:no-underline focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                           aria-label={t('usersRowOpenProfile', { name })}
                         >
                           <InitialsAvatar
@@ -454,7 +454,7 @@ export function UsersListPage() {
                         </Link>
                       </TableCell>
                       <TableCell
-                        className="hidden max-w-[10rem] truncate font-mono text-xs text-muted-foreground lg:table-cell"
+                        className="hidden max-w-40 truncate font-mono text-xs text-muted-foreground lg:table-cell"
                         title={row.username}
                       >
                         {row.username}

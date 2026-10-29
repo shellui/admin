@@ -372,7 +372,7 @@ export function BroadcastAudienceBuilder({
             <Label htmlFor="broadcast-emails">{t('emailBroadcastPasteEmails')}</Label>
             <textarea
               id="broadcast-emails"
-              className="min-h-32 w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="min-h-32 w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-xs shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
               value={pasted}
               placeholder="ada@example.com, grace@example.com"
               onChange={(ev) => changePasted(ev.target.value)}

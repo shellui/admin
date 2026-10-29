@@ -42,7 +42,7 @@ function HostCard({
   children: ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm">
+    <section className="overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-xs">
       <header className="space-y-1 border-b border-border px-5 py-4">
         <h2 className="text-sm font-semibold">{title}</h2>
         <p className="text-xs text-muted-foreground">{description}</p>

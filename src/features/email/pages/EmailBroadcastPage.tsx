@@ -322,7 +322,7 @@ export function EmailBroadcastPage() {
             {isDraft ? (
               <Input
                 aria-label={t('emailBroadcastName')}
-                className="h-auto max-w-full border-transparent bg-transparent px-1 [field-sizing:content] font-heading text-2xl font-semibold tracking-tight shadow-none hover:border-input focus-visible:border-input md:text-3xl"
+                className="h-auto max-w-full border-transparent bg-transparent px-1 field-sizing-content font-heading text-2xl font-semibold tracking-tight shadow-none hover:border-input focus-visible:border-input md:text-3xl"
                 value={name}
                 maxLength={120}
                 onChange={(ev) => setName(ev.target.value)}
@@ -411,7 +411,7 @@ export function EmailBroadcastPage() {
 
           {isDraft && tab === 'audience' && audience ? (
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
-              <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+              <section className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
                 <div className="space-y-4 p-4 sm:p-5">
                   <BroadcastAudienceBuilder
                     accessToken={accessToken}
@@ -444,7 +444,7 @@ export function EmailBroadcastPage() {
                   </Button>
                 </div>
               </section>
-              <aside className="h-fit space-y-2 rounded-xl border border-border bg-card p-4 shadow-sm">
+              <aside className="h-fit space-y-2 rounded-xl border border-border bg-card p-4 shadow-xs">
                 <h2 className="text-sm font-semibold">{t('emailBroadcastPreviewTitle')}</h2>
                 <PreviewSummary
                   preview={preview}
@@ -468,7 +468,7 @@ export function EmailBroadcastPage() {
                   <AlertDescription>{t('emailBroadcastUnpublished')}</AlertDescription>
                 </Alert>
               ) : null}
-              <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+              <section className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
                 <div className="space-y-5 p-4 sm:p-5">
                   <div className="space-y-1">
                     <h2 className="text-sm font-semibold">{t('emailBroadcastSender')}</h2>
@@ -541,7 +541,7 @@ export function EmailBroadcastPage() {
           {!isDraft ? (
             <section className="space-y-4">
               {broadcast.counts ? <BroadcastCountsGrid counts={broadcast.counts} /> : null}
-              <dl className="grid max-w-3xl gap-x-6 gap-y-2 rounded-xl border border-border bg-card p-4 text-sm shadow-sm sm:grid-cols-[10rem_1fr]">
+              <dl className="grid max-w-3xl gap-x-6 gap-y-2 rounded-xl border border-border bg-card p-4 text-sm shadow-xs sm:grid-cols-[10rem_1fr]">
                 <dt className="text-muted-foreground">{t('emailBroadcastSender')}</dt>
                 <dd className="font-mono">{broadcast.fromEmail}</dd>
                 <dt className="text-muted-foreground">{t('emailBroadcastDelivery')}</dt>

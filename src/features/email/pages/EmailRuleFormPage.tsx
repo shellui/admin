@@ -198,7 +198,7 @@ export function EmailRuleFormPage() {
   }
 
   const card =
-    'space-y-3 rounded-xl border border-border bg-card p-5 text-card-foreground shadow-sm';
+    'space-y-3 rounded-xl border border-border bg-card p-5 text-card-foreground shadow-xs';
   const ready = !loading && !loadError && api && canManage;
 
   return (
@@ -315,7 +315,7 @@ export function EmailRuleFormPage() {
                     visibleEvents.map((item) => (
                       <label
                         key={item.eventType}
-                        className="flex cursor-pointer items-start gap-3 px-3 py-2.5 text-sm transition-colors hover:bg-muted/50 has-[:checked]:bg-primary/10 motion-reduce:transition-none"
+                        className="flex cursor-pointer items-start gap-3 px-3 py-2.5 text-sm transition-colors hover:bg-muted/50 has-checked:bg-primary/10 motion-reduce:transition-none"
                       >
                         <input
                           type="radio"
@@ -342,7 +342,7 @@ export function EmailRuleFormPage() {
                 <Label htmlFor="email-rule-newsletter">{t('webhooksNewsletterFilter')}</Label>
                 <select
                   id="email-rule-newsletter"
-                  className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                   value={newsletterId == null ? '' : String(newsletterId)}
                   onChange={(event) =>
                     setNewsletterId(event.target.value ? Number(event.target.value) : null)
@@ -414,7 +414,7 @@ export function EmailRuleFormPage() {
                     value={addresses}
                     onChange={(event) => setAddresses(event.target.value)}
                     rows={4}
-                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                   />
                   <p className="text-xs text-muted-foreground">{t('emailRuleAddressesHint')}</p>
                 </div>
@@ -425,7 +425,7 @@ export function EmailRuleFormPage() {
               <Label htmlFor="email-rule-language">{t('emailRuleLanguage')}</Label>
               <select
                 id="email-rule-language"
-                className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                 value={language}
                 onChange={(event) => setLanguage(event.target.value)}
               >

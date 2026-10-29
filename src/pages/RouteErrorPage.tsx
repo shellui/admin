@@ -13,7 +13,7 @@ function ErrorPanel({ title, detail, retry }: { title: string; detail: string; r
     <div className="flex min-h-full items-center justify-center bg-background px-6 py-12">
       <div
         role={retry ? 'alert' : undefined}
-        className="w-full max-w-xl space-y-4 rounded-xl border border-border bg-card p-6 shadow-sm"
+        className="w-full max-w-xl space-y-4 rounded-xl border border-border bg-card p-6 shadow-xs"
       >
         <span className="flex size-10 items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground">
           <Icon
@@ -22,7 +22,7 @@ function ErrorPanel({ title, detail, retry }: { title: string; detail: string; r
           />
         </span>
         <h1 className="font-heading text-xl font-semibold tracking-tight">{title}</h1>
-        <Text className="break-words font-mono text-sm text-muted-foreground">{detail}</Text>
+        <Text className="wrap-break-word font-mono text-sm text-muted-foreground">{detail}</Text>
         <div className="flex gap-2">
           {retry ? (
             <Button

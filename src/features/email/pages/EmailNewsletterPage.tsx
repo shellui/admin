@@ -121,7 +121,7 @@ export function EmailNewsletterPage() {
               {newsletter ? (
                 <Input
                   aria-label={t('emailNewsletterName')}
-                  className="h-auto max-w-full border-transparent bg-transparent px-1 font-heading text-2xl font-semibold tracking-tight shadow-none [field-sizing:content] hover:border-input focus-visible:border-input md:text-3xl"
+                  className="h-auto max-w-full border-transparent bg-transparent px-1 font-heading text-2xl font-semibold tracking-tight shadow-none field-sizing-content hover:border-input focus-visible:border-input md:text-3xl"
                   value={name}
                   maxLength={120}
                   onChange={(ev) => setName(ev.target.value)}

@@ -35,7 +35,7 @@ export function BroadcastCountsGrid({ counts }: { counts: BroadcastCounts }) {
       {(['total', ...shown] as const).map((key) => (
         <div
           key={key}
-          className="rounded-xl border border-border bg-card p-4 shadow-sm"
+          className="rounded-xl border border-border bg-card p-4 shadow-xs"
         >
           <dt className="text-[13px] text-muted-foreground">{t(`emailBroadcastCount_${key}`)}</dt>
           <dd className="mt-1 font-heading text-2xl font-semibold tabular-nums">

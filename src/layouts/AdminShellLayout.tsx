@@ -76,7 +76,7 @@ import { appVersionLabel } from '@/lib/appVersion';
 import { cn } from '@/lib/utils';
 
 const navLinkBase =
-  'flex h-8 items-center gap-2.5 rounded-[7px] px-2.5 text-[13.5px] font-medium no-underline transition-colors duration-150 ease-soft hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring';
+  'flex h-8 items-center gap-2.5 rounded-[7px] px-2.5 text-[13.5px] font-medium no-underline transition-colors duration-150 ease-soft hover:no-underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring';
 
 function readSectionOpen(key: string, defaultOpen = true): boolean {
   try {
@@ -308,7 +308,7 @@ function NavSectionHeader({
       type="button"
       onClick={onToggle}
       aria-expanded={open}
-      className="mb-1 flex w-full items-start gap-1 rounded-md px-2.5 py-1.5 text-left transition-colors duration-150 hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+      className="mb-1 flex w-full items-start gap-1 rounded-md px-2.5 py-1.5 text-left transition-colors duration-150 hover:bg-sidebar-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring"
     >
       <div className="min-w-0 flex-1">
         <p className="text-xs font-semibold text-sidebar-foreground">{title}</p>
@@ -1299,7 +1299,7 @@ export function AdminShellLayout() {
           data-collapsed={sidebarCollapsed ? 'true' : 'false'}
           className={cn(
             'hidden h-full min-h-0 shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-soft md:flex',
-            sidebarCollapsed ? 'w-[3.25rem]' : 'w-[248px]',
+            sidebarCollapsed ? 'w-13' : 'w-[248px]',
           )}
         >
           <div

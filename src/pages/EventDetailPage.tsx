@@ -37,7 +37,7 @@ function detailField(label: string, value: unknown, key?: string) {
       className="grid min-w-0 gap-1 px-4 py-3 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-4"
     >
       <dt className="text-sm text-muted-foreground">{label}</dt>
-      <dd className="break-words font-mono text-sm">{formatValue(value)}</dd>
+      <dd className="wrap-break-word font-mono text-sm">{formatValue(value)}</dd>
     </div>
   );
 }
@@ -137,7 +137,7 @@ export function EventDetailPage({ service = 'identity' }: { service?: WebhookSer
 
   const back = { to: eventsListPath(service), label: t('eventsBackToList') };
   const card =
-    'overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm';
+    'overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-xs';
 
   if (!Number.isFinite(idNum)) {
     return (
@@ -288,7 +288,7 @@ export function EventDetailPage({ service = 'identity' }: { service?: WebhookSer
                       <li key={ev.id}>
                         <Link
                           to={eventDetailPath(service, ev.id)}
-                          className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none"
+                          className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 transition-colors hover:bg-muted/50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none"
                         >
                           <span className="min-w-0 space-y-0.5">
                             <span className="flex flex-wrap items-center gap-2">

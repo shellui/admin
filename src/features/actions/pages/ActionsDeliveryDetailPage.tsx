@@ -183,7 +183,7 @@ export function ActionsDeliveryDetailPage() {
 
       {detail ? (
         <div className="space-y-6">
-          <Card className="rounded-xl shadow-sm">
+          <Card className="rounded-xl shadow-xs">
             <CardHeader className="border-b border-border pb-4">
               <CardTitle className="text-sm font-semibold">
                 {t('actionsDeliverySummaryTitle')}
@@ -229,7 +229,7 @@ export function ActionsDeliveryDetailPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-xl shadow-sm">
+          <Card className="rounded-xl shadow-xs">
             <CardHeader className="border-b border-border pb-4">
               <CardTitle className="text-sm font-semibold">{t('actionsAttemptsTitle')}</CardTitle>
               <CardDescription className="text-xs">
@@ -247,7 +247,7 @@ export function ActionsDeliveryDetailPage() {
                       className="relative space-y-1"
                     >
                       <span
-                        className="absolute -left-[1.6rem] top-1.5 size-2.5 rounded-full border-2 border-background bg-border"
+                        className="absolute left-[-1.6rem] top-1.5 size-2.5 rounded-full border-2 border-background bg-border"
                         aria-hidden
                       />
                       <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -286,7 +286,7 @@ export function ActionsDeliveryDetailPage() {
           </Card>
 
           {detail.payload != null ? (
-            <Card className="rounded-xl shadow-sm">
+            <Card className="rounded-xl shadow-xs">
               <CardHeader className="border-b border-border pb-4">
                 <CardTitle className="text-sm font-semibold">{t('actionsPayloadTitle')}</CardTitle>
               </CardHeader>

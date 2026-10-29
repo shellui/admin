@@ -266,14 +266,14 @@ export function CompanyDesktopSchemesSection({ accessToken, canEdit = true }: Pr
             disabled={devSchemeDisabled}
             onClick={toggleDevScheme}
             className={cn(
-              'inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+              'inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
               allowDev ? 'bg-primary' : 'bg-input',
               devSchemeDisabled && 'cursor-not-allowed opacity-60',
             )}
           >
             <span
               className={cn(
-                'pointer-events-none block size-4 rounded-full bg-background shadow-sm transition-transform',
+                'pointer-events-none block size-4 rounded-full bg-background shadow-xs transition-transform',
                 allowDev ? 'translate-x-4' : 'translate-x-0',
               )}
             />
