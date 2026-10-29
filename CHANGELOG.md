@@ -21,7 +21,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
-## [Unreleased]
+## [0.9.0] - 2026-10-29
+
+Requires hosting-service 0.9.0.
 
 ### ✨ Feature
 
