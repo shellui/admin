@@ -1,6 +1,6 @@
 {
   "name": "shellui-admin",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Shellui admin panel — React app embedded in the main shell",
   "type": "module",
   "scripts": {
