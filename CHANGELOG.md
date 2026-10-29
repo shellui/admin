@@ -21,6 +21,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [Unreleased]
+
+### 🏗 Chore
+
+- **Tests:** Upgrade vitest to 5.0.5 and add @types/node for the Node-based spec files.
+- **Styles:** Migrate to Tailwind CSS 4 (CSS-first config in `src/index.css`, `@tailwindcss/postcss`, utilities renamed by the official upgrade tool).
+
 ## [0.9.1] - 2026-10-29
 
 ### 🔒 Security

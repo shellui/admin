@@ -431,7 +431,7 @@ export function EmailTemplateEditor({
   const actionButton = (
     name: string,
     action: EmailEditorAction,
-    variant?: 'outline-solid',
+    variant?: 'outline',
   ): ReactNode => (
     <div className="space-y-2">
       <Button
@@ -526,7 +526,7 @@ export function EmailTemplateEditor({
         >
           <div className="flex flex-wrap items-start gap-3">
             {primary ? actionButton('primary', primary) : null}
-            {secondary ? actionButton('secondary', secondary, 'outline-solid') : null}
+            {secondary ? actionButton('secondary', secondary, 'outline') : null}
             {sendDraft ? (
               <div className="space-y-2">
                 <EmailSendDraftAction
