@@ -11,6 +11,7 @@ import { ActionsRuleEditorPage } from '@/features/actions/pages/ActionsRuleEdito
 import { ActionsRulesListPage } from '@/features/actions/pages/ActionsRulesListPage';
 import { OAuthSetupPage } from '@/pages/OAuthSetupPage';
 import { ScimSetupPage } from '@/pages/ScimSetupPage';
+import { AgentsPage } from '@/features/agents/pages/AgentsPage';
 import { NotFoundPage, RouteErrorPage } from '@/pages/RouteErrorPage';
 import { AccessTokensPage } from '@/pages/AccessTokensPage';
 import { InviteUserPage } from '@/pages/InviteUserPage';
@@ -146,6 +147,7 @@ export const router = createHashRouter([
           { path: 'groups', element: <GroupsListPage /> },
           { path: 'oauth/*', element: <OAuthSetupPage /> },
           { path: 'scim', element: <ScimSetupPage /> },
+          { path: 'agents', element: <AgentsPage /> },
           ...identityWebhookRoutes,
           ...hostingWebhookRoutes,
           ...storageWebhookRoutes,
