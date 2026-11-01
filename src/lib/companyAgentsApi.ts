@@ -165,6 +165,9 @@ async function tryDevMock<T>(
   res: Response,
   mockFn: () => T | Promise<T>,
 ): Promise<{ mocked: true; value: T } | { mocked: false }> {
+  if (import.meta.env.PROD) {
+    return { mocked: false };
+  }
   if (
     import.meta.env.DEV &&
     import.meta.env.VITE_COMPANY_AGENTS_MOCK === '1' &&
@@ -350,11 +353,25 @@ export function isDestructiveMcpApproval(approval: CompanyMcpApproval): boolean 
   return DESTRUCTIVE_ACTION.test(approval.action);
 }
 
+/** True when identity included redacted tool arguments on the approval row. */
+export function mcpApprovalHasRedactedArguments(approval: CompanyMcpApproval): boolean {
+  return approval.arguments !== undefined;
+}
+
 export function formatApprovalArgumentsForConfirm(approval: CompanyMcpApproval): string {
-  const payload = {
+  const payload: Record<string, unknown> = {
     service: approval.service,
     action: approval.action,
-    arguments: approval.arguments ?? { arguments_hash: approval.arguments_hash },
   };
+  if (mcpApprovalHasRedactedArguments(approval)) {
+    payload.arguments = approval.arguments;
+  } else {
+    payload.arguments_hash = approval.arguments_hash;
+  }
   return JSON.stringify(payload, null, 2);
+}
+
+export function formatCallLogArguments(args: Record<string, unknown>): string {
+  if (!args || Object.keys(args).length === 0) return '';
+  return JSON.stringify(args, null, 2);
 }

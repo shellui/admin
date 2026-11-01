@@ -1,12 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatApprovalArgumentsForConfirm,
+  formatCallLogArguments,
   isDestructiveMcpApproval,
+  mcpApprovalHasRedactedArguments,
   parseMcpAgent,
   parseMcpAgentsResponse,
   parseMcpApproval,
   parseMcpCallLogEntry,
 } from '@/lib/companyAgentsApi';
+import {
+  claudeDesktopMcpConfig,
+  cursorMcpConfig,
+  genericMcpJsonConfig,
+  mcpConnectPrompt,
+} from '@/lib/companyAgentsMcpConfig';
 
 describe('companyAgentsApi parsers', () => {
   it('parses agent rows from identity admin API', () => {
@@ -64,7 +72,7 @@ describe('companyAgentsApi parsers', () => {
   });
 
   it('formats confirm payload with hash when args missing', () => {
-    const json = formatApprovalArgumentsForConfirm({
+    const pending = {
       id: '1',
       agent_id: 'a',
       agent_name: 'A',
@@ -72,8 +80,45 @@ describe('companyAgentsApi parsers', () => {
       action: 'patch_user',
       arguments_hash: 'abc',
       expires_at: '2026-01-01T00:00:00Z',
-    });
-    expect(json).toContain('arguments_hash');
+    };
+    expect(mcpApprovalHasRedactedArguments(pending)).toBe(false);
+    const json = formatApprovalArgumentsForConfirm(pending);
+    expect(json).toContain('"arguments_hash": "abc"');
+    expect(json).not.toContain('"arguments": {');
+  });
+
+  it('formats confirm payload with redacted arguments when present', () => {
+    const row = {
+      id: '1',
+      agent_id: 'a',
+      agent_name: 'A',
+      service: 'identity',
+      action: 'patch_user',
+      arguments_hash: 'abc',
+      arguments: { user_id: 'u1' },
+      expires_at: '2026-01-01T00:00:00Z',
+    };
+    expect(mcpApprovalHasRedactedArguments(row)).toBe(true);
+    const json = formatApprovalArgumentsForConfirm(row);
+    expect(json).toContain('"user_id": "u1"');
+  });
+
+  it('serializes call log arguments as JSON text', () => {
+    expect(formatCallLogArguments({ prefix: 'uploads/' })).toContain('uploads/');
+    expect(formatCallLogArguments({})).toBe('');
+  });
+
+  it('MCP copy helpers never embed bearer tokens', () => {
+    const origin = 'https://auth.example.com';
+    for (const blob of [
+      mcpConnectPrompt(origin),
+      claudeDesktopMcpConfig(origin),
+      cursorMcpConfig(origin),
+      genericMcpJsonConfig(origin),
+    ]) {
+      expect(blob.toLowerCase()).not.toMatch(/bearer|refresh_token|access_token|secret/);
+      expect(blob).toContain(`${origin}/mcp`);
+    }
   });
 
   it('parses call log entry', () => {

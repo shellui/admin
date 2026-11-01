@@ -25,7 +25,7 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ### ✨ Feature
 
-- **Agents:** Company MCP admin aligned with identity `/api/v1/mcp/*` (agents, approvals, call logs, services); production shows an empty state when MCP is missing; dev mock is opt-in via `VITE_COMPANY_AGENTS_MOCK=1`.
+- **Agents:** Company MCP admin aligned with identity `/api/v1/mcp/*` (agents, approvals, call logs, services); production shows an empty state when MCP is missing; dev mock is opt-in via `VITE_COMPANY_AGENTS_MOCK=1`; approve stays disabled until redacted arguments are present on approval rows; full-access agents show an explicit warning.
 
 ### 🏗 Chore
 

@@ -29,9 +29,11 @@ import {
   fetchCompanyMcpCallLogs,
   fetchMcpDiscoveredServices,
   formatApprovalArgumentsForConfirm,
+  formatCallLogArguments,
   identityMcpConnectOrigin,
   isDestructiveMcpApproval,
   isMcpApiUnavailable,
+  mcpApprovalHasRedactedArguments,
   MCP_API_UNAVAILABLE,
   pauseCompanyMcpAgent,
   rejectCompanyMcpApproval,
@@ -190,6 +192,10 @@ export function AgentsPage() {
 
   async function onResolveApproval(approval: CompanyMcpApproval, decision: 'approve' | 'reject') {
     if (!accessToken || companyId == null) return;
+    if (decision === 'approve' && !mcpApprovalHasRedactedArguments(approval)) {
+      shellui.toast({ type: 'error', title: t('agentsApprovalArgsMissing') });
+      return;
+    }
     const ok = await confirmApprovalDecision(approval, decision);
     if (!ok) return;
     setBusyApprovalId(approval.id);
@@ -497,6 +503,22 @@ export function AgentsPage() {
                 )}
               </DataTableCard>
 
+              {selectedAgent?.access_mode === 'full' ? (
+                <Alert
+                  variant="destructive"
+                  className="mt-4"
+                >
+                  <ShieldAlert
+                    className="size-4"
+                    aria-hidden
+                  />
+                  <AlertTitle>{t('agentsFullAccessWarningTitle')}</AlertTitle>
+                  <AlertDescription>
+                    {t('agentsFullAccessWarningDescription', { name: selectedAgent.name })}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+
               {selectedAgent?.allow_destructive_without_asking ? (
                 <Alert
                   variant="destructive"
@@ -536,20 +558,33 @@ export function AgentsPage() {
                           <TableHead>{t('agentsCallColTarget')}</TableHead>
                           <TableHead>{t('agentsCallColStatus')}</TableHead>
                           <TableHead className="text-right">{t('agentsCallColDuration')}</TableHead>
+                          <TableHead>{t('agentsCallColArguments')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredCallLog.map((entry) => (
-                          <TableRow key={entry.id}>
-                            <TableCell>{formatDateTime(entry.created_at, locale)}</TableCell>
-                            <TableCell className="font-mono text-xs">
-                              {entry.tool || `${entry.method} ${entry.path}`.trim()}
-                            </TableCell>
-                            <TableCell>{entry.service}</TableCell>
-                            <TableCell>{entry.status_code || '-'}</TableCell>
-                            <TableCell className="text-right">{entry.duration_ms} ms</TableCell>
-                          </TableRow>
-                        ))}
+                        {filteredCallLog.map((entry) => {
+                          const argsText = formatCallLogArguments(entry.arguments);
+                          return (
+                            <TableRow key={entry.id}>
+                              <TableCell>{formatDateTime(entry.created_at, locale)}</TableCell>
+                              <TableCell className="font-mono text-xs">
+                                {entry.tool || `${entry.method} ${entry.path}`.trim()}
+                              </TableCell>
+                              <TableCell>{entry.service}</TableCell>
+                              <TableCell>{entry.status_code || '-'}</TableCell>
+                              <TableCell className="text-right">{entry.duration_ms} ms</TableCell>
+                              <TableCell className="max-w-[240px] align-top">
+                                {argsText ? (
+                                  <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-[10px] text-muted-foreground">
+                                    {argsText}
+                                  </pre>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   )}
@@ -581,6 +616,7 @@ export function AgentsPage() {
                       const busy = busyApprovalId === approval.id;
                       const destructive = isDestructiveMcpApproval(approval);
                       const argsJson = formatApprovalArgumentsForConfirm(approval);
+                      const hasRedactedArgs = mcpApprovalHasRedactedArguments(approval);
                       return (
                         <li
                           key={approval.id}
@@ -612,12 +648,17 @@ export function AgentsPage() {
                           <pre className="overflow-x-auto rounded-md bg-muted p-3 font-mono text-xs text-foreground">
                             {argsJson}
                           </pre>
+                          {!hasRedactedArgs ? (
+                            <p className="text-sm text-destructive">
+                              {t('agentsApprovalArgsMissing')}
+                            </p>
+                          ) : null}
                           <div className="flex flex-wrap gap-2">
                             <Button
                               type="button"
                               size="sm"
                               variant={destructive ? 'destructive' : 'default'}
-                              disabled={busy}
+                              disabled={busy || !hasRedactedArgs}
                               onClick={() => void onResolveApproval(approval, 'approve')}
                             >
                               {busy ? (

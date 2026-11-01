@@ -1079,6 +1079,9 @@ const resources = {
       agentsDestructiveWarningTitle: 'Destructive actions allowed',
       agentsDestructiveWarningDescription:
         '{{name}} may run destructive tools without an approval prompt.',
+      agentsFullAccessWarningTitle: 'Full access enabled',
+      agentsFullAccessWarningDescription:
+        '{{name}} may run write and destructive tools according to its access rules. Review allowed services and expiry often.',
       agentsCallLogTitle: 'Call log · {{name}}',
       agentsCallLogEmpty: 'No MCP tool calls recorded for this agent yet.',
       agentsCallColTime: 'Time',
@@ -1086,6 +1089,7 @@ const resources = {
       agentsCallColTarget: 'Target',
       agentsCallColStatus: 'Status',
       agentsCallColDuration: 'Duration',
+      agentsCallColArguments: 'Arguments (redacted)',
       agentsApprovalsTitle: 'Pending approvals',
       agentsApprovalsEmpty: 'No actions waiting for approval.',
       agentsApprovalMeta: '{{agent}} · {{target}}',
@@ -1094,6 +1098,8 @@ const resources = {
       agentsApprovalConfirmRejectTitle: 'Reject {{action}}?',
       agentsApprovalConfirmDescription:
         'Review the exact payload before you decide:\n\n{{arguments}}',
+      agentsApprovalArgsMissing:
+        'Redacted arguments are missing for this request. Your identity-service deployment must include arguments_redacted on MCP approval rows before you can approve.',
       agentsDestructiveApprovalWarning: 'This action is destructive.',
       agentsApprove: 'Approve',
       agentsReject: 'Reject',
@@ -3099,6 +3105,9 @@ const resources = {
       agentsDestructiveWarningTitle: 'Actions destructives autorisées',
       agentsDestructiveWarningDescription:
         '{{name}} peut exécuter des outils destructifs sans invite d’approbation.',
+      agentsFullAccessWarningTitle: 'Accès complet activé',
+      agentsFullAccessWarningDescription:
+        '{{name}} peut exécuter des outils d’écriture et destructifs selon ses règles d’accès. Vérifiez souvent les services autorisés et l’expiration.',
       agentsCallLogTitle: 'Journal d’appels · {{name}}',
       agentsCallLogEmpty: 'Aucun appel d’outil MCP enregistré pour cet agent.',
       agentsCallColTime: 'Heure',
@@ -3106,6 +3115,7 @@ const resources = {
       agentsCallColTarget: 'Cible',
       agentsCallColStatus: 'Statut',
       agentsCallColDuration: 'Durée',
+      agentsCallColArguments: 'Arguments (masqués)',
       agentsApprovalsTitle: 'Approbations en attente',
       agentsApprovalsEmpty: 'Aucune action en attente d’approbation.',
       agentsApprovalMeta: '{{agent}} · {{target}}',
@@ -3114,6 +3124,8 @@ const resources = {
       agentsApprovalConfirmRejectTitle: 'Refuser {{action}} ?',
       agentsApprovalConfirmDescription:
         'Vérifiez la charge utile exacte avant de décider :\n\n{{arguments}}',
+      agentsApprovalArgsMissing:
+        'Les arguments masqués manquent pour cette demande. Votre déploiement identity-service doit inclure arguments_redacted sur les lignes d’approbation MCP avant que vous puissiez approuver.',
       agentsDestructiveApprovalWarning: 'Cette action est destructive.',
       agentsApprove: 'Approuver',
       agentsReject: 'Refuser',
