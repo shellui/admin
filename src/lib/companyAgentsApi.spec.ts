@@ -56,19 +56,36 @@ describe('companyAgentsApi parsers', () => {
     expect(agent?.read_level).toBe('sensitive');
   });
 
-  it('parses approval with redacted arguments alias', () => {
+  it('parses approval rows like identity admin API', () => {
     const row = parseMcpApproval({
       id: 'p1',
       agent_id: 'a1',
       agent_name: 'Agent',
       service: 'storage',
       action: 'delete_object',
+      target: 'POST /api/v1/objects/delete',
       arguments_hash: 'hash',
       arguments_redacted: { key: 'x' },
       expires_at: '2026-01-01T00:10:00Z',
     });
-    expect(row?.arguments).toEqual({ key: 'x' });
+    expect(row?.target).toBe('POST /api/v1/objects/delete');
+    expect(row?.arguments_redacted).toEqual({ key: 'x' });
     expect(isDestructiveMcpApproval(row!)).toBe(true);
+  });
+
+  it('treats empty arguments_redacted as present', () => {
+    const row = parseMcpApproval({
+      id: 'p2',
+      agent_id: 'a1',
+      agent_name: 'Agent',
+      service: 'identity',
+      action: 'noop',
+      target: 'GET /api/v1/health',
+      arguments_hash: 'hash',
+      arguments_redacted: {},
+      expires_at: '2026-01-01T00:10:00Z',
+    });
+    expect(mcpApprovalHasRedactedArguments(row!)).toBe(true);
   });
 
   it('formats confirm payload with hash when args missing', () => {
@@ -78,6 +95,7 @@ describe('companyAgentsApi parsers', () => {
       agent_name: 'A',
       service: 'identity',
       action: 'patch_user',
+      target: '',
       arguments_hash: 'abc',
       expires_at: '2026-01-01T00:00:00Z',
     };
@@ -94,13 +112,15 @@ describe('companyAgentsApi parsers', () => {
       agent_name: 'A',
       service: 'identity',
       action: 'patch_user',
+      target: 'PATCH /api/v1/users/u1',
       arguments_hash: 'abc',
-      arguments: { user_id: 'u1' },
+      arguments_redacted: { user_id: 'u1' },
       expires_at: '2026-01-01T00:00:00Z',
     };
     expect(mcpApprovalHasRedactedArguments(row)).toBe(true);
     const json = formatApprovalArgumentsForConfirm(row);
     expect(json).toContain('"user_id": "u1"');
+    expect(json).toContain('"target": "PATCH /api/v1/users/u1"');
   });
 
   it('serializes call log arguments as JSON text', () => {

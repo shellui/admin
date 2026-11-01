@@ -25,9 +25,11 @@ export type CompanyMcpApproval = {
   agent_name: string;
   service: string;
   action: string;
+  /** HTTP method and path or other target label from identity. */
+  target: string;
   arguments_hash: string;
-  /** Present when identity includes redacted args on the list endpoint. */
-  arguments?: Record<string, unknown>;
+  /** Set only when identity included `arguments_redacted` on the approval row. */
+  arguments_redacted?: Record<string, unknown>;
   expires_at: string;
 };
 

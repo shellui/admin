@@ -80,14 +80,12 @@ export function parseMcpApproval(row: unknown): CompanyMcpApproval | null {
     agent_name: typeof o.agent_name === 'string' ? o.agent_name : '-',
     service: typeof o.service === 'string' ? o.service : '-',
     action: o.action,
+    target: typeof o.target === 'string' ? o.target : '',
     arguments_hash: typeof o.arguments_hash === 'string' ? o.arguments_hash : '',
     expires_at: typeof o.expires_at === 'string' ? o.expires_at : new Date().toISOString(),
   };
-  if (o.arguments !== undefined) {
-    approval.arguments = parseArguments(o.arguments);
-  }
-  if (o.arguments_redacted !== undefined) {
-    approval.arguments = parseArguments(o.arguments_redacted);
+  if (Object.prototype.hasOwnProperty.call(o, 'arguments_redacted')) {
+    approval.arguments_redacted = parseArguments(o.arguments_redacted);
   }
   return approval;
 }
@@ -353,18 +351,19 @@ export function isDestructiveMcpApproval(approval: CompanyMcpApproval): boolean 
   return DESTRUCTIVE_ACTION.test(approval.action);
 }
 
-/** True when identity included redacted tool arguments on the approval row. */
+/** True when identity included `arguments_redacted` on the approval row (may be empty). */
 export function mcpApprovalHasRedactedArguments(approval: CompanyMcpApproval): boolean {
-  return approval.arguments !== undefined;
+  return approval.arguments_redacted !== undefined;
 }
 
 export function formatApprovalArgumentsForConfirm(approval: CompanyMcpApproval): string {
   const payload: Record<string, unknown> = {
     service: approval.service,
     action: approval.action,
+    target: approval.target,
   };
   if (mcpApprovalHasRedactedArguments(approval)) {
-    payload.arguments = approval.arguments;
+    payload.arguments_redacted = approval.arguments_redacted;
   } else {
     payload.arguments_hash = approval.arguments_hash;
   }

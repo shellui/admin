@@ -630,7 +630,7 @@ export function AgentsPage() {
                               <p className="text-sm text-muted-foreground">
                                 {t('agentsApprovalMeta', {
                                   agent: approval.agent_name,
-                                  target: approval.service,
+                                  target: approval.target || approval.service,
                                 })}
                               </p>
                               {destructive ? (

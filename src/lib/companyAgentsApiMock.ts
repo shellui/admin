@@ -49,8 +49,9 @@ function seedStore(companyId: number): CompanyStore {
     agent_name: agentA.name,
     service: 'storage',
     action: 'delete_object',
+    target: 'POST /api/v1/objects/delete',
     arguments_hash: 'abc123',
-    arguments: { bucket: 'uploads', key: 'drafts/report-q4.pdf' },
+    arguments_redacted: { bucket: 'uploads', key: 'drafts/report-q4.pdf' },
     expires_at: new Date(now + 1000 * 60 * 8).toISOString(),
   };
   const calls: CompanyMcpCallLogEntry[] = [
