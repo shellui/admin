@@ -23,6 +23,10 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ## [Unreleased]
 
+### ✨ Feature
+
+- **Agents:** Company MCP admin (settings, connected agents, pending approvals, call log) with a typed identity API client and mock fallback until identity-service ships.
+
 ### 🏗 Chore
 
 - **Tests:** Upgrade vitest to 5.0.5 and add @types/node for the Node-based spec files.

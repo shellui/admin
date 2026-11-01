@@ -20,6 +20,7 @@ import {
   AppWindow,
   ArrowUpRight,
   BarChart3,
+  Bot,
   BookOpen,
   Building2,
   ChevronDown,
@@ -124,6 +125,7 @@ const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
   'identity/statistics': BarChart3,
   oauth: KeyRound,
   scim: Network,
+  agents: Bot,
   webhooks: SendHorizonal,
   'identity/webhooks': SendHorizonal,
   'hosting/webhooks': SendHorizonal,
@@ -165,6 +167,7 @@ const mapLabelToTranslationKey = (label: string, path = ''): string => {
   if (normalized === 'log events' || normalized === 'journal des événements') return 'navEvents';
   if (normalized === 'oauth apps' || normalized === 'apps oauth') return 'navOAuth';
   if (normalized === 'scim') return 'navScim';
+  if (normalized === 'agents') return 'navAgents';
   if (normalized === 'webhooks') return 'navEmailAndWebhooks';
   if (normalized === 'actions') return 'navEmailAndWebhooks';
   if (normalized === 'email and webhooks' || normalized === 'e-mail et webhooks') {
