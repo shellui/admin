@@ -1,28 +1,21 @@
-/** MCP services exposed to agents for a company. Align with identity-service when the backend lands. */
-export const MCP_SERVICE_IDS = ['identity', 'storage', 'hosting', 'email'] as const;
-export type McpServiceId = (typeof MCP_SERVICE_IDS)[number];
+/** Matches identity-service Agent.access_mode values. */
+export type McpAccessMode = 'read_only' | 'ask' | 'full';
 
-export type McpAccessMode = 'read_only' | 'ask_before_changes' | 'full_access';
-export type McpReadLevel = 'safe' | 'sensitive_data';
-export type McpAgentStatus = 'active' | 'paused' | 'revoked';
-
-export type CompanyMcpSettings = {
-  enabled: boolean;
-  services: Record<McpServiceId, boolean>;
-  mcp_url: string;
-};
+/** Matches identity-service Agent.read_level values. */
+export type McpReadLevel = 'safe' | 'sensitive';
 
 export type CompanyMcpAgent = {
   id: string;
   name: string;
-  client: string;
   access_mode: McpAccessMode;
   read_level: McpReadLevel;
-  allowed_services: McpServiceId[];
-  allow_destructive_without_ask: boolean;
+  allow_destructive_without_asking: boolean;
+  services_allowed: string[];
+  project_scope: string;
   expires_at: string | null;
-  last_call_at: string | null;
-  status: McpAgentStatus;
+  paused_at: string | null;
+  revoked_at: string | null;
+  is_active: boolean;
   created_at: string;
 };
 
@@ -30,23 +23,35 @@ export type CompanyMcpApproval = {
   id: string;
   agent_id: string;
   agent_name: string;
-  tool: string;
-  target: string;
-  arguments: Record<string, unknown>;
+  service: string;
+  action: string;
+  arguments_hash: string;
+  /** Present when identity includes redacted args on the list endpoint. */
+  arguments?: Record<string, unknown>;
   expires_at: string;
-  created_at: string;
 };
 
 export type CompanyMcpCallLogEntry = {
-  id: string;
+  id: number;
   agent_id: string;
-  at: string;
+  agent_name: string;
+  service: string;
   tool: string;
-  target: string;
-  status: 'ok' | 'error' | 'denied' | 'pending';
+  method: string;
+  path: string;
+  status_code: number;
   duration_ms: number;
+  arguments: Record<string, unknown>;
+  created_at: string;
 };
 
-export type CompanyMcpAgentsListResponse = { results: CompanyMcpAgent[] };
-export type CompanyMcpApprovalsListResponse = { results: CompanyMcpApproval[] };
-export type CompanyMcpCallLogListResponse = { results: CompanyMcpCallLogEntry[] };
+export type McpDiscoveredService = {
+  id: string;
+  name: string;
+  mcp_url: string;
+};
+
+export type CompanyMcpAgentsResponse = { agents: CompanyMcpAgent[] };
+export type CompanyMcpApprovalsResponse = { approvals: CompanyMcpApproval[] };
+export type CompanyMcpCallLogsResponse = { call_logs: CompanyMcpCallLogEntry[] };
+export type McpServicesResponse = { services: McpDiscoveredService[] };

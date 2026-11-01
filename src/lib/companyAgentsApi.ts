@@ -1,243 +1,196 @@
 import { requireAuthBackendBaseUrl } from '@/lib/backendUrl';
 import { identityAuthFetch, readJsonOrThrow } from '@/lib/adminIdentityFetch';
-import {
-  mockFetchAgents,
-  mockFetchApprovals,
-  mockFetchCallLog,
-  mockFetchMcpSettings,
-  mockPatchAgent,
-  mockPatchMcpSettings,
-  mockPauseAgent,
-  mockResolveApproval,
-  mockRevokeAgent,
-} from '@/lib/companyAgentsApiMock';
+import { ApiUnavailableError } from '@/lib/serviceAuthFetch';
 import type {
   CompanyMcpAgent,
   CompanyMcpApproval,
   CompanyMcpCallLogEntry,
-  CompanyMcpSettings,
-  McpServiceId,
+  McpAccessMode,
+  McpDiscoveredService,
+  McpReadLevel,
 } from '@/lib/companyAgentsTypes';
 
 export type {
   CompanyMcpAgent,
   CompanyMcpApproval,
   CompanyMcpCallLogEntry,
-  CompanyMcpSettings,
   McpAccessMode,
+  McpDiscoveredService,
   McpReadLevel,
-  McpServiceId,
 } from '@/lib/companyAgentsTypes';
-export { MCP_SERVICE_IDS } from '@/lib/companyAgentsTypes';
 
-const UNAVAILABLE = 'Company agents API is not available on this identity version.';
+export const MCP_API_UNAVAILABLE =
+  'Requires identity-service with MCP (identity-service PR #110 or newer).';
 
-/** When true, identity MCP routes are wired; until then, 404 responses use the in-memory mock. */
-let useMockUntilBackend = true;
+const MCP_PREFIX = '/api/v1/mcp';
 
-function identityBase(): string {
-  return requireAuthBackendBaseUrl();
+function parseAccessMode(raw: unknown): McpAccessMode {
+  if (raw === 'read_only' || raw === 'ask' || raw === 'full') return raw;
+  return 'ask';
 }
 
-function shouldUseMock(res: Response): boolean {
-  if (res.status === 404 || res.status === 501) {
-    useMockUntilBackend = true;
-    return true;
-  }
-  if (res.ok) {
-    useMockUntilBackend = false;
-  }
-  return false;
+function parseReadLevel(raw: unknown): McpReadLevel {
+  return raw === 'sensitive' ? 'sensitive' : 'safe';
 }
 
-function parseSettings(body: unknown, fallbackUrl: string): CompanyMcpSettings {
-  if (!body || typeof body !== 'object') {
-    throw new Error('Unexpected MCP settings response.');
-  }
-  const o = body as Record<string, unknown>;
-  const servicesRaw = o.services;
-  const services =
-    servicesRaw && typeof servicesRaw === 'object' ? (servicesRaw as Record<string, boolean>) : {};
-  return {
-    enabled: o.enabled === true,
-    services: {
-      identity: services.identity === true,
-      storage: services.storage === true,
-      hosting: services.hosting === true,
-      email: services.email === true,
-    },
-    mcp_url: typeof o.mcp_url === 'string' ? o.mcp_url : fallbackUrl,
-  };
+function parseStringList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((v): v is string => typeof v === 'string');
 }
 
-function parseAgent(row: unknown): CompanyMcpAgent | null {
+function parseArguments(raw: unknown): Record<string, unknown> {
+  return raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+}
+
+export function parseMcpAgent(row: unknown): CompanyMcpAgent | null {
   if (!row || typeof row !== 'object') return null;
   const o = row as Record<string, unknown>;
   if (typeof o.id !== 'string' || typeof o.name !== 'string') return null;
   return {
     id: o.id,
     name: o.name,
-    client: typeof o.client === 'string' ? o.client : '-',
-    access_mode:
-      o.access_mode === 'read_only' ||
-      o.access_mode === 'ask_before_changes' ||
-      o.access_mode === 'full_access'
-        ? o.access_mode
-        : 'ask_before_changes',
-    read_level: o.read_level === 'sensitive_data' ? 'sensitive_data' : 'safe',
-    allowed_services: Array.isArray(o.allowed_services)
-      ? (o.allowed_services.filter((s) => typeof s === 'string') as McpServiceId[])
-      : [],
-    allow_destructive_without_ask: o.allow_destructive_without_ask === true,
+    access_mode: parseAccessMode(o.access_mode),
+    read_level: parseReadLevel(o.read_level),
+    allow_destructive_without_asking: o.allow_destructive_without_asking === true,
+    services_allowed: parseStringList(o.services_allowed),
+    project_scope: typeof o.project_scope === 'string' ? o.project_scope : '',
     expires_at: typeof o.expires_at === 'string' ? o.expires_at : null,
-    last_call_at: typeof o.last_call_at === 'string' ? o.last_call_at : null,
-    status:
-      o.status === 'paused' || o.status === 'revoked' || o.status === 'active'
-        ? o.status
-        : 'active',
+    paused_at: typeof o.paused_at === 'string' ? o.paused_at : null,
+    revoked_at: typeof o.revoked_at === 'string' ? o.revoked_at : null,
+    is_active: o.is_active === true,
     created_at: typeof o.created_at === 'string' ? o.created_at : new Date().toISOString(),
   };
 }
 
-function parseAgentsList(body: unknown): CompanyMcpAgent[] {
-  const rows = Array.isArray(body)
-    ? body
-    : body && typeof body === 'object' && Array.isArray((body as { results?: unknown }).results)
-      ? (body as { results: unknown[] }).results
+export function parseMcpAgentsResponse(body: unknown): CompanyMcpAgent[] {
+  const rows =
+    body && typeof body === 'object' && Array.isArray((body as { agents?: unknown }).agents)
+      ? (body as { agents: unknown[] }).agents
       : [];
-  return rows.map(parseAgent).filter((a): a is CompanyMcpAgent => a != null);
+  return rows.map(parseMcpAgent).filter((a): a is CompanyMcpAgent => a != null);
 }
 
-function parseApproval(row: unknown): CompanyMcpApproval | null {
+export function parseMcpApproval(row: unknown): CompanyMcpApproval | null {
   if (!row || typeof row !== 'object') return null;
   const o = row as Record<string, unknown>;
-  if (typeof o.id !== 'string' || typeof o.tool !== 'string') return null;
-  return {
+  if (typeof o.id !== 'string' || typeof o.action !== 'string') return null;
+  const approval: CompanyMcpApproval = {
     id: o.id,
     agent_id: typeof o.agent_id === 'string' ? o.agent_id : '',
     agent_name: typeof o.agent_name === 'string' ? o.agent_name : '-',
-    tool: o.tool,
-    target: typeof o.target === 'string' ? o.target : '-',
-    arguments:
-      o.arguments && typeof o.arguments === 'object'
-        ? (o.arguments as Record<string, unknown>)
-        : {},
+    service: typeof o.service === 'string' ? o.service : '-',
+    action: o.action,
+    arguments_hash: typeof o.arguments_hash === 'string' ? o.arguments_hash : '',
     expires_at: typeof o.expires_at === 'string' ? o.expires_at : new Date().toISOString(),
+  };
+  if (o.arguments !== undefined) {
+    approval.arguments = parseArguments(o.arguments);
+  }
+  if (o.arguments_redacted !== undefined) {
+    approval.arguments = parseArguments(o.arguments_redacted);
+  }
+  return approval;
+}
+
+export function parseMcpApprovalsResponse(body: unknown): CompanyMcpApproval[] {
+  const rows =
+    body && typeof body === 'object' && Array.isArray((body as { approvals?: unknown }).approvals)
+      ? (body as { approvals: unknown[] }).approvals
+      : [];
+  return rows.map(parseMcpApproval).filter((a): a is CompanyMcpApproval => a != null);
+}
+
+export function parseMcpCallLogEntry(row: unknown): CompanyMcpCallLogEntry | null {
+  if (!row || typeof row !== 'object') return null;
+  const o = row as Record<string, unknown>;
+  const id = typeof o.id === 'number' ? o.id : typeof o.id === 'string' ? Number(o.id) : NaN;
+  if (!Number.isFinite(id)) return null;
+  return {
+    id,
+    agent_id: typeof o.agent_id === 'string' ? o.agent_id : '',
+    agent_name: typeof o.agent_name === 'string' ? o.agent_name : '-',
+    service: typeof o.service === 'string' ? o.service : '-',
+    tool: typeof o.tool === 'string' ? o.tool : '',
+    method:
+      typeof o.http_method === 'string'
+        ? o.http_method
+        : typeof o.method === 'string'
+          ? o.method
+          : '',
+    path: typeof o.path === 'string' ? o.path : '',
+    status_code: typeof o.status_code === 'number' ? o.status_code : 0,
+    duration_ms: typeof o.duration_ms === 'number' ? o.duration_ms : 0,
+    arguments: parseArguments(o.arguments),
     created_at: typeof o.created_at === 'string' ? o.created_at : new Date().toISOString(),
   };
 }
 
-function parseApprovalsList(body: unknown): CompanyMcpApproval[] {
-  const rows = Array.isArray(body)
-    ? body
-    : body && typeof body === 'object' && Array.isArray((body as { results?: unknown }).results)
-      ? (body as { results: unknown[] }).results
+export function parseMcpCallLogsResponse(body: unknown): CompanyMcpCallLogEntry[] {
+  const rows =
+    body && typeof body === 'object' && Array.isArray((body as { call_logs?: unknown }).call_logs)
+      ? (body as { call_logs: unknown[] }).call_logs
       : [];
-  return rows.map(parseApproval).filter((a): a is CompanyMcpApproval => a != null);
+  return rows.map(parseMcpCallLogEntry).filter((c): c is CompanyMcpCallLogEntry => c != null);
 }
 
-function parseCallLogEntry(row: unknown): CompanyMcpCallLogEntry | null {
-  if (!row || typeof row !== 'object') return null;
-  const o = row as Record<string, unknown>;
-  if (typeof o.id !== 'string' || typeof o.tool !== 'string') return null;
-  const status = o.status;
-  return {
-    id: o.id,
-    agent_id: typeof o.agent_id === 'string' ? o.agent_id : '',
-    at: typeof o.at === 'string' ? o.at : new Date().toISOString(),
-    tool: o.tool,
-    target: typeof o.target === 'string' ? o.target : '-',
-    status:
-      status === 'ok' || status === 'error' || status === 'denied' || status === 'pending'
-        ? status
-        : 'ok',
-    duration_ms: typeof o.duration_ms === 'number' ? o.duration_ms : 0,
-  };
-}
-
-function parseCallLogList(body: unknown): CompanyMcpCallLogEntry[] {
-  const rows = Array.isArray(body)
-    ? body
-    : body && typeof body === 'object' && Array.isArray((body as { results?: unknown }).results)
-      ? (body as { results: unknown[] }).results
+export function parseMcpServicesResponse(body: unknown): McpDiscoveredService[] {
+  const rows =
+    body && typeof body === 'object' && Array.isArray((body as { services?: unknown }).services)
+      ? (body as { services: unknown[] }).services
       : [];
-  return rows.map(parseCallLogEntry).filter((c): c is CompanyMcpCallLogEntry => c != null);
+  return rows
+    .map((row) => {
+      if (!row || typeof row !== 'object') return null;
+      const o = row as Record<string, unknown>;
+      if (typeof o.id !== 'string' || typeof o.mcp_url !== 'string') return null;
+      return {
+        id: o.id,
+        name: typeof o.name === 'string' ? o.name : o.id,
+        mcp_url: o.mcp_url,
+      };
+    })
+    .filter((s): s is McpDiscoveredService => s != null);
 }
 
-export function companyAgentsUsingMock(): boolean {
-  return useMockUntilBackend;
-}
-
-export async function fetchCompanyMcpSettings(
+async function mcpFetch(
   accessToken: string,
   companyId: number,
-): Promise<CompanyMcpSettings> {
-  const base = identityBase();
-  const res = await identityAuthFetch('/api/v1/mcp/settings', accessToken, {}, { companyId });
-  if (shouldUseMock(res)) {
-    return mockFetchMcpSettings(companyId, base);
-  }
-  const body = await readJsonOrThrow(res, UNAVAILABLE);
-  return parseSettings(body, base);
+  path: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  return identityAuthFetch(`${MCP_PREFIX}${path}`, accessToken, init, { companyId });
 }
 
-export async function patchCompanyMcpSettings(
-  accessToken: string,
-  companyId: number,
-  payload: Partial<Pick<CompanyMcpSettings, 'enabled' | 'services'>>,
-): Promise<CompanyMcpSettings> {
-  const base = identityBase();
-  const res = await identityAuthFetch(
-    '/api/v1/mcp/settings',
-    accessToken,
-    { method: 'PATCH', body: JSON.stringify(payload) },
-    { companyId },
-  );
-  if (shouldUseMock(res)) {
-    return mockPatchMcpSettings(companyId, base, payload);
+async function tryDevMock<T>(
+  res: Response,
+  mockFn: () => T | Promise<T>,
+): Promise<{ mocked: true; value: T } | { mocked: false }> {
+  if (
+    import.meta.env.DEV &&
+    import.meta.env.VITE_COMPANY_AGENTS_MOCK === '1' &&
+    (res.status === 404 || res.status === 501)
+  ) {
+    return { mocked: true, value: await mockFn() };
   }
-  const body = await readJsonOrThrow(res, UNAVAILABLE);
-  return parseSettings(body, base);
+  return { mocked: false };
+}
+
+export function identityMcpConnectOrigin(): string {
+  return requireAuthBackendBaseUrl().replace(/\/+$/, '');
 }
 
 export async function fetchCompanyMcpAgents(
   accessToken: string,
   companyId: number,
 ): Promise<CompanyMcpAgent[]> {
-  const base = identityBase();
-  const res = await identityAuthFetch('/api/v1/mcp/agents', accessToken, {}, { companyId });
-  if (shouldUseMock(res)) {
-    return mockFetchAgents(companyId, base);
-  }
-  const body = await readJsonOrThrow(res, UNAVAILABLE);
-  return parseAgentsList(body);
-}
-
-export async function patchCompanyMcpAgent(
-  accessToken: string,
-  companyId: number,
-  agentId: string,
-  payload: Partial<
-    Pick<
-      CompanyMcpAgent,
-      'access_mode' | 'read_level' | 'allowed_services' | 'allow_destructive_without_ask'
-    >
-  >,
-): Promise<CompanyMcpAgent> {
-  const base = identityBase();
-  const res = await identityAuthFetch(
-    `/api/v1/mcp/agents/${encodeURIComponent(agentId)}`,
-    accessToken,
-    { method: 'PATCH', body: JSON.stringify(payload) },
-    { companyId },
-  );
-  if (shouldUseMock(res)) {
-    return mockPatchAgent(companyId, base, agentId, payload);
-  }
-  const body = await readJsonOrThrow(res, UNAVAILABLE);
-  const agent = parseAgent(body);
-  if (!agent) throw new Error('Unexpected agent response.');
-  return agent;
+  const res = await mcpFetch(accessToken, companyId, '/agents');
+  const devMock = await tryDevMock(res, async () => {
+    const { mockFetchAgents } = await import('@/lib/companyAgentsApiMock');
+    return mockFetchAgents(companyId, identityMcpConnectOrigin());
+  });
+  if (devMock.mocked) return devMock.value;
+  const body = await readJsonOrThrow(res, MCP_API_UNAVAILABLE);
+  return parseMcpAgentsResponse(body);
 }
 
 export async function pauseCompanyMcpAgent(
@@ -245,18 +198,22 @@ export async function pauseCompanyMcpAgent(
   companyId: number,
   agentId: string,
 ): Promise<CompanyMcpAgent> {
-  const base = identityBase();
-  const res = await identityAuthFetch(
-    `/api/v1/mcp/agents/${encodeURIComponent(agentId)}/pause`,
+  const res = await mcpFetch(
     accessToken,
-    { method: 'POST' },
-    { companyId },
+    companyId,
+    `/agents/${encodeURIComponent(agentId)}/pause`,
+    {
+      method: 'POST',
+    },
   );
-  if (shouldUseMock(res)) {
-    return mockPauseAgent(companyId, base, agentId);
-  }
-  const body = await readJsonOrThrow(res, UNAVAILABLE);
-  const agent = parseAgent(body);
+  const devMock = await tryDevMock(res, async () => {
+    const { mockPauseAgent } = await import('@/lib/companyAgentsApiMock');
+    return mockPauseAgent(companyId, identityMcpConnectOrigin(), agentId);
+  });
+  if (devMock.mocked) return devMock.value;
+  const body = await readJsonOrThrow(res, MCP_API_UNAVAILABLE);
+  const agent =
+    body && typeof body === 'object' ? parseMcpAgent((body as { agent?: unknown }).agent) : null;
   if (!agent) throw new Error('Unexpected agent response.');
   return agent;
 }
@@ -266,18 +223,22 @@ export async function revokeCompanyMcpAgent(
   companyId: number,
   agentId: string,
 ): Promise<CompanyMcpAgent> {
-  const base = identityBase();
-  const res = await identityAuthFetch(
-    `/api/v1/mcp/agents/${encodeURIComponent(agentId)}/revoke`,
+  const res = await mcpFetch(
     accessToken,
-    { method: 'POST' },
-    { companyId },
+    companyId,
+    `/agents/${encodeURIComponent(agentId)}/revoke`,
+    {
+      method: 'POST',
+    },
   );
-  if (shouldUseMock(res)) {
-    return mockRevokeAgent(companyId, base, agentId);
-  }
-  const body = await readJsonOrThrow(res, UNAVAILABLE);
-  const agent = parseAgent(body);
+  const devMock = await tryDevMock(res, async () => {
+    const { mockRevokeAgent } = await import('@/lib/companyAgentsApiMock');
+    return mockRevokeAgent(companyId, identityMcpConnectOrigin(), agentId);
+  });
+  if (devMock.mocked) return devMock.value;
+  const body = await readJsonOrThrow(res, MCP_API_UNAVAILABLE);
+  const agent =
+    body && typeof body === 'object' ? parseMcpAgent((body as { agent?: unknown }).agent) : null;
   if (!agent) throw new Error('Unexpected agent response.');
   return agent;
 }
@@ -286,52 +247,114 @@ export async function fetchCompanyMcpApprovals(
   accessToken: string,
   companyId: number,
 ): Promise<CompanyMcpApproval[]> {
-  const base = identityBase();
-  const res = await identityAuthFetch('/api/v1/mcp/approvals', accessToken, {}, { companyId });
-  if (shouldUseMock(res)) {
-    return mockFetchApprovals(companyId, base);
-  }
-  const body = await readJsonOrThrow(res, UNAVAILABLE);
-  return parseApprovalsList(body);
+  const res = await mcpFetch(accessToken, companyId, '/approvals');
+  const devMock = await tryDevMock(res, async () => {
+    const { mockFetchApprovals } = await import('@/lib/companyAgentsApiMock');
+    return mockFetchApprovals(companyId, identityMcpConnectOrigin());
+  });
+  if (devMock.mocked) return devMock.value;
+  const body = await readJsonOrThrow(res, MCP_API_UNAVAILABLE);
+  return parseMcpApprovalsResponse(body);
 }
 
-export async function resolveCompanyMcpApproval(
+export async function approveCompanyMcpApproval(
   accessToken: string,
   companyId: number,
   approvalId: string,
-  decision: 'approve' | 'reject',
 ): Promise<void> {
-  const base = identityBase();
-  const res = await identityAuthFetch(
-    `/api/v1/mcp/approvals/${encodeURIComponent(approvalId)}/${decision}`,
+  const res = await mcpFetch(
     accessToken,
+    companyId,
+    `/approvals/${encodeURIComponent(approvalId)}/approve`,
     { method: 'POST' },
-    { companyId },
   );
-  if (shouldUseMock(res)) {
-    mockResolveApproval(companyId, base, approvalId, decision);
-    return;
-  }
+  const devMock = await tryDevMock(res, async () => {
+    const { mockResolveApproval } = await import('@/lib/companyAgentsApiMock');
+    mockResolveApproval(companyId, identityMcpConnectOrigin(), approvalId, 'approve');
+  });
+  if (devMock.mocked) return;
   if (!res.ok) {
-    await readJsonOrThrow(res, UNAVAILABLE);
+    await readJsonOrThrow(res, MCP_API_UNAVAILABLE);
   }
 }
 
-export async function fetchCompanyMcpCallLog(
+export async function rejectCompanyMcpApproval(
   accessToken: string,
   companyId: number,
-  agentId: string,
-): Promise<CompanyMcpCallLogEntry[]> {
-  const base = identityBase();
-  const res = await identityAuthFetch(
-    `/api/v1/mcp/agents/${encodeURIComponent(agentId)}/calls`,
+  approvalId: string,
+): Promise<void> {
+  const res = await mcpFetch(
     accessToken,
-    {},
-    { companyId },
+    companyId,
+    `/approvals/${encodeURIComponent(approvalId)}/reject`,
+    { method: 'POST' },
   );
-  if (shouldUseMock(res)) {
-    return mockFetchCallLog(companyId, base, agentId);
+  const devMock = await tryDevMock(res, async () => {
+    const { mockResolveApproval } = await import('@/lib/companyAgentsApiMock');
+    mockResolveApproval(companyId, identityMcpConnectOrigin(), approvalId, 'reject');
+  });
+  if (devMock.mocked) return;
+  if (!res.ok) {
+    await readJsonOrThrow(res, MCP_API_UNAVAILABLE);
   }
-  const body = await readJsonOrThrow(res, UNAVAILABLE);
-  return parseCallLogList(body);
+}
+
+export async function fetchCompanyMcpCallLogs(
+  accessToken: string,
+  companyId: number,
+): Promise<CompanyMcpCallLogEntry[]> {
+  const res = await mcpFetch(accessToken, companyId, '/call-logs');
+  const devMock = await tryDevMock(res, async () => {
+    const { mockFetchAllCallLogs } = await import('@/lib/companyAgentsApiMock');
+    return mockFetchAllCallLogs(companyId, identityMcpConnectOrigin());
+  });
+  if (devMock.mocked) return devMock.value;
+  const body = await readJsonOrThrow(res, MCP_API_UNAVAILABLE);
+  return parseMcpCallLogsResponse(body);
+}
+
+export async function fetchMcpDiscoveredServices(
+  accessToken: string,
+  companyId: number,
+): Promise<McpDiscoveredService[]> {
+  const res = await mcpFetch(accessToken, companyId, '/services');
+  const devMock = await tryDevMock(res, async () => {
+    const { mockFetchDiscoveredServices } = await import('@/lib/companyAgentsApiMock');
+    return mockFetchDiscoveredServices(identityMcpConnectOrigin());
+  });
+  if (devMock.mocked) return devMock.value;
+  const body = await readJsonOrThrow(res, MCP_API_UNAVAILABLE);
+  return parseMcpServicesResponse(body);
+}
+
+export function isMcpApiUnavailable(error: unknown): boolean {
+  return (
+    error instanceof ApiUnavailableError ||
+    (error instanceof Error && error.message === MCP_API_UNAVAILABLE)
+  );
+}
+
+export function agentDisplayStatus(
+  agent: CompanyMcpAgent,
+): 'active' | 'paused' | 'revoked' | 'expired' {
+  if (agent.revoked_at) return 'revoked';
+  if (agent.paused_at) return 'paused';
+  if (!agent.is_active) return 'expired';
+  return 'active';
+}
+
+const DESTRUCTIVE_ACTION =
+  /(?:^|[._-])(delete|destroy|purge|remove|revoke|drop|truncate)(?:$|[._-])/i;
+
+export function isDestructiveMcpApproval(approval: CompanyMcpApproval): boolean {
+  return DESTRUCTIVE_ACTION.test(approval.action);
+}
+
+export function formatApprovalArgumentsForConfirm(approval: CompanyMcpApproval): string {
+  const payload = {
+    service: approval.service,
+    action: approval.action,
+    arguments: approval.arguments ?? { arguments_hash: approval.arguments_hash },
+  };
+  return JSON.stringify(payload, null, 2);
 }

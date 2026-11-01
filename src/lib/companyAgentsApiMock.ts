@@ -1,14 +1,11 @@
-import {
-  MCP_SERVICE_IDS,
-  type CompanyMcpAgent,
-  type CompanyMcpApproval,
-  type CompanyMcpCallLogEntry,
-  type CompanyMcpSettings,
-  type McpServiceId,
+import type {
+  CompanyMcpAgent,
+  CompanyMcpApproval,
+  CompanyMcpCallLogEntry,
+  McpDiscoveredService,
 } from '@/lib/companyAgentsTypes';
 
 type CompanyStore = {
-  settings: CompanyMcpSettings;
   agents: CompanyMcpAgent[];
   approvals: CompanyMcpApproval[];
   calls: CompanyMcpCallLogEntry[];
@@ -16,183 +13,152 @@ type CompanyStore = {
 
 const stores = new Map<number, CompanyStore>();
 
-function defaultServices(): Record<McpServiceId, boolean> {
-  return Object.fromEntries(MCP_SERVICE_IDS.map((id) => [id, false])) as Record<
-    McpServiceId,
-    boolean
-  >;
-}
-
-function seedStore(companyId: number, identityBaseUrl: string): CompanyStore {
+function seedStore(companyId: number): CompanyStore {
   const now = Date.now();
   const agentA: CompanyMcpAgent = {
-    id: `mock-agent-${companyId}-1`,
+    id: `00000000-0000-4000-8000-${String(companyId).padStart(12, '0')}`,
     name: 'Local Cursor',
-    client: 'Cursor',
-    access_mode: 'ask_before_changes',
+    access_mode: 'ask',
     read_level: 'safe',
-    allowed_services: ['identity', 'storage'],
-    allow_destructive_without_ask: false,
+    allow_destructive_without_asking: false,
+    services_allowed: ['identity', 'storage'],
+    project_scope: 'Cursor',
     expires_at: new Date(now + 1000 * 60 * 60 * 24 * 30).toISOString(),
-    last_call_at: new Date(now - 1000 * 60 * 12).toISOString(),
-    status: 'active',
+    paused_at: null,
+    revoked_at: null,
+    is_active: true,
     created_at: new Date(now - 1000 * 60 * 60 * 24 * 3).toISOString(),
   };
   const agentB: CompanyMcpAgent = {
-    id: `mock-agent-${companyId}-2`,
+    id: `00000000-0000-4001-8000-${String(companyId).padStart(12, '0')}`,
     name: 'CI read-only',
-    client: 'Claude Code',
     access_mode: 'read_only',
-    read_level: 'sensitive_data',
-    allowed_services: ['identity'],
-    allow_destructive_without_ask: false,
+    read_level: 'sensitive',
+    allow_destructive_without_asking: false,
+    services_allowed: ['identity'],
+    project_scope: 'Claude Code',
     expires_at: null,
-    last_call_at: new Date(now - 1000 * 60 * 60 * 26).toISOString(),
-    status: 'paused',
+    paused_at: new Date(now - 1000 * 60 * 60).toISOString(),
+    revoked_at: null,
+    is_active: false,
     created_at: new Date(now - 1000 * 60 * 60 * 24 * 10).toISOString(),
   };
   const approval: CompanyMcpApproval = {
-    id: `mock-approval-${companyId}-1`,
+    id: `00000000-0000-4002-8000-${String(companyId).padStart(12, '0')}`,
     agent_id: agentA.id,
     agent_name: agentA.name,
-    tool: 'storage.delete_object',
-    target: 'storage',
-    arguments: {
-      bucket: 'uploads',
-      key: 'drafts/report-q4.pdf',
-    },
+    service: 'storage',
+    action: 'delete_object',
+    arguments_hash: 'abc123',
+    arguments: { bucket: 'uploads', key: 'drafts/report-q4.pdf' },
     expires_at: new Date(now + 1000 * 60 * 8).toISOString(),
-    created_at: new Date(now - 1000 * 60 * 2).toISOString(),
   };
   const calls: CompanyMcpCallLogEntry[] = [
     {
-      id: `mock-call-${companyId}-1`,
+      id: 1,
       agent_id: agentA.id,
-      at: new Date(now - 1000 * 60 * 12).toISOString(),
-      tool: 'identity.list_users',
-      target: 'identity',
-      status: 'ok',
+      agent_name: agentA.name,
+      service: 'identity',
+      tool: 'list_users',
+      method: 'GET',
+      path: '/api/v1/users',
+      status_code: 200,
       duration_ms: 142,
+      arguments: {},
+      created_at: new Date(now - 1000 * 60 * 12).toISOString(),
     },
     {
-      id: `mock-call-${companyId}-2`,
+      id: 2,
       agent_id: agentA.id,
-      at: new Date(now - 1000 * 60 * 45).toISOString(),
-      tool: 'storage.list_objects',
-      target: 'storage',
-      status: 'ok',
+      agent_name: agentA.name,
+      service: 'storage',
+      tool: 'list_objects',
+      method: 'GET',
+      path: '/api/v1/objects',
+      status_code: 200,
       duration_ms: 89,
-    },
-    {
-      id: `mock-call-${companyId}-3`,
-      agent_id: agentB.id,
-      at: new Date(now - 1000 * 60 * 60 * 26).toISOString(),
-      tool: 'hosting.restart_app',
-      target: 'hosting',
-      status: 'denied',
-      duration_ms: 12,
+      arguments: { prefix: 'uploads/' },
+      created_at: new Date(now - 1000 * 60 * 45).toISOString(),
     },
   ];
-  return {
-    settings: {
-      enabled: false,
-      services: { ...defaultServices(), identity: true, storage: true },
-      mcp_url: identityBaseUrl.replace(/\/+$/, ''),
-    },
-    agents: [agentA, agentB],
-    approvals: [approval],
-    calls,
-  };
+  return { agents: [agentA, agentB], approvals: [approval], calls };
 }
 
-function storeFor(companyId: number, identityBaseUrl: string): CompanyStore {
+function storeFor(companyId: number): CompanyStore {
   let s = stores.get(companyId);
   if (!s) {
-    s = seedStore(companyId, identityBaseUrl);
+    s = seedStore(companyId);
     stores.set(companyId, s);
   }
   return s;
 }
 
-export function mockFetchMcpSettings(
-  companyId: number,
-  identityBaseUrl: string,
-): CompanyMcpSettings {
-  return { ...storeFor(companyId, identityBaseUrl).settings };
-}
-
-export function mockPatchMcpSettings(
-  companyId: number,
-  identityBaseUrl: string,
-  patch: Partial<Pick<CompanyMcpSettings, 'enabled' | 'services'>>,
-): CompanyMcpSettings {
-  const s = storeFor(companyId, identityBaseUrl);
-  if (patch.enabled !== undefined) s.settings.enabled = patch.enabled;
-  if (patch.services) {
-    s.settings.services = { ...s.settings.services, ...patch.services };
-  }
-  return { ...s.settings };
-}
-
-export function mockFetchAgents(companyId: number, identityBaseUrl: string): CompanyMcpAgent[] {
-  return [...storeFor(companyId, identityBaseUrl).agents];
-}
-
-export function mockPatchAgent(
-  companyId: number,
-  identityBaseUrl: string,
-  agentId: string,
-  patch: Partial<
-    Pick<
-      CompanyMcpAgent,
-      'access_mode' | 'read_level' | 'allowed_services' | 'allow_destructive_without_ask' | 'status'
-    >
-  >,
-): CompanyMcpAgent {
-  const s = storeFor(companyId, identityBaseUrl);
-  const idx = s.agents.findIndex((a) => a.id === agentId);
-  if (idx < 0) throw new Error('Agent not found.');
-  s.agents[idx] = { ...s.agents[idx], ...patch };
-  return { ...s.agents[idx] };
+export function mockFetchAgents(_companyId: number, _identityBaseUrl: string): CompanyMcpAgent[] {
+  return [...storeFor(_companyId).agents];
 }
 
 export function mockPauseAgent(
   companyId: number,
-  identityBaseUrl: string,
+  _identityBaseUrl: string,
   agentId: string,
 ): CompanyMcpAgent {
-  return mockPatchAgent(companyId, identityBaseUrl, agentId, { status: 'paused' });
+  const s = storeFor(companyId);
+  const idx = s.agents.findIndex((a) => a.id === agentId);
+  if (idx < 0) throw new Error('Agent not found.');
+  s.agents[idx] = {
+    ...s.agents[idx],
+    paused_at: new Date().toISOString(),
+    is_active: false,
+  };
+  return { ...s.agents[idx] };
 }
 
 export function mockRevokeAgent(
   companyId: number,
-  identityBaseUrl: string,
+  _identityBaseUrl: string,
   agentId: string,
 ): CompanyMcpAgent {
-  return mockPatchAgent(companyId, identityBaseUrl, agentId, { status: 'revoked' });
+  const s = storeFor(companyId);
+  const idx = s.agents.findIndex((a) => a.id === agentId);
+  if (idx < 0) throw new Error('Agent not found.');
+  const now = new Date().toISOString();
+  s.agents[idx] = {
+    ...s.agents[idx],
+    revoked_at: now,
+    paused_at: s.agents[idx].paused_at ?? now,
+    is_active: false,
+  };
+  return { ...s.agents[idx] };
 }
 
 export function mockFetchApprovals(
   companyId: number,
-  identityBaseUrl: string,
+  _identityBaseUrl: string,
 ): CompanyMcpApproval[] {
-  return [...storeFor(companyId, identityBaseUrl).approvals];
+  return [...storeFor(companyId).approvals];
 }
 
 export function mockResolveApproval(
   companyId: number,
-  identityBaseUrl: string,
+  _identityBaseUrl: string,
   approvalId: string,
   _decision: 'approve' | 'reject',
 ): void {
-  const s = storeFor(companyId, identityBaseUrl);
+  const s = storeFor(companyId);
   s.approvals = s.approvals.filter((a) => a.id !== approvalId);
 }
 
-export function mockFetchCallLog(
+export function mockFetchAllCallLogs(
   companyId: number,
-  identityBaseUrl: string,
-  agentId: string,
+  _identityBaseUrl: string,
 ): CompanyMcpCallLogEntry[] {
-  return storeFor(companyId, identityBaseUrl).calls.filter((c) => c.agent_id === agentId);
+  return [...storeFor(companyId).calls];
+}
+
+export function mockFetchDiscoveredServices(identityBaseUrl: string): McpDiscoveredService[] {
+  const base = identityBaseUrl.replace(/\/+$/, '');
+  return [
+    { id: 'identity', name: 'Identity', mcp_url: `${base}/mcp` },
+    { id: 'storage', name: 'Storage', mcp_url: 'https://storage.example/mcp' },
+  ];
 }

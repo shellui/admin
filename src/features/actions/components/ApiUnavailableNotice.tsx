@@ -8,6 +8,7 @@ type Props = {
 };
 
 const UNAVAILABLE_SNIPPETS = [
+  'Requires identity-service with MCP',
   'not available on this identity version',
   'not available on this hosting version',
   'not available on this storage version',
