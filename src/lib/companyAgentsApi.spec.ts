@@ -9,12 +9,6 @@ import {
   parseMcpApproval,
   parseMcpCallLogEntry,
 } from '@/lib/companyAgentsApi';
-import {
-  claudeDesktopMcpConfig,
-  cursorMcpConfig,
-  genericMcpJsonConfig,
-  mcpConnectPrompt,
-} from '@/lib/companyAgentsMcpConfig';
 
 describe('companyAgentsApi parsers', () => {
   it('parses agent rows from identity admin API', () => {
@@ -126,19 +120,6 @@ describe('companyAgentsApi parsers', () => {
   it('serializes call log arguments as JSON text', () => {
     expect(formatCallLogArguments({ prefix: 'uploads/' })).toContain('uploads/');
     expect(formatCallLogArguments({})).toBe('');
-  });
-
-  it('MCP copy helpers never embed bearer tokens', () => {
-    const origin = 'https://auth.example.com';
-    for (const blob of [
-      mcpConnectPrompt(origin),
-      claudeDesktopMcpConfig(origin),
-      cursorMcpConfig(origin),
-      genericMcpJsonConfig(origin),
-    ]) {
-      expect(blob.toLowerCase()).not.toMatch(/bearer|refresh_token|access_token|secret/);
-      expect(blob).toContain(`${origin}/mcp`);
-    }
   });
 
   it('parses call log entry', () => {

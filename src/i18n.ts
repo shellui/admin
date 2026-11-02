@@ -1024,7 +1024,17 @@ const resources = {
       brandSubtitle: 'Administration',
       agentsPageTitle: 'Agents (MCP)',
       agentsPageDescription:
-        'Turn Model Context Protocol access on for this company, review connected agents, and approve sensitive tool calls. Company owners only.',
+        'Connect AI assistants to this company, review agents, and approve sensitive changes. Company owners only.',
+      agentsPageIntroMcp:
+        'Model Context Protocol (MCP) is a standard way for AI assistants such as Claude, Cursor, or ChatGPT to read and manage your Shellui company through signed-in tools.',
+      agentsPageIntroAgents:
+        'Each connected client becomes an agent that can list users, files, hosting apps, and more, depending on what you allow at sign-in.',
+      agentsPageIntroSafety1: 'Each agent only sees this company.',
+      agentsPageIntroSafety2:
+        'Changes wait for your approval unless you chose full access at sign-in.',
+      agentsPageIntroSafety3:
+        'You can pause or revoke any agent at any time. Every tool call is logged on this page.',
+      agentsDocsLink: 'Read the MCP and agents guide',
       agentsPageForbidden: 'You need company-owner access to manage agents for this company.',
       agentsLoadError: 'Could not load agents.',
       agentsSaveError: 'Could not update agents.',
@@ -1037,12 +1047,42 @@ const resources = {
       agentsService_storage: 'Storage',
       agentsService_hosting: 'Hosting',
       agentsService_email: 'Email',
+      agentsService_saas: 'SaaS',
       agentsConnectTitle: 'Connect an agent client',
       agentsConnectMissingUrl: 'Identity URL is not configured in this session.',
-      agentsCopyConnect: 'Copy connect line',
-      agentsCopyClaude: 'Copy Claude config',
-      agentsCopyCursor: 'Copy Cursor config',
-      agentsCopyGeneric: 'Copy MCP JSON',
+      agentsClientTab_claude: 'Claude',
+      agentsClientTab_cursor: 'Cursor',
+      agentsClientTab_chatgpt: 'ChatGPT',
+      agentsClientTab_other: 'Other',
+      agentsClientClaudeStep1: 'Open Claude Desktop and go to Settings, then Connectors.',
+      agentsClientClaudeStep2:
+        'Add a remote connector with Streamable HTTP transport (not a local stdio entry in claude_desktop_config.json).',
+      agentsClientClaudeStep3: 'Paste the MCP server URL below as the connector address.',
+      agentsClientClaudeStep4:
+        'Complete sign-in in the browser, then pick this company, services, and access on the consent screen.',
+      agentsClientCursorStep1:
+        'Create or open ~/.cursor/mcp.json (all projects) or .cursor/mcp.json in a project folder.',
+      agentsClientCursorStep2: 'Paste the JSON below under mcpServers.',
+      agentsClientCursorStep3: 'Save the file and restart Cursor.',
+      agentsClientCursorStep4:
+        'Sign in through the browser when Cursor prompts you, then approve access.',
+      agentsClientChatgptStep1: 'Open ChatGPT in the browser and go to Plugins.',
+      agentsClientChatgptStep2: 'Select the plus button, then Add custom MCP server.',
+      agentsClientChatgptStep3:
+        'Under Connection, enter the server URL below (include the /mcp path). Choose OAuth sign-in.',
+      agentsClientChatgptStep4:
+        'Review the risk warning, create the plugin, install it, then mention it with @ in chat.',
+      agentsClientOtherStep1:
+        'Add a remote MCP server in your client using streamable HTTP or SSE to the URL below.',
+      agentsClientOtherStep2:
+        'Sign in with your Shellui account when the client opens a browser window.',
+      agentsClientOtherStep3:
+        'On the consent screen, pick this company, allowed services, access mode, and read level.',
+      agentsCopyClient_claude: 'Copy MCP server URL',
+      agentsCopyClient_cursor: 'Copy Cursor config',
+      agentsCopyClient_chatgpt: 'Copy server URL',
+      agentsCopyClient_other: 'Copy MCP JSON',
+      agentsCopyServiceUrl: 'Copy MCP URL',
       agentsCopied: '{{label}} copied',
       agentsCopyError: 'Could not copy to the clipboard.',
       agentsTabAgents: 'Agents',
@@ -1050,6 +1090,23 @@ const resources = {
       agentsListTitle: 'Connected agents',
       agentsListEmpty: 'No agents connected yet.',
       agentsListEmptyHint: 'When a client connects through MCP and signs in, it appears here.',
+      agentsListEmptyStep1: 'Copy the identity MCP server URL from the connect box above.',
+      agentsListEmptyStep2: 'Paste it into your assistant MCP or Connectors settings.',
+      agentsListEmptyStep3: 'Sign in and pick access for this company.',
+      agentsAccessLegendTitle: 'What do these mean?',
+      agentsAccessLegendIntro:
+        'Access mode and destructive flags come from the consent screen at sign-in.',
+      agentsAccessLegend_read_only: 'The agent can read data but cannot change anything.',
+      agentsAccessLegend_ask:
+        'Write actions appear under Pending approvals until you approve them.',
+      agentsAccessLegend_full:
+        'Writes run immediately except destructive tools when ask-first is on.',
+      agentsAccessLegend_destructive:
+        'When allowed, delete-style tools can run without a separate approval even in full access mode.',
+      agentsColAccessTooltip:
+        'Read only, ask before changes, or full access. Set when the user signed in.',
+      agentsColDestructiveTooltip:
+        'Whether destructive tools (such as deletes) can run without an extra approval prompt.',
       agentsColName: 'Name',
       agentsColProjectScope: 'Client / scope',
       agentsColAccess: 'Access',
@@ -1092,6 +1149,8 @@ const resources = {
       agentsCallColArguments: 'Arguments (redacted)',
       agentsApprovalsTitle: 'Pending approvals',
       agentsApprovalsEmpty: 'No actions waiting for approval.',
+      agentsApprovalsEmptyHint:
+        'Requests appear when an agent with ask before changes tries a write or a destructive tool that needs your OK. They expire if you do not respond in time.',
       agentsApprovalMeta: '{{agent}} · {{target}}',
       agentsApprovalExpires: 'Expires in {{countdown}}',
       agentsApprovalConfirmApproveTitle: 'Approve {{action}}?',
@@ -3049,7 +3108,17 @@ const resources = {
       brandSubtitle: 'Administration',
       agentsPageTitle: 'Agents (MCP)',
       agentsPageDescription:
-        'Activez l’accès Model Context Protocol pour cette entreprise, consultez les agents connectés et approuvez les appels d’outils sensibles. Réservé aux propriétaires.',
+        'Connectez des assistants IA à cette entreprise, consultez les agents et approuvez les changements sensibles. Réservé aux propriétaires.',
+      agentsPageIntroMcp:
+        'Le Model Context Protocol (MCP) est un standard qui permet aux assistants IA comme Claude, Cursor ou ChatGPT de lire et gérer votre entreprise Shellui via des outils authentifiés.',
+      agentsPageIntroAgents:
+        'Chaque client connecté devient un agent qui peut lister les utilisateurs, fichiers, apps d’hébergement, etc., selon ce que vous autorisez à la connexion.',
+      agentsPageIntroSafety1: 'Chaque agent ne voit que cette entreprise.',
+      agentsPageIntroSafety2:
+        'Les changements attendent votre approbation sauf si vous avez choisi l’accès complet à la connexion.',
+      agentsPageIntroSafety3:
+        'Vous pouvez mettre en pause ou révoquer un agent à tout moment. Chaque appel d’outil est journalisé sur cette page.',
+      agentsDocsLink: 'Lire le guide MCP et agents',
       agentsPageForbidden:
         'Il faut être propriétaire de l’entreprise pour gérer les agents de cette société.',
       agentsLoadError: 'Impossible de charger les agents.',
@@ -3063,12 +3132,43 @@ const resources = {
       agentsService_storage: 'Storage',
       agentsService_hosting: 'Hosting',
       agentsService_email: 'Email',
+      agentsService_saas: 'SaaS',
       agentsConnectTitle: 'Connecter un client agent',
       agentsConnectMissingUrl: 'L’URL identity n’est pas configurée dans cette session.',
-      agentsCopyConnect: 'Copier la ligne de connexion',
-      agentsCopyClaude: 'Copier la config Claude',
-      agentsCopyCursor: 'Copier la config Cursor',
-      agentsCopyGeneric: 'Copier le JSON MCP',
+      agentsClientTab_claude: 'Claude',
+      agentsClientTab_cursor: 'Cursor',
+      agentsClientTab_chatgpt: 'ChatGPT',
+      agentsClientTab_other: 'Autre',
+      agentsClientClaudeStep1: 'Ouvrez Claude Desktop, puis Paramètres, puis Connectors.',
+      agentsClientClaudeStep2:
+        'Ajoutez un connecteur distant en transport Streamable HTTP (pas une entrée stdio locale dans claude_desktop_config.json).',
+      agentsClientClaudeStep3:
+        'Collez l’URL du serveur MCP ci-dessous comme adresse du connecteur.',
+      agentsClientClaudeStep4:
+        'Terminez la connexion dans le navigateur, puis choisissez cette entreprise, les services et l’accès sur l’écran de consentement.',
+      agentsClientCursorStep1:
+        'Créez ou ouvrez ~/.cursor/mcp.json (tous les projets) ou .cursor/mcp.json dans un dossier de projet.',
+      agentsClientCursorStep2: 'Collez le JSON ci-dessous sous mcpServers.',
+      agentsClientCursorStep3: 'Enregistrez le fichier et redémarrez Cursor.',
+      agentsClientCursorStep4:
+        'Connectez-vous dans le navigateur quand Cursor le demande, puis approuvez l’accès.',
+      agentsClientChatgptStep1: 'Ouvrez ChatGPT dans le navigateur et allez dans Plugins.',
+      agentsClientChatgptStep2: 'Cliquez sur le bouton plus, puis Add custom MCP server.',
+      agentsClientChatgptStep3:
+        'Sous Connection, entrez l’URL du serveur ci-dessous (avec le chemin /mcp). Choisissez la connexion OAuth.',
+      agentsClientChatgptStep4:
+        'Lisez l’avertissement, créez le plugin, installez-le, puis citez-le avec @ dans le chat.',
+      agentsClientOtherStep1:
+        'Ajoutez un serveur MCP distant dans votre client en HTTP streamable ou SSE vers l’URL ci-dessous.',
+      agentsClientOtherStep2:
+        'Connectez-vous avec votre compte Shellui quand le client ouvre une fenêtre de navigateur.',
+      agentsClientOtherStep3:
+        'Sur l’écran de consentement, choisissez cette entreprise, les services, le mode d’accès et le niveau de lecture.',
+      agentsCopyClient_claude: 'Copier l’URL du serveur MCP',
+      agentsCopyClient_cursor: 'Copier la config Cursor',
+      agentsCopyClient_chatgpt: 'Copier l’URL du serveur',
+      agentsCopyClient_other: 'Copier le JSON MCP',
+      agentsCopyServiceUrl: 'Copier l’URL MCP',
       agentsCopied: '{{label}} copié',
       agentsCopyError: 'Impossible de copier dans le presse-papiers.',
       agentsTabAgents: 'Agents',
@@ -3076,6 +3176,24 @@ const resources = {
       agentsListTitle: 'Agents connectés',
       agentsListEmpty: 'Aucun agent connecté pour l’instant.',
       agentsListEmptyHint: 'Quand un client se connecte via MCP et se connecte, il apparaît ici.',
+      agentsListEmptyStep1:
+        'Copiez l’URL du serveur MCP identity depuis la zone de connexion ci-dessus.',
+      agentsListEmptyStep2: 'Collez-la dans les paramètres MCP ou Connectors de votre assistant.',
+      agentsListEmptyStep3: 'Connectez-vous et choisissez l’accès pour cette entreprise.',
+      agentsAccessLegendTitle: 'Que signifient ces colonnes ?',
+      agentsAccessLegendIntro:
+        'Le mode d’accès et le drapeau destructif viennent de l’écran de consentement à la connexion.',
+      agentsAccessLegend_read_only: 'L’agent peut lire des données mais ne peut rien modifier.',
+      agentsAccessLegend_ask:
+        'Les écritures apparaissent sous Approbations en attente jusqu’à votre validation.',
+      agentsAccessLegend_full:
+        'Les écritures s’exécutent tout de suite sauf les outils destructifs si la demande préalable est active.',
+      agentsAccessLegend_destructive:
+        'Si autorisé, les outils de type suppression peuvent s’exécuter sans approbation supplémentaire, même en accès complet.',
+      agentsColAccessTooltip:
+        'Lecture seule, demander avant modification ou accès complet. Défini à la connexion.',
+      agentsColDestructiveTooltip:
+        'Si les outils destructifs (comme les suppressions) peuvent s’exécuter sans invite d’approbation supplémentaire.',
       agentsColName: 'Nom',
       agentsColProjectScope: 'Client / périmètre',
       agentsColAccess: 'Accès',
@@ -3118,6 +3236,8 @@ const resources = {
       agentsCallColArguments: 'Arguments (masqués)',
       agentsApprovalsTitle: 'Approbations en attente',
       agentsApprovalsEmpty: 'Aucune action en attente d’approbation.',
+      agentsApprovalsEmptyHint:
+        'Une demande apparaît quand un agent en mode demander avant modification tente une écriture ou un outil destructif qui nécessite votre accord. Elle expire si vous ne répondez pas à temps.',
       agentsApprovalMeta: '{{agent}} · {{target}}',
       agentsApprovalExpires: 'Expire dans {{countdown}}',
       agentsApprovalConfirmApproveTitle: 'Approuver {{action}} ?',
