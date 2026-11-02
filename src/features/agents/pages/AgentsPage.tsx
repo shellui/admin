@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bot, Copy, Loader2, Pause, ShieldAlert } from 'lucide-react';
+import {
+  Bot,
+  ChevronRight,
+  Copy,
+  ExternalLink,
+  HelpCircle,
+  Loader2,
+  Pause,
+  ShieldAlert,
+} from 'lucide-react';
 import shellui from '@shellui/sdk';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { DataTableCard, SkeletonRows } from '@/components/admin/DataTableCard';
@@ -10,6 +19,7 @@ import { StatusBadge } from '@/components/admin/StatusBadge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Table,
   TableBody,
@@ -44,10 +54,10 @@ import {
   type McpDiscoveredService,
 } from '@/lib/companyAgentsApi';
 import {
-  claudeDesktopMcpConfig,
-  cursorMcpConfig,
-  genericMcpJsonConfig,
-  mcpConnectPrompt,
+  IDENTITY_MCP_AGENTS_DOCS_URL,
+  identityMcpEndpointUrl,
+  mcpClientCopySnippet,
+  type McpClientId,
 } from '@/lib/companyAgentsMcpConfig';
 import { cn } from '@/lib/utils';
 
@@ -70,6 +80,55 @@ function formatCountdown(expiresAt: string, nowMs: number): string {
 function servicesLabel(services: string[], t: (k: string) => string): string {
   if (services.length === 0) return '-';
   return services.map((id) => t(`agentsService_${id}`)).join(', ');
+}
+
+const MCP_CLIENT_TABS: McpClientId[] = ['claude', 'cursor', 'chatgpt', 'other'];
+
+function mcpClientStepKeys(client: McpClientId): string[] {
+  switch (client) {
+    case 'claude':
+      return [
+        'agentsClientClaudeStep1',
+        'agentsClientClaudeStep2',
+        'agentsClientClaudeStep3',
+        'agentsClientClaudeStep4',
+      ];
+    case 'cursor':
+      return [
+        'agentsClientCursorStep1',
+        'agentsClientCursorStep2',
+        'agentsClientCursorStep3',
+        'agentsClientCursorStep4',
+      ];
+    case 'chatgpt':
+      return [
+        'agentsClientChatgptStep1',
+        'agentsClientChatgptStep2',
+        'agentsClientChatgptStep3',
+        'agentsClientChatgptStep4',
+      ];
+    case 'other':
+      return ['agentsClientOtherStep1', 'agentsClientOtherStep2', 'agentsClientOtherStep3'];
+  }
+}
+
+function TableHeadWithTooltip({ label, tooltip }: { label: string; tooltip: string }) {
+  return (
+    <TableHead>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex cursor-help items-center gap-1">
+            {label}
+            <HelpCircle
+              className="size-3.5 text-muted-foreground"
+              aria-hidden
+            />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs text-xs">{tooltip}</TooltipContent>
+      </Tooltip>
+    </TableHead>
+  );
 }
 
 function lastCallForAgent(agentId: string, logs: CompanyMcpCallLogEntry[]): string | null {
@@ -98,6 +157,7 @@ export function AgentsPage() {
   const [mcpUnavailable, setMcpUnavailable] = useState(false);
   const [busyAgentId, setBusyAgentId] = useState<string | null>(null);
   const [busyApprovalId, setBusyApprovalId] = useState<string | null>(null);
+  const [connectClient, setConnectClient] = useState<McpClientId>('cursor');
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   const mcpOrigin = useMemo(() => {
@@ -108,7 +168,10 @@ export function AgentsPage() {
     }
   }, [accessToken]);
 
-  const connectLine = useMemo(() => (mcpOrigin ? mcpConnectPrompt(mcpOrigin) : ''), [mcpOrigin]);
+  const mcpEndpoint = useMemo(
+    () => (mcpOrigin ? identityMcpEndpointUrl(mcpOrigin) : ''),
+    [mcpOrigin],
+  );
 
   const load = useCallback(async () => {
     if (!accessToken || companyId == null || !isOwner) {
@@ -264,6 +327,32 @@ export function AgentsPage() {
         description={t('agentsPageDescription')}
       />
 
+      {accessToken && isOwner && !mcpUnavailable ? (
+        <div className="space-y-4 rounded-xl border border-border bg-card px-5 py-4 text-card-foreground shadow-xs">
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>{t('agentsPageIntroMcp')}</p>
+            <p>{t('agentsPageIntroAgents')}</p>
+          </div>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+            <li>{t('agentsPageIntroSafety1')}</li>
+            <li>{t('agentsPageIntroSafety2')}</li>
+            <li>{t('agentsPageIntroSafety3')}</li>
+          </ul>
+          <a
+            href={IDENTITY_MCP_AGENTS_DOCS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-ink underline-offset-4 hover:underline"
+          >
+            <ExternalLink
+              className="size-3.5 shrink-0"
+              aria-hidden
+            />
+            {t('agentsDocsLink')}
+          </a>
+        </div>
+      ) : null}
+
       {!accessToken && <p className="text-sm text-muted-foreground">{t('dashboardNoSession')}</p>}
 
       {accessToken && !isOwner && (
@@ -297,67 +386,92 @@ export function AgentsPage() {
             busy={loading}
           >
             <div className="space-y-6 p-5">
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <p className="text-sm font-medium text-foreground">{t('agentsConnectTitle')}</p>
-                <p className="text-sm text-muted-foreground">
-                  {connectLine || t('agentsConnectMissingUrl')}
-                </p>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!mcpOrigin}
-                    onClick={() => void copyText(t('agentsCopyConnect'), connectLine)}
-                  >
-                    <Copy
-                      className="mr-1.5 size-3.5"
-                      aria-hidden
-                    />
-                    {t('agentsCopyConnect')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!mcpOrigin}
-                    onClick={() =>
-                      void copyText(t('agentsCopyClaude'), claudeDesktopMcpConfig(mcpOrigin))
-                    }
-                  >
-                    {t('agentsCopyClaude')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!mcpOrigin}
-                    onClick={() => void copyText(t('agentsCopyCursor'), cursorMcpConfig(mcpOrigin))}
-                  >
-                    {t('agentsCopyCursor')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!mcpOrigin}
-                    onClick={() =>
-                      void copyText(t('agentsCopyGeneric'), genericMcpJsonConfig(mcpOrigin))
-                    }
-                  >
-                    {t('agentsCopyGeneric')}
-                  </Button>
-                </div>
+                {!mcpOrigin ? (
+                  <p className="text-sm text-muted-foreground">{t('agentsConnectMissingUrl')}</p>
+                ) : (
+                  <div className="space-y-3">
+                    <div
+                      className="flex flex-wrap gap-1 rounded-lg bg-muted p-1"
+                      role="tablist"
+                      aria-label={t('agentsConnectTitle')}
+                    >
+                      {MCP_CLIENT_TABS.map((client) => (
+                        <Button
+                          key={client}
+                          type="button"
+                          role="tab"
+                          aria-selected={connectClient === client}
+                          variant={connectClient === client ? 'secondary' : 'ghost'}
+                          size="sm"
+                          className="text-xs sm:text-sm"
+                          onClick={() => setConnectClient(client)}
+                        >
+                          {t(`agentsClientTab_${client}`)}
+                        </Button>
+                      ))}
+                    </div>
+                    <div
+                      role="tabpanel"
+                      className="space-y-3"
+                    >
+                      <ol className="list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
+                        {mcpClientStepKeys(connectClient).map((key) => (
+                          <li key={key}>{t(key)}</li>
+                        ))}
+                      </ol>
+                      <pre className="overflow-x-auto rounded-md border border-border bg-muted p-3 font-mono text-xs text-foreground">
+                        {mcpClientCopySnippet(connectClient, mcpOrigin)}
+                      </pre>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          void copyText(
+                            t(`agentsCopyClient_${connectClient}`),
+                            mcpClientCopySnippet(connectClient, mcpOrigin),
+                          )
+                        }
+                      >
+                        <Copy
+                          className="mr-1.5 size-3.5"
+                          aria-hidden
+                        />
+                        {t(`agentsCopyClient_${connectClient}`)}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {discoveredServices.length > 0 ? (
                 <div className="space-y-2 border-t border-border pt-4">
                   <p className="text-sm font-medium text-foreground">{t('agentsServicesLabel')}</p>
-                  <ul className="space-y-1 text-sm text-muted-foreground">
+                  <ul className="space-y-2 text-sm text-muted-foreground">
                     {discoveredServices.map((svc) => (
-                      <li key={svc.id}>
-                        <span className="font-medium text-foreground">{svc.name}</span>
-                        <span className="font-mono text-xs"> · {svc.mcp_url}</span>
+                      <li
+                        key={svc.id}
+                        className="flex flex-wrap items-center gap-x-2 gap-y-1"
+                      >
+                        <span className="font-medium text-foreground">
+                          {t(`agentsService_${svc.id}`, { defaultValue: svc.name })}
+                        </span>
+                        <span className="font-mono text-xs">{svc.mcp_url}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => void copyText(t('agentsCopyServiceUrl'), svc.mcp_url)}
+                        >
+                          <Copy
+                            className="mr-1 size-3"
+                            aria-hidden
+                          />
+                          {t('agentsCopyServiceUrl')}
+                        </Button>
                       </li>
                     ))}
                   </ul>
@@ -401,105 +515,177 @@ export function AgentsPage() {
                   <EmptyState
                     icon={Bot}
                     title={t('agentsListEmpty')}
-                    description={t('agentsListEmptyHint')}
+                    description={
+                      <ol className="mx-auto max-w-md list-decimal space-y-1.5 pl-5 text-left text-[13px]">
+                        <li>{t('agentsListEmptyStep1')}</li>
+                        <li>{t('agentsListEmptyStep2')}</li>
+                        <li>{t('agentsListEmptyStep3')}</li>
+                      </ol>
+                    }
+                    actions={
+                      mcpEndpoint ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void copyText(t('agentsCopyServiceUrl'), mcpEndpoint)}
+                        >
+                          <Copy
+                            className="mr-1.5 size-3.5"
+                            aria-hidden
+                          />
+                          {t('agentsCopyServiceUrl')}
+                        </Button>
+                      ) : null
+                    }
                   />
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t('agentsColName')}</TableHead>
-                        <TableHead>{t('agentsColProjectScope')}</TableHead>
-                        <TableHead>{t('agentsColAccess')}</TableHead>
-                        <TableHead>{t('agentsColReadLevel')}</TableHead>
-                        <TableHead>{t('agentsColServices')}</TableHead>
-                        <TableHead>{t('agentsColDestructive')}</TableHead>
-                        <TableHead>{t('agentsColExpiry')}</TableHead>
-                        <TableHead>{t('agentsColLastCall')}</TableHead>
-                        <TableHead>{t('agentsColStatus')}</TableHead>
-                        <TableHead className="text-right">{t('agentsColActions')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {agents.map((agent) => {
-                        const busy = busyAgentId === agent.id;
-                        const status = agentDisplayStatus(agent);
-                        const selected = selectedAgentId === agent.id;
-                        return (
-                          <TableRow
-                            key={agent.id}
-                            className={cn(selected && 'bg-muted/40')}
-                            onClick={() => setSelectedAgentId(agent.id)}
-                          >
-                            <TableCell className="font-medium">{agent.name}</TableCell>
-                            <TableCell>{agent.project_scope || '-'}</TableCell>
-                            <TableCell>{t(`agentsAccess_${agent.access_mode}`)}</TableCell>
-                            <TableCell>{t(`agentsReadLevel_${agent.read_level}`)}</TableCell>
-                            <TableCell className="max-w-[140px] truncate">
-                              {servicesLabel(agent.services_allowed, t)}
-                            </TableCell>
-                            <TableCell>
-                              {agent.allow_destructive_without_asking
-                                ? t('agentsDestructiveAllowed')
-                                : t('agentsDestructiveAsk')}
-                            </TableCell>
-                            <TableCell>{formatDateTime(agent.expires_at, locale)}</TableCell>
-                            <TableCell>
-                              {formatDateTime(lastCallForAgent(agent.id, callLogs), locale)}
-                            </TableCell>
-                            <TableCell>
-                              <StatusBadge
-                                tone={
-                                  status === 'active'
-                                    ? 'success'
-                                    : status === 'paused'
-                                      ? 'warning'
-                                      : 'muted'
-                                }
-                              >
-                                {t(`agentsStatus_${status}`)}
-                              </StatusBadge>
-                            </TableCell>
-                            <TableCell
-                              className="text-right"
-                              onClick={(e) => e.stopPropagation()}
+                  <>
+                    <details className="group mx-5 mb-4 rounded-lg border border-border">
+                      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-medium marker:content-none [&::-webkit-details-marker]:hidden">
+                        <ChevronRight
+                          className="size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-open:rotate-90"
+                          aria-hidden
+                        />
+                        {t('agentsAccessLegendTitle')}
+                      </summary>
+                      <div className="space-y-2 border-t border-border px-3 py-3 text-sm text-muted-foreground">
+                        <p>{t('agentsAccessLegendIntro')}</p>
+                        <ul className="list-disc space-y-1 pl-5">
+                          <li>
+                            <span className="font-medium text-foreground">
+                              {t('agentsAccess_read_only')}
+                            </span>
+                            {' · '}
+                            {t('agentsAccessLegend_read_only')}
+                          </li>
+                          <li>
+                            <span className="font-medium text-foreground">
+                              {t('agentsAccess_ask')}
+                            </span>
+                            {' · '}
+                            {t('agentsAccessLegend_ask')}
+                          </li>
+                          <li>
+                            <span className="font-medium text-foreground">
+                              {t('agentsAccess_full')}
+                            </span>
+                            {' · '}
+                            {t('agentsAccessLegend_full')}
+                          </li>
+                          <li>
+                            <span className="font-medium text-foreground">
+                              {t('agentsColDestructive')}
+                            </span>
+                            {' · '}
+                            {t('agentsAccessLegend_destructive')}
+                          </li>
+                        </ul>
+                      </div>
+                    </details>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t('agentsColName')}</TableHead>
+                          <TableHead>{t('agentsColProjectScope')}</TableHead>
+                          <TableHeadWithTooltip
+                            label={t('agentsColAccess')}
+                            tooltip={t('agentsColAccessTooltip')}
+                          />
+                          <TableHead>{t('agentsColReadLevel')}</TableHead>
+                          <TableHead>{t('agentsColServices')}</TableHead>
+                          <TableHeadWithTooltip
+                            label={t('agentsColDestructive')}
+                            tooltip={t('agentsColDestructiveTooltip')}
+                          />
+                          <TableHead>{t('agentsColExpiry')}</TableHead>
+                          <TableHead>{t('agentsColLastCall')}</TableHead>
+                          <TableHead>{t('agentsColStatus')}</TableHead>
+                          <TableHead className="text-right">{t('agentsColActions')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {agents.map((agent) => {
+                          const busy = busyAgentId === agent.id;
+                          const status = agentDisplayStatus(agent);
+                          const selected = selectedAgentId === agent.id;
+                          return (
+                            <TableRow
+                              key={agent.id}
+                              className={cn(selected && 'bg-muted/40')}
+                              onClick={() => setSelectedAgentId(agent.id)}
                             >
-                              <div className="flex justify-end gap-1">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  disabled={busy || status !== 'active'}
-                                  onClick={() => void onPause(agent)}
+                              <TableCell className="font-medium">{agent.name}</TableCell>
+                              <TableCell>{agent.project_scope || '-'}</TableCell>
+                              <TableCell>{t(`agentsAccess_${agent.access_mode}`)}</TableCell>
+                              <TableCell>{t(`agentsReadLevel_${agent.read_level}`)}</TableCell>
+                              <TableCell className="max-w-[140px] truncate">
+                                {servicesLabel(agent.services_allowed, t)}
+                              </TableCell>
+                              <TableCell>
+                                {agent.allow_destructive_without_asking
+                                  ? t('agentsDestructiveAllowed')
+                                  : t('agentsDestructiveAsk')}
+                              </TableCell>
+                              <TableCell>{formatDateTime(agent.expires_at, locale)}</TableCell>
+                              <TableCell>
+                                {formatDateTime(lastCallForAgent(agent.id, callLogs), locale)}
+                              </TableCell>
+                              <TableCell>
+                                <StatusBadge
+                                  tone={
+                                    status === 'active'
+                                      ? 'success'
+                                      : status === 'paused'
+                                        ? 'warning'
+                                        : 'muted'
+                                  }
                                 >
-                                  {busy ? (
-                                    <Loader2
-                                      className="size-4 animate-spin"
-                                      aria-hidden
-                                    />
-                                  ) : (
-                                    <Pause
-                                      className="size-4"
-                                      aria-hidden
-                                    />
-                                  )}
-                                  <span className="sr-only">{t('agentsPause')}</span>
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  disabled={busy || status === 'revoked'}
-                                  onClick={() => void onRevoke(agent)}
-                                >
-                                  {t('agentsRevoke')}
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                                  {t(`agentsStatus_${status}`)}
+                                </StatusBadge>
+                              </TableCell>
+                              <TableCell
+                                className="text-right"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div className="flex justify-end gap-1">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={busy || status !== 'active'}
+                                    onClick={() => void onPause(agent)}
+                                  >
+                                    {busy ? (
+                                      <Loader2
+                                        className="size-4 animate-spin"
+                                        aria-hidden
+                                      />
+                                    ) : (
+                                      <Pause
+                                        className="size-4"
+                                        aria-hidden
+                                      />
+                                    )}
+                                    <span className="sr-only">{t('agentsPause')}</span>
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={busy || status === 'revoked'}
+                                    onClick={() => void onRevoke(agent)}
+                                  >
+                                    {t('agentsRevoke')}
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </>
                 )}
               </DataTableCard>
 
@@ -609,6 +795,7 @@ export function AgentsPage() {
                   <EmptyState
                     icon={Bot}
                     title={t('agentsApprovalsEmpty')}
+                    description={t('agentsApprovalsEmptyHint')}
                   />
                 ) : (
                   <ul className="divide-y divide-border">

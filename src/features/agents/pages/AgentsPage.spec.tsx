@@ -1,6 +1,15 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AgentsPage } from '@/features/agents/pages/AgentsPage';
+import { TooltipProvider } from '@/components/ui/tooltip';
+
+function renderAgentsPage() {
+  return render(
+    <TooltipProvider>
+      <AgentsPage />
+    </TooltipProvider>,
+  );
+}
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -65,10 +74,18 @@ vi.mock('@/lib/companyAgentsApi', async (importOriginal) => {
 
 describe('AgentsPage', () => {
   it('renders agent names and call log arguments as plain text', async () => {
-    render(<AgentsPage />);
+    renderAgentsPage();
     await screen.findByText('<img src=x onerror=alert(1)>');
     expect(document.body.textContent).toContain('<b>bold</b>');
     expect(document.querySelector('b')).toBeNull();
     expect(document.querySelector('img[onerror]')).toBeNull();
+    expect(screen.getByText('agentsPageIntroMcp')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'agentsDocsLink' }).getAttribute('href')).toBe(
+      'https://docs.shellui.com/identity/mcp-and-agents/',
+    );
+    expect(
+      screen.getByRole('tab', { name: 'agentsClientTab_cursor' }).getAttribute('aria-selected'),
+    ).toBe('true');
+    expect(document.body.textContent).toContain('https://auth.example.com/mcp');
   });
 });
