@@ -1,4 +1,4 @@
-import { requireAuthBackendBaseUrl } from '@/lib/backendUrl';
+import { getAiServiceBaseUrl } from '@/lib/aiServiceUrl';
 import { identityAuthFetch, readJsonOrThrow } from '@/lib/adminIdentityFetch';
 import { ApiUnavailableError } from '@/lib/serviceAuthFetch';
 import type {
@@ -176,8 +176,9 @@ async function tryDevMock<T>(
   return { mocked: false };
 }
 
-export function identityMcpConnectOrigin(): string {
-  return requireAuthBackendBaseUrl().replace(/\/+$/, '');
+/** ai-service origin for MCP client connect URLs (`POST /mcp` on ai-service). */
+export function aiServiceMcpConnectOrigin(): string | null {
+  return getAiServiceBaseUrl();
 }
 
 export async function fetchCompanyMcpAgents(
@@ -187,7 +188,7 @@ export async function fetchCompanyMcpAgents(
   const res = await mcpFetch(accessToken, companyId, '/agents');
   const devMock = await tryDevMock(res, async () => {
     const { mockFetchAgents } = await import('@/lib/companyAgentsApiMock');
-    return mockFetchAgents(companyId, identityMcpConnectOrigin());
+    return mockFetchAgents(companyId, aiServiceMcpConnectOrigin() ?? 'https://ai.example.com');
   });
   if (devMock.mocked) return devMock.value;
   const body = await readJsonOrThrow(res, MCP_API_UNAVAILABLE);
@@ -209,7 +210,11 @@ export async function pauseCompanyMcpAgent(
   );
   const devMock = await tryDevMock(res, async () => {
     const { mockPauseAgent } = await import('@/lib/companyAgentsApiMock');
-    return mockPauseAgent(companyId, identityMcpConnectOrigin(), agentId);
+    return mockPauseAgent(
+      companyId,
+      aiServiceMcpConnectOrigin() ?? 'https://ai.example.com',
+      agentId,
+    );
   });
   if (devMock.mocked) return devMock.value;
   const body = await readJsonOrThrow(res, MCP_API_UNAVAILABLE);
@@ -234,7 +239,11 @@ export async function revokeCompanyMcpAgent(
   );
   const devMock = await tryDevMock(res, async () => {
     const { mockRevokeAgent } = await import('@/lib/companyAgentsApiMock');
-    return mockRevokeAgent(companyId, identityMcpConnectOrigin(), agentId);
+    return mockRevokeAgent(
+      companyId,
+      aiServiceMcpConnectOrigin() ?? 'https://ai.example.com',
+      agentId,
+    );
   });
   if (devMock.mocked) return devMock.value;
   const body = await readJsonOrThrow(res, MCP_API_UNAVAILABLE);
@@ -251,7 +260,7 @@ export async function fetchCompanyMcpApprovals(
   const res = await mcpFetch(accessToken, companyId, '/approvals');
   const devMock = await tryDevMock(res, async () => {
     const { mockFetchApprovals } = await import('@/lib/companyAgentsApiMock');
-    return mockFetchApprovals(companyId, identityMcpConnectOrigin());
+    return mockFetchApprovals(companyId, aiServiceMcpConnectOrigin() ?? 'https://ai.example.com');
   });
   if (devMock.mocked) return devMock.value;
   const body = await readJsonOrThrow(res, MCP_API_UNAVAILABLE);
@@ -271,7 +280,12 @@ export async function approveCompanyMcpApproval(
   );
   const devMock = await tryDevMock(res, async () => {
     const { mockResolveApproval } = await import('@/lib/companyAgentsApiMock');
-    mockResolveApproval(companyId, identityMcpConnectOrigin(), approvalId, 'approve');
+    mockResolveApproval(
+      companyId,
+      aiServiceMcpConnectOrigin() ?? 'https://ai.example.com',
+      approvalId,
+      'approve',
+    );
   });
   if (devMock.mocked) return;
   if (!res.ok) {
@@ -292,7 +306,12 @@ export async function rejectCompanyMcpApproval(
   );
   const devMock = await tryDevMock(res, async () => {
     const { mockResolveApproval } = await import('@/lib/companyAgentsApiMock');
-    mockResolveApproval(companyId, identityMcpConnectOrigin(), approvalId, 'reject');
+    mockResolveApproval(
+      companyId,
+      aiServiceMcpConnectOrigin() ?? 'https://ai.example.com',
+      approvalId,
+      'reject',
+    );
   });
   if (devMock.mocked) return;
   if (!res.ok) {
@@ -307,7 +326,7 @@ export async function fetchCompanyMcpCallLogs(
   const res = await mcpFetch(accessToken, companyId, '/call-logs');
   const devMock = await tryDevMock(res, async () => {
     const { mockFetchAllCallLogs } = await import('@/lib/companyAgentsApiMock');
-    return mockFetchAllCallLogs(companyId, identityMcpConnectOrigin());
+    return mockFetchAllCallLogs(companyId, aiServiceMcpConnectOrigin() ?? 'https://ai.example.com');
   });
   if (devMock.mocked) return devMock.value;
   const body = await readJsonOrThrow(res, MCP_API_UNAVAILABLE);
@@ -321,7 +340,7 @@ export async function fetchMcpDiscoveredServices(
   const res = await mcpFetch(accessToken, companyId, '/services');
   const devMock = await tryDevMock(res, async () => {
     const { mockFetchDiscoveredServices } = await import('@/lib/companyAgentsApiMock');
-    return mockFetchDiscoveredServices(identityMcpConnectOrigin());
+    return mockFetchDiscoveredServices(aiServiceMcpConnectOrigin() ?? 'https://ai.example.com');
   });
   if (devMock.mocked) return devMock.value;
   const body = await readJsonOrThrow(res, MCP_API_UNAVAILABLE);

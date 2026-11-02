@@ -40,7 +40,6 @@ import {
   fetchMcpDiscoveredServices,
   formatApprovalArgumentsForConfirm,
   formatCallLogArguments,
-  identityMcpConnectOrigin,
   isDestructiveMcpApproval,
   isMcpApiUnavailable,
   mcpApprovalHasRedactedArguments,
@@ -54,11 +53,12 @@ import {
   type McpDiscoveredService,
 } from '@/lib/companyAgentsApi';
 import {
+  aiServiceMcpEndpointUrl,
   IDENTITY_MCP_AGENTS_DOCS_URL,
-  identityMcpEndpointUrl,
   mcpClientCopySnippet,
   type McpClientId,
 } from '@/lib/companyAgentsMcpConfig';
+import { useShelluiAiService } from '@/hooks/useShelluiAiService';
 import { cn } from '@/lib/utils';
 
 function formatDateTime(iso: string | null | undefined, locale: string): string {
@@ -160,16 +160,11 @@ export function AgentsPage() {
   const [connectClient, setConnectClient] = useState<McpClientId>('cursor');
   const [nowMs, setNowMs] = useState(() => Date.now());
 
-  const mcpOrigin = useMemo(() => {
-    try {
-      return identityMcpConnectOrigin();
-    } catch {
-      return '';
-    }
-  }, [accessToken]);
+  const aiService = useShelluiAiService();
+  const mcpOrigin = aiService?.url ?? '';
 
   const mcpEndpoint = useMemo(
-    () => (mcpOrigin ? identityMcpEndpointUrl(mcpOrigin) : ''),
+    () => (mcpOrigin ? aiServiceMcpEndpointUrl(mcpOrigin) : ''),
     [mcpOrigin],
   );
 

@@ -26,6 +26,10 @@ vi.mock('@/hooks/useShelluiAccessToken', () => ({
   useShelluiAccessToken: () => 'tok',
 }));
 
+vi.mock('@/hooks/useShelluiAiService', () => ({
+  useShelluiAiService: () => ({ url: 'https://ai.example.com' }),
+}));
+
 vi.mock('@/lib/jwtCompany', () => ({
   getCompanyIdFromJwt: () => 1,
   getIsCompanyOwnerFromJwt: () => true,
@@ -68,7 +72,6 @@ vi.mock('@/lib/companyAgentsApi', async (importOriginal) => {
       },
     ]),
     fetchMcpDiscoveredServices: vi.fn().mockResolvedValue([]),
-    identityMcpConnectOrigin: () => 'https://auth.example.com',
   };
 });
 
@@ -86,6 +89,6 @@ describe('AgentsPage', () => {
     expect(
       screen.getByRole('tab', { name: 'agentsClientTab_cursor' }).getAttribute('aria-selected'),
     ).toBe('true');
-    expect(document.body.textContent).toContain('https://auth.example.com/mcp');
+    expect(document.body.textContent).toContain('https://ai.example.com/mcp');
   });
 });

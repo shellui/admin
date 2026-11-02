@@ -6,6 +6,7 @@ import { LangProvider, getLangFromSettings } from '@/contexts/LangContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { getAppearanceFromSettings, applyThemeToDocument } from '@/lib/theme';
 import { isEmbeddedInShell } from '@/lib/embed';
+import { hydrateAiServiceUrlFromSdk } from '@/lib/aiServiceUrl';
 import { hydrateAuthBackendBaseUrlFromSdk } from '@/lib/backendUrl';
 import { setupContentFrameMessagePropagation } from '@/lib/propagateToContentFrames';
 import { setupEmbeddedAppMessageSecurity } from '@/lib/embeddedAppOrigins';
@@ -30,6 +31,7 @@ async function bootstrap() {
   await shellui.init();
   setupEmbeddedAppMessageSecurity();
   hydrateAuthBackendBaseUrlFromSdk();
+  hydrateAiServiceUrlFromSdk();
   setupContentFrameMessagePropagation();
   const initialLang = getLangFromSettings(shellui.initialSettings);
   await i18n.changeLanguage(initialLang);
