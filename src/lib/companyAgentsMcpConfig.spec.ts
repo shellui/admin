@@ -1,21 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import {
+  aiServiceMcpEndpointUrl,
   chatGptMcpServerUrl,
   claudeDesktopMcpConfig,
   cursorMcpConfig,
   genericMcpJsonConfig,
   IDENTITY_MCP_AGENTS_DOCS_URL,
-  identityMcpEndpointUrl,
   mcpClientCopySnippet,
   mcpConnectPrompt,
 } from '@/lib/companyAgentsMcpConfig';
 
 describe('companyAgentsMcpConfig', () => {
-  const origin = 'https://auth.example.com';
+  const origin = 'https://ai.example.com';
 
-  it('builds identity MCP endpoint URL', () => {
-    expect(identityMcpEndpointUrl(origin)).toBe('https://auth.example.com/mcp');
-    expect(identityMcpEndpointUrl(`${origin}/`)).toBe('https://auth.example.com/mcp');
+  it('builds ai-service MCP endpoint URL', () => {
+    expect(aiServiceMcpEndpointUrl(origin)).toBe('https://ai.example.com/mcp');
+    expect(aiServiceMcpEndpointUrl(`${origin}/`)).toBe('https://ai.example.com/mcp');
   });
 
   it('points docs link at identity service path', () => {

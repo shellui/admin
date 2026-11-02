@@ -1,20 +1,20 @@
 /** Identity docs: `routeBasePath` identity + `docs/mcp-and-agents.md` in identity-service. */
 export const IDENTITY_MCP_AGENTS_DOCS_URL = 'https://docs.shellui.com/identity/mcp-and-agents/';
 
-export function identityMcpEndpointUrl(mcpOrigin: string): string {
-  return `${mcpOrigin.replace(/\/+$/, '')}/mcp`;
+export function aiServiceMcpEndpointUrl(aiServiceOrigin: string): string {
+  return `${aiServiceOrigin.replace(/\/+$/, '')}/mcp`;
 }
 
 export function mcpConnectPrompt(mcpUrl: string): string {
-  return `Connect to ${identityMcpEndpointUrl(mcpUrl)} and sign in`;
+  return `Connect to ${aiServiceMcpEndpointUrl(mcpUrl)} and sign in`;
 }
 
 export function claudeDesktopMcpConfig(mcpUrl: string): string {
-  return identityMcpEndpointUrl(mcpUrl);
+  return aiServiceMcpEndpointUrl(mcpUrl);
 }
 
 export function cursorMcpConfig(mcpUrl: string): string {
-  const url = identityMcpEndpointUrl(mcpUrl);
+  const url = aiServiceMcpEndpointUrl(mcpUrl);
   return JSON.stringify(
     {
       mcpServers: {
@@ -29,11 +29,11 @@ export function cursorMcpConfig(mcpUrl: string): string {
 }
 
 export function chatGptMcpServerUrl(mcpUrl: string): string {
-  return identityMcpEndpointUrl(mcpUrl);
+  return aiServiceMcpEndpointUrl(mcpUrl);
 }
 
 export function genericMcpJsonConfig(mcpUrl: string): string {
-  const url = identityMcpEndpointUrl(mcpUrl);
+  const url = aiServiceMcpEndpointUrl(mcpUrl);
   return JSON.stringify(
     {
       servers: {
@@ -50,15 +50,15 @@ export function genericMcpJsonConfig(mcpUrl: string): string {
 
 export type McpClientId = 'claude' | 'cursor' | 'chatgpt' | 'other';
 
-export function mcpClientCopySnippet(client: McpClientId, mcpOrigin: string): string {
+export function mcpClientCopySnippet(client: McpClientId, aiServiceOrigin: string): string {
   switch (client) {
     case 'claude':
-      return claudeDesktopMcpConfig(mcpOrigin);
+      return claudeDesktopMcpConfig(aiServiceOrigin);
     case 'cursor':
-      return cursorMcpConfig(mcpOrigin);
+      return cursorMcpConfig(aiServiceOrigin);
     case 'chatgpt':
-      return chatGptMcpServerUrl(mcpOrigin);
+      return chatGptMcpServerUrl(aiServiceOrigin);
     case 'other':
-      return genericMcpJsonConfig(mcpOrigin);
+      return genericMcpJsonConfig(aiServiceOrigin);
   }
 }

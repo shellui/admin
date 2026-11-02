@@ -7,6 +7,7 @@ declare module '*.svg?raw' {
 
 interface ImportMetaEnv {
   readonly VITE_STORAGE_URL?: string;
+  readonly VITE_AI_SERVICE_URL?: string;
 }
 
 interface ImportMeta {

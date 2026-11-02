@@ -27,6 +27,7 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 - **Agents:** Company MCP admin aligned with identity `/api/v1/mcp/*` (agents, approvals, call logs, services); production shows an empty state when MCP is missing; dev mock is opt-in via `VITE_COMPANY_AGENTS_MOCK=1`; approve stays disabled until redacted arguments are present on approval rows; full-access agents show an explicit warning.
 - **Agents:** MCP page onboarding copy, per-client connect steps, access legend, service URL copy, and docs link for company owners new to MCP.
+- **Agents:** MCP connect copy uses the ai-service `/mcp` URL from `aiService.url` (OAuth still via identity).
 
 ### 🏗 Chore
 

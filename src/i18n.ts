@@ -1049,7 +1049,8 @@ const resources = {
       agentsService_email: 'Email',
       agentsService_saas: 'SaaS',
       agentsConnectTitle: 'Connect an agent client',
-      agentsConnectMissingUrl: 'Identity URL is not configured in this session.',
+      agentsConnectMissingUrl:
+        'ai-service URL is not configured in this session. Set aiService.url in the host shell config.',
       agentsClientTab_claude: 'Claude',
       agentsClientTab_cursor: 'Cursor',
       agentsClientTab_chatgpt: 'ChatGPT',
@@ -1090,7 +1091,7 @@ const resources = {
       agentsListTitle: 'Connected agents',
       agentsListEmpty: 'No agents connected yet.',
       agentsListEmptyHint: 'When a client connects through MCP and signs in, it appears here.',
-      agentsListEmptyStep1: 'Copy the identity MCP server URL from the connect box above.',
+      agentsListEmptyStep1: 'Copy the Shellui MCP server URL from the connect box above.',
       agentsListEmptyStep2: 'Paste it into your assistant MCP or Connectors settings.',
       agentsListEmptyStep3: 'Sign in and pick access for this company.',
       agentsAccessLegendTitle: 'What do these mean?',
@@ -3134,7 +3135,8 @@ const resources = {
       agentsService_email: 'Email',
       agentsService_saas: 'SaaS',
       agentsConnectTitle: 'Connecter un client agent',
-      agentsConnectMissingUrl: 'L’URL identity n’est pas configurée dans cette session.',
+      agentsConnectMissingUrl:
+        'L’URL ai-service n’est pas configurée dans cette session. Définissez aiService.url dans la configuration du shell.',
       agentsClientTab_claude: 'Claude',
       agentsClientTab_cursor: 'Cursor',
       agentsClientTab_chatgpt: 'ChatGPT',
@@ -3177,7 +3179,7 @@ const resources = {
       agentsListEmpty: 'Aucun agent connecté pour l’instant.',
       agentsListEmptyHint: 'Quand un client se connecte via MCP et se connecte, il apparaît ici.',
       agentsListEmptyStep1:
-        'Copiez l’URL du serveur MCP identity depuis la zone de connexion ci-dessus.',
+        'Copiez l’URL du serveur MCP Shellui depuis la zone de connexion ci-dessus.',
       agentsListEmptyStep2: 'Collez-la dans les paramètres MCP ou Connectors de votre assistant.',
       agentsListEmptyStep3: 'Connectez-vous et choisissez l’accès pour cette entreprise.',
       agentsAccessLegendTitle: 'Que signifient ces colonnes ?',
