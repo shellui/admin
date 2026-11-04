@@ -89,6 +89,6 @@ describe('AgentsPage', () => {
     expect(
       screen.getByRole('tab', { name: 'agentsClientTab_cursor' }).getAttribute('aria-selected'),
     ).toBe('true');
-    expect(document.body.textContent).toContain('https://ai.example.com/mcp');
+    expect(document.body.textContent).toContain('https://ai.example.com/c/1/mcp');
   });
 });
