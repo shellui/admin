@@ -7,6 +7,8 @@ import { normalizeServiceOrigin } from '@/lib/emailServiceUrl';
 export interface SettingsAiService {
   /** Base URL of ai-service (no trailing slash). */
   url: string;
+  /** When false, hide Admin → AI even if `url` is set. Default: true when `url` is set. */
+  showInAdmin?: boolean;
 }
 
 export type SettingsWithAiService = Settings & {
@@ -23,9 +25,19 @@ export function readSettingsAiService(
   settings: Settings | null | undefined,
 ): SettingsAiService | null {
   const aiService = (settings as SettingsWithAiService | null | undefined)?.aiService;
-  const url = resolveAiServiceUrl(aiService?.url);
+  const url =
+    resolveAiServiceUrl(aiService?.url) ??
+    readDevServiceUrlFromEnv(import.meta.env.VITE_AI_SERVICE_URL);
   if (!url) return null;
-  return { url };
+  return {
+    url,
+    showInAdmin: aiService?.showInAdmin,
+  };
+}
+
+/** Admin AI needs a URL, like Hosting. `showInAdmin: false` still hides it. */
+export function isAiAdminEnabled(ai: SettingsAiService | null | undefined): boolean {
+  return Boolean(normalizeServiceOrigin(ai?.url)) && ai?.showInAdmin !== false;
 }
 
 let aiServiceUrlFromShellMessages: string | null = null;
