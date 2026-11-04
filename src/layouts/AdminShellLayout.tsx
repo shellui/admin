@@ -77,7 +77,7 @@ import { appVersionLabel } from '@/lib/appVersion';
 import { cn } from '@/lib/utils';
 
 const navLinkBase =
-  'flex h-8 items-center gap-2.5 rounded-[7px] px-2.5 text-[13.5px] font-medium no-underline transition-colors duration-150 ease-soft hover:no-underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring';
+  'flex h-8 shrink-0 items-center gap-2.5 rounded-[7px] px-2.5 text-[13.5px] font-medium no-underline transition-colors duration-150 ease-soft hover:no-underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring';
 
 function readSectionOpen(key: string, defaultOpen = true): boolean {
   try {
