@@ -8,14 +8,14 @@ import {
 
 describe('buildAdminHashContentUrl', () => {
   it('builds root dashboard hash', () => {
-    expect(buildAdminHashContentUrl('http://localhost:5174', '', '', '')).toBe(
-      'http://localhost:5174/#/',
+    expect(buildAdminHashContentUrl('http://localhost:5173', '', '', '')).toBe(
+      'http://localhost:5173/#/',
     );
   });
 
   it('builds path with subpath and search', () => {
-    expect(buildAdminHashContentUrl('http://localhost:5174/', 'users', '42', '?tab=profile')).toBe(
-      'http://localhost:5174/#/users/42?tab=profile',
+    expect(buildAdminHashContentUrl('http://localhost:5173/', 'users', '42', '?tab=profile')).toBe(
+      'http://localhost:5173/#/users/42?tab=profile',
     );
   });
 });

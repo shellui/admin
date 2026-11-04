@@ -98,14 +98,14 @@ const resources = {
       standaloneDescription:
         'The admin UI is loaded inside the main Shell application. You opened this URL directly in a browser tab.',
       standaloneStepRunShell:
-        '1. Start the main Shellui app (for example port 4000) and this dev server with pnpm start in the admin repo (port 5174).',
+        '1. Start the main Shellui app (for example port 4000) and this dev server with pnpm start in the admin repo (port 5173).',
       standaloneStepConfigure:
         '2. In the main app’s shellui.config.json (or .ts), point the backend admin URL at this Vite server:',
       standaloneConfigSnippet: `backend: {
   type: 'shellui',
-  url: 'http://localhost:8000',
+  url: 'http://localhost:8001',
   adminPathname: '/admin',
-  adminUrl: 'http://localhost:5174',
+  adminUrl: 'http://localhost:5173',
   login: { /* … */ },
 },`,
       standaloneStepOpenAdmin:
@@ -2167,14 +2167,14 @@ const resources = {
       standaloneDescription:
         'L’interface d’administration est chargée dans l’application Shell principale. Vous avez ouvert cette URL directement dans un onglet.',
       standaloneStepRunShell:
-        '1. Démarrez l’application Shellui principale (par ex. port 4000) et ce serveur de dev avec pnpm start dans le dépôt admin (port 5174).',
+        '1. Démarrez l’application Shellui principale (par ex. port 4000) et ce serveur de dev avec pnpm start dans le dépôt admin (port 5173).',
       standaloneStepConfigure:
         '2. Dans shellui.config.json (ou .ts) de l’app principale, indiquez l’URL du serveur Vite pour l’admin :',
       standaloneConfigSnippet: `backend: {
   type: 'shellui',
-  url: 'http://localhost:8000',
+  url: 'http://localhost:8001',
   adminPathname: '/admin',
-  adminUrl: 'http://localhost:5174',
+  adminUrl: 'http://localhost:5173',
   login: { /* … */ },
 },`,
       standaloneStepOpenAdmin:

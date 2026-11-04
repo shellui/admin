@@ -23,6 +23,10 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ## [0.10.0] - 2026-11-02
 
+### 📚 Documentation
+
+- **Dev stack:** Dockerfile `dev` target (Vite on 5173, HMR and optional bind-mount polling), `.env.example` for local `VITE_*` service URLs, and notes for the shared Shellui compose stack.
+
 ### ✨ Feature
 
 - **Agents:** Company MCP admin aligned with identity `/api/v1/mcp/*` (agents, approvals, call logs, services); production shows an empty state when MCP is missing; dev mock is opt-in via `VITE_COMPANY_AGENTS_MOCK=1`; approve stays disabled until redacted arguments are present on approval rows; full-access agents show an explicit warning.

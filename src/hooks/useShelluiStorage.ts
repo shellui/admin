@@ -1,14 +1,29 @@
 import { useEffect, useState } from 'react';
 import shellui, { addMessageListener } from '@shellui/sdk';
 import type { Settings, SettingsStorage } from '@shellui/sdk';
+import { readDevServiceUrlFromEnv } from '@/lib/devServiceUrl';
+import { normalizeServiceOrigin } from '@/lib/emailServiceUrl';
 
 function readStorage(settings: Settings | null | undefined): SettingsStorage | null {
-  return settings?.storage ?? null;
+  const fromShell = settings?.storage ?? null;
+  const url =
+    normalizeServiceOrigin(fromShell?.url) ??
+    readDevServiceUrlFromEnv(import.meta.env.VITE_STORAGE_URL);
+  if (!url) return fromShell?.url ? fromShell : null;
+  const filesUrl =
+    normalizeServiceOrigin(fromShell?.filesUrl) ??
+    readDevServiceUrlFromEnv(import.meta.env.VITE_FILES_URL);
+  return {
+    ...fromShell,
+    url,
+    ...(filesUrl ? { filesUrl } : {}),
+  };
 }
 
 /**
  * Storage config from the host shell (`storage` in shellui.config.json),
  * delivered via `SHELLUI_SETTINGS` / `SHELLUI_SETTINGS_UPDATED`.
+ * Falls back to `VITE_STORAGE_URL` / `VITE_FILES_URL` in dev when the shell omits URLs.
  */
 export function useShelluiStorage(): SettingsStorage | null {
   const [storage, setStorage] = useState<SettingsStorage | null>(() =>

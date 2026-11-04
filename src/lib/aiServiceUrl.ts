@@ -1,5 +1,6 @@
 import shellui, { addMessageListener } from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
+import { readDevServiceUrlFromEnv } from '@/lib/devServiceUrl';
 import { normalizeServiceOrigin } from '@/lib/emailServiceUrl';
 
 /** ai-service connection from host `aiService` in shellui.config.json. */
@@ -50,7 +51,7 @@ export function readExplicitAiServiceUrl(): string | null {
 export function getAiServiceBaseUrl(): string | null {
   const fromShell = readExplicitAiServiceUrl();
   if (fromShell) return fromShell;
-  const fromEnv = resolveAiServiceUrl(import.meta.env.VITE_AI_SERVICE_URL);
+  const fromEnv = readDevServiceUrlFromEnv(import.meta.env.VITE_AI_SERVICE_URL);
   if (fromEnv) return fromEnv;
   return null;
 }

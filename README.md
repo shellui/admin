@@ -18,21 +18,23 @@ You need [pnpm](https://pnpm.io/) and a local [Shellui](https://github.com/shell
 git clone https://github.com/shellui/admin.git
 cd admin
 pnpm install
-pnpm start   # http://localhost:5174
+pnpm start   # http://localhost:5173
 ```
 
 Then point the shell at it in `shellui.config.ts` and open `/admin` as a company owner:
 
 ```ts
 backend: {
-  url: 'http://localhost:8000',
-  adminUrl: 'http://localhost:5174',
+  url: 'http://localhost:8001',
+  adminUrl: 'http://localhost:5173',
 },
 ```
 
 Add `storage.url`, `hosting.url` and `email.url` to turn on the matching sections. Opened directly in a browser, the app shows a short notice instead.
 
 ## Docker
+
+The `Dockerfile` has a **`dev` target** for the Shellui local dev stack (`docker compose` in the main Shellui repo): Vite on port `5173`, source bind-mounted at `/app`, `node_modules` in an anonymous volume. Production publish still uses the default (last) nginx stage on port `8080`.
 
 Each release is published to Docker Hub as `shellui/admin`: a static build on unprivileged nginx, port `8080`, health check on `/health`.
 
@@ -45,7 +47,7 @@ docker run -p 8080:8080 -e FRAME_ANCESTORS="https://dashboard.shellui.com" shell
 ## Documentation
 
 - [Administration panel](https://docs.shellui.com/features/administration/) on docs.shellui.com
-- [Development notes](docs/development.md): architecture, routes, webhooks, OAuth setup and custom navigation
+- [Development notes](docs/development.md): architecture, routes, webhooks, OAuth setup, custom navigation, and the shared local dev stack
 - [CHANGELOG.md](CHANGELOG.md)
 
 ## Development
