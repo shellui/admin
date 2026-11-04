@@ -7,6 +7,7 @@ export function routeShowsIdentityBackendMissing(pathname: string): boolean {
   if (
     pathname.startsWith('/storage') ||
     pathname.startsWith('/hosting') ||
+    pathname.startsWith('/ai') ||
     pathname.startsWith('/email') ||
     pathname.startsWith('/app/')
   ) {

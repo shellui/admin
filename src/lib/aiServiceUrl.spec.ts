@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readSettingsAiService, resolveAiServiceUrl } from '@/lib/aiServiceUrl';
+import { isAiAdminEnabled, readSettingsAiService, resolveAiServiceUrl } from '@/lib/aiServiceUrl';
 import type { Settings } from '@shellui/sdk';
 
 describe('resolveAiServiceUrl', () => {
@@ -24,5 +24,12 @@ describe('readSettingsAiService', () => {
     expect(readSettingsAiService(undefined)).toBeNull();
     expect(readSettingsAiService({ aiService: null } as unknown as Settings)).toBeNull();
     expect(readSettingsAiService({ aiService: {} } as unknown as Settings)).toBeNull();
+  });
+});
+
+describe('isAiAdminEnabled', () => {
+  it('respects showInAdmin false', () => {
+    expect(isAiAdminEnabled({ url: 'https://ai.example.com', showInAdmin: false })).toBe(false);
+    expect(isAiAdminEnabled({ url: 'https://ai.example.com' })).toBe(true);
   });
 });

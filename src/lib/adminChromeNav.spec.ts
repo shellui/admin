@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import {
   getAdminHashPath,
-  placeStandaloneEmailSectionLast,
+  orderAdminSidebarSections,
   readSidebarCollapsed,
   writeSidebarCollapsed,
 } from './adminChromeNav';
@@ -28,31 +28,32 @@ describe('getAdminHashPath', () => {
 });
 
 describe('sidebar section order', () => {
-  it('places the standalone Email group after every other section', () => {
+  it('places AI above Email and both after other sections', () => {
     expect(
-      placeStandaloneEmailSectionLast([
+      orderAdminSidebarSections([
         { title: 'Identity' },
         { title: 'Email' },
+        { title: 'AI' },
         { title: 'Storage' },
         { title: 'Hosting' },
       ]).map((section) => section.title),
-    ).toEqual(['Identity', 'Storage', 'Hosting', 'Email']);
+    ).toEqual(['Identity', 'Storage', 'Hosting', 'AI', 'Email']);
   });
 
-  it('places the French E-mail group last and leaves other sections in place', () => {
+  it('places the French IA group above E-mail', () => {
     expect(
-      placeStandaloneEmailSectionLast([
+      orderAdminSidebarSections([
         { title: 'Identité' },
         { title: 'E-mail' },
+        { title: 'IA' },
         { title: 'Stockage' },
-        { title: 'Hébergement' },
       ]).map((section) => section.title),
-    ).toEqual(['Identité', 'Stockage', 'Hébergement', 'E-mail']);
+    ).toEqual(['Identité', 'Stockage', 'IA', 'E-mail']);
   });
 
-  it('keeps the order when the Email group is hidden', () => {
+  it('keeps the order when Email and AI groups are hidden', () => {
     expect(
-      placeStandaloneEmailSectionLast([{ title: 'Identity' }, { title: 'Storage' }]).map(
+      orderAdminSidebarSections([{ title: 'Identity' }, { title: 'Storage' }]).map(
         (section) => section.title,
       ),
     ).toEqual(['Identity', 'Storage']);
