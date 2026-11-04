@@ -111,7 +111,7 @@ Typical stack host ports: identity `8001`, storage `8002`, hosting `8003`, email
 | `VITE_DEV_SERVER_PORT` / `VITE_HMR_CLIENT_PORT` / `VITE_HMR_HOST` | HMR through the published Docker port (defaults: `5173`, `5173`, `localhost`) |
 | `VITE_USE_POLLING` or `CHOKIDAR_USEPOLLING`                       | File watching on bind mounts (macOS)                                          |
 
-Run the full stack from the Shellui repo: `cd shellui/dev && docker compose --env-file .env.local up` (copy `.env.local.example` first).
+Run the full stack from the Shellui repo: `cd shellui/dev && ./start.sh`. See the [Shellui dev stack guide](https://github.com/shellui/shellui/blob/develop/docs/dev-stack.md).
 
 ## Identity company admin (SCIM, magic link, webhooks)
 
