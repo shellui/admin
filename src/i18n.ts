@@ -1083,7 +1083,7 @@ const resources = {
       agentsClientChatgptStep1: 'Open ChatGPT in the browser and go to Plugins.',
       agentsClientChatgptStep2: 'Select the plus button, then Add custom MCP server.',
       agentsClientChatgptStep3:
-        'Under Connection, enter the server URL below (include the /mcp path). Choose OAuth sign-in.',
+        'Under Connection, enter the server URL below (it ends with /c/<company_id>/mcp, the URL of your company). Choose OAuth sign-in.',
       agentsClientChatgptStep4:
         'Review the risk warning, create the plugin, install it, then mention it with @ in chat.',
       agentsClientOtherStep1:
@@ -3183,7 +3183,7 @@ const resources = {
       agentsClientChatgptStep1: 'Ouvrez ChatGPT dans le navigateur et allez dans Plugins.',
       agentsClientChatgptStep2: 'Cliquez sur le bouton plus, puis Add custom MCP server.',
       agentsClientChatgptStep3:
-        'Sous Connection, entrez l’URL du serveur ci-dessous (avec le chemin /mcp). Choisissez la connexion OAuth.',
+        'Sous Connection, entrez l’URL du serveur ci-dessous (elle se termine par /c/<company_id>/mcp, l’URL de votre entreprise). Choisissez la connexion OAuth.',
       agentsClientChatgptStep4:
         'Lisez l’avertissement, créez le plugin, installez-le, puis citez-le avec @ dans le chat.',
       agentsClientOtherStep1:

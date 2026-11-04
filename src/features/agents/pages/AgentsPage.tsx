@@ -164,8 +164,8 @@ export function AgentsPage() {
   const mcpOrigin = aiService?.url ?? '';
 
   const mcpEndpoint = useMemo(
-    () => (mcpOrigin ? aiServiceMcpEndpointUrl(mcpOrigin) : ''),
-    [mcpOrigin],
+    () => (mcpOrigin ? aiServiceMcpEndpointUrl(mcpOrigin, companyId) : ''),
+    [mcpOrigin, companyId],
   );
 
   const load = useCallback(async () => {
@@ -417,7 +417,7 @@ export function AgentsPage() {
                         ))}
                       </ol>
                       <pre className="overflow-x-auto rounded-md border border-border bg-muted p-3 font-mono text-xs text-foreground">
-                        {mcpClientCopySnippet(connectClient, mcpOrigin)}
+                        {mcpClientCopySnippet(connectClient, mcpOrigin, companyId)}
                       </pre>
                       <Button
                         type="button"
@@ -426,7 +426,7 @@ export function AgentsPage() {
                         onClick={() =>
                           void copyText(
                             t(`agentsCopyClient_${connectClient}`),
-                            mcpClientCopySnippet(connectClient, mcpOrigin),
+                            mcpClientCopySnippet(connectClient, mcpOrigin, companyId),
                           )
                         }
                       >

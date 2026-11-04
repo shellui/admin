@@ -10,12 +10,16 @@ import { AiServiceNotConfiguredError, isAiAdminEnabled } from '@/lib/aiServiceUr
 import { fetchAiServiceHealthLive, type AiServiceHealthSnapshot } from '@/lib/aiServiceHealthApi';
 import { aiServiceMcpEndpointUrl } from '@/lib/companyAgentsMcpConfig';
 import { useShelluiAiService } from '@/hooks/useShelluiAiService';
+import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
+import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
 
 export function AiStatusPage() {
   const { t } = useTranslation();
   const aiSettings = useShelluiAiService();
   const aiUrl = isAiAdminEnabled(aiSettings) ? (aiSettings?.url ?? null) : null;
-  const mcpEndpoint = aiUrl ? aiServiceMcpEndpointUrl(aiUrl) : '';
+  const accessToken = useShelluiAccessToken();
+  const companyId = accessToken ? getCompanyIdFromJwt(accessToken) : null;
+  const mcpEndpoint = aiUrl ? aiServiceMcpEndpointUrl(aiUrl, companyId) : '';
 
   const [snapshot, setSnapshot] = useState<AiServiceHealthSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
