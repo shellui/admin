@@ -215,7 +215,10 @@ export function AiStatusPage() {
         description={t('aiStatusStatsSectionDescription')}
       >
         {loading && !statsReady ? (
-          <KpiSkeletonRow columns={4} />
+          <KpiSkeletonRow
+            columns={4}
+            label={t('aiStatusLoading')}
+          />
         ) : !accessToken || companyId == null ? (
           <p className="text-sm text-muted-foreground">{t('aiStatusMcpSignIn')}</p>
         ) : statsReady && agentCounts ? (
@@ -245,7 +248,10 @@ export function AiStatusPage() {
                 value={formatInt(pendingApprovals ?? 0)}
               />
             </KpiRow>
-            <KpiRow columns={2}>
+            <KpiRow
+              columns={4}
+              label={t('aiStatusCallMetricsRow')}
+            >
               <KpiCard
                 icon={Wrench}
                 label={t('aiStatusCallLogs24h')}
