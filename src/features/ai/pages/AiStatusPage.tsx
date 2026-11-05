@@ -19,11 +19,11 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { isAiAdminEnabled } from '@/lib/aiServiceUrl';
 import {
-  countAgentsByDisplayStatus,
-  countFailedCallLogs,
+  AI_CALL_LOG_WINDOW_MS,
   filterCallLogsSince,
   topToolsFromCallLogs,
 } from '@/lib/aiStatusStats';
+import { buildAiDashboardMetricsFromSources } from '@/lib/dashboardAi';
 import {
   fetchCompanyMcpAgents,
   fetchCompanyMcpApprovals,
@@ -35,8 +35,6 @@ import { useShelluiAiService } from '@/hooks/useShelluiAiService';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
 import { cn } from '@/lib/utils';
-
-const CALL_LOG_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 function formatInt(n: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.round(n));
@@ -53,9 +51,9 @@ export function AiStatusPage() {
   const mcpEndpoint = aiUrl ? aiServiceMcpEndpointUrl(aiUrl, companyId) : '';
 
   const [mcpReachability, setMcpReachability] = useState<McpReachability>('missing_session');
-  const [agentCounts, setAgentCounts] = useState<ReturnType<
-    typeof countAgentsByDisplayStatus
-  > | null>(null);
+  const [agentCounts, setAgentCounts] = useState<
+    ReturnType<typeof buildAiDashboardMetricsFromSources>['agentCounts'] | null
+  >(null);
   const [pendingApprovals, setPendingApprovals] = useState<number | null>(null);
   const [callLogs24h, setCallLogs24h] = useState<number | null>(null);
   const [callLogErrors24h, setCallLogErrors24h] = useState<number | null>(null);
@@ -83,12 +81,13 @@ export function AiStatusPage() {
         fetchCompanyMcpApprovals(accessToken, companyId),
         fetchCompanyMcpCallLogs(accessToken, companyId),
       ]);
+      const dashboardMetrics = buildAiDashboardMetricsFromSources(agents, approvals, callLogs);
       setMcpReachability('ok');
-      setAgentCounts(countAgentsByDisplayStatus(agents));
-      setPendingApprovals(approvals.length);
-      const recent = filterCallLogsSince(callLogs, CALL_LOG_WINDOW_MS);
-      setCallLogs24h(recent.length);
-      setCallLogErrors24h(countFailedCallLogs(recent));
+      setAgentCounts(dashboardMetrics.agentCounts);
+      setPendingApprovals(dashboardMetrics.pendingApprovals);
+      setCallLogs24h(dashboardMetrics.callLogs24h);
+      setCallLogErrors24h(dashboardMetrics.callLogErrors24h);
+      const recent = filterCallLogsSince(callLogs, AI_CALL_LOG_WINDOW_MS);
       setTopTools(topToolsFromCallLogs(recent));
     } catch (e) {
       if (isMcpApiUnavailable(e)) {

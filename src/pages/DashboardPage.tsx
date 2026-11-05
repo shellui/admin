@@ -22,6 +22,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { KpiCard, KpiRow, KpiSkeletonRow, ServiceSectionHeader } from '@/components/admin/Kpi';
 import { Text } from '@/components/ui/text';
+import { DashboardAiSection } from '@/components/DashboardAiSection';
 import { DashboardEmailSection } from '@/components/DashboardEmailSection';
 import { AllServicesRetentionAlerts } from '@/components/EventRetentionAlert';
 import { IdentityBackendMissing } from '@/components/ServiceUrlMissing';
@@ -440,6 +441,8 @@ export function DashboardPage() {
           <p className="mt-2 text-xs text-muted-foreground">{t('dashboardHostingDescription')}</p>
         </section>
       )}
+
+      <DashboardAiSection />
 
       <DashboardEmailSection />
 
