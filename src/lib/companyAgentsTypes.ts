@@ -4,6 +4,11 @@ export type McpAccessMode = 'read_only' | 'ask' | 'full';
 /** Matches identity-service Agent.read_level values. */
 export type McpReadLevel = 'safe' | 'sensitive';
 
+export type CompanyMcpAgentCreatedBy = {
+  /** Person name or system/service account label from identity when available. */
+  display_name?: string | null;
+};
+
 export type CompanyMcpAgent = {
   id: string;
   name: string;
@@ -17,6 +22,9 @@ export type CompanyMcpAgent = {
   revoked_at: string | null;
   is_active: boolean;
   created_at: string;
+  created_by?: CompanyMcpAgentCreatedBy | null;
+  /** Total call count when identity includes it on the agent row. */
+  call_count?: number | null;
 };
 
 export type CompanyMcpApproval = {

@@ -1,21 +1,20 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AgentsPage } from '@/features/agents/pages/AgentsPage';
-import { TooltipProvider } from '@/components/ui/tooltip';
 
 function renderAgentsPage() {
-  return render(
-    <TooltipProvider>
-      <AgentsPage />
-    </TooltipProvider>,
-  );
+  return render(<AgentsPage />);
 }
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, opts?: Record<string, string>) => {
-      if (opts?.name) return `${key}:${opts.name}`;
-      if (opts?.arguments) return `${key}:${opts.arguments}`;
+    t: (key: string, opts?: Record<string, unknown>) => {
+      if (key === 'agentsCallCount' && typeof opts?.count === 'number') {
+        if (opts.count === 0) return '0 calls';
+        if (opts.count === 1) return '1 call';
+        return `${opts.count} calls`;
+      }
+      if (opts?.name && opts?.date) return `${key}:${opts.name}:${opts.date}`;
       return key;
     },
     i18n: { language: 'en' },
@@ -28,6 +27,11 @@ vi.mock('@/hooks/useShelluiAccessToken', () => ({
 
 vi.mock('@/hooks/useShelluiAiService', () => ({
   useShelluiAiService: () => ({ url: 'https://ai.example.com' }),
+}));
+
+vi.mock('@/hooks/useEventRetention', () => ({
+  useEventLogSource: () => ({ service: 'identity', baseUrl: 'https://id.example' }),
+  useEventRetention: () => ({ data_retention_days: 30, stale_events: false }),
 }));
 
 vi.mock('@/lib/jwtCompany', () => ({
@@ -57,11 +61,12 @@ vi.mock('@/lib/companyAgentsApi', async (importOriginal) => {
         allow_destructive_without_asking: true,
         services_allowed: ['identity'],
         project_scope: 'test',
-        expires_at: null,
+        expires_at: '2026-12-01T00:00:00Z',
         paused_at: null,
         revoked_at: null,
         is_active: true,
         created_at: '2026-01-01T00:00:00Z',
+        created_by: { display_name: 'Owner' },
       },
     ]),
     fetchCompanyMcpApprovals: vi.fn().mockResolvedValue([]),
@@ -77,7 +82,7 @@ vi.mock('@/lib/companyAgentsApi', async (importOriginal) => {
         status_code: 200,
         duration_ms: 50,
         arguments: { note: '<b>bold</b>' },
-        created_at: '2026-01-01T00:00:00Z',
+        created_at: new Date(Date.now() - 60_000).toISOString(),
       },
     ]),
     fetchMcpDiscoveredServices: vi.fn().mockResolvedValue([]),
@@ -85,18 +90,20 @@ vi.mock('@/lib/companyAgentsApi', async (importOriginal) => {
 });
 
 describe('AgentsPage', () => {
-  it('renders agent names and call log arguments as plain text', async () => {
+  it('renders agent names as plain text and shows per-agent call log on expand', async () => {
     renderAgentsPage();
     await screen.findByText('<img src=x onerror=alert(1)>');
-    expect(document.body.textContent).toContain('<b>bold</b>');
-    expect(document.querySelector('b')).toBeNull();
     expect(document.querySelector('img[onerror]')).toBeNull();
-    expect(screen.getByText('agentsPageIntroMcp')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'agentsDocsLink' }).getAttribute('href')).toBe(
-      'https://docs.shellui.com/identity/mcp-and-agents/',
-    );
-    expect(screen.getByText('agentsConnectIntro')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'agentsConnectCreateButton' })).toBeTruthy();
-    expect(document.body.textContent).toContain('50 ms');
+    expect(screen.getByText('agentsPageDescription')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'agentsConnectOpen' })).toBeTruthy();
+    expect(screen.getByText('agentsRetentionBanner')).toBeTruthy();
+
+    const expand = screen.getByRole('button', { name: 'agentsExpandAgent' });
+    fireEvent.click(expand);
+
+    const log = await screen.findByText('list_users');
+    expect(log).toBeTruthy();
+    expect(within(log.closest('table')!).getByText('50 ms')).toBeTruthy();
+    expect(document.body.textContent).not.toContain('<b>bold</b>');
   });
 });
