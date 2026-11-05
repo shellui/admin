@@ -144,6 +144,8 @@ const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
   'email/provider': Server,
   'email/link-hosts': Link2,
   'email/statistics': BarChart3,
+  'email/swagger': BookOpen,
+  'email/redoc': BookOpen,
   actions: SendHorizonal,
   swagger: BookOpen,
   redoc: BookOpen,
@@ -1020,6 +1022,8 @@ function AdminContentMain() {
     location.pathname === '/hosting/redoc' ||
     location.pathname === '/ai/swagger' ||
     location.pathname === '/ai/redoc' ||
+    location.pathname === '/email/swagger' ||
+    location.pathname === '/email/redoc' ||
     location.pathname === '/swagger' ||
     location.pathname === '/redoc';
 
@@ -1140,6 +1144,22 @@ export function AdminShellLayout() {
         if (isStandaloneEmailGroupTitle(group.title)) {
           if (!isEmailAdminEnabled(emailSettings)) return null;
           const items = [...group.items];
+          if (isDeveloperMode && emailUrl) {
+            items.push(
+              {
+                key: 'navEmailSwagger',
+                icon: BookOpen,
+                label: t('navSwagger'),
+                to: '/email/swagger',
+              },
+              {
+                key: 'navEmailRedoc',
+                icon: BookOpen,
+                label: t('navRedoc'),
+                to: '/email/redoc',
+              },
+            );
+          }
           if (isStaff && emailDjangoAdminHref) {
             items.push({
               key: 'navEmailDjangoAdmin',
