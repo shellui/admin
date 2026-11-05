@@ -42,6 +42,23 @@ function parseArguments(raw: unknown): Record<string, unknown> {
   return raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
 }
 
+function parseCreatedBy(raw: unknown): CompanyMcpAgent['created_by'] {
+  if (typeof raw === 'string' && raw.trim()) {
+    return { display_name: raw.trim() };
+  }
+  if (!raw || typeof raw !== 'object') return null;
+  const o = raw as Record<string, unknown>;
+  const display =
+    typeof o.display_name === 'string' && o.display_name.trim()
+      ? o.display_name.trim()
+      : typeof o.name === 'string' && o.name.trim()
+        ? o.name.trim()
+        : typeof o.label === 'string' && o.label.trim()
+          ? o.label.trim()
+          : null;
+  return display ? { display_name: display } : null;
+}
+
 export function parseMcpAgent(row: unknown): CompanyMcpAgent | null {
   if (!row || typeof row !== 'object') return null;
   const o = row as Record<string, unknown>;
@@ -59,6 +76,13 @@ export function parseMcpAgent(row: unknown): CompanyMcpAgent | null {
     revoked_at: typeof o.revoked_at === 'string' ? o.revoked_at : null,
     is_active: o.is_active === true,
     created_at: typeof o.created_at === 'string' ? o.created_at : new Date().toISOString(),
+    created_by:
+      parseCreatedBy(o.created_by) ??
+      (typeof o.created_by_display_name === 'string'
+        ? parseCreatedBy(o.created_by_display_name)
+        : null),
+    call_count:
+      typeof o.call_count === 'number' && Number.isFinite(o.call_count) ? o.call_count : null,
   };
 }
 
@@ -392,4 +416,19 @@ export function formatApprovalArgumentsForConfirm(approval: CompanyMcpApproval):
 export function formatCallLogArguments(args: Record<string, unknown>): string {
   if (!args || Object.keys(args).length === 0) return '';
   return JSON.stringify(args, null, 2);
+}
+
+export type McpCallLogOutcome = 'succeeded' | 'failed' | 'denied';
+
+/** Maps HTTP status from identity call logs to admin UI labels. */
+export function mcpCallLogOutcome(entry: CompanyMcpCallLogEntry): McpCallLogOutcome {
+  const code = entry.status_code;
+  if (code === 403 || code === 401) return 'denied';
+  if (code >= 200 && code < 300) return 'succeeded';
+  return 'failed';
+}
+
+export function agentCreatorDisplayName(agent: CompanyMcpAgent): string | null {
+  const name = agent.created_by?.display_name?.trim();
+  return name || null;
 }

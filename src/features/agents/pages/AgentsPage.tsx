@@ -1,26 +1,27 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Bot,
-  ChevronRight,
-  Copy,
-  ExternalLink,
-  HelpCircle,
-  Loader2,
-  Pause,
-  ShieldAlert,
-} from 'lucide-react';
+import { Bot, ChevronRight, Copy, Loader2 } from 'lucide-react';
 import shellui from '@shellui/sdk';
 import { PageHeader } from '@/components/admin/PageHeader';
-import { DataTableCard, SkeletonRows } from '@/components/admin/DataTableCard';
 import { EmptyState } from '@/components/admin/EmptyState';
-import { SettingsSection } from '@/components/admin/SettingsSection';
 import { StatusBadge } from '@/components/admin/StatusBadge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import {
   Table,
   TableBody,
@@ -30,33 +31,29 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
+import { useEventLogSource, useEventRetention } from '@/hooks/useEventRetention';
 import { getCompanyIdFromJwt, getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
 import { askShelluiConfirm } from '@/lib/shelluiConfirm';
 import {
+  agentCreatorDisplayName,
   agentDisplayStatus,
   approveCompanyMcpApproval,
   fetchCompanyMcpAgents,
   fetchCompanyMcpApprovals,
   fetchCompanyMcpCallLogs,
-  fetchMcpDiscoveredServices,
   formatApprovalArgumentsForConfirm,
-  formatCallLogArguments,
   isDestructiveMcpApproval,
   isMcpApiUnavailable,
   mcpApprovalHasRedactedArguments,
+  mcpCallLogOutcome,
   MCP_API_UNAVAILABLE,
-  pauseCompanyMcpAgent,
   rejectCompanyMcpApproval,
   revokeCompanyMcpAgent,
   type CompanyMcpAgent,
   type CompanyMcpApproval,
   type CompanyMcpCallLogEntry,
-  type McpDiscoveredService,
+  type McpCallLogOutcome,
 } from '@/lib/companyAgentsApi';
-import {
-  aiServiceMcpEndpointUrl,
-  IDENTITY_MCP_AGENTS_DOCS_URL,
-} from '@/lib/companyAgentsMcpConfig';
 import {
   buildAgentPrompt,
   buildCompanyMcpUrl,
@@ -77,11 +74,29 @@ type IssuedMcpConnection = {
   prompt: string;
 };
 
-function formatDateTime(iso: string | null | undefined, locale: string): string {
+type AgentStatusFilter = 'all' | 'active' | 'paused';
+type CallLogStatusFilter = 'any' | McpCallLogOutcome;
+type CallLogTimeFilter = '7d' | '30d' | 'all';
+
+const CREATOR_ANY = '__any__';
+
+function formatDateOnly(iso: string | null | undefined, locale: string): string {
   if (!iso) return '-';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(d);
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(d);
+}
+
+function formatCallWhen(iso: string, locale: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(d);
 }
 
 function formatCountdown(expiresAt: string, nowMs: number): string {
@@ -93,37 +108,301 @@ function formatCountdown(expiresAt: string, nowMs: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-function servicesLabel(services: string[], t: (k: string) => string): string {
-  if (services.length === 0) return '-';
-  return services.map((id) => t(`agentsService_${id}`)).join(', ');
+function countCallsForAgent(agent: CompanyMcpAgent, logs: CompanyMcpCallLogEntry[]): number {
+  if (typeof agent.call_count === 'number' && Number.isFinite(agent.call_count)) {
+    return agent.call_count;
+  }
+  return logs.filter((row) => row.agent_id === agent.id).length;
 }
 
-function TableHeadWithTooltip({ label, tooltip }: { label: string; tooltip: string }) {
+function agentMatchesListFilters(
+  agent: CompanyMcpAgent,
+  search: string,
+  statusFilter: AgentStatusFilter,
+  creatorFilter: string,
+): boolean {
+  const status = agentDisplayStatus(agent);
+  if (status === 'revoked') return false;
+
+  if (statusFilter === 'active' && status !== 'active') return false;
+  if (statusFilter === 'paused' && status !== 'paused') return false;
+
+  if (creatorFilter !== CREATOR_ANY) {
+    const creator = agentCreatorDisplayName(agent);
+    if ((creator ?? '') !== creatorFilter) return false;
+  }
+
+  const q = search.trim().toLowerCase();
+  if (q && !agent.name.toLowerCase().includes(q)) return false;
+
+  return true;
+}
+
+function filterCallLogRows(
+  rows: CompanyMcpCallLogEntry[],
+  search: string,
+  statusFilter: CallLogStatusFilter,
+  timeFilter: CallLogTimeFilter,
+  nowMs: number,
+): CompanyMcpCallLogEntry[] {
+  let out = rows;
+  const q = search.trim().toLowerCase();
+  if (q) {
+    out = out.filter(
+      (row) =>
+        row.service.toLowerCase().includes(q) ||
+        row.tool.toLowerCase().includes(q) ||
+        `${row.method} ${row.path}`.toLowerCase().includes(q),
+    );
+  }
+  if (statusFilter !== 'any') {
+    out = out.filter((row) => mcpCallLogOutcome(row) === statusFilter);
+  }
+  if (timeFilter !== 'all') {
+    const days = timeFilter === '7d' ? 7 : 30;
+    const cutoff = nowMs - days * 24 * 60 * 60 * 1000;
+    out = out.filter((row) => new Date(row.created_at).getTime() >= cutoff);
+  }
+  return out.sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+function AgentCallLogPanel({
+  agentId,
+  callLogs,
+  loading,
+  locale,
+}: {
+  agentId: string;
+  callLogs: CompanyMcpCallLogEntry[];
+  loading: boolean;
+  locale: string;
+}) {
+  const { t } = useTranslation();
+  const [logSearch, setLogSearch] = useState('');
+  const [logStatus, setLogStatus] = useState<CallLogStatusFilter>('any');
+  const [logTime, setLogTime] = useState<CallLogTimeFilter>('7d');
+  const [nowMs] = useState(() => Date.now());
+
+  const rows = useMemo(
+    () =>
+      filterCallLogRows(
+        callLogs.filter((row) => row.agent_id === agentId),
+        logSearch,
+        logStatus,
+        logTime,
+        nowMs,
+      ),
+    [agentId, callLogs, logSearch, logStatus, logTime, nowMs],
+  );
+
+  const statusLabel = (outcome: McpCallLogOutcome) => {
+    if (outcome === 'succeeded') return t('agentsLogStatusSucceeded');
+    if (outcome === 'denied') return t('agentsLogStatusDenied');
+    return t('agentsLogStatusFailed');
+  };
+
   return (
-    <TableHead>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="inline-flex cursor-help items-center gap-1">
-            {label}
-            <HelpCircle
-              className="size-3.5 text-muted-foreground"
-              aria-hidden
-            />
-          </span>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-xs text-xs">{tooltip}</TooltipContent>
-      </Tooltip>
-    </TableHead>
+    <div className="border-t border-border bg-muted/30 px-4 py-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {t('agentsCallLog')}
+      </p>
+      <div className="mb-3 flex flex-wrap gap-2">
+        <Input
+          value={logSearch}
+          onChange={(e) => setLogSearch(e.target.value)}
+          placeholder={t('agentsSearchToolsPlaceholder')}
+          className="h-9 min-w-[200px] max-w-xs text-sm"
+          aria-label={t('agentsSearchToolsPlaceholder')}
+        />
+        <Select
+          value={logStatus}
+          onValueChange={(v) => setLogStatus(v as CallLogStatusFilter)}
+        >
+          <SelectTrigger className="h-9 w-[140px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="any">{t('agentsLogFilterAnyStatus')}</SelectItem>
+            <SelectItem value="succeeded">{t('agentsLogStatusSucceeded')}</SelectItem>
+            <SelectItem value="failed">{t('agentsLogStatusFailed')}</SelectItem>
+            <SelectItem value="denied">{t('agentsLogStatusDenied')}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select
+          value={logTime}
+          onValueChange={(v) => setLogTime(v as CallLogTimeFilter)}
+        >
+          <SelectTrigger className="h-9 w-[140px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7d">{t('agentsLogTimeLast7')}</SelectItem>
+            <SelectItem value="30d">{t('agentsLogTimeLast30')}</SelectItem>
+            <SelectItem value="all">{t('agentsLogTimeAll')}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {loading ? (
+        <p className="text-sm text-muted-foreground">{t('agentsCallLogLoading')}</p>
+      ) : rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t('agentsCallLogEmptyRange')}</p>
+      ) : (
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('agentsCallColWhen')}</TableHead>
+                <TableHead>{t('agentsCallColService')}</TableHead>
+                <TableHead>{t('agentsCallColTool')}</TableHead>
+                <TableHead>{t('agentsCallColStatus')}</TableHead>
+                <TableHead>{t('agentsCallColDuration')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((entry) => {
+                const outcome = mcpCallLogOutcome(entry);
+                return (
+                  <TableRow key={entry.id}>
+                    <TableCell className="text-muted-foreground">
+                      {formatCallWhen(entry.created_at, locale)}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">{entry.service}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {entry.tool || `${entry.method} ${entry.path}`.trim() || '-'}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        'font-semibold',
+                        outcome === 'succeeded' && 'text-emerald-700',
+                        outcome === 'denied' && 'text-destructive',
+                        outcome === 'failed' && 'text-destructive',
+                      )}
+                    >
+                      {statusLabel(outcome)}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {formatDurationMs(entry.duration_ms, locale) ?? '-'}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
   );
 }
 
-function lastCallForAgent(agentId: string, logs: CompanyMcpCallLogEntry[]): string | null {
-  let latest: string | null = null;
-  for (const row of logs) {
-    if (row.agent_id !== agentId) continue;
-    if (!latest || row.created_at > latest) latest = row.created_at;
-  }
-  return latest;
+function AgentAccordionRow({
+  agent,
+  expanded,
+  onToggle,
+  callLogs,
+  loadingLogs,
+  locale,
+  readOnly,
+  busy,
+  onRevoke,
+}: {
+  agent: CompanyMcpAgent;
+  expanded: boolean;
+  onToggle: () => void;
+  callLogs: CompanyMcpCallLogEntry[];
+  loadingLogs: boolean;
+  locale: string;
+  readOnly: boolean;
+  busy: boolean;
+  onRevoke: () => void;
+}) {
+  const { t } = useTranslation();
+  const status = agentDisplayStatus(agent);
+  const creator = agentCreatorDisplayName(agent);
+  const createdMeta = creator
+    ? t('agentsCreatedBy', {
+        name: creator,
+        date: formatDateOnly(agent.created_at, locale),
+      })
+    : t('agentsCreatedByUnknown', { date: formatDateOnly(agent.created_at, locale) });
+  const callCount = countCallsForAgent(agent, callLogs);
+
+  const statusTone = status === 'active' ? 'success' : status === 'paused' ? 'warning' : 'muted';
+
+  return (
+    <div
+      className={cn(
+        'overflow-hidden rounded-[10px] border border-border bg-card',
+        readOnly && 'opacity-[0.72] bg-muted/30',
+      )}
+    >
+      <div className="grid grid-cols-[28px_1.4fr_auto_auto_auto_auto] items-center gap-3 px-3.5 py-3 sm:grid-cols-[28px_minmax(0,1.4fr)_auto_auto_auto_auto]">
+        <button
+          type="button"
+          className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted/60"
+          aria-expanded={expanded}
+          aria-label={expanded ? t('agentsCollapseAgent') : t('agentsExpandAgent')}
+          onClick={onToggle}
+        >
+          <ChevronRight
+            className={cn(
+              'size-4 transition-transform motion-reduce:transition-none',
+              expanded && 'rotate-90',
+            )}
+            aria-hidden
+          />
+        </button>
+        <button
+          type="button"
+          className="min-w-0 text-left"
+          onClick={onToggle}
+        >
+          <p className="text-sm font-semibold text-foreground">{agent.name}</p>
+          <p className="text-xs text-muted-foreground">{createdMeta}</p>
+        </button>
+        <StatusBadge tone={statusTone}>{t(`agentsStatus_${status}`)}</StatusBadge>
+        <p className="hidden text-xs text-muted-foreground sm:block">
+          {agent.expires_at
+            ? t('agentsExpires', { date: formatDateOnly(agent.expires_at, locale) })
+            : '-'}
+        </p>
+        <p className="text-xs text-muted-foreground tabular-nums">
+          {t('agentsCallCount', { count: callCount })}
+        </p>
+        {!readOnly && status !== 'revoked' ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 border-destructive/30 text-destructive hover:bg-destructive/5 hover:text-destructive"
+            disabled={busy}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRevoke();
+            }}
+          >
+            {busy ? (
+              <Loader2
+                className="size-4 animate-spin"
+                aria-hidden
+              />
+            ) : (
+              t('agentsRevoke')
+            )}
+          </Button>
+        ) : (
+          <span aria-hidden />
+        )}
+      </div>
+      {expanded ? (
+        <AgentCallLogPanel
+          agentId={agent.id}
+          callLogs={callLogs}
+          loading={loadingLogs}
+          locale={locale}
+        />
+      ) : null}
+    </div>
+  );
 }
 
 export function AgentsPage() {
@@ -133,17 +412,23 @@ export function AgentsPage() {
   const companyId = accessToken ? getCompanyIdFromJwt(accessToken) : null;
   const isOwner = Boolean(accessToken && getIsCompanyOwnerFromJwt(accessToken));
 
-  const [discoveredServices, setDiscoveredServices] = useState<McpDiscoveredService[]>([]);
+  const identityRetention = useEventRetention(useEventLogSource('identity'), accessToken);
+
   const [agents, setAgents] = useState<CompanyMcpAgent[]>([]);
   const [approvals, setApprovals] = useState<CompanyMcpApproval[]>([]);
   const [callLogs, setCallLogs] = useState<CompanyMcpCallLogEntry[]>([]);
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [expandedAgentId, setExpandedAgentId] = useState<string | null>(null);
+  const [showRevoked, setShowRevoked] = useState(false);
+  const [agentSearch, setAgentSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<AgentStatusFilter>('active');
+  const [creatorFilter, setCreatorFilter] = useState(CREATOR_ANY);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [mcpUnavailable, setMcpUnavailable] = useState(false);
   const [busyAgentId, setBusyAgentId] = useState<string | null>(null);
   const [busyApprovalId, setBusyApprovalId] = useState<string | null>(null);
   const [personalStatus, setPersonalStatus] = useState<McpPersonalStatus | null>(null);
+  const [connectOpen, setConnectOpen] = useState(false);
   const [connectName, setConnectName] = useState('');
   const [creatingConnection, setCreatingConnection] = useState(false);
   const [createConnectionError, setCreateConnectionError] = useState<string | null>(null);
@@ -152,11 +437,6 @@ export function AgentsPage() {
 
   const aiService = useShelluiAiService();
   const mcpOrigin = aiService?.url ?? '';
-
-  const mcpEndpoint = useMemo(
-    () => (mcpOrigin ? aiServiceMcpEndpointUrl(mcpOrigin, companyId) : ''),
-    [mcpOrigin, companyId],
-  );
 
   const includeSaas = isGlobalIdentitySession(personalStatus);
   const companyMcpUrl = useMemo(
@@ -173,27 +453,22 @@ export function AgentsPage() {
     setError(null);
     setMcpUnavailable(false);
     try {
-      const [agentRows, approvalRows, logRows, serviceRows, statusRow] = await Promise.all([
+      const [agentRows, approvalRows, logRows, statusRow] = await Promise.all([
         fetchCompanyMcpAgents(accessToken, companyId),
         fetchCompanyMcpApprovals(accessToken, companyId),
         fetchCompanyMcpCallLogs(accessToken, companyId),
-        fetchMcpDiscoveredServices(accessToken, companyId),
         fetchMcpPersonalStatus(accessToken, companyId).catch(() => null),
       ]);
       setAgents(agentRows);
       setApprovals(approvalRows);
       setCallLogs(logRows);
-      setDiscoveredServices(serviceRows);
       setPersonalStatus(statusRow);
-      const first = agentRows.find((a) => agentDisplayStatus(a) !== 'revoked')?.id ?? null;
-      setSelectedAgentId((prev) => (prev && agentRows.some((a) => a.id === prev) ? prev : first));
     } catch (e) {
       if (isMcpApiUnavailable(e)) {
         setMcpUnavailable(true);
         setAgents([]);
         setApprovals([]);
         setCallLogs([]);
-        setDiscoveredServices([]);
         setError(null);
       } else {
         setError(e);
@@ -212,12 +487,35 @@ export function AgentsPage() {
     return () => window.clearInterval(id);
   }, []);
 
-  const filteredCallLog = useMemo(
-    () => (selectedAgentId ? callLogs.filter((row) => row.agent_id === selectedAgentId) : []),
-    [callLogs, selectedAgentId],
+  const revokedAgents = useMemo(
+    () => agents.filter((a) => agentDisplayStatus(a) === 'revoked'),
+    [agents],
   );
 
-  const selectedAgent = agents.find((a) => a.id === selectedAgentId) ?? null;
+  const hasPausedAgents = useMemo(
+    () => agents.some((a) => agentDisplayStatus(a) === 'paused'),
+    [agents],
+  );
+
+  const creatorOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const agent of agents) {
+      const name = agentCreatorDisplayName(agent);
+      if (name) names.add(name);
+    }
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [agents]);
+
+  const filteredActiveAgents = useMemo(
+    () =>
+      agents.filter((agent) =>
+        agentMatchesListFilters(agent, agentSearch, statusFilter, creatorFilter),
+      ),
+    [agents, agentSearch, statusFilter, creatorFilter],
+  );
+
+  const listHasFilters =
+    agentSearch.trim() !== '' || statusFilter !== 'all' || creatorFilter !== CREATOR_ANY;
 
   async function copyText(label: string, text: string) {
     try {
@@ -272,22 +570,6 @@ export function AgentsPage() {
     }
   }
 
-  async function onPause(agent: CompanyMcpAgent) {
-    if (!accessToken || companyId == null) return;
-    setBusyAgentId(agent.id);
-    try {
-      const updated = await pauseCompanyMcpAgent(accessToken, companyId, agent.id);
-      setAgents((rows) => rows.map((a) => (a.id === updated.id ? updated : a)));
-    } catch (e) {
-      shellui.toast({
-        type: 'error',
-        title: e instanceof Error ? e.message : t('agentsSaveError'),
-      });
-    } finally {
-      setBusyAgentId(null);
-    }
-  }
-
   async function onCreateConnection() {
     if (!accessToken || companyId == null || !companyMcpUrl) return;
     const trimmed = connectName.trim();
@@ -319,9 +601,6 @@ export function AgentsPage() {
       setConnectName('');
       const agentRows = await fetchCompanyMcpAgents(accessToken, companyId);
       setAgents(agentRows);
-      const first =
-        agentRows.find((a) => agentDisplayStatus(a) !== 'revoked')?.id ?? selectedAgentId;
-      if (first) setSelectedAgentId(first);
     } catch (e) {
       setCreateConnectionError(e instanceof Error ? e.message : t('agentsConnectCreateError'));
     } finally {
@@ -332,7 +611,7 @@ export function AgentsPage() {
   async function onRevoke(agent: CompanyMcpAgent) {
     if (!accessToken || companyId == null) return;
     const ok = await askShelluiConfirm({
-      title: t('agentsRevokeConfirmTitle', { name: agent.name }),
+      title: t('agentsRevokeConfirmTitle'),
       description: t('agentsRevokeConfirmDescription'),
       okLabel: t('agentsRevoke'),
       cancelLabel: t('actionsCancel'),
@@ -343,6 +622,7 @@ export function AgentsPage() {
     try {
       const updated = await revokeCompanyMcpAgent(accessToken, companyId, agent.id);
       setAgents((rows) => rows.map((a) => (a.id === updated.id ? updated : a)));
+      if (expandedAgentId === agent.id) setExpandedAgentId(null);
     } catch (e) {
       shellui.toast({
         type: 'error',
@@ -353,39 +633,29 @@ export function AgentsPage() {
     }
   }
 
+  function toggleAgentExpand(agentId: string) {
+    setExpandedAgentId((prev) => (prev === agentId ? null : agentId));
+  }
+
+  const retentionDays = identityRetention?.data_retention_days;
+
   return (
-    <div className="w-full space-y-8">
+    <div className="w-full space-y-6">
       <PageHeader
         title={t('agentsPageTitle')}
-        service={t('dashboardEnvBadge')}
         description={t('agentsPageDescription')}
+        actions={
+          accessToken && isOwner && !mcpUnavailable ? (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setConnectOpen(true)}
+            >
+              {t('agentsConnectOpen')}
+            </Button>
+          ) : null
+        }
       />
-
-      {accessToken && isOwner && !mcpUnavailable ? (
-        <div className="space-y-4 rounded-xl border border-border bg-card px-5 py-4 text-card-foreground shadow-xs">
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <p>{t('agentsPageIntroMcp')}</p>
-            <p>{t('agentsPageIntroAgents')}</p>
-          </div>
-          <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-            <li>{t('agentsPageIntroSafety1')}</li>
-            <li>{t('agentsPageIntroSafety2')}</li>
-            <li>{t('agentsPageIntroSafety3')}</li>
-          </ul>
-          <a
-            href={IDENTITY_MCP_AGENTS_DOCS_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-ink underline-offset-4 hover:underline"
-          >
-            <ExternalLink
-              className="size-3.5 shrink-0"
-              aria-hidden
-            />
-            {t('agentsDocsLink')}
-          </a>
-        </div>
-      ) : null}
 
       {!accessToken && <p className="text-sm text-muted-foreground">{t('dashboardNoSession')}</p>}
 
@@ -413,542 +683,311 @@ export function AgentsPage() {
             </Alert>
           ) : null}
 
-          <SettingsSection
-            id="agents-mcp"
-            title={t('agentsMcpTitle')}
-            description={t('agentsMcpDescription')}
-            busy={loading}
-          >
-            <div className="space-y-6 p-5">
-              <p className="text-sm text-muted-foreground">{t('agentsConnectIntro')}</p>
-              {!mcpOrigin || !companyMcpUrl ? (
-                <p className="text-sm text-muted-foreground">{t('agentsConnectMissingUrl')}</p>
-              ) : issuedConnection ? (
-                <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-foreground">
-                      {t('agentsConnectCreatedTitle')}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{t('agentsConnectCreatedHint')}</p>
-                  </div>
-                  <pre className="max-h-64 overflow-auto rounded-md border border-border bg-muted p-3 font-mono text-xs text-foreground">
-                    {issuedConnection.prompt}
-                  </pre>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="default"
-                      size="sm"
-                      onClick={() => void copyText(t('agentsCopyPrompt'), issuedConnection.prompt)}
-                    >
-                      <Copy
-                        className="mr-1.5 size-3.5"
-                        aria-hidden
-                      />
-                      {t('agentsCopyPrompt')}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        void copyText(t('agentsCopyToken'), issuedConnection.accessToken)
-                      }
-                    >
-                      <Copy
-                        className="mr-1.5 size-3.5"
-                        aria-hidden
-                      />
-                      {t('agentsCopyToken')}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIssuedConnection(null)}
-                    >
-                      {t('agentsConnectCreateAnother')}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <label
-                    htmlFor="agents-connect-name"
-                    className="text-sm font-medium text-foreground"
-                  >
-                    {t('agentsConnectNameLabel')}
-                  </label>
-                  <Input
-                    id="agents-connect-name"
-                    value={connectName}
-                    onChange={(e) => setConnectName(e.target.value)}
-                    placeholder={formatDefaultAgentName(locale)}
-                    autoComplete="off"
-                  />
-                  <p className="text-xs text-muted-foreground">{t('agentsConnectNameHint')}</p>
-                  {createConnectionError ? (
-                    <p className="text-sm text-destructive">{createConnectionError}</p>
-                  ) : null}
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={creatingConnection}
-                    onClick={() => void onCreateConnection()}
-                  >
-                    {creatingConnection ? (
-                      <>
-                        <Loader2
-                          className="mr-1.5 size-3.5 animate-spin"
-                          aria-hidden
-                        />
-                        {t('agentsConnectCreating')}
-                      </>
-                    ) : (
-                      t('agentsConnectCreateButton')
-                    )}
-                  </Button>
-                </div>
-              )}
-
-              {discoveredServices.length > 0 ? (
-                <details className="group border-t border-border pt-4">
-                  <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium marker:content-none [&::-webkit-details-marker]:hidden">
-                    <ChevronRight
-                      className="size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-open:rotate-90"
-                      aria-hidden
-                    />
-                    {t('agentsServicesAdvanced')}
-                  </summary>
-                  <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                    {discoveredServices.map((svc) => (
-                      <li
-                        key={svc.id}
-                        className="flex flex-wrap items-center gap-x-2 gap-y-1"
-                      >
-                        <span className="font-medium text-foreground">
-                          {t(`agentsService_${svc.id}`, { defaultValue: svc.name })}
-                        </span>
-                        <span className="font-mono text-xs">{svc.mcp_url}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          onClick={() => void copyText(t('agentsCopyServiceUrl'), svc.mcp_url)}
-                        >
-                          <Copy
-                            className="mr-1 size-3"
-                            aria-hidden
-                          />
-                          {t('agentsCopyServiceUrl')}
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              ) : null}
+          {typeof retentionDays === 'number' ? (
+            <div
+              role="status"
+              className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm leading-snug text-amber-900"
+            >
+              {t('agentsRetentionBanner', { data_retention_days: retentionDays })}
             </div>
-          </SettingsSection>
+          ) : null}
 
-          <Tabs
-            defaultValue="agents"
-            className="space-y-4"
-          >
-            <TabsList>
-              <TabsTrigger value="agents">{t('agentsTabAgents')}</TabsTrigger>
-              <TabsTrigger value="approvals">
-                {t('agentsTabApprovals')}
-                {approvals.length > 0 ? (
-                  <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
-                    {approvals.length}
-                  </span>
+          <div className="flex flex-wrap gap-2">
+            <Input
+              value={agentSearch}
+              onChange={(e) => setAgentSearch(e.target.value)}
+              placeholder={t('agentsSearchPlaceholder')}
+              className="h-9 min-w-[220px] max-w-xs"
+              aria-label={t('agentsSearchPlaceholder')}
+            />
+            <Select
+              value={statusFilter}
+              onValueChange={(v) => setStatusFilter(v as AgentStatusFilter)}
+            >
+              <SelectTrigger className="h-9 w-[150px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('agentsFilterAllStatuses')}</SelectItem>
+                <SelectItem value="active">{t('agentsFilterActive')}</SelectItem>
+                {hasPausedAgents ? (
+                  <SelectItem value="paused">{t('agentsFilterPaused')}</SelectItem>
                 ) : null}
-              </TabsTrigger>
-            </TabsList>
+              </SelectContent>
+            </Select>
+            <Select
+              value={creatorFilter}
+              onValueChange={setCreatorFilter}
+            >
+              <SelectTrigger className="h-9 w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={CREATOR_ANY}>{t('agentsFilterAnyCreator')}</SelectItem>
+                {creatorOptions.map((name) => (
+                  <SelectItem
+                    key={name}
+                    value={name}
+                  >
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <TabsContent value="agents">
-              <DataTableCard
-                label={t('agentsListTitle')}
-                busy={loading}
-                toolbar={<h2 className="text-sm font-semibold">{t('agentsListTitle')}</h2>}
-              >
-                {loading && agents.length === 0 ? (
-                  <Table>
-                    <TableBody>
-                      <SkeletonRows
-                        rows={3}
-                        columns={['', '', '', '', '', '', '', '']}
-                      />
-                    </TableBody>
-                  </Table>
-                ) : agents.length === 0 ? (
-                  <EmptyState
-                    icon={Bot}
-                    title={t('agentsListEmpty')}
-                    description={
-                      <ol className="mx-auto max-w-md list-decimal space-y-1.5 pl-5 text-left text-[13px]">
-                        <li>{t('agentsListEmptyStep1')}</li>
-                        <li>{t('agentsListEmptyStep2')}</li>
-                        <li>{t('agentsListEmptyStep3')}</li>
-                      </ol>
-                    }
-                    actions={
-                      mcpEndpoint ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => void copyText(t('agentsCopyServiceUrl'), mcpEndpoint)}
-                        >
-                          <Copy
-                            className="mr-1.5 size-3.5"
-                            aria-hidden
-                          />
-                          {t('agentsCopyServiceUrl')}
-                        </Button>
-                      ) : null
-                    }
-                  />
-                ) : (
-                  <>
-                    <details className="group mx-5 mb-4 rounded-lg border border-border">
-                      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-medium marker:content-none [&::-webkit-details-marker]:hidden">
-                        <ChevronRight
-                          className="size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-open:rotate-90"
-                          aria-hidden
-                        />
-                        {t('agentsAccessLegendTitle')}
-                      </summary>
-                      <div className="space-y-2 border-t border-border px-3 py-3 text-sm text-muted-foreground">
-                        <p>{t('agentsAccessLegendIntro')}</p>
-                        <ul className="list-disc space-y-1 pl-5">
-                          <li>
-                            <span className="font-medium text-foreground">
-                              {t('agentsAccess_read_only')}
-                            </span>
-                            {' · '}
-                            {t('agentsAccessLegend_read_only')}
-                          </li>
-                          <li>
-                            <span className="font-medium text-foreground">
-                              {t('agentsAccess_ask')}
-                            </span>
-                            {' · '}
-                            {t('agentsAccessLegend_ask')}
-                          </li>
-                          <li>
-                            <span className="font-medium text-foreground">
-                              {t('agentsAccess_full')}
-                            </span>
-                            {' · '}
-                            {t('agentsAccessLegend_full')}
-                          </li>
-                          <li>
-                            <span className="font-medium text-foreground">
-                              {t('agentsColDestructive')}
-                            </span>
-                            {' · '}
-                            {t('agentsAccessLegend_destructive')}
-                          </li>
-                        </ul>
-                      </div>
-                    </details>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>{t('agentsColName')}</TableHead>
-                          <TableHead>{t('agentsColProjectScope')}</TableHead>
-                          <TableHeadWithTooltip
-                            label={t('agentsColAccess')}
-                            tooltip={t('agentsColAccessTooltip')}
-                          />
-                          <TableHead>{t('agentsColReadLevel')}</TableHead>
-                          <TableHead>{t('agentsColServices')}</TableHead>
-                          <TableHeadWithTooltip
-                            label={t('agentsColDestructive')}
-                            tooltip={t('agentsColDestructiveTooltip')}
-                          />
-                          <TableHead>{t('agentsColExpiry')}</TableHead>
-                          <TableHead>{t('agentsColLastCall')}</TableHead>
-                          <TableHead>{t('agentsColStatus')}</TableHead>
-                          <TableHead className="text-right">{t('agentsColActions')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {agents.map((agent) => {
-                          const busy = busyAgentId === agent.id;
-                          const status = agentDisplayStatus(agent);
-                          const selected = selectedAgentId === agent.id;
-                          return (
-                            <TableRow
-                              key={agent.id}
-                              className={cn(selected && 'bg-muted/40')}
-                              onClick={() => setSelectedAgentId(agent.id)}
-                            >
-                              <TableCell className="font-medium">{agent.name}</TableCell>
-                              <TableCell>{agent.project_scope || '-'}</TableCell>
-                              <TableCell>{t(`agentsAccess_${agent.access_mode}`)}</TableCell>
-                              <TableCell>{t(`agentsReadLevel_${agent.read_level}`)}</TableCell>
-                              <TableCell className="max-w-[140px] truncate">
-                                {servicesLabel(agent.services_allowed, t)}
-                              </TableCell>
-                              <TableCell>
-                                {agent.allow_destructive_without_asking
-                                  ? t('agentsDestructiveAllowed')
-                                  : t('agentsDestructiveAsk')}
-                              </TableCell>
-                              <TableCell>{formatDateTime(agent.expires_at, locale)}</TableCell>
-                              <TableCell>
-                                {formatDateTime(lastCallForAgent(agent.id, callLogs), locale)}
-                              </TableCell>
-                              <TableCell>
-                                <StatusBadge
-                                  tone={
-                                    status === 'active'
-                                      ? 'success'
-                                      : status === 'paused'
-                                        ? 'warning'
-                                        : 'muted'
-                                  }
-                                >
-                                  {t(`agentsStatus_${status}`)}
-                                </StatusBadge>
-                              </TableCell>
-                              <TableCell
-                                className="text-right"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <div className="flex justify-end gap-1">
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    disabled={busy || status !== 'active'}
-                                    onClick={() => void onPause(agent)}
-                                  >
-                                    {busy ? (
-                                      <Loader2
-                                        className="size-4 animate-spin"
-                                        aria-hidden
-                                      />
-                                    ) : (
-                                      <Pause
-                                        className="size-4"
-                                        aria-hidden
-                                      />
-                                    )}
-                                    <span className="sr-only">{t('agentsPause')}</span>
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    disabled={busy || status === 'revoked'}
-                                    onClick={() => void onRevoke(agent)}
-                                  >
-                                    {t('agentsRevoke')}
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </>
-                )}
-              </DataTableCard>
-
-              {selectedAgent?.access_mode === 'full' ? (
-                <Alert
-                  variant="destructive"
-                  className="mt-4"
-                >
-                  <ShieldAlert
-                    className="size-4"
-                    aria-hidden
-                  />
-                  <AlertTitle>{t('agentsFullAccessWarningTitle')}</AlertTitle>
-                  <AlertDescription>
-                    {t('agentsFullAccessWarningDescription', { name: selectedAgent.name })}
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-
-              {selectedAgent?.allow_destructive_without_asking ? (
-                <Alert
-                  variant="destructive"
-                  className="mt-4"
-                >
-                  <ShieldAlert
-                    className="size-4"
-                    aria-hidden
-                  />
-                  <AlertTitle>{t('agentsDestructiveWarningTitle')}</AlertTitle>
-                  <AlertDescription>
-                    {t('agentsDestructiveWarningDescription', { name: selectedAgent.name })}
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-
-              {selectedAgent ? (
-                <DataTableCard
-                  label={t('agentsCallLogTitle', { name: selectedAgent.name })}
-                  className="mt-4"
-                  toolbar={
-                    <h2 className="text-sm font-semibold">
-                      {t('agentsCallLogTitle', { name: selectedAgent.name })}
-                    </h2>
-                  }
-                >
-                  {filteredCallLog.length === 0 ? (
-                    <p className="px-5 pb-4 text-sm text-muted-foreground">
-                      {t('agentsCallLogEmpty')}
-                    </p>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>{t('agentsCallColTime')}</TableHead>
-                          <TableHead>{t('agentsCallColTool')}</TableHead>
-                          <TableHead>{t('agentsCallColTarget')}</TableHead>
-                          <TableHead>{t('agentsCallColStatus')}</TableHead>
-                          <TableHead className="text-right">{t('agentsCallColDuration')}</TableHead>
-                          <TableHead>{t('agentsCallColArguments')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredCallLog.map((entry) => {
-                          const argsText = formatCallLogArguments(entry.arguments);
-                          return (
-                            <TableRow key={entry.id}>
-                              <TableCell>{formatDateTime(entry.created_at, locale)}</TableCell>
-                              <TableCell className="font-mono text-xs">
-                                {entry.tool || `${entry.method} ${entry.path}`.trim()}
-                              </TableCell>
-                              <TableCell>{entry.service}</TableCell>
-                              <TableCell>{entry.status_code || '-'}</TableCell>
-                              <TableCell className="text-right">
-                                {formatDurationMs(entry.duration_ms, locale) ?? '-'}
-                              </TableCell>
-                              <TableCell className="max-w-[240px] align-top">
-                                {argsText ? (
-                                  <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-[10px] text-muted-foreground">
-                                    {argsText}
-                                  </pre>
-                                ) : (
-                                  <span className="text-muted-foreground">-</span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  )}
-                </DataTableCard>
-              ) : null}
-            </TabsContent>
-
-            <TabsContent value="approvals">
-              <DataTableCard
-                label={t('agentsApprovalsTitle')}
-                busy={loading}
-                toolbar={<h2 className="text-sm font-semibold">{t('agentsApprovalsTitle')}</h2>}
-              >
-                {loading && approvals.length === 0 ? (
-                  <div className="px-5 py-4">
-                    <SkeletonRows
-                      rows={2}
-                      columns={['']}
-                    />
-                  </div>
-                ) : approvals.length === 0 ? (
-                  <EmptyState
-                    icon={Bot}
-                    title={t('agentsApprovalsEmpty')}
-                    description={t('agentsApprovalsEmptyHint')}
-                  />
-                ) : (
-                  <ul className="divide-y divide-border">
-                    {approvals.map((approval) => {
-                      const busy = busyApprovalId === approval.id;
-                      const destructive = isDestructiveMcpApproval(approval);
-                      const argsJson = formatApprovalArgumentsForConfirm(approval);
-                      const hasRedactedArgs = mcpApprovalHasRedactedArguments(approval);
-                      return (
-                        <li
-                          key={approval.id}
-                          className={cn('space-y-3 px-5 py-4', destructive && 'bg-destructive/5')}
-                        >
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div className="min-w-0 space-y-1">
-                              <p className="text-sm font-medium text-foreground">
-                                {approval.service}.{approval.action}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {t('agentsApprovalMeta', {
-                                  agent: approval.agent_name,
-                                  target: approval.target || approval.service,
-                                })}
-                              </p>
-                              {destructive ? (
-                                <p className="text-sm font-medium text-destructive">
-                                  {t('agentsDestructiveApprovalWarning')}
-                                </p>
-                              ) : null}
-                            </div>
-                            <p className="text-sm tabular-nums text-muted-foreground">
-                              {t('agentsApprovalExpires', {
-                                countdown: formatCountdown(approval.expires_at, nowMs),
-                              })}
-                            </p>
-                          </div>
-                          <pre className="overflow-x-auto rounded-md bg-muted p-3 font-mono text-xs text-foreground">
-                            {argsJson}
-                          </pre>
-                          {!hasRedactedArgs ? (
-                            <p className="text-sm text-destructive">
-                              {t('agentsApprovalArgsMissing')}
+          {approvals.length > 0 ? (
+            <div className="space-y-3 rounded-xl border border-border bg-card px-4 py-3 shadow-xs">
+              <h2 className="text-sm font-semibold">{t('agentsApprovalsTitle')}</h2>
+              <ul className="divide-y divide-border">
+                {approvals.map((approval) => {
+                  const busy = busyApprovalId === approval.id;
+                  const destructive = isDestructiveMcpApproval(approval);
+                  const argsJson = formatApprovalArgumentsForConfirm(approval);
+                  const hasRedactedArgs = mcpApprovalHasRedactedArguments(approval);
+                  return (
+                    <li
+                      key={approval.id}
+                      className={cn(
+                        'space-y-3 py-3 first:pt-0 last:pb-0',
+                        destructive && 'bg-destructive/5',
+                      )}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0 space-y-1">
+                          <p className="text-sm font-medium text-foreground">
+                            {approval.service}.{approval.action}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {t('agentsApprovalMeta', {
+                              agent: approval.agent_name,
+                              target: approval.target || approval.service,
+                            })}
+                          </p>
+                          {destructive ? (
+                            <p className="text-sm font-medium text-destructive">
+                              {t('agentsDestructiveApprovalWarning')}
                             </p>
                           ) : null}
-                          <div className="flex flex-wrap gap-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant={destructive ? 'destructive' : 'default'}
-                              disabled={busy || !hasRedactedArgs}
-                              onClick={() => void onResolveApproval(approval, 'approve')}
-                            >
-                              {busy ? (
-                                <Loader2
-                                  className="mr-1.5 size-4 animate-spin"
-                                  aria-hidden
-                                />
-                              ) : null}
-                              {t('agentsApprove')}
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled={busy}
-                              onClick={() => void onResolveApproval(approval, 'reject')}
-                            >
-                              {t('agentsReject')}
-                            </Button>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </DataTableCard>
-            </TabsContent>
-          </Tabs>
+                        </div>
+                        <p className="text-sm tabular-nums text-muted-foreground">
+                          {t('agentsApprovalExpires', {
+                            countdown: formatCountdown(approval.expires_at, nowMs),
+                          })}
+                        </p>
+                      </div>
+                      <pre className="overflow-x-auto rounded-md bg-muted p-3 font-mono text-xs text-foreground">
+                        {argsJson}
+                      </pre>
+                      {!hasRedactedArgs ? (
+                        <p className="text-sm text-destructive">{t('agentsApprovalArgsMissing')}</p>
+                      ) : null}
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={destructive ? 'destructive' : 'default'}
+                          disabled={busy || !hasRedactedArgs}
+                          onClick={() => void onResolveApproval(approval, 'approve')}
+                        >
+                          {busy ? (
+                            <Loader2
+                              className="mr-1.5 size-4 animate-spin"
+                              aria-hidden
+                            />
+                          ) : null}
+                          {t('agentsApprove')}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={busy}
+                          onClick={() => void onResolveApproval(approval, 'reject')}
+                        >
+                          {t('agentsReject')}
+                        </Button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t('agentsSectionActive')}
+            </p>
+            {loading && agents.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t('agentsCallLogLoading')}</p>
+            ) : filteredActiveAgents.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {listHasFilters ? t('agentsNoMatch') : t('agentsNoActive')}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {filteredActiveAgents.map((agent) => (
+                  <AgentAccordionRow
+                    key={agent.id}
+                    agent={agent}
+                    expanded={expandedAgentId === agent.id}
+                    onToggle={() => toggleAgentExpand(agent.id)}
+                    callLogs={callLogs}
+                    loadingLogs={loading}
+                    locale={locale}
+                    readOnly={false}
+                    busy={busyAgentId === agent.id}
+                    onRevoke={() => void onRevoke(agent)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {revokedAgents.length > 0 ? (
+            <div>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-[#8a6300] hover:underline"
+                onClick={() => setShowRevoked((v) => !v)}
+              >
+                {showRevoked
+                  ? t('agentsHideRevoked')
+                  : t('agentsShowRevoked', { count: revokedAgents.length })}
+                <ChevronRight
+                  className={cn(
+                    'size-4 transition-transform motion-reduce:transition-none',
+                    showRevoked && 'rotate-90',
+                  )}
+                  aria-hidden
+                />
+              </button>
+              {showRevoked ? (
+                <div className="mt-3 space-y-2">
+                  {revokedAgents.map((agent) => (
+                    <AgentAccordionRow
+                      key={agent.id}
+                      agent={agent}
+                      expanded={expandedAgentId === agent.id}
+                      onToggle={() => toggleAgentExpand(agent.id)}
+                      callLogs={callLogs}
+                      loadingLogs={loading}
+                      locale={locale}
+                      readOnly
+                      busy={false}
+                      onRevoke={() => {}}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </>
       ) : null}
+
+      <Sheet
+        open={connectOpen}
+        onOpenChange={setConnectOpen}
+      >
+        <SheetContent className="overflow-y-auto sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>{t('agentsConnectOpen')}</SheetTitle>
+            <SheetDescription>{t('agentsConnectIntro')}</SheetDescription>
+          </SheetHeader>
+          <div className="mt-6 space-y-4">
+            {!mcpOrigin || !companyMcpUrl ? (
+              <p className="text-sm text-muted-foreground">{t('agentsConnectMissingUrl')}</p>
+            ) : issuedConnection ? (
+              <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">
+                    {t('agentsConnectCreatedTitle')}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{t('agentsConnectCreatedHint')}</p>
+                </div>
+                <pre className="max-h-64 overflow-auto rounded-md border border-border bg-muted p-3 font-mono text-xs text-foreground">
+                  {issuedConnection.prompt}
+                </pre>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    onClick={() => void copyText(t('agentsCopyPrompt'), issuedConnection.prompt)}
+                  >
+                    <Copy
+                      className="mr-1.5 size-3.5"
+                      aria-hidden
+                    />
+                    {t('agentsCopyPrompt')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      void copyText(t('agentsCopyToken'), issuedConnection.accessToken)
+                    }
+                  >
+                    <Copy
+                      className="mr-1.5 size-3.5"
+                      aria-hidden
+                    />
+                    {t('agentsCopyToken')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIssuedConnection(null)}
+                  >
+                    {t('agentsConnectCreateAnother')}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <label
+                  htmlFor="agents-connect-name"
+                  className="text-sm font-medium text-foreground"
+                >
+                  {t('agentsConnectNameLabel')}
+                </label>
+                <Input
+                  id="agents-connect-name"
+                  value={connectName}
+                  onChange={(e) => setConnectName(e.target.value)}
+                  placeholder={formatDefaultAgentName(locale)}
+                  autoComplete="off"
+                />
+                <p className="text-xs text-muted-foreground">{t('agentsConnectNameHint')}</p>
+                {createConnectionError ? (
+                  <p className="text-sm text-destructive">{createConnectionError}</p>
+                ) : null}
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={creatingConnection}
+                  onClick={() => void onCreateConnection()}
+                >
+                  {creatingConnection ? (
+                    <>
+                      <Loader2
+                        className="mr-1.5 size-3.5 animate-spin"
+                        aria-hidden
+                      />
+                      {t('agentsConnectCreating')}
+                    </>
+                  ) : (
+                    t('agentsConnectCreateButton')
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  agentCreatorDisplayName,
   formatApprovalArgumentsForConfirm,
   formatCallLogArguments,
   isDestructiveMcpApproval,
   mcpApprovalHasRedactedArguments,
+  mcpCallLogOutcome,
   parseMcpAgent,
   parseMcpAgentsResponse,
   parseMcpApproval,
@@ -139,6 +141,37 @@ describe('companyAgentsApi parsers', () => {
     expect(row?.method).toBe('GET');
     expect(row?.status_code).toBe(200);
     expect(row?.duration_ms).toBe(50);
+  });
+
+  it('parses created_by display name from identity', () => {
+    const agent = parseMcpAgent({
+      id: 'x',
+      name: 'n',
+      created_by: { display_name: 'Sébastien Barbier' },
+      created_at: '2026-01-01T00:00:00Z',
+    });
+    expect(agentCreatorDisplayName(agent!)).toBe('Sébastien Barbier');
+  });
+
+  it('parses created_by_display_name fallback', () => {
+    const agent = parseMcpAgent({
+      id: 'x',
+      name: 'n',
+      created_by_display_name: 'CI bot',
+      created_at: '2026-01-01T00:00:00Z',
+    });
+    expect(agentCreatorDisplayName(agent!)).toBe('CI bot');
+  });
+
+  it('maps call log HTTP status to outcome labels', () => {
+    const base = {
+      id: 1,
+      agent_id: 'a',
+      created_at: '2026-01-01T00:00:00Z',
+    };
+    expect(mcpCallLogOutcome({ ...base, status_code: 200 } as never)).toBe('succeeded');
+    expect(mcpCallLogOutcome({ ...base, status_code: 403 } as never)).toBe('denied');
+    expect(mcpCallLogOutcome({ ...base, status_code: 500 } as never)).toBe('failed');
   });
 
   it('parses missing call duration as null', () => {
