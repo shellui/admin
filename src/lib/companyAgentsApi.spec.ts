@@ -138,5 +138,16 @@ describe('companyAgentsApi parsers', () => {
     });
     expect(row?.method).toBe('GET');
     expect(row?.status_code).toBe(200);
+    expect(row?.duration_ms).toBe(50);
+  });
+
+  it('parses missing call duration as null', () => {
+    const row = parseMcpCallLogEntry({
+      id: 1,
+      agent_id: 'a1',
+      tool: 't',
+      created_at: '2026-01-01T00:00:00Z',
+    });
+    expect(row?.duration_ms).toBeNull();
   });
 });

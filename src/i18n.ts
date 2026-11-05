@@ -1054,7 +1054,21 @@ const resources = {
       agentsMcpUnavailableTitle: 'MCP admin is not available',
       agentsMcpTitle: 'Connect MCP clients',
       agentsMcpDescription:
-        'Agents sign in through Identity OAuth and pick services at consent. This page lists connected agents for your company.',
+        'Create a connection token for MCP clients, then manage agents, approvals, and call logs for your company.',
+      agentsConnectIntro:
+        'Create a connection to get one copy-paste prompt with the company MCP URL and access token. Paste it into Cursor, Claude, or another MCP client.',
+      agentsConnectNameLabel: 'Connection name',
+      agentsConnectNameHint: 'Shown in the connected agents list. You cannot rename it later.',
+      agentsConnectCreateButton: 'Create connection',
+      agentsConnectCreating: 'Creating…',
+      agentsConnectCreateError: 'Could not create the connection.',
+      agentsConnectCreatedTitle: 'Connection created',
+      agentsConnectCreatedHint:
+        'Copy the agent prompt now. The access token is shown once and cannot be retrieved later.',
+      agentsConnectCreateAnother: 'Create another',
+      agentsCopyPrompt: 'Copy agent prompt',
+      agentsCopyToken: 'Copy token only',
+      agentsServicesAdvanced: 'Per-service MCP URLs (advanced)',
       agentsServicesLabel: 'Shellui MCP services on this deployment',
       agentsService_identity: 'Identity',
       agentsService_storage: 'Storage',
@@ -1104,9 +1118,10 @@ const resources = {
       agentsListTitle: 'Connected agents',
       agentsListEmpty: 'No agents connected yet.',
       agentsListEmptyHint: 'When a client connects through MCP and signs in, it appears here.',
-      agentsListEmptyStep1: 'Copy the Shellui MCP server URL from the connect box above.',
-      agentsListEmptyStep2: 'Paste it into your assistant MCP or Connectors settings.',
-      agentsListEmptyStep3: 'Sign in and pick access for this company.',
+      agentsListEmptyStep1: 'Create a connection above and copy the agent prompt.',
+      agentsListEmptyStep2:
+        'Paste it into your MCP client (or use OAuth sign-in if the client supports it).',
+      agentsListEmptyStep3: 'The new agent appears in this list when the client connects.',
       agentsAccessLegendTitle: 'What do these mean?',
       agentsAccessLegendIntro:
         'Access mode and destructive flags come from the consent screen at sign-in.',
@@ -3153,7 +3168,22 @@ const resources = {
       agentsMcpUnavailableTitle: 'Admin MCP indisponible',
       agentsMcpTitle: 'Connecter des clients MCP',
       agentsMcpDescription:
-        'Les agents se connectent via OAuth Identity et choisissent les services au consentement. Cette page liste les agents connectés pour votre entreprise.',
+        'Créez un jeton de connexion pour les clients MCP, puis gérez les agents, approbations et journaux d’appels de votre entreprise.',
+      agentsConnectIntro:
+        'Créez une connexion pour obtenir un prompt unique avec l’URL MCP de l’entreprise et le jeton d’accès. Collez-le dans Cursor, Claude ou un autre client MCP.',
+      agentsConnectNameLabel: 'Nom de la connexion',
+      agentsConnectNameHint:
+        'Affiché dans la liste des agents connectés. Vous ne pourrez pas le renommer.',
+      agentsConnectCreateButton: 'Créer la connexion',
+      agentsConnectCreating: 'Création…',
+      agentsConnectCreateError: 'Impossible de créer la connexion.',
+      agentsConnectCreatedTitle: 'Connexion créée',
+      agentsConnectCreatedHint:
+        'Copiez le prompt agent maintenant. Le jeton d’accès n’est affiché qu’une fois et ne peut pas être récupéré ensuite.',
+      agentsConnectCreateAnother: 'Créer une autre',
+      agentsCopyPrompt: 'Copier le prompt agent',
+      agentsCopyToken: 'Copier le jeton seul',
+      agentsServicesAdvanced: 'URL MCP par service (avancé)',
       agentsServicesLabel: 'Services MCP Shellui sur ce déploiement',
       agentsService_identity: 'Identity',
       agentsService_storage: 'Storage',
@@ -3204,10 +3234,10 @@ const resources = {
       agentsListTitle: 'Agents connectés',
       agentsListEmpty: 'Aucun agent connecté pour l’instant.',
       agentsListEmptyHint: 'Quand un client se connecte via MCP et se connecte, il apparaît ici.',
-      agentsListEmptyStep1:
-        'Copiez l’URL du serveur MCP Shellui depuis la zone de connexion ci-dessus.',
-      agentsListEmptyStep2: 'Collez-la dans les paramètres MCP ou Connectors de votre assistant.',
-      agentsListEmptyStep3: 'Connectez-vous et choisissez l’accès pour cette entreprise.',
+      agentsListEmptyStep1: 'Créez une connexion ci-dessus et copiez le prompt agent.',
+      agentsListEmptyStep2:
+        'Collez-le dans votre client MCP (ou utilisez OAuth si le client le prend en charge).',
+      agentsListEmptyStep3: 'Le nouvel agent apparaît ici quand le client se connecte.',
       agentsAccessLegendTitle: 'Que signifient ces colonnes ?',
       agentsAccessLegendIntro:
         'Le mode d’accès et le drapeau destructif viennent de l’écran de consentement à la connexion.',

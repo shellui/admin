@@ -42,7 +42,7 @@ export type CompanyMcpCallLogEntry = {
   method: string;
   path: string;
   status_code: number;
-  duration_ms: number;
+  duration_ms: number | null;
   arguments: Record<string, unknown>;
   created_at: string;
 };

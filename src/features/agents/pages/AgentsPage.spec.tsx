@@ -35,6 +35,15 @@ vi.mock('@/lib/jwtCompany', () => ({
   getIsCompanyOwnerFromJwt: () => true,
 }));
 
+vi.mock('@/lib/personalAgentsApi', () => ({
+  fetchMcpPersonalStatus: vi.fn().mockResolvedValue({
+    mcp_enabled: true,
+    mcp_url: 'https://ai.example.com/c/1/mcp',
+    global_identity: false,
+  }),
+  createMcpPersonalAgent: vi.fn(),
+}));
+
 vi.mock('@/lib/companyAgentsApi', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/companyAgentsApi')>();
   return {
@@ -66,7 +75,7 @@ vi.mock('@/lib/companyAgentsApi', async (importOriginal) => {
         method: 'GET',
         path: '/users',
         status_code: 200,
-        duration_ms: 1,
+        duration_ms: 50,
         arguments: { note: '<b>bold</b>' },
         created_at: '2026-01-01T00:00:00Z',
       },
@@ -86,9 +95,8 @@ describe('AgentsPage', () => {
     expect(screen.getByRole('link', { name: 'agentsDocsLink' }).getAttribute('href')).toBe(
       'https://docs.shellui.com/identity/mcp-and-agents/',
     );
-    expect(
-      screen.getByRole('tab', { name: 'agentsClientTab_cursor' }).getAttribute('aria-selected'),
-    ).toBe('true');
-    expect(document.body.textContent).toContain('https://ai.example.com/c/1/mcp');
+    expect(screen.getByText('agentsConnectIntro')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'agentsConnectCreateButton' })).toBeTruthy();
+    expect(document.body.textContent).toContain('50 ms');
   });
 });
