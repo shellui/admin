@@ -84,6 +84,17 @@ describe('service Django admin links', () => {
     ]);
   });
 
+  it('adds Email Swagger and ReDoc in developer mode before Django admin', () => {
+    hooks.developerMode = true;
+    renderShell();
+    expect(sectionHrefs(/^Email/).slice(-4)).toEqual([
+      '/email/statistics',
+      '/email/swagger',
+      '/email/redoc',
+      'http://localhost:8003/admin/',
+    ]);
+  });
+
   it('hides Django admin links from company owners', () => {
     hooks.isStaff = false;
     renderShell();
