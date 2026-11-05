@@ -4,6 +4,9 @@ import {
   type CompanyMcpCallLogEntry,
 } from '@/lib/companyAgentsApi';
 
+/** Default call-log window for AI activity KPIs (24 hours). */
+export const AI_CALL_LOG_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 export type AiAgentStatusCounts = {
   active: number;
   paused: number;
