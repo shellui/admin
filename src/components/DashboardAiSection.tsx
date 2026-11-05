@@ -18,7 +18,7 @@ function formatInt(n: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.round(n));
 }
 
-function DashboardAiQuiet({ quiet }: { quiet: AiDashboardQuiet }) {
+function DashboardAiQuiet() {
   const { t } = useTranslation();
   return (
     <Alert variant="info">
@@ -35,7 +35,7 @@ class DashboardAiBoundary extends Component<{ children: ReactNode }, { failed: b
   }
 
   render() {
-    if (this.state.failed) return <DashboardAiQuiet quiet="unavailable" />;
+    if (this.state.failed) return <DashboardAiQuiet />;
     return this.props.children;
   }
 }
@@ -76,7 +76,7 @@ function DashboardAiSectionInner() {
   const activeHint =
     metrics && metrics.agentCounts.revoked > 0
       ? t('dashboardStatAiAgentsActiveHintRevoked', {
-          count: formatInt(metrics.agentCounts.revoked),
+          count: metrics.agentCounts.revoked,
         })
       : t('dashboardStatAiAgentsActiveHintConnected');
 
@@ -99,7 +99,7 @@ function DashboardAiSectionInner() {
         />
       ) : null}
 
-      {companyId != null && !loading && quiet ? <DashboardAiQuiet quiet={quiet} /> : null}
+      {companyId != null && !loading && quiet ? <DashboardAiQuiet /> : null}
 
       {companyId != null && !loading && !quiet && metrics ? (
         <KpiRow

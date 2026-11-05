@@ -4,21 +4,26 @@ import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter } from 'react-router-dom';
 import i18n from '@/i18n';
 import { DashboardAiSection } from '@/components/DashboardAiSection';
+import type { AiDashboardSnapshot } from '@/lib/dashboardAi';
 
-const state = vi.hoisted(() => ({
-  enabled: true,
-  accessToken: 'token' as string | null,
-  companyId: 42 as number | null,
-  snapshot: {
+const state = vi.hoisted(() => {
+  const defaultSnapshot = (): AiDashboardSnapshot => ({
     metrics: {
       agentCounts: { active: 3, paused: 0, revoked: 1, expired: 0 },
       pendingApprovals: 2,
       callLogs24h: 12,
       callLogErrors24h: 1,
     },
-    quiet: null as const,
-  },
-}));
+    quiet: null,
+  });
+  return {
+    enabled: true,
+    accessToken: 'token' as string | null,
+    companyId: 42 as number | null,
+    snapshot: defaultSnapshot(),
+    defaultSnapshot,
+  };
+});
 
 vi.mock('@/hooks/useShelluiAccessToken', () => ({
   useShelluiAccessToken: () => state.accessToken,
@@ -54,15 +59,7 @@ describe('DashboardAiSection', () => {
     state.enabled = true;
     state.accessToken = 'token';
     state.companyId = 42;
-    state.snapshot = {
-      metrics: {
-        agentCounts: { active: 3, paused: 0, revoked: 1, expired: 0 },
-        pendingApprovals: 2,
-        callLogs24h: 12,
-        callLogErrors24h: 1,
-      },
-      quiet: null,
-    };
+    state.snapshot = state.defaultSnapshot();
     await i18n.changeLanguage('en');
   });
 
@@ -91,7 +88,7 @@ describe('DashboardAiSection', () => {
         callLogErrors24h: 0,
       },
       quiet: null,
-    };
+    } satisfies AiDashboardSnapshot;
     renderSection();
     expect(await screen.findByText('Connected MCP agents.')).toBeTruthy();
     expect(screen.queryByText(/revoked/)).toBeNull();
@@ -105,7 +102,7 @@ describe('DashboardAiSection', () => {
   });
 
   it('shows a quiet empty state when MCP data is unavailable', async () => {
-    state.snapshot = { metrics: null, quiet: 'unavailable' };
+    state.snapshot = { metrics: null, quiet: 'unavailable' } satisfies AiDashboardSnapshot;
     renderSection();
     const note = await screen.findByText('AI metrics are unavailable right now.');
     expect(note.className).not.toContain('text-destructive');
