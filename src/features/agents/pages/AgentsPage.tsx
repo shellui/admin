@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bot, ChevronRight, Copy, Loader2 } from 'lucide-react';
 import shellui from '@shellui/sdk';
@@ -166,6 +166,38 @@ function filterCallLogRows(
   return out.sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
+const callLogTableHeadClass = 'h-9 px-3 text-xs font-medium tracking-normal text-muted-foreground';
+const callLogTableCellClass = 'px-3 py-2 align-middle text-xs';
+
+function callLogStatusBadgeClass(outcome: McpCallLogOutcome): string {
+  if (outcome === 'succeeded') {
+    return 'border-border/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400';
+  }
+  if (outcome === 'denied') {
+    return 'border-border/60 bg-amber-500/10 text-amber-800 dark:text-amber-400';
+  }
+  return 'border-border/60 bg-red-500/10 text-red-700 dark:text-red-400';
+}
+
+function CallLogStatusBadge({
+  outcome,
+  children,
+}: {
+  outcome: McpCallLogOutcome;
+  children: ReactNode;
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-md border px-1.5 py-0.5 text-[11px] font-medium leading-none',
+        callLogStatusBadgeClass(outcome),
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 function AgentCallLogPanel({
   agentId,
   callLogs,
@@ -202,23 +234,21 @@ function AgentCallLogPanel({
   };
 
   return (
-    <div className="border-t border-border bg-muted/30 px-4 py-3">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {t('agentsCallLog')}
-      </p>
+    <div className="border-t border-border bg-muted/40 px-4 py-3">
+      <p className="mb-2 text-xs font-medium text-muted-foreground">{t('agentsCallLog')}</p>
       <div className="mb-3 flex flex-wrap gap-2">
         <Input
           value={logSearch}
           onChange={(e) => setLogSearch(e.target.value)}
           placeholder={t('agentsSearchToolsPlaceholder')}
-          className="h-9 min-w-[200px] max-w-xs text-sm"
+          className="h-8 min-w-[200px] max-w-xs text-xs"
           aria-label={t('agentsSearchToolsPlaceholder')}
         />
         <Select
           value={logStatus}
           onValueChange={(v) => setLogStatus(v as CallLogStatusFilter)}
         >
-          <SelectTrigger className="h-9 w-[140px]">
+          <SelectTrigger className="h-8 w-[140px] text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -232,7 +262,7 @@ function AgentCallLogPanel({
           value={logTime}
           onValueChange={(v) => setLogTime(v as CallLogTimeFilter)}
         >
-          <SelectTrigger className="h-9 w-[140px]">
+          <SelectTrigger className="h-8 w-[140px] text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -242,54 +272,87 @@ function AgentCallLogPanel({
           </SelectContent>
         </Select>
       </div>
-      {loading ? (
-        <p className="text-sm text-muted-foreground">{t('agentsCallLogLoading')}</p>
-      ) : rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t('agentsCallLogEmptyRange')}</p>
-      ) : (
-        <div className="overflow-hidden rounded-lg border border-border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('agentsCallColWhen')}</TableHead>
-                <TableHead>{t('agentsCallColService')}</TableHead>
-                <TableHead>{t('agentsCallColTool')}</TableHead>
-                <TableHead>{t('agentsCallColStatus')}</TableHead>
-                <TableHead>{t('agentsCallColDuration')}</TableHead>
+      <div className="overflow-hidden rounded-md border border-border bg-background">
+        <Table className="text-xs">
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className={callLogTableHeadClass}>{t('agentsCallColWhen')}</TableHead>
+              <TableHead className={callLogTableHeadClass}>{t('agentsCallColService')}</TableHead>
+              <TableHead className={callLogTableHeadClass}>{t('agentsCallColTool')}</TableHead>
+              <TableHead className={callLogTableHeadClass}>{t('agentsCallColStatus')}</TableHead>
+              <TableHead className={cn(callLogTableHeadClass, 'text-right')}>
+                {t('agentsCallColDuration')}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow className="hover:bg-transparent">
+                <TableCell
+                  colSpan={5}
+                  className="py-8 text-center text-xs text-muted-foreground"
+                >
+                  {t('agentsCallLogLoading')}
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((entry) => {
+            ) : rows.length === 0 ? (
+              <TableRow className="hover:bg-transparent">
+                <TableCell
+                  colSpan={5}
+                  className="py-8 text-center text-xs text-muted-foreground"
+                >
+                  {t('agentsCallLogEmptyRange')}
+                </TableCell>
+              </TableRow>
+            ) : (
+              rows.map((entry) => {
                 const outcome = mcpCallLogOutcome(entry);
+                const toolLabel = entry.tool || `${entry.method} ${entry.path}`.trim() || '-';
                 return (
                   <TableRow key={entry.id}>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell
+                      className={cn(
+                        callLogTableCellClass,
+                        'whitespace-nowrap tabular-nums text-muted-foreground',
+                      )}
+                      title={entry.created_at}
+                    >
                       {formatCallWhen(entry.created_at, locale)}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">{entry.service}</TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {entry.tool || `${entry.method} ${entry.path}`.trim() || '-'}
+                    <TableCell
+                      className={cn(callLogTableCellClass, 'font-mono text-muted-foreground')}
+                    >
+                      {entry.service}
                     </TableCell>
                     <TableCell
                       className={cn(
-                        'font-semibold',
-                        outcome === 'succeeded' && 'text-emerald-700',
-                        outcome === 'denied' && 'text-destructive',
-                        outcome === 'failed' && 'text-destructive',
+                        callLogTableCellClass,
+                        'max-w-[16rem] truncate font-mono font-medium text-foreground',
+                      )}
+                      title={toolLabel === '-' ? undefined : toolLabel}
+                    >
+                      {toolLabel}
+                    </TableCell>
+                    <TableCell className={callLogTableCellClass}>
+                      <CallLogStatusBadge outcome={outcome}>
+                        {statusLabel(outcome)}
+                      </CallLogStatusBadge>
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        callLogTableCellClass,
+                        'text-right font-mono tabular-nums text-muted-foreground',
                       )}
                     >
-                      {statusLabel(outcome)}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
                       {formatDurationMs(entry.duration_ms, locale) ?? '-'}
                     </TableCell>
                   </TableRow>
                 );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

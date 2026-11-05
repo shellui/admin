@@ -103,7 +103,10 @@ describe('AgentsPage', () => {
 
     const log = await screen.findByText('list_users');
     expect(log).toBeTruthy();
-    expect(within(log.closest('table')!).getByText('50 ms')).toBeTruthy();
+    const table = log.closest('table')!;
+    expect(within(table).getByText('50 ms')).toBeTruthy();
+    const statusBadge = within(table).getByText('agentsLogStatusSucceeded');
+    expect(statusBadge.className).toContain('bg-emerald-500/10');
     expect(document.body.textContent).not.toContain('<b>bold</b>');
   });
 });
