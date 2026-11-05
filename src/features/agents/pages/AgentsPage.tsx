@@ -18,6 +18,7 @@ import { SettingsSection } from '@/components/admin/SettingsSection';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -55,11 +56,26 @@ import {
 import {
   aiServiceMcpEndpointUrl,
   IDENTITY_MCP_AGENTS_DOCS_URL,
-  mcpClientCopySnippet,
-  type McpClientId,
 } from '@/lib/companyAgentsMcpConfig';
+import {
+  buildAgentPrompt,
+  buildCompanyMcpUrl,
+  defaultPersonalAgentExpiresAt,
+  formatDefaultAgentName,
+  getDefaultPersonalAgentServices,
+  isGlobalIdentitySession,
+} from '@/lib/mcpAgentsConnect';
+import { createMcpPersonalAgent, fetchMcpPersonalStatus } from '@/lib/personalAgentsApi';
+import type { McpPersonalStatus } from '@/lib/personalAgentsApi';
+import { formatDurationMs } from '@/lib/scheduledJobsApi';
 import { useShelluiAiService } from '@/hooks/useShelluiAiService';
 import { cn } from '@/lib/utils';
+
+type IssuedMcpConnection = {
+  accessToken: string;
+  mcpUrl: string;
+  prompt: string;
+};
 
 function formatDateTime(iso: string | null | undefined, locale: string): string {
   if (!iso) return '-';
@@ -80,36 +96,6 @@ function formatCountdown(expiresAt: string, nowMs: number): string {
 function servicesLabel(services: string[], t: (k: string) => string): string {
   if (services.length === 0) return '-';
   return services.map((id) => t(`agentsService_${id}`)).join(', ');
-}
-
-const MCP_CLIENT_TABS: McpClientId[] = ['claude', 'cursor', 'chatgpt', 'other'];
-
-function mcpClientStepKeys(client: McpClientId): string[] {
-  switch (client) {
-    case 'claude':
-      return [
-        'agentsClientClaudeStep1',
-        'agentsClientClaudeStep2',
-        'agentsClientClaudeStep3',
-        'agentsClientClaudeStep4',
-      ];
-    case 'cursor':
-      return [
-        'agentsClientCursorStep1',
-        'agentsClientCursorStep2',
-        'agentsClientCursorStep3',
-        'agentsClientCursorStep4',
-      ];
-    case 'chatgpt':
-      return [
-        'agentsClientChatgptStep1',
-        'agentsClientChatgptStep2',
-        'agentsClientChatgptStep3',
-        'agentsClientChatgptStep4',
-      ];
-    case 'other':
-      return ['agentsClientOtherStep1', 'agentsClientOtherStep2', 'agentsClientOtherStep3'];
-  }
 }
 
 function TableHeadWithTooltip({ label, tooltip }: { label: string; tooltip: string }) {
@@ -157,7 +143,11 @@ export function AgentsPage() {
   const [mcpUnavailable, setMcpUnavailable] = useState(false);
   const [busyAgentId, setBusyAgentId] = useState<string | null>(null);
   const [busyApprovalId, setBusyApprovalId] = useState<string | null>(null);
-  const [connectClient, setConnectClient] = useState<McpClientId>('cursor');
+  const [personalStatus, setPersonalStatus] = useState<McpPersonalStatus | null>(null);
+  const [connectName, setConnectName] = useState('');
+  const [creatingConnection, setCreatingConnection] = useState(false);
+  const [createConnectionError, setCreateConnectionError] = useState<string | null>(null);
+  const [issuedConnection, setIssuedConnection] = useState<IssuedMcpConnection | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   const aiService = useShelluiAiService();
@@ -166,6 +156,12 @@ export function AgentsPage() {
   const mcpEndpoint = useMemo(
     () => (mcpOrigin ? aiServiceMcpEndpointUrl(mcpOrigin, companyId) : ''),
     [mcpOrigin, companyId],
+  );
+
+  const includeSaas = isGlobalIdentitySession(personalStatus);
+  const companyMcpUrl = useMemo(
+    () => buildCompanyMcpUrl(mcpOrigin, companyId, personalStatus?.mcp_url),
+    [mcpOrigin, companyId, personalStatus?.mcp_url],
   );
 
   const load = useCallback(async () => {
@@ -177,16 +173,18 @@ export function AgentsPage() {
     setError(null);
     setMcpUnavailable(false);
     try {
-      const [agentRows, approvalRows, logRows, serviceRows] = await Promise.all([
+      const [agentRows, approvalRows, logRows, serviceRows, statusRow] = await Promise.all([
         fetchCompanyMcpAgents(accessToken, companyId),
         fetchCompanyMcpApprovals(accessToken, companyId),
         fetchCompanyMcpCallLogs(accessToken, companyId),
         fetchMcpDiscoveredServices(accessToken, companyId),
+        fetchMcpPersonalStatus(accessToken, companyId).catch(() => null),
       ]);
       setAgents(agentRows);
       setApprovals(approvalRows);
       setCallLogs(logRows);
       setDiscoveredServices(serviceRows);
+      setPersonalStatus(statusRow);
       const first = agentRows.find((a) => agentDisplayStatus(a) !== 'revoked')?.id ?? null;
       setSelectedAgentId((prev) => (prev && agentRows.some((a) => a.id === prev) ? prev : first));
     } catch (e) {
@@ -290,6 +288,47 @@ export function AgentsPage() {
     }
   }
 
+  async function onCreateConnection() {
+    if (!accessToken || companyId == null || !companyMcpUrl) return;
+    const trimmed = connectName.trim();
+    const name = trimmed || formatDefaultAgentName(locale);
+    setCreatingConnection(true);
+    setCreateConnectionError(null);
+    try {
+      const result = await createMcpPersonalAgent(
+        accessToken,
+        companyId,
+        {
+          name,
+          services: getDefaultPersonalAgentServices(includeSaas),
+          access_mode: 'ask',
+          read_level: 'safe',
+          allow_destructive: false,
+          expires_at: defaultPersonalAgentExpiresAt(),
+        },
+        { allowSaas: includeSaas },
+      );
+      const promptMcpUrl =
+        buildCompanyMcpUrl(mcpOrigin, companyId, result.resource) || companyMcpUrl;
+      const prompt = buildAgentPrompt(promptMcpUrl, result.access_token);
+      setIssuedConnection({
+        accessToken: result.access_token,
+        mcpUrl: promptMcpUrl,
+        prompt,
+      });
+      setConnectName('');
+      const agentRows = await fetchCompanyMcpAgents(accessToken, companyId);
+      setAgents(agentRows);
+      const first =
+        agentRows.find((a) => agentDisplayStatus(a) !== 'revoked')?.id ?? selectedAgentId;
+      if (first) setSelectedAgentId(first);
+    } catch (e) {
+      setCreateConnectionError(e instanceof Error ? e.message : t('agentsConnectCreateError'));
+    } finally {
+      setCreatingConnection(false);
+    }
+  }
+
   async function onRevoke(agent: CompanyMcpAgent) {
     if (!accessToken || companyId == null) return;
     const ok = await askShelluiConfirm({
@@ -381,70 +420,107 @@ export function AgentsPage() {
             busy={loading}
           >
             <div className="space-y-6 p-5">
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-foreground">{t('agentsConnectTitle')}</p>
-                {!mcpOrigin ? (
-                  <p className="text-sm text-muted-foreground">{t('agentsConnectMissingUrl')}</p>
-                ) : (
-                  <div className="space-y-3">
-                    <div
-                      className="flex flex-wrap gap-1 rounded-lg bg-muted p-1"
-                      role="tablist"
-                      aria-label={t('agentsConnectTitle')}
+              <p className="text-sm text-muted-foreground">{t('agentsConnectIntro')}</p>
+              {!mcpOrigin || !companyMcpUrl ? (
+                <p className="text-sm text-muted-foreground">{t('agentsConnectMissingUrl')}</p>
+              ) : issuedConnection ? (
+                <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">
+                      {t('agentsConnectCreatedTitle')}
+                    </p>
+                    <p className="text-sm text-muted-foreground">{t('agentsConnectCreatedHint')}</p>
+                  </div>
+                  <pre className="max-h-64 overflow-auto rounded-md border border-border bg-muted p-3 font-mono text-xs text-foreground">
+                    {issuedConnection.prompt}
+                  </pre>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="default"
+                      size="sm"
+                      onClick={() => void copyText(t('agentsCopyPrompt'), issuedConnection.prompt)}
                     >
-                      {MCP_CLIENT_TABS.map((client) => (
-                        <Button
-                          key={client}
-                          type="button"
-                          role="tab"
-                          aria-selected={connectClient === client}
-                          variant={connectClient === client ? 'secondary' : 'ghost'}
-                          size="sm"
-                          className="text-xs sm:text-sm"
-                          onClick={() => setConnectClient(client)}
-                        >
-                          {t(`agentsClientTab_${client}`)}
-                        </Button>
-                      ))}
-                    </div>
-                    <div
-                      role="tabpanel"
-                      className="space-y-3"
+                      <Copy
+                        className="mr-1.5 size-3.5"
+                        aria-hidden
+                      />
+                      {t('agentsCopyPrompt')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        void copyText(t('agentsCopyToken'), issuedConnection.accessToken)
+                      }
                     >
-                      <ol className="list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
-                        {mcpClientStepKeys(connectClient).map((key) => (
-                          <li key={key}>{t(key)}</li>
-                        ))}
-                      </ol>
-                      <pre className="overflow-x-auto rounded-md border border-border bg-muted p-3 font-mono text-xs text-foreground">
-                        {mcpClientCopySnippet(connectClient, mcpOrigin, companyId)}
-                      </pre>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          void copyText(
-                            t(`agentsCopyClient_${connectClient}`),
-                            mcpClientCopySnippet(connectClient, mcpOrigin, companyId),
-                          )
-                        }
-                      >
-                        <Copy
-                          className="mr-1.5 size-3.5"
+                      <Copy
+                        className="mr-1.5 size-3.5"
+                        aria-hidden
+                      />
+                      {t('agentsCopyToken')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIssuedConnection(null)}
+                    >
+                      {t('agentsConnectCreateAnother')}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <label
+                    htmlFor="agents-connect-name"
+                    className="text-sm font-medium text-foreground"
+                  >
+                    {t('agentsConnectNameLabel')}
+                  </label>
+                  <Input
+                    id="agents-connect-name"
+                    value={connectName}
+                    onChange={(e) => setConnectName(e.target.value)}
+                    placeholder={formatDefaultAgentName(locale)}
+                    autoComplete="off"
+                  />
+                  <p className="text-xs text-muted-foreground">{t('agentsConnectNameHint')}</p>
+                  {createConnectionError ? (
+                    <p className="text-sm text-destructive">{createConnectionError}</p>
+                  ) : null}
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={creatingConnection}
+                    onClick={() => void onCreateConnection()}
+                  >
+                    {creatingConnection ? (
+                      <>
+                        <Loader2
+                          className="mr-1.5 size-3.5 animate-spin"
                           aria-hidden
                         />
-                        {t(`agentsCopyClient_${connectClient}`)}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
+                        {t('agentsConnectCreating')}
+                      </>
+                    ) : (
+                      t('agentsConnectCreateButton')
+                    )}
+                  </Button>
+                </div>
+              )}
 
               {discoveredServices.length > 0 ? (
-                <div className="space-y-2 border-t border-border pt-4">
-                  <p className="text-sm font-medium text-foreground">{t('agentsServicesLabel')}</p>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
+                <details className="group border-t border-border pt-4">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium marker:content-none [&::-webkit-details-marker]:hidden">
+                    <ChevronRight
+                      className="size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-open:rotate-90"
+                      aria-hidden
+                    />
+                    {t('agentsServicesAdvanced')}
+                  </summary>
+                  <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
                     {discoveredServices.map((svc) => (
                       <li
                         key={svc.id}
@@ -470,7 +546,7 @@ export function AgentsPage() {
                       </li>
                     ))}
                   </ul>
-                </div>
+                </details>
               ) : null}
             </div>
           </SettingsSection>
@@ -753,7 +829,9 @@ export function AgentsPage() {
                               </TableCell>
                               <TableCell>{entry.service}</TableCell>
                               <TableCell>{entry.status_code || '-'}</TableCell>
-                              <TableCell className="text-right">{entry.duration_ms} ms</TableCell>
+                              <TableCell className="text-right">
+                                {formatDurationMs(entry.duration_ms, locale) ?? '-'}
+                              </TableCell>
                               <TableCell className="max-w-[240px] align-top">
                                 {argsText ? (
                                   <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-[10px] text-muted-foreground">

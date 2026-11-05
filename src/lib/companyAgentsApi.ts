@@ -117,7 +117,7 @@ export function parseMcpCallLogEntry(row: unknown): CompanyMcpCallLogEntry | nul
           : '',
     path: typeof o.path === 'string' ? o.path : '',
     status_code: typeof o.status_code === 'number' ? o.status_code : 0,
-    duration_ms: typeof o.duration_ms === 'number' ? o.duration_ms : 0,
+    duration_ms: typeof o.duration_ms === 'number' ? o.duration_ms : null,
     arguments: parseArguments(o.arguments),
     created_at: typeof o.created_at === 'string' ? o.created_at : new Date().toISOString(),
   };
