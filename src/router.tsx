@@ -270,6 +270,8 @@ export const router = createHashRouter([
               { path: 'email/statistics', element: <EmailStatisticsPage /> },
             ],
           },
+          { path: 'email/swagger', element: null },
+          { path: 'email/redoc', element: null },
           { path: 'storage/swagger', element: null },
           { path: 'storage/redoc', element: null },
           { path: 'storage', element: null },
