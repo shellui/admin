@@ -73,7 +73,7 @@ export function OAuthAppsTable({ rows, catalogProviders, colorScheme = 'light' }
                   <span className="font-medium">{catalog?.name ?? row.provider}</span>
                 </div>
               </TableCell>
-              <TableCell className="hidden max-w-[14rem] truncate font-mono text-xs text-muted-foreground sm:table-cell">
+              <TableCell className="hidden max-w-56 truncate font-mono text-xs text-muted-foreground sm:table-cell">
                 {row.client_id}
               </TableCell>
               <TableCell>

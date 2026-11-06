@@ -108,7 +108,7 @@ function dayStartIso(day: string, addDays = 0): string {
 
 function selectFieldClassName() {
   return cn(
-    'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
+    'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
   );
 }
 
@@ -241,7 +241,7 @@ export function EventsListPage({ service = 'identity' }: { service?: WebhookServ
   const fieldLabel = 'text-xs font-medium text-muted-foreground';
 
   const filterCard = (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+    <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
       {!accessToken ? (
         <p className="text-sm text-muted-foreground">{t('eventsNoSession')}</p>
       ) : (
@@ -367,7 +367,7 @@ export function EventsListPage({ service = 'identity' }: { service?: WebhookServ
       />
 
       <details
-        className="group rounded-xl border border-border bg-card shadow-sm lg:border-0 lg:bg-transparent lg:shadow-none"
+        className="group rounded-xl border border-border bg-card shadow-xs lg:border-0 lg:bg-transparent lg:shadow-none"
         open={sidebarOpen}
         onToggle={(e) => {
           if (isLg) return;
@@ -412,7 +412,7 @@ export function EventsListPage({ service = 'identity' }: { service?: WebhookServ
             <button
               type="button"
               onClick={clearUserId}
-              className="-mr-1 rounded-sm p-0.5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="-mr-1 rounded-sm p-0.5 hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={t('eventsClearUserFilter')}
             >
               <X

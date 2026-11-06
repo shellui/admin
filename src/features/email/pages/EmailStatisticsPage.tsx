@@ -140,7 +140,7 @@ export function EmailStatisticsPage() {
             <div className="flex items-center gap-2">
               <select
                 aria-label={t('emailMetricLane')}
-                className="h-8 rounded-md border border-input bg-background px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-8 rounded-md border border-input bg-background px-2 text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                 value={lane}
                 onChange={(event) => setLane(event.target.value)}
               >

@@ -128,7 +128,7 @@ export function EmailLibraryGrid({
                 <li
                   key={template.id}
                   className={cn(
-                    'flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm',
+                    'flex flex-col overflow-hidden rounded-xl border bg-card shadow-xs',
                     selected ? 'border-primary ring-1 ring-primary' : 'border-border',
                   )}
                 >

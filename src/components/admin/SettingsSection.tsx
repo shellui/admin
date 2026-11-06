@@ -65,7 +65,7 @@ export function SettingsSection({
           </a>
         ) : null}
       </div>
-      <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm">
+      <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-xs">
         <div className="space-y-5 p-4 sm:p-5">{children}</div>
         {footerNote || footerAction ? (
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-muted/60 px-4 py-3 sm:px-5">

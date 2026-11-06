@@ -146,7 +146,7 @@ export function AccessTokensPanel({ accessToken }: AccessTokensPanelProps) {
   }
 
   const card =
-    'overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm';
+    'overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-xs';
 
   if (!accessToken) {
     return (
@@ -350,7 +350,7 @@ export function AccessTokensPanel({ accessToken }: AccessTokensPanelProps) {
                       key={mk.id}
                       className={revoked ? 'text-muted-foreground' : undefined}
                     >
-                      <TableCell className="max-w-[12rem] truncate font-medium">
+                      <TableCell className="max-w-48 truncate font-medium">
                         {mk.name?.trim() ? mk.name : '-'}
                       </TableCell>
                       <TableCell>
