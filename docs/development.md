@@ -38,14 +38,14 @@ pnpm install
 pnpm start
 ```
 
-This runs the app on **http://localhost:5174** (see `vite.config.ts`).
+This runs the app on **http://localhost:5173** (see `vite.config.ts`).
 
 If you open that URL **directly in a browser**, you will see a short message: the admin UI is meant to load **inside an iframe** from the main Shellui app. Configure the main app's `shellui.config.json` (or `shellui.config.ts`) with `backend.adminUrl` pointing at this URL, then open **`/admin`** in the shell (as a staff user or company owner).
 
 **Run together with the main Shellui app**
 
 1. Terminal A - main Shellui repo: `pnpm start` → e.g. `http://localhost:4000`
-2. Terminal B - this repo: `pnpm start` → `http://localhost:5174`
+2. Terminal B - this repo: `pnpm start` → `http://localhost:5173`
 
 In the main app, set:
 
@@ -53,7 +53,7 @@ In the main app, set:
 backend: {
   // …
   adminPathname: '/admin',
-  adminUrl: 'http://localhost:5174',
+  adminUrl: 'http://localhost:5173',
 },
 ```
 
@@ -61,25 +61,61 @@ Optional services the admin panel picks up from SDK settings:
 
 ```ts
 storage: {
-  url: 'http://localhost:8001',
+  url: 'http://localhost:8002',
   filesUrl: 'http://localhost:5175/', // optional Files explorer entry
 },
 hosting: {
-  url: 'http://localhost:8002',
+  url: 'http://localhost:8003',
   // showInAdmin: false, // hide Admin → Hosting while keeping deploy
 },
 email: {
-  url: 'http://localhost:8003', // required, no default
+  url: 'http://localhost:8004',
+},
+aiService: {
+  url: 'http://localhost:8006',
 },
 ```
 
-Admin reads `email.url` the same way it reads `storage.url` and `hosting.url` (SDK settings from the host `shellui.config`). `@shellui/sdk` 0.7.0-alpha.1 types `settings.email`. When `email.url` is missing, Admin hides Email; there is no default URL. Set `email.showInAdmin: false` to hide the Email section.
+Admin reads service URLs from SDK settings (host `shellui.config`) first. In **dev builds only**, it can fall back to `VITE_*` env vars when a URL is missing (see [.env.example](../.env.example)). Production nginx images still rely on the shell; nothing is baked in at build time unless you set `VITE_*` during `pnpm build` (avoid that for production).
 
 Staff open Django admin for Email at the `email.url` origin plus `/admin/`.
 
+### Shared local dev stack (Docker Compose)
+
+The Shellui monorepo ships a compose file under `dev/docker-compose.yml` that builds sibling repos with `target: dev`, bind-mounts source at `/app`, and keeps `node_modules` in an anonymous volume for Vite apps.
+
+For Admin alone:
+
+```bash
+docker build --target dev -t shellui-admin:dev .
+docker run --rm -p 5173:5173 \
+  -v "$PWD:/app" -v /app/node_modules \
+  -e VITE_IDENTITY_URL=http://localhost:8001 \
+  -e VITE_STORAGE_URL=http://localhost:8002 \
+  -e VITE_HOSTING_URL=http://localhost:8003 \
+  -e VITE_EMAIL_URL=http://localhost:8004 \
+  -e VITE_AI_SERVICE_URL=http://localhost:8006 \
+  shellui-admin:dev
+```
+
+Typical stack host ports: identity `8001`, storage `8002`, hosting `8003`, email `8004`, ai `8006`, admin `5173`, files `5175`.
+
+| Variable                                                          | Purpose                                                                       |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `VITE_IDENTITY_URL`                                               | identity-service (maps to shell `backend.url`)                                |
+| `VITE_STORAGE_URL`                                                | storage-service                                                               |
+| `VITE_HOSTING_URL`                                                | hosting-service                                                               |
+| `VITE_EMAIL_URL`                                                  | email-service                                                                 |
+| `VITE_AI_SERVICE_URL`                                             | ai-service (`aiService.url`)                                                  |
+| `VITE_FILES_URL`                                                  | optional Files explorer origin (`storage.filesUrl`)                           |
+| `VITE_DEV_SERVER_PORT` / `VITE_HMR_CLIENT_PORT` / `VITE_HMR_HOST` | HMR through the published Docker port (defaults: `5173`, `5173`, `localhost`) |
+| `VITE_USE_POLLING` or `CHOKIDAR_USEPOLLING`                       | File watching on bind mounts (macOS)                                          |
+
+Run the full stack from the Shellui repo: `cd shellui/dev && ./start.sh`. See the [Shellui dev stack guide](https://github.com/shellui/shellui/blob/develop/docs/dev-stack.md).
+
 ## Identity company admin (SCIM, magic link, webhooks)
 
-Point `backend.url` at a local or deployed **identity-service** (for example `http://localhost:8000`). Sign in through Shellui as a **company owner** so the JWT includes `company_id` and `user_metadata.is_company_owner`.
+Point `backend.url` at a local or deployed **identity-service** (for example `http://localhost:8001` in the shared dev stack). Sign in through Shellui as a **company owner** so the JWT includes `company_id` and `user_metadata.is_company_owner`.
 
 | Route                            | API                                                                                                                                                                                                                     |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

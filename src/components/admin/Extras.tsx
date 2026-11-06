@@ -57,7 +57,7 @@ export function CheckTile({
   return (
     <label
       htmlFor={htmlFor}
-      className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 transition-colors duration-150 ease-soft hover:bg-muted/60 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+      className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 transition-colors duration-150 ease-soft hover:bg-muted/60 has-focus-visible:ring-2 has-focus-visible:ring-ring"
     >
       {control}
       <span className="min-w-0 truncate text-sm">{label}</span>
@@ -81,7 +81,7 @@ export function DangerCard({
   return (
     <section
       aria-labelledby={id}
-      className="rounded-xl border bg-card shadow-sm [border-color:color-mix(in_oklab,var(--destructive)_35%,var(--border))]"
+      className="rounded-xl border bg-card shadow-xs border-[color-mix(in_oklab,var(--destructive)_35%,var(--border))]"
     >
       <div className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
         <div className="min-w-0 space-y-1">

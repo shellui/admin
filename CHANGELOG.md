@@ -21,6 +21,35 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [Unreleased]
+
+### ✨ Feature
+
+- **Agents:** Connect MCP clients uses a Settings-style create flow with a one-time agent prompt (company MCP URL + access token).
+
+### 🐛 Bug Fixes
+
+- **Agents:** Call log duration shows measured milliseconds from identity, or `-` when missing.
+
+## [0.10.0] - 2026-11-02
+
+### 📚 Documentation
+
+- **Dev stack:** Dockerfile `dev` target (Vite on 5173, HMR and optional bind-mount polling), `.env.example` for local `VITE_*` service URLs, and notes for the shared Shellui compose stack.
+
+### ✨ Feature
+
+- **Agents:** Company MCP admin aligned with identity `/api/v1/mcp/*` (agents, approvals, call logs, services); production shows an empty state when MCP is missing; dev mock is opt-in via `VITE_COMPANY_AGENTS_MOCK=1`; approve stays disabled until redacted arguments are present on approval rows; full-access agents show an explicit warning.
+- **Agents:** MCP page onboarding copy, per-client connect steps, access legend, service URL copy, and docs link for company owners new to MCP.
+- **Agents:** MCP connect copy uses the ai-service `/mcp` URL from `aiService.url` (OAuth still via identity).
+- **Agents:** MCP connect copy and the AI status page show the per-company URL `{aiService.url}/c/<company_id>/mcp`, with the company id from the signed-in session.
+- **AI:** Admin sidebar section (status, agents, API docs) when `settings.aiService.url` is set from the host shell or dashboard.
+
+### 🏗 Chore
+
+- **Tests:** Upgrade vitest to 5.0.5 and add @types/node for the Node-based spec files.
+- **Styles:** Migrate to Tailwind CSS 4 (CSS-first config in `src/index.css`, `@tailwindcss/postcss`, utilities renamed by the official upgrade tool).
+
 ## [0.9.1] - 2026-10-29
 
 ### 🔒 Security

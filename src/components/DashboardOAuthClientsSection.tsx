@@ -79,7 +79,7 @@ export function DashboardOAuthClientsSection({ accessToken }: Props) {
       className="space-y-4"
       aria-label={t('oauthClientsSectionLabel')}
     >
-      <Card className="border-border/80 shadow-sm">
+      <Card className="border-border/80 shadow-xs">
         <CardHeader>
           <CardTitle className="font-heading flex items-center gap-2 text-lg">
             <KeyRound

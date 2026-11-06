@@ -25,7 +25,7 @@ export function DataTableCard({
       aria-label={label}
       aria-busy={busy || undefined}
       className={cn(
-        'overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm',
+        'overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-xs',
         className,
       )}
     >
@@ -69,8 +69,8 @@ export function SkeletonRows({
                 <div className="flex items-center gap-3">
                   <Skeleton className="size-8 shrink-0 rounded-full" />
                   <div className="min-w-0 flex-1 space-y-1.5">
-                    <Skeleton className="h-3.5 w-full max-w-[9rem]" />
-                    <Skeleton className="h-3 w-full max-w-[11rem]" />
+                    <Skeleton className="h-3.5 w-full max-w-36" />
+                    <Skeleton className="h-3 w-full max-w-44" />
                   </div>
                 </div>
               ) : (

@@ -178,7 +178,7 @@ export function EmailLibraryTemplatePage() {
         >
           <span className="sr-only">{t('emailLoading')}</span>
           <Skeleton className="h-9 w-full max-w-md" />
-          <Skeleton className="h-[28rem] w-full rounded-xl" />
+          <Skeleton className="h-112 w-full rounded-xl" />
         </div>
       ) : null}
       {error ? (
@@ -192,7 +192,7 @@ export function EmailLibraryTemplatePage() {
       {!loading && detail && draft ? (
         <>
           {builtIn ? null : (
-            <div className="max-w-md space-y-1.5 rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="max-w-md space-y-1.5 rounded-xl border border-border bg-card p-4 shadow-xs">
               <Label htmlFor="email-library-name">{t('emailLibraryName')}</Label>
               <Input
                 id="email-library-name"

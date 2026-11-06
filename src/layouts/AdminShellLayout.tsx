@@ -17,9 +17,11 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { LOADING_OVERLAY_DURATION_MS } from '@/constants/loading';
 import {
+  Activity,
   AppWindow,
   ArrowUpRight,
   BarChart3,
+  Bot,
   BookOpen,
   Building2,
   ChevronDown,
@@ -52,12 +54,15 @@ import { useShelluiHosting, isHostingAdminEnabled } from '@/hooks/useShelluiHost
 import { useShelluiEmail } from '@/hooks/useShelluiEmail';
 import { isEmailAdminEnabled } from '@/lib/emailServiceUrl';
 import { useShelluiStorage } from '@/hooks/useShelluiStorage';
+import { useShelluiAiService } from '@/hooks/useShelluiAiService';
+import { isAiAdminEnabled } from '@/lib/aiServiceUrl';
 import { useAdminContentNavigation } from '@/hooks/useAdminContentNavigation';
 import type { AdminEmbedNavItem } from '@/hooks/useAdminContentNavigation';
 import {
   getAdminHashPath,
+  isStandaloneAiGroupTitle,
   isStandaloneEmailGroupTitle,
-  placeStandaloneEmailSectionLast,
+  orderAdminSidebarSections,
   readSidebarCollapsed,
   writeSidebarCollapsed,
 } from '@/lib/adminChromeNav';
@@ -76,7 +81,7 @@ import { appVersionLabel } from '@/lib/appVersion';
 import { cn } from '@/lib/utils';
 
 const navLinkBase =
-  'flex h-8 items-center gap-2.5 rounded-[7px] px-2.5 text-[13.5px] font-medium no-underline transition-colors duration-150 ease-soft hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring';
+  'flex h-8 shrink-0 items-center gap-2.5 rounded-[7px] px-2.5 text-[13.5px] font-medium no-underline transition-colors duration-150 ease-soft hover:no-underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring';
 
 function readSectionOpen(key: string, defaultOpen = true): boolean {
   try {
@@ -124,6 +129,10 @@ const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
   'identity/statistics': BarChart3,
   oauth: KeyRound,
   scim: Network,
+  ai: Activity,
+  agents: Bot,
+  'ai/swagger': BookOpen,
+  'ai/redoc': BookOpen,
   webhooks: SendHorizonal,
   'identity/webhooks': SendHorizonal,
   'hosting/webhooks': SendHorizonal,
@@ -135,6 +144,8 @@ const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
   'email/provider': Server,
   'email/link-hosts': Link2,
   'email/statistics': BarChart3,
+  'email/swagger': BookOpen,
+  'email/redoc': BookOpen,
   actions: SendHorizonal,
   swagger: BookOpen,
   redoc: BookOpen,
@@ -165,6 +176,10 @@ const mapLabelToTranslationKey = (label: string, path = ''): string => {
   if (normalized === 'log events' || normalized === 'journal des événements') return 'navEvents';
   if (normalized === 'oauth apps' || normalized === 'apps oauth') return 'navOAuth';
   if (normalized === 'scim') return 'navScim';
+  if (normalized === 'agents') return 'navAgents';
+  if (normalized === 'status' || normalized === 'état' || normalized === 'etat') {
+    return 'navAiStatus';
+  }
   if (normalized === 'webhooks') return 'navEmailAndWebhooks';
   if (normalized === 'actions') return 'navEmailAndWebhooks';
   if (normalized === 'email and webhooks' || normalized === 'e-mail et webhooks') {
@@ -308,7 +323,7 @@ function NavSectionHeader({
       type="button"
       onClick={onToggle}
       aria-expanded={open}
-      className="mb-1 flex w-full items-start gap-1 rounded-md px-2.5 py-1.5 text-left transition-colors duration-150 hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+      className="mb-1 flex w-full items-start gap-1 rounded-md px-2.5 py-1.5 text-left transition-colors duration-150 hover:bg-sidebar-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring"
     >
       <div className="min-w-0 flex-1">
         <p className="text-xs font-semibold text-sidebar-foreground">{title}</p>
@@ -1005,6 +1020,10 @@ function AdminContentMain() {
     location.pathname === '/storage/redoc' ||
     location.pathname === '/hosting/swagger' ||
     location.pathname === '/hosting/redoc' ||
+    location.pathname === '/ai/swagger' ||
+    location.pathname === '/ai/redoc' ||
+    location.pathname === '/email/swagger' ||
+    location.pathname === '/email/redoc' ||
     location.pathname === '/swagger' ||
     location.pathname === '/redoc';
 
@@ -1040,6 +1059,7 @@ export function AdminShellLayout() {
   const storage = useShelluiStorage();
   const hosting = useShelluiHosting();
   const emailSettings = useShelluiEmail();
+  const aiSettings = useShelluiAiService();
   const authBackendBaseUrl = useShelluiAuthBackendBaseUrl();
   const contentFrame = isAdminContentFrame();
   const shellNavigation = adminShellUiConfig.navigation ?? [];
@@ -1068,6 +1088,10 @@ export function AdminShellLayout() {
     ? emailSettings?.url?.trim().replace(/\/+$/, '') || null
     : null;
   const emailDjangoAdminHref = emailUrl ? `${emailUrl}/admin/` : null;
+  const aiUrl = isAiAdminEnabled(aiSettings)
+    ? aiSettings?.url?.trim().replace(/\/+$/, '') || null
+    : null;
+  const aiDjangoAdminHref = aiUrl ? `${aiUrl}/admin/` : null;
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed());
   const [mobilePane, setMobilePane] = useState<'menu' | 'content'>(() =>
@@ -1091,7 +1115,7 @@ export function AdminShellLayout() {
     const sections = groups
       .map((group) => {
         if (isIdentityGroup(group.title)) {
-          const items = [...group.items];
+          const items = group.items.filter((item) => item.to !== '/agents' || !aiUrl);
           if (isStaff && djangoAdminHref) {
             items.push({
               key: 'navDjangoAdmin',
@@ -1108,9 +1132,34 @@ export function AdminShellLayout() {
             items,
           };
         }
+        if (isStandaloneAiGroupTitle(group.title)) {
+          if (!isAiAdminEnabled(aiSettings)) return null;
+          return {
+            ...group,
+            title: t('navAiGroup'),
+            subtitle: aiUrl,
+            items: group.items,
+          };
+        }
         if (isStandaloneEmailGroupTitle(group.title)) {
           if (!isEmailAdminEnabled(emailSettings)) return null;
           const items = [...group.items];
+          if (isDeveloperMode && emailUrl) {
+            items.push(
+              {
+                key: 'navEmailSwagger',
+                icon: BookOpen,
+                label: t('navSwagger'),
+                to: '/email/swagger',
+              },
+              {
+                key: 'navEmailRedoc',
+                icon: BookOpen,
+                label: t('navRedoc'),
+                to: '/email/redoc',
+              },
+            );
+          }
           if (isStaff && emailDjangoAdminHref) {
             items.push({
               key: 'navEmailDjangoAdmin',
@@ -1252,8 +1301,59 @@ export function AdminShellLayout() {
       });
     }
 
-    return placeStandaloneEmailSectionLast(sections);
+    if (aiUrl) {
+      const aiItems: AdminNavItem[] = [
+        {
+          key: 'navAiStatus',
+          icon: Activity,
+          label: t('navAiStatus'),
+          to: '/ai',
+        },
+        {
+          key: 'navAgents',
+          icon: Bot,
+          label: t('navAgents'),
+          to: '/agents',
+        },
+      ];
+      if (isDeveloperMode) {
+        aiItems.push(
+          {
+            key: 'navAiSwagger',
+            icon: BookOpen,
+            label: t('navSwagger'),
+            to: '/ai/swagger',
+          },
+          {
+            key: 'navAiRedoc',
+            icon: BookOpen,
+            label: t('navRedoc'),
+            to: '/ai/redoc',
+          },
+        );
+      }
+      if (isStaff && aiDjangoAdminHref) {
+        aiItems.push({
+          key: 'navAiDjangoAdmin',
+          icon: Lock,
+          label: t('navAiDjangoAdmin'),
+          openIn: 'external',
+          href: aiDjangoAdminHref,
+        });
+      }
+      sections.push({
+        id: 'admin-ai',
+        title: t('navAiGroup'),
+        subtitle: aiUrl,
+        items: aiItems,
+      });
+    }
+
+    return orderAdminSidebarSections(sections);
   }, [
+    aiDjangoAdminHref,
+    aiSettings,
+    aiUrl,
     authBackendBaseUrl,
     djangoAdminHref,
     emailDjangoAdminHref,
@@ -1299,7 +1399,7 @@ export function AdminShellLayout() {
           data-collapsed={sidebarCollapsed ? 'true' : 'false'}
           className={cn(
             'hidden h-full min-h-0 shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-soft md:flex',
-            sidebarCollapsed ? 'w-[3.25rem]' : 'w-[248px]',
+            sidebarCollapsed ? 'w-13' : 'w-[248px]',
           )}
         >
           <div

@@ -241,7 +241,7 @@ export function EmailProviderForm({
                 <label
                   key={item.id}
                   className={cn(
-                    'flex items-center gap-3 rounded-lg border px-3 py-3 text-sm transition-colors motion-reduce:transition-none has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring',
+                    'flex items-center gap-3 rounded-lg border px-3 py-3 text-sm transition-colors motion-reduce:transition-none has-focus-visible:ring-2 has-focus-visible:ring-ring',
                     checked ? 'border-primary bg-primary/5' : 'border-border',
                     enabled ? 'cursor-pointer hover:bg-muted/60' : 'cursor-not-allowed opacity-60',
                   )}
@@ -252,7 +252,7 @@ export function EmailProviderForm({
                     value={item.id}
                     checked={checked}
                     disabled={!enabled}
-                    className="size-4 accent-[var(--primary)]"
+                    className="size-4 accent-(--primary)"
                     onChange={() => {
                       setProvider(item.id);
                       clearSecrets();
@@ -447,7 +447,7 @@ export function EmailProviderForm({
                 <Label htmlFor="email-ses-region">{t('emailSesRegion')}</Label>
                 <select
                   id="email-ses-region"
-                  className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                   value={sesOtherRegion ? SES_OTHER_REGION : ses.region}
                   onChange={(event) => {
                     const value = event.target.value;

@@ -42,7 +42,7 @@ export function TagPill({ children, title }: { children: ReactNode; title?: stri
   return (
     <span
       title={title}
-      className="inline-flex h-5 max-w-[10rem] items-center truncate rounded-full border border-border bg-muted px-2 text-[11.5px] text-foreground"
+      className="inline-flex h-5 max-w-40 items-center truncate rounded-full border border-border bg-muted px-2 text-[11.5px] text-foreground"
     >
       {children}
     </span>
