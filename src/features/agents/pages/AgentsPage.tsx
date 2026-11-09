@@ -27,6 +27,12 @@ import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { useEventLogSource, useEventRetention } from '@/hooks/useEventRetention';
 import { getCompanyIdFromJwt, getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
 import { onAgentsChanged, openAgentConnectDrawer } from '@/lib/agentConnectDrawer';
+import { connectionKindLines, mergeCompanyAndPersonalAgents } from '@/lib/mcpAgentsConnect';
+import {
+  fetchMcpPersonalAgents,
+  revokeMcpPersonalAgent,
+  type McpPersonalAgent,
+} from '@/lib/personalAgentsApi';
 import { askShelluiConfirm } from '@/lib/shelluiConfirm';
 import {
   agentCreatorDisplayName,
@@ -364,6 +370,13 @@ function AgentAccordionRow({
         date: formatDateOnly(agent.created_at, locale),
       })
     : t('agentsCreatedByUnknown', { date: formatDateOnly(agent.created_at, locale) });
+  const kindLines = connectionKindLines(agent, {
+    oauth: t('agentsKindOauth'),
+    personal: t('agentsKindPersonal'),
+    services: (services) => t('agentsKindServices', { services }),
+    scopeRegional: t('agentsScopeRegional'),
+    scopeRegionalSaas: t('agentsScopeRegionalSaas'),
+  });
   const callCount = countCallsForAgent(agent, callLogs);
 
   const statusTone = status === 'active' ? 'success' : status === 'paused' ? 'warning' : 'muted';
@@ -398,6 +411,14 @@ function AgentAccordionRow({
         >
           <p className="text-sm font-semibold text-foreground">{agent.name}</p>
           <p className="text-xs text-muted-foreground">{createdMeta}</p>
+          {kindLines.map((line) => (
+            <p
+              key={line}
+              className="text-xs text-muted-foreground"
+            >
+              {line}
+            </p>
+          ))}
         </button>
         <StatusBadge tone={statusTone}>{t(`agentsStatus_${status}`)}</StatusBadge>
         <p className="hidden text-xs text-muted-foreground sm:block">
@@ -467,45 +488,89 @@ export function AgentsPage() {
   const [mcpUnavailable, setMcpUnavailable] = useState(false);
   const [busyAgentId, setBusyAgentId] = useState<string | null>(null);
   const [busyApprovalId, setBusyApprovalId] = useState<string | null>(null);
+  const [personalIds, setPersonalIds] = useState<Set<string>>(() => new Set());
   const [nowMs, setNowMs] = useState(() => Date.now());
 
-  const load = useCallback(async () => {
-    if (!accessToken || companyId == null || !isOwner) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    setMcpUnavailable(false);
-    try {
-      const [agentRows, approvalRows, logRows] = await Promise.all([
-        fetchCompanyMcpAgents(accessToken, companyId),
-        fetchCompanyMcpApprovals(accessToken, companyId),
-        fetchCompanyMcpCallLogs(accessToken, companyId),
-      ]);
-      setAgents(agentRows);
-      setApprovals(approvalRows);
-      setCallLogs(logRows);
-    } catch (e) {
-      if (isMcpApiUnavailable(e)) {
-        setMcpUnavailable(true);
-        setAgents([]);
-        setApprovals([]);
-        setCallLogs([]);
-        setError(null);
-      } else {
-        setError(e);
+  const applyPersonalRows = useCallback(
+    (companyRows: CompanyMcpAgent[], personalRows: McpPersonalAgent[]) => {
+      const merged = mergeCompanyAndPersonalAgents(companyRows, personalRows);
+      setAgents(merged.agents);
+      setPersonalIds(merged.personalIds);
+    },
+    [],
+  );
+
+  const load = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!accessToken || companyId == null || !isOwner) {
+        setLoading(false);
+        return;
       }
-    } finally {
-      setLoading(false);
-    }
-  }, [accessToken, companyId, isOwner]);
+      if (!options?.silent) {
+        setLoading(true);
+        setError(null);
+        setMcpUnavailable(false);
+      }
+      const personalPromise = fetchMcpPersonalAgents(accessToken, companyId).catch(
+        () => [] as McpPersonalAgent[],
+      );
+      try {
+        const [agentRows, approvalRows, logRows] = await Promise.all([
+          fetchCompanyMcpAgents(accessToken, companyId),
+          fetchCompanyMcpApprovals(accessToken, companyId),
+          fetchCompanyMcpCallLogs(accessToken, companyId),
+        ]);
+        const personalRows = await personalPromise;
+        applyPersonalRows(agentRows, personalRows);
+        setApprovals(approvalRows);
+        setCallLogs(logRows);
+        setError(null);
+        setMcpUnavailable(false);
+      } catch (e) {
+        const personalRows = await personalPromise;
+        if (personalRows.length > 0) {
+          applyPersonalRows([], personalRows);
+          setApprovals([]);
+          setCallLogs([]);
+          setMcpUnavailable(false);
+          setError(isMcpApiUnavailable(e) ? null : e);
+        } else if (!options?.silent) {
+          if (isMcpApiUnavailable(e)) {
+            setMcpUnavailable(true);
+            setAgents([]);
+            setPersonalIds(new Set());
+            setApprovals([]);
+            setCallLogs([]);
+            setError(null);
+          } else {
+            setError(e);
+          }
+        }
+      } finally {
+        if (!options?.silent) setLoading(false);
+      }
+    },
+    [accessToken, applyPersonalRows, companyId, isOwner],
+  );
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  useEffect(() => onAgentsChanged(() => void load()), [load]);
+  useEffect(() => onAgentsChanged(() => void load({ silent: true })), [load]);
+
+  useEffect(() => {
+    const refreshIfVisible = () => {
+      if (document.visibilityState === 'hidden') return;
+      void load({ silent: true });
+    };
+    document.addEventListener('visibilitychange', refreshIfVisible);
+    window.addEventListener('focus', refreshIfVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', refreshIfVisible);
+      window.removeEventListener('focus', refreshIfVisible);
+    };
+  }, [load]);
 
   useEffect(() => {
     const id = window.setInterval(() => setNowMs(Date.now()), 1000);
@@ -598,8 +663,30 @@ export function AgentsPage() {
     if (!ok) return;
     setBusyAgentId(agent.id);
     try {
-      const updated = await revokeCompanyMcpAgent(accessToken, companyId, agent.id);
-      setAgents((rows) => rows.map((a) => (a.id === updated.id ? updated : a)));
+      if (personalIds.has(agent.id)) {
+        const revoked = await revokeMcpPersonalAgent(accessToken, companyId, agent.id);
+        setAgents((rows) =>
+          rows.map((a) =>
+            a.id === agent.id
+              ? {
+                  ...a,
+                  revoked_at: revoked.revoked_at,
+                  is_active: revoked.is_active,
+                  paused_at: revoked.paused_at,
+                  kind: revoked.kind,
+                  services_allowed: revoked.services_allowed,
+                }
+              : a,
+          ),
+        );
+      } else {
+        const updated = await revokeCompanyMcpAgent(accessToken, companyId, agent.id);
+        setAgents((rows) =>
+          rows.map((a) =>
+            a.id === updated.id ? { ...a, ...updated, kind: updated.kind ?? a.kind } : a,
+          ),
+        );
+      }
       if (expandedAgentId === agent.id) setExpandedAgentId(null);
     } catch (e) {
       shellui.toast({

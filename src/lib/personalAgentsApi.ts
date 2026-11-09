@@ -1,4 +1,5 @@
 import { identityAuthFetch, readJsonOrThrow } from '@/lib/adminIdentityFetch';
+import type { McpAgentKind } from '@/lib/companyAgentsTypes';
 
 export const MCP_PERSONAL_SERVICE_OPTIONS = [
   'identity',
@@ -32,6 +33,24 @@ export type CreatePersonalAgentResult = {
   token_type: string;
   expires_at: string;
   resource: string;
+};
+
+/** One row from `GET /api/v1/mcp/personal/agents`. */
+export type McpPersonalAgent = {
+  id: string;
+  kind: McpAgentKind;
+  name: string;
+  access_mode: McpAccessMode;
+  read_level: McpReadLevel;
+  allow_destructive_without_asking: boolean;
+  services_allowed: string[];
+  expires_at: string | null;
+  paused_at: string | null;
+  revoked_at: string | null;
+  is_active: boolean;
+  created_at: string;
+  oauth_client_id: string | null;
+  personal_token_id: string | null;
 };
 
 function parsePersonalStatus(body: unknown): McpPersonalStatus | null {
@@ -110,4 +129,88 @@ export async function createMcpPersonalAgent(
   const parsed = parseCreateResult(body);
   if (!parsed) throw new Error('Unexpected response from identity.');
   return parsed;
+}
+
+function asTrimmedString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function asStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string' && item.trim() !== '');
+}
+
+export function parseMcpPersonalAgent(row: unknown): McpPersonalAgent | null {
+  if (!row || typeof row !== 'object') return null;
+  const o = row as Record<string, unknown>;
+  const id = asTrimmedString(o.id);
+  const name = asTrimmedString(o.name);
+  const createdAt = asTrimmedString(o.created_at);
+  const kind = o.kind === 'oauth' || o.kind === 'personal' ? o.kind : null;
+  const accessMode =
+    o.access_mode === 'read_only' || o.access_mode === 'ask' || o.access_mode === 'full'
+      ? o.access_mode
+      : null;
+  const readLevel = o.read_level === 'safe' || o.read_level === 'sensitive' ? o.read_level : null;
+  if (!id || !name || !createdAt || !kind || !accessMode || !readLevel) return null;
+  return {
+    id,
+    kind,
+    name,
+    access_mode: accessMode,
+    read_level: readLevel,
+    allow_destructive_without_asking: o.allow_destructive_without_asking === true,
+    services_allowed: asStringList(o.services_allowed),
+    expires_at: asTrimmedString(o.expires_at),
+    paused_at: asTrimmedString(o.paused_at),
+    revoked_at: asTrimmedString(o.revoked_at),
+    is_active: o.is_active === true,
+    created_at: createdAt,
+    oauth_client_id: asTrimmedString(o.oauth_client_id),
+    personal_token_id: asTrimmedString(o.personal_token_id),
+  };
+}
+
+export function parseMcpPersonalAgentsResponse(body: unknown): McpPersonalAgent[] {
+  const rows =
+    body && typeof body === 'object' && Array.isArray((body as { agents?: unknown }).agents)
+      ? (body as { agents: unknown[] }).agents
+      : [];
+  return rows.map(parseMcpPersonalAgent).filter((row): row is McpPersonalAgent => row != null);
+}
+
+/** OAuth device-login and static secrets for the signed-in member. 404 yields an empty list. */
+export async function fetchMcpPersonalAgents(
+  accessToken: string,
+  companyId: number,
+): Promise<McpPersonalAgent[]> {
+  const res = await identityAuthFetch(
+    '/api/v1/mcp/personal/agents',
+    accessToken,
+    {},
+    { companyId },
+  );
+  if (res.status === 404) return [];
+  const body = await readJsonOrThrow(res, 'Personal MCP agents are not available.');
+  return parseMcpPersonalAgentsResponse(body);
+}
+
+export async function revokeMcpPersonalAgent(
+  accessToken: string,
+  companyId: number,
+  agentId: string,
+): Promise<McpPersonalAgent> {
+  const res = await identityAuthFetch(
+    `/api/v1/mcp/personal/agents/${encodeURIComponent(agentId)}/revoke`,
+    accessToken,
+    { method: 'POST' },
+    { companyId },
+  );
+  const body = await readJsonOrThrow(res, 'Could not revoke MCP connection.');
+  const agent =
+    body && typeof body === 'object'
+      ? parseMcpPersonalAgent((body as { agent?: unknown }).agent)
+      : null;
+  if (!agent) throw new Error('Unexpected response from identity.');
+  return agent;
 }

@@ -1,3 +1,6 @@
+/** Identity personal-agent list: OAuth device login, or a static personal secret. */
+export type McpAgentKind = 'oauth' | 'personal';
+
 /** Matches identity-service Agent.access_mode values. */
 export type McpAccessMode = 'read_only' | 'ask' | 'full';
 
@@ -12,6 +15,11 @@ export type CompanyMcpAgentCreatedBy = {
 export type CompanyMcpAgent = {
   id: string;
   name: string;
+  /**
+   * Set when identity sends `kind`, or when a personal-agent row is merged in.
+   * `oauth` is device login. `personal` is a static secret.
+   */
+  kind?: McpAgentKind | null;
   access_mode: McpAccessMode;
   read_level: McpReadLevel;
   allow_destructive_without_asking: boolean;
