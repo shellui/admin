@@ -12,10 +12,12 @@ import { ActionsRulesListPage } from '@/features/actions/pages/ActionsRulesListP
 import { OAuthSetupPage } from '@/pages/OAuthSetupPage';
 import { ScimSetupPage } from '@/pages/ScimSetupPage';
 import { AgentsPage } from '@/features/agents/pages/AgentsPage';
+import { ConnectAgentPage } from '@/features/agents/pages/ConnectAgentPage';
 import { AiStatusPage } from '@/features/ai/pages/AiStatusPage';
 import { NotFoundPage, RouteErrorPage } from '@/pages/RouteErrorPage';
 import { AccessTokensPage } from '@/pages/AccessTokensPage';
 import { InviteUserPage } from '@/pages/InviteUserPage';
+import { AGENT_CONNECT_ROUTE } from '@/lib/agentConnectDrawer';
 import { INVITATIONS_ROUTE, INVITE_ROUTE } from '@/lib/inviteModal';
 import { PendingInvitationsPage } from '@/pages/PendingInvitationsPage';
 import { UserDetailPage } from '@/pages/UserDetailPage';
@@ -128,6 +130,7 @@ const storageWebhookRoutes = [
  * their routes exist only so the chrome hash location stays bookmarkable.
  */
 export const router = createHashRouter([
+  { path: AGENT_CONNECT_ROUTE, element: <ConnectAgentPage />, errorElement: <RouteErrorPage /> },
   { path: INVITE_ROUTE, element: <InviteUserPage />, errorElement: <RouteErrorPage /> },
   {
     path: INVITATIONS_ROUTE,

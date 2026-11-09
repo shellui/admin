@@ -1132,6 +1132,9 @@ const resources = {
       agentsConnectCreateButton: 'Create connection',
       agentsConnectCreating: 'Creating…',
       agentsConnectCreateError: 'Could not create the connection.',
+      agentsConnectExpiry: 'This connection expires in {{days}} days.',
+      agentsConnectExpiryTooLong:
+        'Identity rejected this expiry. It is longer than the maximum lifetime for this connection.',
       agentsConnectCreatedTitle: 'Connection created',
       agentsConnectCreatedHint:
         'Copy the agent prompt now. The access token is shown once and cannot be retrieved later.',
@@ -3321,6 +3324,9 @@ const resources = {
       agentsConnectCreateButton: 'Créer la connexion',
       agentsConnectCreating: 'Création…',
       agentsConnectCreateError: 'Impossible de créer la connexion.',
+      agentsConnectExpiry: 'Cette connexion expire dans {{days}} jours.',
+      agentsConnectExpiryTooLong:
+        'Identity refuse cette expiration. Elle dépasse la durée de vie maximale de cette connexion.',
       agentsConnectCreatedTitle: 'Connexion créée',
       agentsConnectCreatedHint:
         'Copiez le prompt agent maintenant. Le jeton d’accès n’est affiché qu’une fois et ne peut pas être récupéré ensuite.',

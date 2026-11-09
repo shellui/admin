@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bot, ChevronRight, Copy, Loader2 } from 'lucide-react';
+import { Bot, ChevronRight, Loader2 } from 'lucide-react';
 import shellui from '@shellui/sdk';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { EmptyState } from '@/components/admin/EmptyState';
@@ -16,13 +16,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import {
   Table,
   TableBody,
   TableCell,
@@ -33,6 +26,7 @@ import {
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { useEventLogSource, useEventRetention } from '@/hooks/useEventRetention';
 import { getCompanyIdFromJwt, getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
+import { onAgentsChanged, openAgentConnectDrawer } from '@/lib/agentConnectDrawer';
 import { askShelluiConfirm } from '@/lib/shelluiConfirm';
 import {
   agentCreatorDisplayName,
@@ -54,25 +48,8 @@ import {
   type CompanyMcpCallLogEntry,
   type McpCallLogOutcome,
 } from '@/lib/companyAgentsApi';
-import {
-  buildAgentPrompt,
-  buildCompanyMcpUrl,
-  defaultPersonalAgentExpiresAt,
-  formatDefaultAgentName,
-  getDefaultPersonalAgentServices,
-  isGlobalIdentitySession,
-} from '@/lib/mcpAgentsConnect';
-import { createMcpPersonalAgent, fetchMcpPersonalStatus } from '@/lib/personalAgentsApi';
-import type { McpPersonalStatus } from '@/lib/personalAgentsApi';
 import { formatDurationMs } from '@/lib/scheduledJobsApi';
-import { useShelluiAiService } from '@/hooks/useShelluiAiService';
 import { cn } from '@/lib/utils';
-
-type IssuedMcpConnection = {
-  accessToken: string;
-  mcpUrl: string;
-  prompt: string;
-};
 
 type AgentStatusFilter = 'all' | 'active' | 'paused';
 type CallLogStatusFilter = 'any' | McpCallLogOutcome;
@@ -490,22 +467,7 @@ export function AgentsPage() {
   const [mcpUnavailable, setMcpUnavailable] = useState(false);
   const [busyAgentId, setBusyAgentId] = useState<string | null>(null);
   const [busyApprovalId, setBusyApprovalId] = useState<string | null>(null);
-  const [personalStatus, setPersonalStatus] = useState<McpPersonalStatus | null>(null);
-  const [connectOpen, setConnectOpen] = useState(false);
-  const [connectName, setConnectName] = useState('');
-  const [creatingConnection, setCreatingConnection] = useState(false);
-  const [createConnectionError, setCreateConnectionError] = useState<string | null>(null);
-  const [issuedConnection, setIssuedConnection] = useState<IssuedMcpConnection | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
-
-  const aiService = useShelluiAiService();
-  const mcpOrigin = aiService?.url ?? '';
-
-  const includeSaas = isGlobalIdentitySession(personalStatus);
-  const companyMcpUrl = useMemo(
-    () => buildCompanyMcpUrl(mcpOrigin, companyId, personalStatus?.mcp_url),
-    [mcpOrigin, companyId, personalStatus?.mcp_url],
-  );
 
   const load = useCallback(async () => {
     if (!accessToken || companyId == null || !isOwner) {
@@ -516,16 +478,14 @@ export function AgentsPage() {
     setError(null);
     setMcpUnavailable(false);
     try {
-      const [agentRows, approvalRows, logRows, statusRow] = await Promise.all([
+      const [agentRows, approvalRows, logRows] = await Promise.all([
         fetchCompanyMcpAgents(accessToken, companyId),
         fetchCompanyMcpApprovals(accessToken, companyId),
         fetchCompanyMcpCallLogs(accessToken, companyId),
-        fetchMcpPersonalStatus(accessToken, companyId).catch(() => null),
       ]);
       setAgents(agentRows);
       setApprovals(approvalRows);
       setCallLogs(logRows);
-      setPersonalStatus(statusRow);
     } catch (e) {
       if (isMcpApiUnavailable(e)) {
         setMcpUnavailable(true);
@@ -544,6 +504,8 @@ export function AgentsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => onAgentsChanged(() => void load()), [load]);
 
   useEffect(() => {
     const id = window.setInterval(() => setNowMs(Date.now()), 1000);
@@ -579,15 +541,6 @@ export function AgentsPage() {
 
   const listHasFilters =
     agentSearch.trim() !== '' || statusFilter !== 'all' || creatorFilter !== CREATOR_ANY;
-
-  async function copyText(label: string, text: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      shellui.toast({ type: 'success', title: t('agentsCopied', { label }) });
-    } catch {
-      shellui.toast({ type: 'error', title: t('agentsCopyError') });
-    }
-  }
 
   async function confirmApprovalDecision(
     approval: CompanyMcpApproval,
@@ -633,44 +586,6 @@ export function AgentsPage() {
     }
   }
 
-  async function onCreateConnection() {
-    if (!accessToken || companyId == null || !companyMcpUrl) return;
-    const trimmed = connectName.trim();
-    const name = trimmed || formatDefaultAgentName(locale);
-    setCreatingConnection(true);
-    setCreateConnectionError(null);
-    try {
-      const result = await createMcpPersonalAgent(
-        accessToken,
-        companyId,
-        {
-          name,
-          services: getDefaultPersonalAgentServices(includeSaas),
-          access_mode: 'ask',
-          read_level: 'safe',
-          allow_destructive: false,
-          expires_at: defaultPersonalAgentExpiresAt(),
-        },
-        { allowSaas: includeSaas },
-      );
-      const promptMcpUrl =
-        buildCompanyMcpUrl(mcpOrigin, companyId, result.resource) || companyMcpUrl;
-      const prompt = buildAgentPrompt(promptMcpUrl, result.access_token);
-      setIssuedConnection({
-        accessToken: result.access_token,
-        mcpUrl: promptMcpUrl,
-        prompt,
-      });
-      setConnectName('');
-      const agentRows = await fetchCompanyMcpAgents(accessToken, companyId);
-      setAgents(agentRows);
-    } catch (e) {
-      setCreateConnectionError(e instanceof Error ? e.message : t('agentsConnectCreateError'));
-    } finally {
-      setCreatingConnection(false);
-    }
-  }
-
   async function onRevoke(agent: CompanyMcpAgent) {
     if (!accessToken || companyId == null) return;
     const ok = await askShelluiConfirm({
@@ -712,7 +627,7 @@ export function AgentsPage() {
             <Button
               type="button"
               size="sm"
-              onClick={() => setConnectOpen(true)}
+              onClick={() => openAgentConnectDrawer()}
             >
               {t('agentsConnectOpen')}
             </Button>
@@ -948,109 +863,6 @@ export function AgentsPage() {
           ) : null}
         </>
       ) : null}
-
-      <Sheet
-        open={connectOpen}
-        onOpenChange={setConnectOpen}
-      >
-        <SheetContent className="overflow-y-auto sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>{t('agentsConnectOpen')}</SheetTitle>
-            <SheetDescription>{t('agentsConnectIntro')}</SheetDescription>
-          </SheetHeader>
-          <div className="mt-6 space-y-4">
-            {!mcpOrigin || !companyMcpUrl ? (
-              <p className="text-sm text-muted-foreground">{t('agentsConnectMissingUrl')}</p>
-            ) : issuedConnection ? (
-              <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {t('agentsConnectCreatedTitle')}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{t('agentsConnectCreatedHint')}</p>
-                </div>
-                <pre className="max-h-64 overflow-auto rounded-md border border-border bg-muted p-3 font-mono text-xs text-foreground">
-                  {issuedConnection.prompt}
-                </pre>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="default"
-                    size="sm"
-                    onClick={() => void copyText(t('agentsCopyPrompt'), issuedConnection.prompt)}
-                  >
-                    <Copy
-                      className="mr-1.5 size-3.5"
-                      aria-hidden
-                    />
-                    {t('agentsCopyPrompt')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      void copyText(t('agentsCopyToken'), issuedConnection.accessToken)
-                    }
-                  >
-                    <Copy
-                      className="mr-1.5 size-3.5"
-                      aria-hidden
-                    />
-                    {t('agentsCopyToken')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIssuedConnection(null)}
-                  >
-                    {t('agentsConnectCreateAnother')}
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <label
-                  htmlFor="agents-connect-name"
-                  className="text-sm font-medium text-foreground"
-                >
-                  {t('agentsConnectNameLabel')}
-                </label>
-                <Input
-                  id="agents-connect-name"
-                  value={connectName}
-                  onChange={(e) => setConnectName(e.target.value)}
-                  placeholder={formatDefaultAgentName(locale)}
-                  autoComplete="off"
-                />
-                <p className="text-xs text-muted-foreground">{t('agentsConnectNameHint')}</p>
-                {createConnectionError ? (
-                  <p className="text-sm text-destructive">{createConnectionError}</p>
-                ) : null}
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={creatingConnection}
-                  onClick={() => void onCreateConnection()}
-                >
-                  {creatingConnection ? (
-                    <>
-                      <Loader2
-                        className="mr-1.5 size-3.5 animate-spin"
-                        aria-hidden
-                      />
-                      {t('agentsConnectCreating')}
-                    </>
-                  ) : (
-                    t('agentsConnectCreateButton')
-                  )}
-                </Button>
-              </div>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }

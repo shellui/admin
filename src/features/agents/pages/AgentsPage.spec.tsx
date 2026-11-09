@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import shellui from '@shellui/sdk';
 import { AgentsPage } from '@/features/agents/pages/AgentsPage';
 
 function renderAgentsPage() {
@@ -25,10 +26,6 @@ vi.mock('@/hooks/useShelluiAccessToken', () => ({
   useShelluiAccessToken: () => 'tok',
 }));
 
-vi.mock('@/hooks/useShelluiAiService', () => ({
-  useShelluiAiService: () => ({ url: 'https://ai.example.com' }),
-}));
-
 vi.mock('@/hooks/useEventRetention', () => ({
   useEventLogSource: () => ({ service: 'identity', baseUrl: 'https://id.example' }),
   useEventRetention: () => ({ data_retention_days: 30, stale_events: false }),
@@ -37,15 +34,6 @@ vi.mock('@/hooks/useEventRetention', () => ({
 vi.mock('@/lib/jwtCompany', () => ({
   getCompanyIdFromJwt: () => 1,
   getIsCompanyOwnerFromJwt: () => true,
-}));
-
-vi.mock('@/lib/personalAgentsApi', () => ({
-  fetchMcpPersonalStatus: vi.fn().mockResolvedValue({
-    mcp_enabled: true,
-    mcp_url: 'https://ai.example.com/c/1/mcp',
-    global_identity: false,
-  }),
-  createMcpPersonalAgent: vi.fn(),
 }));
 
 vi.mock('@/lib/companyAgentsApi', async (importOriginal) => {
@@ -90,6 +78,11 @@ vi.mock('@/lib/companyAgentsApi', async (importOriginal) => {
 });
 
 describe('AgentsPage', () => {
+  afterEach(() => {
+    cleanup();
+    vi.mocked(shellui.openDrawer).mockClear();
+  });
+
   it('renders agent names as plain text and shows per-agent call log on expand', async () => {
     renderAgentsPage();
     await screen.findByText('<img src=x onerror=alert(1)>');
@@ -108,5 +101,17 @@ describe('AgentsPage', () => {
     const statusBadge = within(table).getByText('agentsLogStatusSucceeded');
     expect(statusBadge.className).toContain('bg-emerald-500/10');
     expect(document.body.textContent).not.toContain('<b>bold</b>');
+  });
+
+  it('opens the shell drawer and does not render the connect form in this frame', async () => {
+    renderAgentsPage();
+    const open = await screen.findByRole('button', { name: 'agentsConnectOpen' });
+    fireEvent.click(open);
+    expect(vi.mocked(shellui.openDrawer)).toHaveBeenCalledTimes(1);
+    const options = vi.mocked(shellui.openDrawer).mock.calls[0]?.[0];
+    expect(options).toMatchObject({ position: 'right', size: 'md' });
+    expect(options?.url).toMatch(/#\/agents\/connect$/);
+    expect(screen.queryByLabelText('agentsConnectNameLabel')).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });
