@@ -6,6 +6,7 @@ import type {
   CompanyMcpApproval,
   CompanyMcpCallLogEntry,
   McpAccessMode,
+  McpAgentKind,
   McpDiscoveredService,
   McpReadLevel,
 } from '@/lib/companyAgentsTypes';
@@ -15,6 +16,7 @@ export type {
   CompanyMcpApproval,
   CompanyMcpCallLogEntry,
   McpAccessMode,
+  McpAgentKind,
   McpDiscoveredService,
   McpReadLevel,
 } from '@/lib/companyAgentsTypes';
@@ -42,6 +44,21 @@ function parseArguments(raw: unknown): Record<string, unknown> {
   return raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
 }
 
+/**
+ * Company admin `GET /api/v1/mcp/agents` may omit `kind`.
+ * A personal credential wins over an OAuth client id, matching identity's
+ * personal-agent list (`kind: "personal"` when a static secret exists).
+ */
+export function parseMcpAgentKind(row: Record<string, unknown>): McpAgentKind | null {
+  if (row.kind === 'oauth' || row.kind === 'personal') return row.kind;
+  const personalToken =
+    typeof row.personal_token_id === 'string' && row.personal_token_id.trim() !== '';
+  const oauthClient = typeof row.oauth_client_id === 'string' && row.oauth_client_id.trim() !== '';
+  if (personalToken) return 'personal';
+  if (oauthClient) return 'oauth';
+  return null;
+}
+
 function parseCreatedBy(raw: unknown): CompanyMcpAgent['created_by'] {
   if (typeof raw === 'string' && raw.trim()) {
     return { display_name: raw.trim() };
@@ -66,6 +83,7 @@ export function parseMcpAgent(row: unknown): CompanyMcpAgent | null {
   return {
     id: o.id,
     name: o.name,
+    kind: parseMcpAgentKind(o),
     access_mode: parseAccessMode(o.access_mode),
     read_level: parseReadLevel(o.read_level),
     allow_destructive_without_asking: o.allow_destructive_without_asking === true,

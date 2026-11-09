@@ -7,6 +7,7 @@ import {
   mcpApprovalHasRedactedArguments,
   mcpCallLogOutcome,
   parseMcpAgent,
+  parseMcpAgentKind,
   parseMcpAgentsResponse,
   parseMcpApproval,
   parseMcpCallLogEntry,
@@ -35,6 +36,32 @@ describe('companyAgentsApi parsers', () => {
     const agents = parseMcpAgentsResponse(body);
     expect(agents).toHaveLength(1);
     expect(agents[0]?.access_mode).toBe('ask');
+  });
+
+  it('reads oauth and personal kinds from the company agent list', () => {
+    expect(
+      parseMcpAgent({
+        id: 'oauth-1',
+        name: 'Device login',
+        kind: 'oauth',
+        services_allowed: ['identity', 'storage'],
+        created_at: '2026-06-01T00:00:00Z',
+      })?.kind,
+    ).toBe('oauth');
+    expect(
+      parseMcpAgentKind({
+        personal_token_id: 'pt-1',
+        oauth_client_id: 'client-1',
+      }),
+    ).toBe('personal');
+    expect(parseMcpAgentKind({ oauth_client_id: 'client-1' })).toBe('oauth');
+    expect(
+      parseMcpAgent({
+        id: 'plain',
+        name: 'Legacy',
+        created_at: '2026-01-01T00:00:00Z',
+      })?.kind,
+    ).toBeNull();
   });
 
   it('parses full access mode', () => {
