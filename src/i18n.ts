@@ -1129,7 +1129,7 @@ const resources = {
       agentsMcpUnavailableTitle: 'MCP admin is not available',
       agentsMcpTitle: 'Connect MCP clients',
       agentsMcpDescription:
-        'Create a connection token for MCP clients, then manage agents, approvals, and call logs for your company.',
+        'Give your agent the company MCP URL and approve the code on the Identity page. For clients that cannot sign in with OAuth, use a static secret. Then manage agents, approvals, and call logs for your company.',
       agentsConnectIntro:
         'Your agent adds this URL as a remote MCP server and signs in with OAuth.',
       agentsConnectUrlLabel: 'Company MCP URL',
@@ -1225,10 +1225,9 @@ const resources = {
       agentsAccessLegend_read_only: 'The agent can read data but cannot change anything.',
       agentsAccessLegend_ask:
         'Write actions appear under Pending approvals until you approve them.',
-      agentsAccessLegend_full:
-        'Writes run immediately except destructive tools when ask-first is on.',
+      agentsAccessLegend_full: 'Non-destructive writes run immediately.',
       agentsAccessLegend_destructive:
-        'When allowed, delete-style tools can run without a separate approval even in full access mode.',
+        'Delete-style tools still need a separate approval in full access, including when you allow them.',
       agentsColAccessTooltip:
         'Read only, ask before changes, or full access. Set when the user signed in.',
       agentsColDestructiveTooltip:
@@ -3344,7 +3343,7 @@ const resources = {
       agentsMcpUnavailableTitle: 'Admin MCP indisponible',
       agentsMcpTitle: 'Connecter des clients MCP',
       agentsMcpDescription:
-        'Créez un jeton de connexion pour les clients MCP, puis gérez les agents, approbations et journaux d’appels de votre entreprise.',
+        'Donnez à votre agent l’URL MCP de l’entreprise et approuvez le code sur la page Identity. Pour les clients qui ne peuvent pas se connecter avec OAuth, utilisez un secret statique. Gérez ensuite les agents, approbations et journaux d’appels de votre entreprise.',
       agentsConnectIntro:
         'Votre agent ajoute cette URL comme serveur MCP distant et se connecte avec OAuth.',
       agentsConnectUrlLabel: "URL MCP de l'entreprise",
@@ -3441,10 +3440,9 @@ const resources = {
       agentsAccessLegend_read_only: 'L’agent peut lire des données mais ne peut rien modifier.',
       agentsAccessLegend_ask:
         'Les écritures apparaissent sous Approbations en attente jusqu’à votre validation.',
-      agentsAccessLegend_full:
-        'Les écritures s’exécutent tout de suite sauf les outils destructifs si la demande préalable est active.',
+      agentsAccessLegend_full: 'Les écritures non destructives s’exécutent tout de suite.',
       agentsAccessLegend_destructive:
-        'Si autorisé, les outils de type suppression peuvent s’exécuter sans approbation supplémentaire, même en accès complet.',
+        'Les outils de type suppression ont besoin d’une approbation séparée en accès complet, y compris si vous les autorisez.',
       agentsColAccessTooltip:
         'Lecture seule, demander avant modification ou accès complet. Défini à la connexion.',
       agentsColDestructiveTooltip:
