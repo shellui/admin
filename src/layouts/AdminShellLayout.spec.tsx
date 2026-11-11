@@ -11,6 +11,9 @@ const hooks = vi.hoisted(() => ({
   isStaff: true,
   developerMode: false,
   email: { url: 'http://localhost:8003/', showInAdmin: true as boolean | undefined },
+  storage: { url: null as string | null },
+  hosting: { url: null as string | null },
+  ai: { url: null as string | null },
 }));
 
 vi.mock('@/hooks/useShelluiIsStaff', () => ({
@@ -19,6 +22,19 @@ vi.mock('@/hooks/useShelluiIsStaff', () => ({
 
 vi.mock('@/hooks/useShelluiEmail', () => ({
   useShelluiEmail: () => hooks.email,
+}));
+
+vi.mock('@/hooks/useShelluiStorage', () => ({
+  useShelluiStorage: () => hooks.storage,
+}));
+
+vi.mock('@/hooks/useShelluiHosting', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/hooks/useShelluiHosting')>()),
+  useShelluiHosting: () => hooks.hosting,
+}));
+
+vi.mock('@/hooks/useShelluiAiService', () => ({
+  useShelluiAiService: () => hooks.ai,
 }));
 
 vi.mock('@/hooks/useIsMobile', () => ({
@@ -47,12 +63,21 @@ function renderShell() {
   );
 }
 
+function setExtraServiceUrls() {
+  hooks.storage = { url: 'https://storage.example' };
+  hooks.hosting = { url: 'https://hosting.example' };
+  hooks.ai = { url: 'https://ai.example' };
+}
+
 describe('service Django admin links', () => {
   afterEach(async () => {
     cleanup();
     hooks.isStaff = true;
     hooks.developerMode = false;
     hooks.email = { url: 'http://localhost:8003/', showInAdmin: true };
+    hooks.storage = { url: null };
+    hooks.hosting = { url: null };
+    hooks.ai = { url: null };
     await i18n.changeLanguage('en');
   });
 
@@ -74,6 +99,7 @@ describe('service Django admin links', () => {
   });
 
   it('hides service URLs from sidebar section titles outside developer mode', () => {
+    setExtraServiceUrls();
     renderShell();
 
     expect(screen.getByRole('button', { name: /^Identity/ }).textContent).not.toContain(
@@ -82,9 +108,17 @@ describe('service Django admin links', () => {
     expect(screen.getByRole('button', { name: /^Email/ }).textContent).not.toContain(
       'http://localhost:8003',
     );
+    for (const [title, url] of [
+      [/^AI/, 'https://ai.example'],
+      [/^Storage/, 'https://storage.example'],
+      [/^Hosting/, 'https://hosting.example'],
+    ] as const) {
+      expect(screen.getByRole('button', { name: title }).textContent).not.toContain(url);
+    }
   });
 
   it('shows service URLs in sidebar section titles in developer mode', () => {
+    setExtraServiceUrls();
     hooks.developerMode = true;
     renderShell();
 
@@ -94,6 +128,13 @@ describe('service Django admin links', () => {
     expect(screen.getByRole('button', { name: /^Email/ }).textContent).toContain(
       'http://localhost:8003',
     );
+    for (const [title, url] of [
+      [/^AI/, 'https://ai.example'],
+      [/^Storage/, 'https://storage.example'],
+      [/^Hosting/, 'https://hosting.example'],
+    ] as const) {
+      expect(screen.getByRole('button', { name: title }).textContent).toContain(url);
+    }
   });
 
   it('keeps developer docs between Identity statistics and Django admin', () => {
