@@ -1,5 +1,14 @@
+import { requireAiServiceBaseUrl } from '@/lib/aiServiceUrl';
 import { identityAuthFetch, readJsonOrThrow } from '@/lib/adminIdentityFetch';
+import {
+  mcpCallLogListQuery,
+  parseMcpCallLogsResponse,
+  type CompanyMcpCallLogEntry,
+  type CompanyMcpCallLogsPage,
+  type McpCallLogListQuery,
+} from '@/lib/companyAgentsApi';
 import type { McpAgentKind } from '@/lib/companyAgentsTypes';
+import { serviceAuthFetch } from '@/lib/serviceAuthFetch';
 
 export const MCP_PERSONAL_SERVICE_OPTIONS = [
   'identity',
@@ -213,4 +222,134 @@ export async function revokeMcpPersonalAgent(
       : null;
   if (!agent) throw new Error('Unexpected response from identity.');
   return agent;
+}
+
+/**
+ * OAuth consent rows still stored by identity.
+ * Tool-call rows on that activity feed are legacy. New calls come from ai-service.
+ */
+export const OAUTH_CONSENT_ACTIVITY_TOOLS = [
+  'oauth.authorize.approved',
+  'oauth.device.approved',
+] as const;
+
+export type McpOauthConsentTool = (typeof OAUTH_CONSENT_ACTIVITY_TOOLS)[number];
+
+export type McpPersonalConsentRow = {
+  timestamp: string;
+  tool: McpOauthConsentTool;
+  service: string;
+  operationTitle: string | null;
+  outcome: string | null;
+  durationMs: number | null;
+};
+
+export type McpPersonalCallLogQuery = Omit<McpCallLogListQuery, 'agent'>;
+
+export type PersonalAgentTimelineEntry =
+  | { kind: 'call'; at: string; call: CompanyMcpCallLogEntry }
+  | { kind: 'consent'; at: string; consent: McpPersonalConsentRow };
+
+function activityTimeMs(iso: string): number {
+  const ms = Date.parse(iso);
+  return Number.isFinite(ms) ? ms : Number.NEGATIVE_INFINITY;
+}
+
+export function parseOauthConsentActivity(body: unknown): McpPersonalConsentRow[] {
+  const rows =
+    body && typeof body === 'object' && Array.isArray((body as { activity?: unknown }).activity)
+      ? (body as { activity: unknown[] }).activity
+      : [];
+  const consents: McpPersonalConsentRow[] = [];
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue;
+    const record = row as Record<string, unknown>;
+    const tool = asTrimmedString(record.tool);
+    const timestamp = asTrimmedString(record.timestamp);
+    const service = asTrimmedString(record.service);
+    if (!tool || !timestamp || !service) continue;
+    if (!(OAUTH_CONSENT_ACTIVITY_TOOLS as readonly string[]).includes(tool)) continue;
+    const durationRaw =
+      typeof record.duration_ms === 'number' && Number.isFinite(record.duration_ms)
+        ? record.duration_ms
+        : null;
+    consents.push({
+      timestamp,
+      tool: tool as McpOauthConsentTool,
+      service,
+      operationTitle: asTrimmedString(record.operation_title),
+      outcome: asTrimmedString(record.outcome),
+      durationMs: durationRaw !== null && durationRaw >= 0 ? durationRaw : null,
+    });
+  }
+  return consents;
+}
+
+/** Newest first. Call logs and OAuth consent rows share one timeline. */
+export function mergePersonalAgentActivity(
+  calls: CompanyMcpCallLogEntry[],
+  consents: McpPersonalConsentRow[],
+): PersonalAgentTimelineEntry[] {
+  const entries: PersonalAgentTimelineEntry[] = [
+    ...calls.map((call) => ({ kind: 'call' as const, at: call.created_at, call })),
+    ...consents.map((consent) => ({ kind: 'consent' as const, at: consent.timestamp, consent })),
+  ];
+  return entries.sort((a, b) => activityTimeMs(b.at) - activityTimeMs(a.at));
+}
+
+export function appendPersonalCallLogs(
+  prev: CompanyMcpCallLogEntry[],
+  next: CompanyMcpCallLogEntry[],
+): CompanyMcpCallLogEntry[] {
+  if (next.length === 0) return prev;
+  const seen = new Set(prev.map((row) => row.id));
+  const extra = next.filter((row) => !seen.has(row.id));
+  return extra.length === 0 ? prev : [...prev, ...extra];
+}
+
+/**
+ * Personal MCP tool calls from ai-service.
+ * Bearer is the signed-in app JWT. Company and user come from that token, so this request does not send `company_id`.
+ * 404 means the caller has no attributed rows for the agent and is an empty page.
+ */
+export async function fetchMcpPersonalAgentCallLogs(
+  accessToken: string,
+  agentId: string,
+  query: McpPersonalCallLogQuery = {},
+): Promise<CompanyMcpCallLogsPage> {
+  const params = mcpCallLogListQuery(query);
+  const res = await serviceAuthFetch(
+    requireAiServiceBaseUrl(),
+    `/ai/v1/mcp/personal/agents/${encodeURIComponent(agentId)}/call-logs`,
+    accessToken,
+    {},
+    { query: params },
+  );
+  if (res.status === 404) {
+    return {
+      count: 0,
+      limit: typeof params.limit === 'number' ? params.limit : 50,
+      offset: typeof params.offset === 'number' ? params.offset : 0,
+      call_logs: [],
+    };
+  }
+  const body = await readJsonOrThrow(res, 'Could not load tool calls.');
+  return parseMcpCallLogsResponse(body);
+}
+
+/** OAuth consent rows only. Identity tool-call rows are dropped. */
+export async function fetchMcpPersonalOauthConsent(
+  accessToken: string,
+  companyId: number,
+  agentId: string,
+): Promise<McpPersonalConsentRow[]> {
+  const res = await identityAuthFetch(
+    `/api/v1/mcp/personal/agents/${encodeURIComponent(agentId)}/activity`,
+    accessToken,
+    {},
+    { companyId },
+  );
+  if (res.status === 404) return [];
+  const body = await readJsonOrThrow(res, 'Could not load OAuth consent history.');
+  return parseOauthConsentActivity(body);
 }
