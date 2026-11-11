@@ -25,6 +25,7 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ### ✨ Feature
 
+- **Agents:** Call logs load from ai-service (`GET /ai/v1/mcp/call-logs`), with service and status filters, approval details, and load-more pagination.
 - **Agents:** Connect MCP clients uses a Settings-style create flow with a one-time agent prompt (company MCP URL + access token).
 
 ### 🐛 Bug Fixes

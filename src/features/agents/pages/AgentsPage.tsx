@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bot, ChevronRight, Loader2 } from 'lucide-react';
 import shellui from '@shellui/sdk';
@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/admin/PageHeader';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -33,6 +34,7 @@ import {
   revokeMcpPersonalAgent,
   type McpPersonalAgent,
 } from '@/lib/personalAgentsApi';
+import { AiServiceNotConfiguredError } from '@/lib/aiServiceUrl';
 import { askShelluiConfirm } from '@/lib/shelluiConfirm';
 import {
   agentCreatorDisplayName,
@@ -44,21 +46,25 @@ import {
   formatApprovalArgumentsForConfirm,
   isDestructiveMcpApproval,
   isMcpApiUnavailable,
-  mcpApprovalHasRedactedArguments,
-  mcpCallLogOutcome,
   MCP_API_UNAVAILABLE,
+  MCP_CALL_LOG_PAGE_SIZE,
+  MCP_CALL_LOG_SERVICES,
+  MCP_CALL_LOG_STATUSES,
+  mcpApprovalHasRedactedArguments,
   rejectCompanyMcpApproval,
   revokeCompanyMcpAgent,
   type CompanyMcpAgent,
   type CompanyMcpApproval,
   type CompanyMcpCallLogEntry,
-  type McpCallLogOutcome,
+  type McpCallLogService,
+  type McpCallLogStatus,
 } from '@/lib/companyAgentsApi';
 import { formatDurationMs } from '@/lib/scheduledJobsApi';
 import { cn } from '@/lib/utils';
 
 type AgentStatusFilter = 'all' | 'active' | 'paused';
-type CallLogStatusFilter = 'any' | McpCallLogOutcome;
+type CallLogStatusFilter = 'any' | McpCallLogStatus;
+type CallLogServiceFilter = 'any' | McpCallLogService;
 type CallLogTimeFilter = '7d' | '30d' | 'all';
 
 const CREATOR_ANY = '__any__';
@@ -91,13 +97,6 @@ function formatCountdown(expiresAt: string, nowMs: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-function countCallsForAgent(agent: CompanyMcpAgent, logs: CompanyMcpCallLogEntry[]): number {
-  if (typeof agent.call_count === 'number' && Number.isFinite(agent.call_count)) {
-    return agent.call_count;
-  }
-  return logs.filter((row) => row.agent_id === agent.id).length;
-}
-
 function agentMatchesListFilters(
   agent: CompanyMcpAgent,
   search: string,
@@ -124,56 +123,74 @@ function agentMatchesListFilters(
 function filterCallLogRows(
   rows: CompanyMcpCallLogEntry[],
   search: string,
-  statusFilter: CallLogStatusFilter,
-  timeFilter: CallLogTimeFilter,
-  nowMs: number,
 ): CompanyMcpCallLogEntry[] {
-  let out = rows;
   const q = search.trim().toLowerCase();
-  if (q) {
-    out = out.filter(
-      (row) =>
-        row.service.toLowerCase().includes(q) ||
-        row.tool.toLowerCase().includes(q) ||
-        `${row.method} ${row.path}`.toLowerCase().includes(q),
-    );
-  }
-  if (statusFilter !== 'any') {
-    out = out.filter((row) => mcpCallLogOutcome(row) === statusFilter);
-  }
-  if (timeFilter !== 'all') {
-    const days = timeFilter === '7d' ? 7 : 30;
-    const cutoff = nowMs - days * 24 * 60 * 60 * 1000;
-    out = out.filter((row) => new Date(row.created_at).getTime() >= cutoff);
-  }
-  return out.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  if (!q) return rows;
+  return rows.filter((row) =>
+    [
+      row.service,
+      row.tool_name,
+      row.wrapper_tool,
+      row.error_message,
+      row.operation_title,
+      row.approval_outcome,
+    ]
+      .join(' ')
+      .toLowerCase()
+      .includes(q),
+  );
+}
+
+function createdAfterForTimeFilter(filter: CallLogTimeFilter, nowMs: number): string | undefined {
+  if (filter === 'all') return undefined;
+  const days = filter === '7d' ? 7 : 30;
+  return new Date(nowMs - days * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function appendCallLogs(
+  prev: CompanyMcpCallLogEntry[],
+  next: CompanyMcpCallLogEntry[],
+): CompanyMcpCallLogEntry[] {
+  if (next.length === 0) return prev;
+  const seen = new Set(prev.map((row) => row.id));
+  const extra = next.filter((row) => !seen.has(row.id));
+  return extra.length === 0 ? prev : [...prev, ...extra];
 }
 
 const callLogTableHeadClass = 'h-9 px-3 text-xs font-medium tracking-normal text-muted-foreground';
 const callLogTableCellClass = 'px-3 py-2 align-middle text-xs';
 
-function callLogStatusBadgeClass(outcome: McpCallLogOutcome): string {
-  if (outcome === 'succeeded') {
+function callLogStatusBadgeClass(status: string): string {
+  if (status === 'allowed') {
     return 'border-border/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400';
   }
-  if (outcome === 'denied') {
+  if (status === 'denied' || status === 'waiting_approval') {
     return 'border-border/60 bg-amber-500/10 text-amber-800 dark:text-amber-400';
   }
   return 'border-border/60 bg-red-500/10 text-red-700 dark:text-red-400';
 }
 
-function CallLogStatusBadge({
-  outcome,
-  children,
-}: {
-  outcome: McpCallLogOutcome;
-  children: ReactNode;
-}) {
+function callLogStatusLabel(status: string, t: (key: string) => string): string {
+  if (status === 'allowed') return t('agentsLogStatusAllowed');
+  if (status === 'denied') return t('agentsLogStatusDenied');
+  if (status === 'waiting_approval') return t('agentsLogStatusWaiting');
+  if (status === 'failed') return t('agentsLogStatusFailed');
+  if (status === 'error') return t('agentsLogStatusError');
+  return status || '-';
+}
+
+function approvalChannelLabel(channel: string, t: (key: string) => string): string {
+  if (channel === 'form') return t('agentsLogApprovalChannel_form');
+  if (channel === 'link') return t('agentsLogApprovalChannel_link');
+  return '';
+}
+
+function CallLogStatusBadge({ status, children }: { status: string; children: ReactNode }) {
   return (
     <span
       className={cn(
         'inline-flex items-center rounded-md border px-1.5 py-0.5 text-[11px] font-medium leading-none',
-        callLogStatusBadgeClass(outcome),
+        callLogStatusBadgeClass(status),
       )}
     >
       {children}
@@ -183,38 +200,88 @@ function CallLogStatusBadge({
 
 function AgentCallLogPanel({
   agentId,
-  callLogs,
-  loading,
+  accessToken,
+  companyId,
   locale,
+  refreshKey,
 }: {
   agentId: string;
-  callLogs: CompanyMcpCallLogEntry[];
-  loading: boolean;
+  accessToken: string;
+  companyId: number;
   locale: string;
+  refreshKey: number;
 }) {
   const { t } = useTranslation();
   const [logSearch, setLogSearch] = useState('');
   const [logStatus, setLogStatus] = useState<CallLogStatusFilter>('any');
+  const [logService, setLogService] = useState<CallLogServiceFilter>('any');
   const [logTime, setLogTime] = useState<CallLogTimeFilter>('7d');
   const [nowMs] = useState(() => Date.now());
+  const [rows, setRows] = useState<CompanyMcpCallLogEntry[]>([]);
+  const [count, setCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const generation = useRef(0);
+  const tRef = useRef(t);
+  tRef.current = t;
 
-  const rows = useMemo(
-    () =>
-      filterCallLogRows(
-        callLogs.filter((row) => row.agent_id === agentId),
-        logSearch,
-        logStatus,
-        logTime,
-        nowMs,
-      ),
-    [agentId, callLogs, logSearch, logStatus, logTime, nowMs],
+  const createdAfter = createdAfterForTimeFilter(logTime, nowMs);
+
+  const loadPage = useCallback(
+    async (offset: number, append: boolean) => {
+      const gen = generation.current;
+      const translate = tRef.current;
+      if (append) setLoadingMore(true);
+      else {
+        setLoading(true);
+        setError(null);
+      }
+      try {
+        const page = await fetchCompanyMcpCallLogs(accessToken, companyId, {
+          agent: agentId,
+          service: logService === 'any' ? undefined : logService,
+          status: logStatus === 'any' ? undefined : logStatus,
+          createdAfter,
+          limit: MCP_CALL_LOG_PAGE_SIZE,
+          offset,
+        });
+        if (generation.current !== gen) return;
+        setRows((prev) => (append ? appendCallLogs(prev, page.call_logs) : page.call_logs));
+        setCount(page.count);
+        setError(null);
+      } catch (e) {
+        if (generation.current !== gen) return;
+        const message =
+          e instanceof AiServiceNotConfiguredError
+            ? translate('agentsConnectMissingUrl')
+            : e instanceof Error && e.message
+              ? e.message
+              : translate('agentsCallLogLoadError');
+        setError(message);
+        if (!append) setRows([]);
+      } finally {
+        if (generation.current === gen) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
+      }
+    },
+    [accessToken, agentId, companyId, createdAfter, logService, logStatus],
   );
 
-  const statusLabel = (outcome: McpCallLogOutcome) => {
-    if (outcome === 'succeeded') return t('agentsLogStatusSucceeded');
-    if (outcome === 'denied') return t('agentsLogStatusDenied');
-    return t('agentsLogStatusFailed');
-  };
+  useEffect(() => {
+    generation.current += 1;
+    setLoading(true);
+    setError(null);
+    setRows([]);
+    setCount(0);
+    void loadPage(0, false);
+  }, [loadPage, refreshKey, reloadKey]);
+
+  const visible = useMemo(() => filterCallLogRows(rows, logSearch), [logSearch, rows]);
+  const hasMore = rows.length > 0 && rows.length < count;
 
   return (
     <div className="border-t border-border bg-muted/40 px-4 py-3">
@@ -228,17 +295,47 @@ function AgentCallLogPanel({
           aria-label={t('agentsSearchToolsPlaceholder')}
         />
         <Select
+          value={logService}
+          onValueChange={(v) => setLogService(v as CallLogServiceFilter)}
+        >
+          <SelectTrigger
+            className="h-8 w-[150px] text-xs"
+            aria-label={t('agentsCallColService')}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="any">{t('agentsLogFilterAnyService')}</SelectItem>
+            {MCP_CALL_LOG_SERVICES.map((service) => (
+              <SelectItem
+                key={service}
+                value={service}
+              >
+                {t(`agentsService_${service}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
           value={logStatus}
           onValueChange={(v) => setLogStatus(v as CallLogStatusFilter)}
         >
-          <SelectTrigger className="h-8 w-[140px] text-xs">
+          <SelectTrigger
+            className="h-8 w-[170px] text-xs"
+            aria-label={t('agentsCallColStatus')}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="any">{t('agentsLogFilterAnyStatus')}</SelectItem>
-            <SelectItem value="succeeded">{t('agentsLogStatusSucceeded')}</SelectItem>
-            <SelectItem value="failed">{t('agentsLogStatusFailed')}</SelectItem>
-            <SelectItem value="denied">{t('agentsLogStatusDenied')}</SelectItem>
+            {MCP_CALL_LOG_STATUSES.map((status) => (
+              <SelectItem
+                key={status}
+                value={status}
+              >
+                {callLogStatusLabel(status, t)}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select
@@ -255,87 +352,169 @@ function AgentCallLogPanel({
           </SelectContent>
         </Select>
       </div>
-      <div className="overflow-hidden rounded-md border border-border bg-background">
-        <Table className="text-xs">
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className={callLogTableHeadClass}>{t('agentsCallColWhen')}</TableHead>
-              <TableHead className={callLogTableHeadClass}>{t('agentsCallColService')}</TableHead>
-              <TableHead className={callLogTableHeadClass}>{t('agentsCallColTool')}</TableHead>
-              <TableHead className={callLogTableHeadClass}>{t('agentsCallColStatus')}</TableHead>
-              <TableHead className={cn(callLogTableHeadClass, 'text-right')}>
-                {t('agentsCallColDuration')}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={5}
-                  className="py-8 text-center text-xs text-muted-foreground"
-                >
-                  {t('agentsCallLogLoading')}
-                </TableCell>
-              </TableRow>
-            ) : rows.length === 0 ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={5}
-                  className="py-8 text-center text-xs text-muted-foreground"
-                >
-                  {t('agentsCallLogEmptyRange')}
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((entry) => {
-                const outcome = mcpCallLogOutcome(entry);
-                const toolLabel = entry.tool || `${entry.method} ${entry.path}`.trim() || '-';
-                return (
-                  <TableRow key={entry.id}>
+
+      {error ? (
+        <Alert
+          variant="destructive"
+          className="mb-3"
+        >
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+            <span>{error}</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => setReloadKey((n) => n + 1)}
+            >
+              {t('agentsCallLogRetry')}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {loading && rows.length === 0 ? (
+        <p
+          className="py-8 text-center text-xs text-muted-foreground"
+          role="status"
+        >
+          {t('agentsCallLogLoading')}
+        </p>
+      ) : rows.length === 0 && !error ? (
+        <p
+          className="py-8 text-center text-xs text-muted-foreground"
+          role="status"
+        >
+          {t('agentsCallLogEmptyRange')}
+        </p>
+      ) : rows.length === 0 ? null : (
+        <>
+          <p className="mb-2 text-[11px] tabular-nums text-muted-foreground">
+            {t('agentsCallLogShown', { shown: rows.length, count })}
+          </p>
+          <div className="overflow-hidden rounded-md border border-border bg-background">
+            <Table className="text-xs">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className={callLogTableHeadClass}>{t('agentsCallColWhen')}</TableHead>
+                  <TableHead className={callLogTableHeadClass}>
+                    {t('agentsCallColService')}
+                  </TableHead>
+                  <TableHead className={callLogTableHeadClass}>{t('agentsCallColTool')}</TableHead>
+                  <TableHead className={callLogTableHeadClass}>
+                    {t('agentsCallColStatus')}
+                  </TableHead>
+                  <TableHead className={cn(callLogTableHeadClass, 'text-right')}>
+                    {t('agentsCallColDuration')}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visible.length === 0 ? (
+                  <TableRow className="hover:bg-transparent">
                     <TableCell
-                      className={cn(
-                        callLogTableCellClass,
-                        'whitespace-nowrap tabular-nums text-muted-foreground',
-                      )}
-                      title={entry.created_at}
+                      colSpan={5}
+                      className="py-8 text-center text-xs text-muted-foreground"
                     >
-                      {formatCallWhen(entry.created_at, locale)}
-                    </TableCell>
-                    <TableCell
-                      className={cn(callLogTableCellClass, 'font-mono text-muted-foreground')}
-                    >
-                      {entry.service}
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        callLogTableCellClass,
-                        'max-w-[16rem] truncate font-mono font-medium text-foreground',
-                      )}
-                      title={toolLabel === '-' ? undefined : toolLabel}
-                    >
-                      {toolLabel}
-                    </TableCell>
-                    <TableCell className={callLogTableCellClass}>
-                      <CallLogStatusBadge outcome={outcome}>
-                        {statusLabel(outcome)}
-                      </CallLogStatusBadge>
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        callLogTableCellClass,
-                        'text-right font-mono tabular-nums text-muted-foreground',
-                      )}
-                    >
-                      {formatDurationMs(entry.duration_ms, locale) ?? '-'}
+                      {t('agentsCallLogEmptySearch')}
                     </TableCell>
                   </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                ) : (
+                  visible.map((entry) => {
+                    const toolLabel = entry.tool_name || entry.operation_title || '-';
+                    const wrapper = entry.wrapper_tool.trim();
+                    const channelLabel = approvalChannelLabel(entry.approval_channel, t);
+                    const outcomeLabel = entry.approval_outcome.trim().replaceAll('_', ' ');
+                    const failureText =
+                      entry.status === 'failed' || entry.status === 'error'
+                        ? entry.error_message.trim() || entry.error_code.trim()
+                        : '';
+                    return (
+                      <TableRow key={entry.id}>
+                        <TableCell
+                          className={cn(
+                            callLogTableCellClass,
+                            'whitespace-nowrap tabular-nums text-muted-foreground',
+                          )}
+                          title={entry.created_at}
+                        >
+                          {formatCallWhen(entry.created_at, locale)}
+                        </TableCell>
+                        <TableCell className={callLogTableCellClass}>
+                          {entry.service && entry.service !== '-' ? (
+                            <Badge
+                              variant="muted"
+                              className="px-1.5 py-0 text-[11px] font-normal"
+                            >
+                              {entry.service}
+                            </Badge>
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell
+                          className={cn(callLogTableCellClass, 'max-w-[18rem] text-foreground')}
+                        >
+                          <span
+                            className="block truncate font-mono font-medium"
+                            title={toolLabel === '-' ? undefined : toolLabel}
+                          >
+                            {toolLabel}
+                          </span>
+                          {wrapper === 'ai_call_tool' ? (
+                            <span className="mt-0.5 block font-sans text-[11px] font-normal text-muted-foreground">
+                              {t('agentsLogViaWrapper', { tool: wrapper })}
+                            </span>
+                          ) : null}
+                        </TableCell>
+                        <TableCell className={cn(callLogTableCellClass, 'max-w-[18rem]')}>
+                          <CallLogStatusBadge status={entry.status}>
+                            {callLogStatusLabel(entry.status, t)}
+                          </CallLogStatusBadge>
+                          {channelLabel || outcomeLabel ? (
+                            <span className="mt-1 block text-[11px] font-normal text-muted-foreground">
+                              {channelLabel}
+                              {channelLabel && outcomeLabel ? ' · ' : null}
+                              {outcomeLabel || null}
+                            </span>
+                          ) : null}
+                          {failureText ? (
+                            <span className="mt-1 block whitespace-normal text-[11px] font-normal text-red-700 dark:text-red-400">
+                              {failureText}
+                            </span>
+                          ) : null}
+                        </TableCell>
+                        <TableCell
+                          className={cn(
+                            callLogTableCellClass,
+                            'text-right font-mono tabular-nums text-muted-foreground',
+                          )}
+                        >
+                          {formatDurationMs(entry.duration_ms, locale) ?? '-'}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          {hasMore ? (
+            <div className="mt-2 flex justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                disabled={loadingMore}
+                onClick={() => void loadPage(rows.length, true)}
+              >
+                {loadingMore ? t('agentsCallLogLoading') : t('agentsCallLogLoadMore')}
+              </Button>
+            </div>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }
@@ -344,8 +523,9 @@ function AgentAccordionRow({
   agent,
   expanded,
   onToggle,
-  callLogs,
-  loadingLogs,
+  accessToken,
+  companyId,
+  logsRefreshKey,
   locale,
   readOnly,
   busy,
@@ -354,8 +534,9 @@ function AgentAccordionRow({
   agent: CompanyMcpAgent;
   expanded: boolean;
   onToggle: () => void;
-  callLogs: CompanyMcpCallLogEntry[];
-  loadingLogs: boolean;
+  accessToken: string;
+  companyId: number;
+  logsRefreshKey: number;
   locale: string;
   readOnly: boolean;
   busy: boolean;
@@ -377,7 +558,10 @@ function AgentAccordionRow({
     scopeRegional: t('agentsScopeRegional'),
     scopeRegionalSaas: t('agentsScopeRegionalSaas'),
   });
-  const callCount = countCallsForAgent(agent, callLogs);
+  const callCount =
+    typeof agent.call_count === 'number' && Number.isFinite(agent.call_count)
+      ? agent.call_count
+      : null;
 
   const statusTone = status === 'active' ? 'success' : status === 'paused' ? 'warning' : 'muted';
 
@@ -427,7 +611,7 @@ function AgentAccordionRow({
             : '-'}
         </p>
         <p className="text-xs text-muted-foreground tabular-nums">
-          {t('agentsCallCount', { count: callCount })}
+          {callCount == null ? '-' : t('agentsCallCount', { count: callCount })}
         </p>
         {!readOnly && status !== 'revoked' ? (
           <Button
@@ -457,9 +641,10 @@ function AgentAccordionRow({
       {expanded ? (
         <AgentCallLogPanel
           agentId={agent.id}
-          callLogs={callLogs}
-          loading={loadingLogs}
+          accessToken={accessToken}
+          companyId={companyId}
           locale={locale}
+          refreshKey={logsRefreshKey}
         />
       ) : null}
     </div>
@@ -477,7 +662,7 @@ export function AgentsPage() {
 
   const [agents, setAgents] = useState<CompanyMcpAgent[]>([]);
   const [approvals, setApprovals] = useState<CompanyMcpApproval[]>([]);
-  const [callLogs, setCallLogs] = useState<CompanyMcpCallLogEntry[]>([]);
+  const [logsRefreshKey, setLogsRefreshKey] = useState(0);
   const [expandedAgentId, setExpandedAgentId] = useState<string | null>(null);
   const [showRevoked, setShowRevoked] = useState(false);
   const [agentSearch, setAgentSearch] = useState('');
@@ -515,15 +700,13 @@ export function AgentsPage() {
         () => [] as McpPersonalAgent[],
       );
       try {
-        const [agentRows, approvalRows, logRows] = await Promise.all([
+        const [agentRows, approvalRows] = await Promise.all([
           fetchCompanyMcpAgents(accessToken, companyId),
           fetchCompanyMcpApprovals(accessToken, companyId),
-          fetchCompanyMcpCallLogs(accessToken, companyId),
         ]);
         const personalRows = await personalPromise;
         applyPersonalRows(agentRows, personalRows);
         setApprovals(approvalRows);
-        setCallLogs(logRows);
         setError(null);
         setMcpUnavailable(false);
       } catch (e) {
@@ -531,7 +714,6 @@ export function AgentsPage() {
         if (personalRows.length > 0) {
           applyPersonalRows([], personalRows);
           setApprovals([]);
-          setCallLogs([]);
           setMcpUnavailable(false);
           setError(isMcpApiUnavailable(e) ? null : e);
         } else if (!options?.silent) {
@@ -540,7 +722,6 @@ export function AgentsPage() {
             setAgents([]);
             setPersonalIds(new Set());
             setApprovals([]);
-            setCallLogs([]);
             setError(null);
           } else {
             setError(e);
@@ -548,6 +729,7 @@ export function AgentsPage() {
         }
       } finally {
         if (!options?.silent) setLoading(false);
+        setLogsRefreshKey((n) => n + 1);
       }
     },
     [accessToken, applyPersonalRows, companyId, isOwner],
@@ -738,7 +920,7 @@ export function AgentsPage() {
         />
       ) : null}
 
-      {accessToken && isOwner && !mcpUnavailable ? (
+      {accessToken && companyId != null && isOwner && !mcpUnavailable ? (
         <>
           {error ? (
             <Alert variant="destructive">
@@ -898,8 +1080,9 @@ export function AgentsPage() {
                     agent={agent}
                     expanded={expandedAgentId === agent.id}
                     onToggle={() => toggleAgentExpand(agent.id)}
-                    callLogs={callLogs}
-                    loadingLogs={loading}
+                    accessToken={accessToken}
+                    companyId={companyId}
+                    logsRefreshKey={logsRefreshKey}
                     locale={locale}
                     readOnly={false}
                     busy={busyAgentId === agent.id}
@@ -936,8 +1119,9 @@ export function AgentsPage() {
                       agent={agent}
                       expanded={expandedAgentId === agent.id}
                       onToggle={() => toggleAgentExpand(agent.id)}
-                      callLogs={callLogs}
-                      loadingLogs={loading}
+                      accessToken={accessToken}
+                      companyId={companyId}
+                      logsRefreshKey={logsRefreshKey}
                       locale={locale}
                       readOnly
                       busy={false}

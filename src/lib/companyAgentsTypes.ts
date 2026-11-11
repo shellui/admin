@@ -49,18 +49,89 @@ export type CompanyMcpApproval = {
   expires_at: string;
 };
 
+/** Services accepted by ai-service `GET /ai/v1/mcp/call-logs`. */
+export const MCP_CALL_LOG_SERVICES = [
+  'identity',
+  'storage',
+  'hosting',
+  'email',
+  'saas',
+  'ai',
+] as const;
+export type McpCallLogService = (typeof MCP_CALL_LOG_SERVICES)[number];
+
+/** Status values accepted by ai-service `GET /ai/v1/mcp/call-logs`. */
+export const MCP_CALL_LOG_STATUSES = [
+  'allowed',
+  'denied',
+  'waiting_approval',
+  'failed',
+  'error',
+] as const;
+export type McpCallLogStatus = (typeof MCP_CALL_LOG_STATUSES)[number];
+
+export type McpApprovalChannel = 'form' | 'link' | 'none';
+
+export type McpAccessKind = 'read' | 'write' | 'destructive' | 'unknown';
+
+/** ai-service display outcome. Distinct from the filterable `status`. */
+export type McpCallOutcome = 'allowed' | 'failed' | 'denied' | 'waiting_approval' | 'session_used';
+
+/**
+ * One MCP tool call recorded by ai-service.
+ * `tool_name` is the inner tool. `wrapper_tool` is `ai_call_tool` when the
+ * call went through that wrapper, otherwise empty.
+ */
 export type CompanyMcpCallLogEntry = {
   id: number;
+  company_id: number | null;
   agent_id: string;
   agent_name: string;
+  client_id: string;
+  client_name: string;
+  token_kind: string;
+  user_id: number | null;
+  user_email: string;
   service: string;
-  tool: string;
-  method: string;
-  path: string;
-  status_code: number;
-  duration_ms: number | null;
+  tool_name: string;
+  wrapper_tool: string;
   arguments: Record<string, unknown>;
+  status: string;
+  status_code: number;
+  error_code: string;
+  error_message: string;
+  duration_ms: number | null;
+  approval_id: string;
+  approval_channel: string;
+  approval_outcome: string;
+  operation_title: string;
+  access_kind: string;
+  outcome: string;
+  resource_label: string;
+  agent_audit_scope?: string;
+  global_agent_id?: string | null;
+  global_company_id?: string | null;
   created_at: string;
+};
+
+export type CompanyMcpCallLogsPage = {
+  count: number;
+  limit: number;
+  offset: number;
+  call_logs: CompanyMcpCallLogEntry[];
+};
+
+export type McpCallLogListQuery = {
+  agent?: string;
+  service?: McpCallLogService;
+  tool?: string;
+  status?: McpCallLogStatus;
+  /** Inclusive ISO-8601 lower bound. */
+  createdAfter?: string;
+  /** Exclusive ISO-8601 upper bound. */
+  createdBefore?: string;
+  limit?: number;
+  offset?: number;
 };
 
 export type McpDiscoveredService = {
@@ -71,5 +142,5 @@ export type McpDiscoveredService = {
 
 export type CompanyMcpAgentsResponse = { agents: CompanyMcpAgent[] };
 export type CompanyMcpApprovalsResponse = { approvals: CompanyMcpApproval[] };
-export type CompanyMcpCallLogsResponse = { call_logs: CompanyMcpCallLogEntry[] };
+export type CompanyMcpCallLogsResponse = CompanyMcpCallLogsPage;
 export type McpServicesResponse = { services: McpDiscoveredService[] };

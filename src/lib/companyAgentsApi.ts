@@ -1,30 +1,50 @@
-import { getAiServiceBaseUrl } from '@/lib/aiServiceUrl';
+import { getAiServiceBaseUrl, requireAiServiceBaseUrl } from '@/lib/aiServiceUrl';
 import { identityAuthFetch, readJsonOrThrow } from '@/lib/adminIdentityFetch';
-import { ApiUnavailableError } from '@/lib/serviceAuthFetch';
-import type {
-  CompanyMcpAgent,
-  CompanyMcpApproval,
-  CompanyMcpCallLogEntry,
-  McpAccessMode,
-  McpAgentKind,
-  McpDiscoveredService,
-  McpReadLevel,
+import { ApiUnavailableError, serviceAuthFetch } from '@/lib/serviceAuthFetch';
+import {
+  MCP_CALL_LOG_SERVICES,
+  MCP_CALL_LOG_STATUSES,
+  type CompanyMcpAgent,
+  type CompanyMcpApproval,
+  type CompanyMcpCallLogEntry,
+  type CompanyMcpCallLogsPage,
+  type McpAccessMode,
+  type McpAgentKind,
+  type McpCallLogListQuery,
+  type McpDiscoveredService,
+  type McpReadLevel,
 } from '@/lib/companyAgentsTypes';
 
 export type {
   CompanyMcpAgent,
   CompanyMcpApproval,
   CompanyMcpCallLogEntry,
+  CompanyMcpCallLogsPage,
   McpAccessMode,
   McpAgentKind,
+  McpApprovalChannel,
+  McpCallLogListQuery,
+  McpCallLogService,
+  McpCallLogStatus,
+  McpCallOutcome,
   McpDiscoveredService,
   McpReadLevel,
 } from '@/lib/companyAgentsTypes';
 
+export { MCP_CALL_LOG_SERVICES, MCP_CALL_LOG_STATUSES };
+
 export const MCP_API_UNAVAILABLE =
   'Requires identity-service with MCP (identity-service PR #110 or newer).';
 
+/** Shown when ai-service does not expose the company call-log list. */
+export const MCP_CALL_LOGS_UNAVAILABLE = 'Call logs are not available from ai-service.';
+
 const MCP_PREFIX = '/api/v1/mcp';
+const AI_MCP_CALL_LOGS_PATH = '/ai/v1/mcp/call-logs';
+
+/** ai-service default page size. The API allows 1..200. */
+export const MCP_CALL_LOG_PAGE_SIZE = 50;
+export const MCP_CALL_LOG_MAX_LIMIT = 200;
 
 function parseAccessMode(raw: unknown): McpAccessMode {
   if (raw === 'read_only' || raw === 'ask' || raw === 'full') return raw;
@@ -140,37 +160,109 @@ export function parseMcpApprovalsResponse(body: unknown): CompanyMcpApproval[] {
   return rows.map(parseMcpApproval).filter((a): a is CompanyMcpApproval => a != null);
 }
 
+function parseOptionalString(raw: unknown): string {
+  return typeof raw === 'string' ? raw : '';
+}
+
+function parseOptionalInt(raw: unknown): number | null {
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  return null;
+}
+
 export function parseMcpCallLogEntry(row: unknown): CompanyMcpCallLogEntry | null {
   if (!row || typeof row !== 'object') return null;
   const o = row as Record<string, unknown>;
   const id = typeof o.id === 'number' ? o.id : typeof o.id === 'string' ? Number(o.id) : NaN;
   if (!Number.isFinite(id)) return null;
-  return {
+  const entry: CompanyMcpCallLogEntry = {
     id,
-    agent_id: typeof o.agent_id === 'string' ? o.agent_id : '',
+    company_id: parseOptionalInt(o.company_id),
+    agent_id: parseOptionalString(o.agent_id),
     agent_name: typeof o.agent_name === 'string' ? o.agent_name : '-',
+    client_id: parseOptionalString(o.client_id),
+    client_name: parseOptionalString(o.client_name),
+    token_kind: parseOptionalString(o.token_kind),
+    user_id: parseOptionalInt(o.user_id),
+    user_email: parseOptionalString(o.user_email),
     service: typeof o.service === 'string' ? o.service : '-',
-    tool: typeof o.tool === 'string' ? o.tool : '',
-    method:
-      typeof o.http_method === 'string'
-        ? o.http_method
-        : typeof o.method === 'string'
-          ? o.method
-          : '',
-    path: typeof o.path === 'string' ? o.path : '',
-    status_code: typeof o.status_code === 'number' ? o.status_code : 0,
-    duration_ms: typeof o.duration_ms === 'number' ? o.duration_ms : null,
+    tool_name: parseOptionalString(o.tool_name),
+    wrapper_tool: parseOptionalString(o.wrapper_tool),
     arguments: parseArguments(o.arguments),
+    status: parseOptionalString(o.status),
+    status_code: typeof o.status_code === 'number' ? o.status_code : 0,
+    error_code: parseOptionalString(o.error_code),
+    error_message: parseOptionalString(o.error_message),
+    duration_ms: parseOptionalInt(o.duration_ms),
+    approval_id: parseOptionalString(o.approval_id),
+    approval_channel: parseOptionalString(o.approval_channel) || 'none',
+    approval_outcome: parseOptionalString(o.approval_outcome),
+    operation_title: parseOptionalString(o.operation_title),
+    access_kind: parseOptionalString(o.access_kind) || 'unknown',
+    outcome: parseOptionalString(o.outcome),
+    resource_label: parseOptionalString(o.resource_label),
     created_at: typeof o.created_at === 'string' ? o.created_at : new Date().toISOString(),
   };
+  if (typeof o.agent_audit_scope === 'string' && o.agent_audit_scope) {
+    entry.agent_audit_scope = o.agent_audit_scope;
+  }
+  if ('global_agent_id' in o) {
+    entry.global_agent_id = typeof o.global_agent_id === 'string' ? o.global_agent_id : null;
+  }
+  if ('global_company_id' in o) {
+    entry.global_company_id = typeof o.global_company_id === 'string' ? o.global_company_id : null;
+  }
+  return entry;
 }
 
-export function parseMcpCallLogsResponse(body: unknown): CompanyMcpCallLogEntry[] {
-  const rows =
-    body && typeof body === 'object' && Array.isArray((body as { call_logs?: unknown }).call_logs)
-      ? (body as { call_logs: unknown[] }).call_logs
-      : [];
-  return rows.map(parseMcpCallLogEntry).filter((c): c is CompanyMcpCallLogEntry => c != null);
+export function parseMcpCallLogsResponse(body: unknown): CompanyMcpCallLogsPage {
+  const record = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
+  const rows = Array.isArray(record.call_logs) ? record.call_logs : [];
+  const call_logs = rows
+    .map(parseMcpCallLogEntry)
+    .filter((c): c is CompanyMcpCallLogEntry => c != null);
+  const count =
+    typeof record.count === 'number' && Number.isFinite(record.count)
+      ? record.count
+      : call_logs.length;
+  const limit =
+    typeof record.limit === 'number' && Number.isFinite(record.limit)
+      ? record.limit
+      : call_logs.length;
+  const offset =
+    typeof record.offset === 'number' && Number.isFinite(record.offset) ? record.offset : 0;
+  return { count, limit, offset, call_logs };
+}
+
+function clampCallLogLimit(limit: number | undefined): number {
+  if (limit == null || !Number.isFinite(limit)) return MCP_CALL_LOG_PAGE_SIZE;
+  return Math.min(MCP_CALL_LOG_MAX_LIMIT, Math.max(1, Math.trunc(limit)));
+}
+
+function clampCallLogOffset(offset: number | undefined): number {
+  if (offset == null || !Number.isFinite(offset) || offset < 0) return 0;
+  return Math.trunc(offset);
+}
+
+const CALL_LOG_SERVICE_SET = new Set<string>(MCP_CALL_LOG_SERVICES);
+const CALL_LOG_STATUS_SET = new Set<string>(MCP_CALL_LOG_STATUSES);
+
+/** Query string for `GET /ai/v1/mcp/call-logs`. Omits blank filters. */
+export function mcpCallLogListQuery(
+  query: McpCallLogListQuery = {},
+): Record<string, string | number | undefined> {
+  const service =
+    query.service && CALL_LOG_SERVICE_SET.has(query.service) ? query.service : undefined;
+  const status = query.status && CALL_LOG_STATUS_SET.has(query.status) ? query.status : undefined;
+  return {
+    agent: query.agent?.trim() || undefined,
+    service,
+    tool: query.tool?.trim() || undefined,
+    status,
+    created_after: query.createdAfter?.trim() || undefined,
+    created_before: query.createdBefore?.trim() || undefined,
+    limit: clampCallLogLimit(query.limit),
+    offset: clampCallLogOffset(query.offset),
+  };
 }
 
 export function parseMcpServicesResponse(body: unknown): McpDiscoveredService[] {
@@ -361,17 +453,29 @@ export async function rejectCompanyMcpApproval(
   }
 }
 
+/**
+ * Company MCP tool-call log from ai-service `GET /ai/v1/mcp/call-logs`.
+ * The bearer token is the signed-in user's app JWT. ai-service reads the
+ * company from that token, so this request does not send `company_id`.
+ */
 export async function fetchCompanyMcpCallLogs(
   accessToken: string,
   companyId: number,
-): Promise<CompanyMcpCallLogEntry[]> {
-  const res = await mcpFetch(accessToken, companyId, '/call-logs');
+  query: McpCallLogListQuery = {},
+): Promise<CompanyMcpCallLogsPage> {
+  const res = await serviceAuthFetch(
+    requireAiServiceBaseUrl(),
+    AI_MCP_CALL_LOGS_PATH,
+    accessToken,
+    {},
+    { query: mcpCallLogListQuery(query) },
+  );
   const devMock = await tryDevMock(res, async () => {
-    const { mockFetchAllCallLogs } = await import('@/lib/companyAgentsApiMock');
-    return mockFetchAllCallLogs(companyId, aiServiceMcpConnectOrigin() ?? 'https://ai.example.com');
+    const { mockFetchCallLogs } = await import('@/lib/companyAgentsApiMock');
+    return mockFetchCallLogs(companyId, query);
   });
   if (devMock.mocked) return devMock.value;
-  const body = await readJsonOrThrow(res, MCP_API_UNAVAILABLE);
+  const body = await readJsonOrThrow(res, MCP_CALL_LOGS_UNAVAILABLE);
   return parseMcpCallLogsResponse(body);
 }
 
@@ -436,14 +540,9 @@ export function formatCallLogArguments(args: Record<string, unknown>): string {
   return JSON.stringify(args, null, 2);
 }
 
-export type McpCallLogOutcome = 'succeeded' | 'failed' | 'denied';
-
-/** Maps HTTP status from identity call logs to admin UI labels. */
-export function mcpCallLogOutcome(entry: CompanyMcpCallLogEntry): McpCallLogOutcome {
-  const code = entry.status_code;
-  if (code === 403 || code === 401) return 'denied';
-  if (code >= 200 && code < 300) return 'succeeded';
-  return 'failed';
+/** True when ai-service recorded the call as a failure (`failed` or `error`). */
+export function isFailedMcpCallLog(entry: Pick<CompanyMcpCallLogEntry, 'status'>): boolean {
+  return entry.status === 'failed' || entry.status === 'error';
 }
 
 export function agentCreatorDisplayName(agent: CompanyMcpAgent): string | null {
