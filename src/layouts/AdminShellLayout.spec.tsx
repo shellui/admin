@@ -73,6 +73,29 @@ describe('service Django admin links', () => {
     expect(emailAdmin?.getAttribute('rel')).toContain('noopener');
   });
 
+  it('hides service URLs from sidebar section titles outside developer mode', () => {
+    renderShell();
+
+    expect(screen.getByRole('button', { name: /^Identity/ }).textContent).not.toContain(
+      'http://localhost:8000',
+    );
+    expect(screen.getByRole('button', { name: /^Email/ }).textContent).not.toContain(
+      'http://localhost:8003',
+    );
+  });
+
+  it('shows service URLs in sidebar section titles in developer mode', () => {
+    hooks.developerMode = true;
+    renderShell();
+
+    expect(screen.getByRole('button', { name: /^Identity/ }).textContent).toContain(
+      'http://localhost:8000',
+    );
+    expect(screen.getByRole('button', { name: /^Email/ }).textContent).toContain(
+      'http://localhost:8003',
+    );
+  });
+
   it('keeps developer docs between Identity statistics and Django admin', () => {
     hooks.developerMode = true;
     renderShell();

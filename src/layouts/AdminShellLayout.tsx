@@ -1128,7 +1128,7 @@ export function AdminShellLayout() {
           return {
             ...group,
             title: t('navAuthGroup'),
-            subtitle: authBackendBaseUrl,
+            subtitle: isDeveloperMode ? authBackendBaseUrl : null,
             items,
           };
         }
@@ -1137,7 +1137,7 @@ export function AdminShellLayout() {
           return {
             ...group,
             title: t('navAiGroup'),
-            subtitle: aiUrl,
+            subtitle: isDeveloperMode ? aiUrl : null,
             items: group.items,
           };
         }
@@ -1172,7 +1172,7 @@ export function AdminShellLayout() {
           return {
             ...group,
             title: t('navEmailGroup'),
-            subtitle: emailUrl,
+            subtitle: isDeveloperMode ? emailUrl : null,
             items,
           };
         }
@@ -1236,7 +1236,7 @@ export function AdminShellLayout() {
       sections.push({
         id: 'admin-storage',
         title: t('navStorageGroup'),
-        subtitle: storageUrl,
+        subtitle: isDeveloperMode ? storageUrl : null,
         items: storageItems,
       });
     }
@@ -1296,7 +1296,7 @@ export function AdminShellLayout() {
       sections.push({
         id: 'admin-hosting',
         title: t('navHostingGroup'),
-        subtitle: hostingUrl,
+        subtitle: isDeveloperMode ? hostingUrl : null,
         items: hostingItems,
       });
     }
@@ -1344,7 +1344,7 @@ export function AdminShellLayout() {
       sections.push({
         id: 'admin-ai',
         title: t('navAiGroup'),
-        subtitle: aiUrl,
+        subtitle: isDeveloperMode ? aiUrl : null,
         items: aiItems,
       });
     }
