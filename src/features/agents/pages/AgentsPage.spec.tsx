@@ -53,6 +53,8 @@ vi.mock('@/lib/jwtCompany', () => ({
 const personal = vi.hoisted(() => ({
   fetchMcpPersonalAgents: vi.fn(),
   revokeMcpPersonalAgent: vi.fn(),
+  fetchMcpPersonalAgentCallLogs: vi.fn(),
+  fetchMcpPersonalOauthConsent: vi.fn(),
 }));
 
 vi.mock('@/lib/personalAgentsApi', async (importOriginal) => {
@@ -61,6 +63,8 @@ vi.mock('@/lib/personalAgentsApi', async (importOriginal) => {
     ...actual,
     fetchMcpPersonalAgents: personal.fetchMcpPersonalAgents,
     revokeMcpPersonalAgent: personal.revokeMcpPersonalAgent,
+    fetchMcpPersonalAgentCallLogs: personal.fetchMcpPersonalAgentCallLogs,
+    fetchMcpPersonalOauthConsent: personal.fetchMcpPersonalOauthConsent,
   };
 });
 
@@ -151,7 +155,16 @@ describe('AgentsPage', () => {
   beforeEach(() => {
     personal.fetchMcpPersonalAgents.mockReset();
     personal.revokeMcpPersonalAgent.mockReset();
+    personal.fetchMcpPersonalAgentCallLogs.mockReset();
+    personal.fetchMcpPersonalOauthConsent.mockReset();
     personal.fetchMcpPersonalAgents.mockResolvedValue([]);
+    personal.fetchMcpPersonalAgentCallLogs.mockResolvedValue({
+      count: 0,
+      limit: 50,
+      offset: 0,
+      call_logs: [],
+    });
+    personal.fetchMcpPersonalOauthConsent.mockResolvedValue([]);
     vi.mocked(fetchCompanyMcpAgents).mockClear();
     vi.mocked(fetchCompanyMcpCallLogs).mockReset();
     vi.mocked(fetchCompanyMcpCallLogs).mockResolvedValue(callLogPage([callLogRow()]));
@@ -404,5 +417,95 @@ describe('AgentsPage', () => {
     expect(await screen.findByText('Cursor laptop')).toBeTruthy();
     expect(screen.getByText('agentsKindOauth')).toBeTruthy();
     expect(screen.queryByText('agentsMcpUnavailableTitle')).toBeNull();
+  });
+
+  it('loads a personal agent from ai-service call logs and identity OAuth consent', async () => {
+    personal.fetchMcpPersonalAgents.mockResolvedValue([personalRow()]);
+    personal.fetchMcpPersonalAgentCallLogs.mockResolvedValue({
+      count: 2,
+      limit: 50,
+      offset: 0,
+      call_logs: [
+        callLogRow({
+          id: 9,
+          agent_id: 'oauth-1',
+          service: 'storage',
+          tool_name: 'storage_list_buckets',
+          wrapper_tool: 'ai_call_tool',
+          status: 'failed',
+          error_message: 'Storage timed out.',
+          approval_channel: 'form',
+          approval_outcome: 'approved',
+        }),
+      ],
+    });
+    personal.fetchMcpPersonalOauthConsent.mockResolvedValue([
+      {
+        timestamp: '2026-11-01T00:00:00Z',
+        tool: 'oauth.device.approved',
+        service: 'identity',
+        operationTitle: 'oauth.device.approved',
+        outcome: 'allowed',
+        durationMs: null,
+      },
+    ]);
+    renderAgentsPage();
+    const name = await screen.findByText('Cursor laptop');
+    const card = name.closest('.overflow-hidden') as HTMLElement;
+    fireEvent.click(within(card).getByRole('button', { name: 'agentsExpandAgent' }));
+
+    const tool = await screen.findByText('storage_list_buckets');
+    const table = tool.closest('table')!;
+    expect(within(table).getByText('storage')).toBeTruthy();
+    expect(within(table).getByText('via ai_call_tool')).toBeTruthy();
+    expect(within(table).getByText(/agentsLogApprovalChannel_form/)).toBeTruthy();
+    expect(within(table).getByText(/approved/)).toBeTruthy();
+    expect(within(table).getByText('Storage timed out.')).toBeTruthy();
+    expect(within(table).getByText('agentsConsentDevice')).toBeTruthy();
+    expect(vi.mocked(fetchCompanyMcpCallLogs)).not.toHaveBeenCalled();
+    expect(personal.fetchMcpPersonalAgentCallLogs).toHaveBeenCalledWith(
+      'tok',
+      'oauth-1',
+      expect.objectContaining({ limit: 50, offset: 0 }),
+    );
+
+    personal.fetchMcpPersonalAgentCallLogs.mockResolvedValueOnce({
+      count: 2,
+      limit: 50,
+      offset: 1,
+      call_logs: [callLogRow({ id: 10, agent_id: 'oauth-1', tool_name: 'storage_delete_object' })],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'agentsCallLogLoadMore' }));
+    expect(await screen.findByText('storage_delete_object')).toBeTruthy();
+    expect(personal.fetchMcpPersonalAgentCallLogs).toHaveBeenLastCalledWith(
+      'tok',
+      'oauth-1',
+      expect.objectContaining({ offset: 1 }),
+    );
+  });
+
+  it('shows an inline message when ai-service is unreachable for a personal agent', async () => {
+    personal.fetchMcpPersonalAgents.mockResolvedValue([personalRow()]);
+    personal.fetchMcpPersonalAgentCallLogs.mockRejectedValue(new Error('network down'));
+    personal.fetchMcpPersonalOauthConsent.mockResolvedValue([
+      {
+        timestamp: '2026-11-01T00:00:00Z',
+        tool: 'oauth.authorize.approved',
+        service: 'identity',
+        operationTitle: null,
+        outcome: 'allowed',
+        durationMs: null,
+      },
+    ]);
+    renderAgentsPage();
+    const name = await screen.findByText('Cursor laptop');
+    fireEvent.click(
+      within(name.closest('.overflow-hidden') as HTMLElement).getByRole('button', {
+        name: 'agentsExpandAgent',
+      }),
+    );
+    expect(await screen.findByText('agentsPersonalCallsUnavailable')).toBeTruthy();
+    expect(screen.getByText('agentsConsentAuthorize')).toBeTruthy();
+    expect(vi.mocked(fetchCompanyMcpCallLogs)).not.toHaveBeenCalled();
   });
 });

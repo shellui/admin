@@ -28,6 +28,7 @@ import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { useEventLogSource, useEventRetention } from '@/hooks/useEventRetention';
 import { getCompanyIdFromJwt, getIsCompanyOwnerFromJwt } from '@/lib/jwtCompany';
 import { onAgentsChanged, openAgentConnectDrawer } from '@/lib/agentConnectDrawer';
+import { PersonalAgentActivityPanel } from '@/features/agents/components/PersonalAgentActivityPanel';
 import { connectionKindLines, mergeCompanyAndPersonalAgents } from '@/lib/mcpAgentsConnect';
 import {
   fetchMcpPersonalAgents,
@@ -530,6 +531,7 @@ function AgentAccordionRow({
   readOnly,
   busy,
   onRevoke,
+  personal,
 }: {
   agent: CompanyMcpAgent;
   expanded: boolean;
@@ -541,6 +543,8 @@ function AgentAccordionRow({
   readOnly: boolean;
   busy: boolean;
   onRevoke: () => void;
+  /** Agent the signed-in member owns. Call logs come from ai-service, not the company drawer. */
+  personal: boolean;
 }) {
   const { t } = useTranslation();
   const status = agentDisplayStatus(agent);
@@ -639,13 +643,23 @@ function AgentAccordionRow({
         )}
       </div>
       {expanded ? (
-        <AgentCallLogPanel
-          agentId={agent.id}
-          accessToken={accessToken}
-          companyId={companyId}
-          locale={locale}
-          refreshKey={logsRefreshKey}
-        />
+        personal ? (
+          <PersonalAgentActivityPanel
+            agentId={agent.id}
+            accessToken={accessToken}
+            companyId={companyId}
+            locale={locale}
+            refreshKey={logsRefreshKey}
+          />
+        ) : (
+          <AgentCallLogPanel
+            agentId={agent.id}
+            accessToken={accessToken}
+            companyId={companyId}
+            locale={locale}
+            refreshKey={logsRefreshKey}
+          />
+        )
       ) : null}
     </div>
   );
@@ -1087,6 +1101,7 @@ export function AgentsPage() {
                     readOnly={false}
                     busy={busyAgentId === agent.id}
                     onRevoke={() => void onRevoke(agent)}
+                    personal={personalIds.has(agent.id)}
                   />
                 ))}
               </div>
@@ -1126,6 +1141,7 @@ export function AgentsPage() {
                       readOnly
                       busy={false}
                       onRevoke={() => {}}
+                      personal={personalIds.has(agent.id)}
                     />
                   ))}
                 </div>
