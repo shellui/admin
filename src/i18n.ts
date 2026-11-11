@@ -129,7 +129,7 @@ const resources = {
       navAiDjangoAdmin: 'Django admin',
       navEmailDjangoAdmin: 'Django admin',
       aiMissingTitle: 'ai-service URL not configured',
-      aiStatusTitle: 'ai-service status',
+      aiStatusTitle: 'AI statistics',
       aiStatusDescription:
         'MCP gateway URL and agent activity for your company in this environment.',
       aiStatusSectionTitle: 'Connection',
@@ -2340,7 +2340,7 @@ const resources = {
       navAiDjangoAdmin: 'Admin Django',
       navEmailDjangoAdmin: 'Admin Django',
       aiMissingTitle: 'URL ai-service non configurée',
-      aiStatusTitle: 'État ai-service',
+      aiStatusTitle: 'Statistiques IA',
       aiStatusDescription:
         'URL de la passerelle MCP et activité des agents pour votre entreprise dans cet environnement.',
       aiStatusSectionTitle: 'Connexion',
