@@ -1,5 +1,6 @@
 import {
   agentDisplayStatus,
+  isFailedMcpCallLog,
   type CompanyMcpAgent,
   type CompanyMcpCallLogEntry,
 } from '@/lib/companyAgentsApi';
@@ -35,7 +36,7 @@ export function filterCallLogsSince(
 }
 
 export function countFailedCallLogs(logs: CompanyMcpCallLogEntry[]): number {
-  return logs.filter((entry) => entry.status_code >= 400).length;
+  return logs.filter((entry) => isFailedMcpCallLog(entry)).length;
 }
 
 export function topToolsFromCallLogs(
@@ -44,7 +45,7 @@ export function topToolsFromCallLogs(
 ): Array<{ tool: string; count: number }> {
   const byTool = new Map<string, number>();
   for (const entry of logs) {
-    const key = entry.tool.trim() || '-';
+    const key = entry.tool_name.trim() || '-';
     byTool.set(key, (byTool.get(key) ?? 0) + 1);
   }
   return [...byTool.entries()]

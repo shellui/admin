@@ -26,21 +26,30 @@ const mocks = vi.hoisted(() => ({
     },
   ]),
   fetchCompanyMcpApprovals: vi.fn(async () => [{ id: 'p1' }]),
-  fetchCompanyMcpCallLogs: vi.fn(async () => [
-    {
-      id: 1,
-      agent_id: '1',
-      agent_name: 'Agent',
-      service: 'storage',
-      tool: 'list_files',
-      method: 'GET',
-      path: '/files',
-      status_code: 200,
-      duration_ms: 12,
-      arguments: {},
-      created_at: new Date().toISOString(),
-    },
-  ]),
+  fetchCompanyMcpCallLogs: vi.fn(async () => ({
+    count: 1,
+    limit: 200,
+    offset: 0,
+    call_logs: [
+      {
+        id: 1,
+        agent_id: '1',
+        agent_name: 'Agent',
+        service: 'storage',
+        tool_name: 'list_files',
+        status: 'allowed',
+        status_code: 200,
+        duration_ms: 12,
+        arguments: {},
+        created_at: new Date().toISOString(),
+        wrapper_tool: '',
+        error_message: '',
+        error_code: '',
+        approval_channel: 'none',
+        approval_outcome: '',
+      },
+    ],
+  })),
 }));
 
 vi.mock('@/hooks/useShelluiAiService', () => ({

@@ -2,7 +2,13 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import shellui from '@shellui/sdk';
 import { notifyAgentsChanged } from '@/lib/agentConnectDrawer';
-import { fetchCompanyMcpAgents, MCP_API_UNAVAILABLE } from '@/lib/companyAgentsApi';
+import {
+  fetchCompanyMcpAgents,
+  fetchCompanyMcpCallLogs,
+  MCP_API_UNAVAILABLE,
+  type CompanyMcpCallLogEntry,
+  type CompanyMcpCallLogsPage,
+} from '@/lib/companyAgentsApi';
 import { AgentsPage } from '@/features/agents/pages/AgentsPage';
 
 function renderAgentsPage() {
@@ -19,6 +25,11 @@ vi.mock('react-i18next', () => ({
       }
       if (opts?.name && opts?.date) return `${key}:${opts.name}:${opts.date}`;
       if (typeof opts?.services === 'string') return `${key}:${opts.services}`;
+      if (key === 'agentsLogViaWrapper' && typeof opts?.tool === 'string')
+        return `via ${opts.tool}`;
+      if (key === 'agentsCallLogShown' && typeof opts?.shown === 'number') {
+        return `${opts.shown} of ${opts.count}`;
+      }
       return key;
     },
     i18n: { language: 'en' },
@@ -75,24 +86,46 @@ vi.mock('@/lib/companyAgentsApi', async (importOriginal) => {
       },
     ]),
     fetchCompanyMcpApprovals: vi.fn().mockResolvedValue([]),
-    fetchCompanyMcpCallLogs: vi.fn().mockResolvedValue([
-      {
-        id: 1,
-        agent_id: 'a1',
-        agent_name: '<script>alert(1)</script>',
-        service: 'identity',
-        tool: 'list_users',
-        method: 'GET',
-        path: '/users',
-        status_code: 200,
-        duration_ms: 50,
-        arguments: { note: '<b>bold</b>' },
-        created_at: new Date(Date.now() - 60_000).toISOString(),
-      },
-    ]),
+    fetchCompanyMcpCallLogs: vi.fn(),
     fetchMcpDiscoveredServices: vi.fn().mockResolvedValue([]),
   };
 });
+
+function callLogRow(overrides: Partial<CompanyMcpCallLogEntry> = {}): CompanyMcpCallLogEntry {
+  return {
+    id: 1,
+    company_id: 1,
+    agent_id: 'a1',
+    agent_name: '<script>alert(1)</script>',
+    client_id: '',
+    client_name: '',
+    token_kind: 'agent',
+    user_id: null,
+    user_email: '',
+    service: 'identity',
+    tool_name: 'list_users',
+    wrapper_tool: '',
+    arguments: { note: '<b>bold</b>' },
+    status: 'allowed',
+    status_code: 200,
+    error_code: '',
+    error_message: '',
+    duration_ms: 50,
+    approval_id: '',
+    approval_channel: 'none',
+    approval_outcome: '',
+    operation_title: 'list_users',
+    access_kind: 'read',
+    outcome: 'allowed',
+    resource_label: 'list_users',
+    created_at: new Date(Date.now() - 60_000).toISOString(),
+    ...overrides,
+  };
+}
+
+function callLogPage(rows: CompanyMcpCallLogEntry[], count = rows.length): CompanyMcpCallLogsPage {
+  return { count, limit: 50, offset: 0, call_logs: rows };
+}
 
 function personalRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -120,6 +153,8 @@ describe('AgentsPage', () => {
     personal.revokeMcpPersonalAgent.mockReset();
     personal.fetchMcpPersonalAgents.mockResolvedValue([]);
     vi.mocked(fetchCompanyMcpAgents).mockClear();
+    vi.mocked(fetchCompanyMcpCallLogs).mockReset();
+    vi.mocked(fetchCompanyMcpCallLogs).mockResolvedValue(callLogPage([callLogRow()]));
   });
 
   afterEach(() => {
@@ -142,9 +177,78 @@ describe('AgentsPage', () => {
     expect(log).toBeTruthy();
     const table = log.closest('table')!;
     expect(within(table).getByText('50 ms')).toBeTruthy();
-    const statusBadge = within(table).getByText('agentsLogStatusSucceeded');
+    const statusBadge = within(table).getByText('agentsLogStatusAllowed');
     expect(statusBadge.className).toContain('bg-emerald-500/10');
+    expect(within(table).getByText('identity')).toBeTruthy();
     expect(document.body.textContent).not.toContain('<b>bold</b>');
+    expect(vi.mocked(fetchCompanyMcpCallLogs)).toHaveBeenCalledWith(
+      'tok',
+      1,
+      expect.objectContaining({ agent: 'a1', limit: 50, offset: 0 }),
+    );
+  });
+
+  it('shows the service badge, wrapper, approval, and error message', async () => {
+    vi.mocked(fetchCompanyMcpCallLogs).mockResolvedValue(
+      callLogPage([
+        callLogRow({
+          service: 'storage',
+          tool_name: 'list_objects',
+          wrapper_tool: 'ai_call_tool',
+          status: 'failed',
+          status_code: 500,
+          error_message: 'Storage timed out.',
+          approval_channel: 'form',
+          approval_outcome: 'approved',
+        }),
+      ]),
+    );
+    renderAgentsPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'agentsExpandAgent' }));
+    const tool = await screen.findByText('list_objects');
+    const table = tool.closest('table')!;
+    expect(within(table).getByText('storage')).toBeTruthy();
+    expect(within(table).getByText('via ai_call_tool')).toBeTruthy();
+    expect(within(table).getByText(/agentsLogApprovalChannel_form/)).toBeTruthy();
+    expect(within(table).getByText(/approved/)).toBeTruthy();
+    expect(within(table).getByText('Storage timed out.')).toBeTruthy();
+    expect(within(table).getByText('agentsLogStatusFailed').className).toContain('bg-red-500/10');
+  });
+
+  it('loads the next call log page from the current offset', async () => {
+    vi.mocked(fetchCompanyMcpCallLogs).mockImplementation(async (_token, _companyId, query) => {
+      const offset = query?.offset ?? 0;
+      if (offset > 0) {
+        return {
+          count: 2,
+          limit: 50,
+          offset,
+          call_logs: [callLogRow({ id: 2, tool_name: 'delete_object', status: 'denied' })],
+        };
+      }
+      return callLogPage([callLogRow()], 2);
+    });
+    renderAgentsPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'agentsExpandAgent' }));
+    expect(await screen.findByText('1 of 2')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'agentsCallLogLoadMore' }));
+    expect(await screen.findByText('delete_object')).toBeTruthy();
+    expect(screen.getByText('2 of 2')).toBeTruthy();
+    const offsets = vi.mocked(fetchCompanyMcpCallLogs).mock.calls.map((call) => call[2]?.offset);
+    expect(offsets).toContain(0);
+    expect(offsets).toContain(1);
+  });
+
+  it('shows a call log error and can try again', async () => {
+    vi.mocked(fetchCompanyMcpCallLogs)
+      .mockRejectedValueOnce(new Error('Call logs are not available from ai-service.'))
+      .mockResolvedValueOnce(callLogPage([]));
+    renderAgentsPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'agentsExpandAgent' }));
+    expect(await screen.findByText('Call logs are not available from ai-service.')).toBeTruthy();
+    expect(screen.queryByText('agentsCallLogEmptyRange')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'agentsCallLogRetry' }));
+    expect(await screen.findByText('agentsCallLogEmptyRange')).toBeTruthy();
   });
 
   it('opens the shell drawer and does not render the connect form in this frame', async () => {

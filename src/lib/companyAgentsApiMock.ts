@@ -1,7 +1,14 @@
+import {
+  MCP_CALL_LOG_MAX_LIMIT,
+  MCP_CALL_LOG_PAGE_SIZE,
+  mcpCallLogListQuery,
+} from '@/lib/companyAgentsApi';
 import type {
   CompanyMcpAgent,
   CompanyMcpApproval,
   CompanyMcpCallLogEntry,
+  CompanyMcpCallLogsPage,
+  McpCallLogListQuery,
   McpDiscoveredService,
 } from '@/lib/companyAgentsTypes';
 
@@ -57,28 +64,58 @@ function seedStore(companyId: number): CompanyStore {
   const calls: CompanyMcpCallLogEntry[] = [
     {
       id: 1,
+      company_id: companyId,
       agent_id: agentA.id,
       agent_name: agentA.name,
+      client_id: '',
+      client_name: '',
+      token_kind: 'agent',
+      user_id: null,
+      user_email: '',
       service: 'identity',
-      tool: 'list_users',
-      method: 'GET',
-      path: '/api/v1/users',
-      status_code: 200,
-      duration_ms: 142,
+      tool_name: 'list_users',
+      wrapper_tool: '',
       arguments: {},
+      status: 'allowed',
+      status_code: 200,
+      error_code: '',
+      error_message: '',
+      duration_ms: 142,
+      approval_id: '',
+      approval_channel: 'none',
+      approval_outcome: '',
+      operation_title: 'list_users',
+      access_kind: 'read',
+      outcome: 'allowed',
+      resource_label: 'list_users',
       created_at: new Date(now - 1000 * 60 * 12).toISOString(),
     },
     {
       id: 2,
+      company_id: companyId,
       agent_id: agentA.id,
       agent_name: agentA.name,
+      client_id: '',
+      client_name: '',
+      token_kind: 'agent',
+      user_id: null,
+      user_email: '',
       service: 'storage',
-      tool: 'list_objects',
-      method: 'GET',
-      path: '/api/v1/objects',
-      status_code: 200,
-      duration_ms: 89,
+      tool_name: 'list_objects',
+      wrapper_tool: 'ai_call_tool',
       arguments: { prefix: 'uploads/' },
+      status: 'failed',
+      status_code: 500,
+      error_code: 'upstream_error',
+      error_message: 'Storage timed out.',
+      duration_ms: 89,
+      approval_id: 'ap-1',
+      approval_channel: 'form',
+      approval_outcome: 'approved',
+      operation_title: 'list_objects',
+      access_kind: 'read',
+      outcome: 'failed',
+      resource_label: 'list_objects',
       created_at: new Date(now - 1000 * 60 * 45).toISOString(),
     },
   ];
@@ -149,11 +186,35 @@ export function mockResolveApproval(
   s.approvals = s.approvals.filter((a) => a.id !== approvalId);
 }
 
-export function mockFetchAllCallLogs(
+export function mockFetchCallLogs(
   companyId: number,
-  _identityBaseUrl: string,
-): CompanyMcpCallLogEntry[] {
-  return [...storeFor(companyId).calls];
+  query: McpCallLogListQuery = {},
+): CompanyMcpCallLogsPage {
+  const params = mcpCallLogListQuery(query);
+  const limit = typeof params.limit === 'number' ? params.limit : MCP_CALL_LOG_PAGE_SIZE;
+  const offset = typeof params.offset === 'number' ? params.offset : 0;
+  const rows = storeFor(companyId)
+    .calls.filter((row) => {
+      if (typeof params.agent === 'string' && row.agent_id !== params.agent) return false;
+      if (typeof params.service === 'string' && row.service !== params.service) return false;
+      if (typeof params.tool === 'string' && row.tool_name !== params.tool) return false;
+      if (typeof params.status === 'string' && row.status !== params.status) return false;
+      if (typeof params.created_after === 'string' && row.created_at < params.created_after) {
+        return false;
+      }
+      if (typeof params.created_before === 'string' && row.created_at >= params.created_before) {
+        return false;
+      }
+      return true;
+    })
+    .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id);
+  const pageLimit = Math.min(MCP_CALL_LOG_MAX_LIMIT, Math.max(1, limit));
+  return {
+    count: rows.length,
+    limit: pageLimit,
+    offset,
+    call_logs: rows.slice(offset, offset + pageLimit),
+  };
 }
 
 export function mockFetchDiscoveredServices(identityBaseUrl: string): McpDiscoveredService[] {

@@ -23,11 +23,10 @@ import {
   filterCallLogsSince,
   topToolsFromCallLogs,
 } from '@/lib/aiStatusStats';
-import { buildAiDashboardMetricsFromSources } from '@/lib/dashboardAi';
+import { buildAiDashboardMetricsFromSources, fetchMcpCallLogWindow } from '@/lib/dashboardAi';
 import {
   fetchCompanyMcpAgents,
   fetchCompanyMcpApprovals,
-  fetchCompanyMcpCallLogs,
   isMcpApiUnavailable,
 } from '@/lib/companyAgentsApi';
 import { aiServiceMcpEndpointUrl } from '@/lib/companyAgentsMcpConfig';
@@ -76,18 +75,23 @@ export function AiStatusPage() {
     setLoading(true);
     setError(null);
     try {
-      const [agents, approvals, callLogs] = await Promise.all([
+      const createdAfter = new Date(Date.now() - AI_CALL_LOG_WINDOW_MS).toISOString();
+      const [agents, approvals, callWindow] = await Promise.all([
         fetchCompanyMcpAgents(accessToken, companyId),
         fetchCompanyMcpApprovals(accessToken, companyId),
-        fetchCompanyMcpCallLogs(accessToken, companyId),
+        fetchMcpCallLogWindow(accessToken, companyId, createdAfter),
       ]);
-      const dashboardMetrics = buildAiDashboardMetricsFromSources(agents, approvals, callLogs);
+      const dashboardMetrics = buildAiDashboardMetricsFromSources(
+        agents,
+        approvals,
+        callWindow.logs,
+      );
       setMcpReachability('ok');
       setAgentCounts(dashboardMetrics.agentCounts);
       setPendingApprovals(dashboardMetrics.pendingApprovals);
-      setCallLogs24h(dashboardMetrics.callLogs24h);
-      setCallLogErrors24h(dashboardMetrics.callLogErrors24h);
-      const recent = filterCallLogsSince(callLogs, AI_CALL_LOG_WINDOW_MS);
+      setCallLogs24h(callWindow.total);
+      setCallLogErrors24h(callWindow.failed);
+      const recent = filterCallLogsSince(callWindow.logs, AI_CALL_LOG_WINDOW_MS);
       setTopTools(topToolsFromCallLogs(recent));
     } catch (e) {
       if (isMcpApiUnavailable(e)) {
