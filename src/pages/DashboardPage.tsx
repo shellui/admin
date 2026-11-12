@@ -22,6 +22,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { KpiCard, KpiRow, KpiSkeletonRow, ServiceSectionHeader } from '@/components/admin/Kpi';
 import { Text } from '@/components/ui/text';
+import { DashboardAiSection } from '@/components/DashboardAiSection';
 import { DashboardEmailSection } from '@/components/DashboardEmailSection';
 import { AllServicesRetentionAlerts } from '@/components/EventRetentionAlert';
 import { IdentityBackendMissing } from '@/components/ServiceUrlMissing';
@@ -441,11 +442,13 @@ export function DashboardPage() {
         </section>
       )}
 
+      <DashboardAiSection />
+
       <DashboardEmailSection />
 
       {selectedSource && (
-        <details className="group rounded-xl border border-border bg-card text-card-foreground shadow-sm">
-          <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl px-4 py-3.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-5 [&::-webkit-details-marker]:hidden">
+        <details className="group rounded-xl border border-border bg-card text-card-foreground shadow-xs">
+          <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl px-4 py-3.5 text-sm font-semibold focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring sm:px-5 [&::-webkit-details-marker]:hidden">
             <ChevronRight
               className="size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-open:rotate-90"
               aria-hidden

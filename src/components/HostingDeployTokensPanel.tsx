@@ -128,7 +128,7 @@ export function HostingDeployTokensPanel({ hostingBaseUrl, accessToken }: Props)
   }
 
   const card =
-    'overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm';
+    'overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-xs';
 
   return (
     <div className="space-y-6">
@@ -271,9 +271,7 @@ export function HostingDeployTokensPanel({ hostingBaseUrl, accessToken }: Props)
                     key={row.id}
                     className={state === 'active' ? undefined : 'text-muted-foreground'}
                   >
-                    <TableCell className="max-w-[12rem] truncate pl-4 font-medium">
-                      {row.name}
-                    </TableCell>
+                    <TableCell className="max-w-48 truncate pl-4 font-medium">{row.name}</TableCell>
                     <TableCell className="hidden font-mono text-xs md:table-cell">
                       {row.prefix}…
                     </TableCell>

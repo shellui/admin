@@ -9,6 +9,10 @@ import { useShelluiDeveloperMode } from '@/hooks/useShelluiDeveloperMode';
 import { useShelluiIsStaff } from '@/hooks/useShelluiIsStaff';
 import { useShelluiHosting, isHostingAdminEnabled } from '@/hooks/useShelluiHosting';
 import { useShelluiStorage } from '@/hooks/useShelluiStorage';
+import { useShelluiAiService } from '@/hooks/useShelluiAiService';
+import { useShelluiEmail } from '@/hooks/useShelluiEmail';
+import { isAiAdminEnabled } from '@/lib/aiServiceUrl';
+import { isEmailAdminEnabled } from '@/lib/emailServiceUrl';
 import { contentFrameAuthRulesFromEmbeds, setContentFrameAuthRules } from '@/lib/contentFrameAuth';
 import { resolveAdminAppUrl } from '@/lib/resolveAdminAppUrl';
 import {
@@ -105,6 +109,8 @@ export function useAdminContentNavigation(): AdminContentFrame {
   const administration = useShelluiAdministration();
   const storage = useShelluiStorage();
   const hosting = useShelluiHosting();
+  const aiService = useShelluiAiService();
+  const emailSettings = useShelluiEmail();
   const authBackendBaseUrl = useShelluiAuthBackendBaseUrl();
 
   const embedItems = useMemo(() => {
@@ -290,11 +296,85 @@ export function useAdminContentNavigation(): AdminContentFrame {
       }
     }
 
+    const aiUrl = isAiAdminEnabled(aiService)
+      ? aiService?.url?.trim().replace(/\/+$/, '') || null
+      : null;
+    if (aiUrl) {
+      const statusHash = buildAdminHashContentUrl(origin, 'ai', '', '');
+      items.push({
+        label: 'Status',
+        path: 'ai',
+        url: statusHash,
+        embedUrl: statusHash,
+        useHashRouter: true,
+      });
+      const agentsHash = buildAdminHashContentUrl(origin, 'agents', '', '');
+      items.push({
+        label: 'Agents',
+        path: 'agents',
+        url: agentsHash,
+        embedUrl: agentsHash,
+        useHashRouter: true,
+      });
+      if (isDeveloperMode) {
+        const swaggerUrl = `${aiUrl}/api/docs/`;
+        const redocUrl = `${aiUrl}/api/docs/redoc/`;
+        items.push(
+          {
+            label: 'Swagger',
+            path: 'ai/swagger',
+            url: swaggerUrl,
+            embedUrl: swaggerUrl,
+            ignoreMessages: true,
+            safeForAuthToken: true,
+            useHashRouter: false,
+          },
+          {
+            label: 'ReDoc',
+            path: 'ai/redoc',
+            url: redocUrl,
+            embedUrl: redocUrl,
+            ignoreMessages: true,
+            useHashRouter: false,
+          },
+        );
+      }
+    }
+
+    const emailUrl = isEmailAdminEnabled(emailSettings)
+      ? emailSettings?.url?.trim().replace(/\/+$/, '') || null
+      : null;
+    if (emailUrl && isDeveloperMode) {
+      const swaggerUrl = `${emailUrl}/api/docs/`;
+      const redocUrl = `${emailUrl}/api/docs/redoc/`;
+      items.push(
+        {
+          label: 'Swagger',
+          path: 'email/swagger',
+          url: swaggerUrl,
+          embedUrl: swaggerUrl,
+          ignoreMessages: true,
+          safeForAuthToken: true,
+          useHashRouter: false,
+        },
+        {
+          label: 'ReDoc',
+          path: 'email/redoc',
+          url: redocUrl,
+          embedUrl: redocUrl,
+          ignoreMessages: true,
+          useHashRouter: false,
+        },
+      );
+    }
+
     setContentFrameAuthRules(contentFrameAuthRulesFromEmbeds(items));
     return items;
   }, [
     administration?.navigation,
+    aiService,
     authBackendBaseUrl,
+    emailSettings,
     hosting?.showInAdmin,
     hosting?.url,
     isDeveloperMode,

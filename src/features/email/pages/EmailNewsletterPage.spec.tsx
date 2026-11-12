@@ -185,7 +185,7 @@ describe('EmailNewsletterPage', () => {
     expect(await screen.findByText('Copy editor 11')).toBeTruthy();
   });
 
-  it('renames on blur and deletes after confirmation', async () => {
+  it('renames on blur-sm and deletes after confirmation', async () => {
     api.fetchNewsletter.mockResolvedValue(newsletter());
     api.fetchSubscribers.mockResolvedValue(subscribers);
     api.patchNewsletter.mockResolvedValue(newsletter({ name: 'Changelog' }));

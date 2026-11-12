@@ -6,6 +6,8 @@ vi.mock('@shellui/sdk', () => ({
       authBackendBaseUrl: 'http://localhost:8000',
     },
     toast: vi.fn(),
+    openDrawer: vi.fn(),
+    closeDrawer: vi.fn(),
   },
   addMessageListener: () => () => {},
   sendMessageToParent: () => false,

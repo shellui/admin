@@ -11,9 +11,13 @@ import { ActionsRuleEditorPage } from '@/features/actions/pages/ActionsRuleEdito
 import { ActionsRulesListPage } from '@/features/actions/pages/ActionsRulesListPage';
 import { OAuthSetupPage } from '@/pages/OAuthSetupPage';
 import { ScimSetupPage } from '@/pages/ScimSetupPage';
+import { AgentsPage } from '@/features/agents/pages/AgentsPage';
+import { ConnectAgentPage } from '@/features/agents/pages/ConnectAgentPage';
+import { AiStatusPage } from '@/features/ai/pages/AiStatusPage';
 import { NotFoundPage, RouteErrorPage } from '@/pages/RouteErrorPage';
 import { AccessTokensPage } from '@/pages/AccessTokensPage';
 import { InviteUserPage } from '@/pages/InviteUserPage';
+import { AGENT_CONNECT_ROUTE } from '@/lib/agentConnectDrawer';
 import { INVITATIONS_ROUTE, INVITE_ROUTE } from '@/lib/inviteModal';
 import { PendingInvitationsPage } from '@/pages/PendingInvitationsPage';
 import { UserDetailPage } from '@/pages/UserDetailPage';
@@ -126,6 +130,7 @@ const storageWebhookRoutes = [
  * their routes exist only so the chrome hash location stays bookmarkable.
  */
 export const router = createHashRouter([
+  { path: AGENT_CONNECT_ROUTE, element: <ConnectAgentPage />, errorElement: <RouteErrorPage /> },
   { path: INVITE_ROUTE, element: <InviteUserPage />, errorElement: <RouteErrorPage /> },
   {
     path: INVITATIONS_ROUTE,
@@ -146,6 +151,10 @@ export const router = createHashRouter([
           { path: 'groups', element: <GroupsListPage /> },
           { path: 'oauth/*', element: <OAuthSetupPage /> },
           { path: 'scim', element: <ScimSetupPage /> },
+          { path: 'ai', element: <AiStatusPage /> },
+          { path: 'ai/swagger', element: null },
+          { path: 'ai/redoc', element: null },
+          { path: 'agents', element: <AgentsPage /> },
           ...identityWebhookRoutes,
           ...hostingWebhookRoutes,
           ...storageWebhookRoutes,
@@ -264,6 +273,8 @@ export const router = createHashRouter([
               { path: 'email/statistics', element: <EmailStatisticsPage /> },
             ],
           },
+          { path: 'email/swagger', element: null },
+          { path: 'email/redoc', element: null },
           { path: 'storage/swagger', element: null },
           { path: 'storage/redoc', element: null },
           { path: 'storage', element: null },

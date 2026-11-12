@@ -294,7 +294,7 @@ export function OAuthWizardRoute() {
   };
 
   return (
-    <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+    <section className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
       <div className="space-y-3 border-b border-border px-4 py-4 sm:px-5">
         <Link
           to="/oauth"

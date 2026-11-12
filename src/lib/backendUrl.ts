@@ -1,8 +1,9 @@
 import shellui, { addMessageListener } from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
+import { readDevServiceUrlFromEnv } from '@/lib/devServiceUrl';
 
-/** Local identity-service origin used only by the dev server. */
-export const DEV_AUTH_BACKEND_BASE_URL = 'http://localhost:8000';
+/** Default identity-service origin in dev when the shell and env omit a URL (Shellui dev stack host port). */
+export const DEV_AUTH_BACKEND_BASE_URL = 'http://localhost:8001';
 
 export type ServiceUrlEnv = {
   /** When true, a missing URL may use the dev default. Production builds pass false. */
@@ -39,7 +40,8 @@ export function readExplicitAuthBackendBaseUrl(): string | null {
 /**
  * Identity-service origin for this frame.
  * Uses `settings.authBackendBaseUrl` (the shell's `backend.url` for this frame).
- * The dev server falls back to `http://localhost:8000`. A production build returns null.
+ * In dev, falls back to `VITE_IDENTITY_URL`, then {@link DEV_AUTH_BACKEND_BASE_URL}.
+ * A production build returns null when the shell omits the URL.
  */
 export function resolveAuthBackendBaseUrl(
   raw: string | null | undefined,
@@ -47,7 +49,8 @@ export function resolveAuthBackendBaseUrl(
 ): string | null {
   const explicit = normalizeBaseUrl(raw);
   if (explicit) return explicit;
-  return env.dev ? DEV_AUTH_BACKEND_BASE_URL : null;
+  if (!env.dev) return null;
+  return readDevServiceUrlFromEnv(import.meta.env.VITE_IDENTITY_URL) ?? DEV_AUTH_BACKEND_BASE_URL;
 }
 
 /** Call after `await shellui.init()` so API modules see the shell `backend.url` before the first fetch. */

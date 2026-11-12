@@ -413,7 +413,7 @@ function JobCard({
   const descriptionKeyForJob = service === 'email' && i18n.exists(emailKey) ? emailKey : genericKey;
   return (
     <Card
-      className="overflow-hidden rounded-xl border-border shadow-sm"
+      className="overflow-hidden rounded-xl border-border shadow-xs"
       data-testid={`scheduled-job-${status.job}`}
     >
       <CardHeader className="space-y-1.5 border-b border-border pb-4">
@@ -671,7 +671,7 @@ export function DashboardScheduledJobsSection({
       ) : null}
 
       {overview ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-xs">
           <span className="text-sm font-medium">{t('scheduledJobsSchedulerStatus')}</span>
           <SchedulerBadges overview={overview} />
         </div>

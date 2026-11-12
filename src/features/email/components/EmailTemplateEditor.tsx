@@ -294,14 +294,14 @@ export function EmailTemplateEditor({
 
   const editPane = (
     <div className="mx-auto w-full max-w-3xl min-w-0 space-y-5">
-      <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm">
+      <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-xs">
         <h2 className="text-sm font-semibold tracking-tight">{t('emailInboxSection')}</h2>
         {inboxField('subject', t('emailSubjectLabel'))}
         {inboxField('preheader', t('emailPreheaderLabel'))}
       </section>
 
       {variables.length ? (
-        <section className="space-y-2.5 rounded-xl border border-border bg-card p-4 shadow-sm">
+        <section className="space-y-2.5 rounded-xl border border-border bg-card p-4 shadow-xs">
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <h2 className="text-sm font-semibold tracking-tight">
               {t('emailVariablesLabel')}{' '}
@@ -344,7 +344,7 @@ export function EmailTemplateEditor({
         </section>
       ) : null}
 
-      <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm">
+      <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-xs">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h2 className="text-sm font-semibold tracking-tight">{t('emailContentSection')}</h2>
           <Text className="text-xs">{t('emailEditorHint')}</Text>
@@ -400,7 +400,7 @@ export function EmailTemplateEditor({
         readOnly={readOnly}
         aria-invalid={jsonError ? true : undefined}
         className={cn(
-          'h-[36rem] w-full resize-y rounded-lg border bg-muted/30 p-3 font-mono text-xs leading-relaxed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+          'h-144 w-full resize-y rounded-lg border bg-muted/30 p-3 font-mono text-xs leading-relaxed focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring',
           jsonError ? 'border-destructive' : 'border-input',
         )}
         value={jsonText}
@@ -448,7 +448,7 @@ export function EmailTemplateEditor({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-2 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-2 shadow-xs">
         <SegmentedControl
           label={t('emailEditorModes')}
           value={mode}
