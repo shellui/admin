@@ -194,3 +194,31 @@ describe('sidebar version', () => {
     expect(appVersionLabel).toMatch(/^v\d+\.\d+\.\d+/);
   });
 });
+
+describe('AI sidebar navigation', () => {
+  afterEach(async () => {
+    cleanup();
+    hooks.developerMode = false;
+    hooks.isStaff = true;
+    hooks.ai = { url: null };
+    await i18n.changeLanguage('en');
+  });
+
+  it('labels AI status as Statistics, uses the statistics icon, and places it below Agents', () => {
+    hooks.isStaff = false;
+    hooks.ai = { url: 'https://ai.example' };
+    renderShell();
+
+    expect(sectionHrefs(/^AI/)).toEqual(['/agents', '/ai']);
+    const aiGroup = screen.getByRole('button', { name: /^AI/ }).parentElement;
+    const aiStatistics = aiGroup?.querySelector('a[href="/ai"]');
+    const identityHeader = screen.getByRole('button', { name: /^Identity/ });
+    const identityStatistics = identityHeader.parentElement?.querySelector(
+      'a[href="/identity/statistics"]',
+    );
+    expect(aiStatistics?.textContent).toContain('Statistics');
+    expect(aiStatistics?.querySelector('svg')?.innerHTML).toBe(
+      identityStatistics?.querySelector('svg')?.innerHTML,
+    );
+  });
+});

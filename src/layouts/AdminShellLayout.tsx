@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { LOADING_OVERLAY_DURATION_MS } from '@/constants/loading';
 import {
-  Activity,
   AppWindow,
   ArrowUpRight,
   BarChart3,
@@ -129,7 +128,7 @@ const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
   'identity/statistics': BarChart3,
   oauth: KeyRound,
   scim: Network,
-  ai: Activity,
+  ai: BarChart3,
   agents: Bot,
   'ai/swagger': BookOpen,
   'ai/redoc': BookOpen,
@@ -168,6 +167,7 @@ function resolveLocalized(label: AdminLocalizedString, language: string): string
 
 const mapLabelToTranslationKey = (label: string, path = ''): string => {
   if (path === 'identity/statistics') return 'navIdentityStatistics';
+  if (path === 'ai') return 'navAiStatistics';
   const normalized = label.toLowerCase();
   if (normalized === 'dashboard' || normalized === 'tableau de bord') return 'navDashboard';
   if (normalized === 'company' || normalized === 'entreprise') return 'navCompany';
@@ -177,9 +177,6 @@ const mapLabelToTranslationKey = (label: string, path = ''): string => {
   if (normalized === 'oauth apps' || normalized === 'apps oauth') return 'navOAuth';
   if (normalized === 'scim') return 'navScim';
   if (normalized === 'agents') return 'navAgents';
-  if (normalized === 'status' || normalized === 'état' || normalized === 'etat') {
-    return 'navAiStatus';
-  }
   if (normalized === 'webhooks') return 'navEmailAndWebhooks';
   if (normalized === 'actions') return 'navEmailAndWebhooks';
   if (normalized === 'email and webhooks' || normalized === 'e-mail et webhooks') {
@@ -1304,16 +1301,16 @@ export function AdminShellLayout() {
     if (aiUrl) {
       const aiItems: AdminNavItem[] = [
         {
-          key: 'navAiStatus',
-          icon: Activity,
-          label: t('navAiStatus'),
-          to: '/ai',
-        },
-        {
           key: 'navAgents',
           icon: Bot,
           label: t('navAgents'),
           to: '/agents',
+        },
+        {
+          key: 'navAiStatistics',
+          icon: BarChart3,
+          label: t('navAiStatistics'),
+          to: '/ai',
         },
       ];
       if (isDeveloperMode) {

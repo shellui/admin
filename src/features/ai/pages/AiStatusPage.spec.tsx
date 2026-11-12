@@ -86,9 +86,10 @@ function renderPage() {
 }
 
 describe('AiStatusPage', () => {
-  afterEach(() => {
+  afterEach(async () => {
     cleanup();
     mocks.accessToken = 'token';
+    await i18n.changeLanguage('en');
   });
 
   it('shows MCP reachability and activity stats without a browser health fetch error', async () => {
@@ -99,6 +100,16 @@ describe('AiStatusPage', () => {
     expect(screen.getByText('Active agents')).toBeTruthy();
     expect(mocks.fetchCompanyMcpAgents).toHaveBeenCalled();
     expect(screen.queryByText(/NetworkError/i)).toBeNull();
+  });
+
+  it('uses a statistics title in English and French', async () => {
+    renderPage();
+    expect(screen.getByRole('heading', { name: 'AI statistics' })).toBeTruthy();
+
+    await i18n.changeLanguage('fr');
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Statistiques IA' })).toBeTruthy();
+    });
   });
 
   it('does not call ai-service /health/live from the page', async () => {
