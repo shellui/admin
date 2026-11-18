@@ -260,7 +260,7 @@ export function PendingInvitationsPage() {
           overflow); the shell caps it to the viewport, and visible content fills what it grants. */}
       <div
         aria-hidden
-        className="!mt-0 h-0 w-[46rem]"
+        className="mt-0! h-0 w-184"
       />
     </div>
   );

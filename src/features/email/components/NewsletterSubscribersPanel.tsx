@@ -193,7 +193,7 @@ export function NewsletterSubscribersPanel({
 
   return (
     <div className="space-y-6">
-      <section className="min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      <section className="min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-xs">
         <div className="flex flex-wrap items-center gap-3 border-b border-border px-3 py-3 sm:px-4">
           <SegmentedControl
             label={t('emailNewsletterStatusFilter')}
@@ -356,7 +356,7 @@ export function NewsletterSubscribersPanel({
                               {metadataEntries.map(([key, value]) => (
                                 <Fragment key={key}>
                                   <dt className="font-mono text-muted-foreground">{key}</dt>
-                                  <dd className="whitespace-pre-wrap break-words">{value}</dd>
+                                  <dd className="whitespace-pre-wrap wrap-break-word">{value}</dd>
                                 </Fragment>
                               ))}
                             </dl>
@@ -399,7 +399,7 @@ export function NewsletterSubscribersPanel({
 
       <div className="grid gap-4 lg:grid-cols-2">
         <form
-          className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5"
+          className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-xs sm:p-5"
           onSubmit={(ev) => void add(ev)}
         >
           <h2 className="text-sm font-semibold">{t('emailNewsletterAddTitle')}</h2>
@@ -436,7 +436,7 @@ export function NewsletterSubscribersPanel({
           <ActionFeedback feedback={addFeedback} />
         </form>
 
-        <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-xs sm:p-5">
           <h2 className="text-sm font-semibold">{t('emailNewsletterImportTitle')}</h2>
           <Text className="text-xs">{t('emailNewsletterImportHint')}</Text>
           <label className="flex cursor-pointer items-start gap-2 text-sm">

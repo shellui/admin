@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   isEmailAdminEnabled,
   readSettingsEmail,
@@ -30,6 +30,16 @@ describe('readSettingsEmail', () => {
     expect(readSettingsEmail({ email: null } as unknown as Settings)).toBeNull();
     expect(readSettingsEmail({ email: {} } as unknown as Settings)).toBeNull();
   });
+
+  it('falls back to VITE_EMAIL_URL in dev when the shell omits email.url', () => {
+    vi.stubEnv('VITE_EMAIL_URL', 'http://localhost:8004/');
+    expect(readSettingsEmail(undefined)).toEqual({ url: 'http://localhost:8004' });
+    vi.unstubAllEnvs();
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe('isEmailAdminEnabled', () => {

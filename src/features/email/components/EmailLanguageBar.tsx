@@ -50,7 +50,7 @@ export function EmailLanguageTabs({
               className={cn(
                 'inline-flex h-8 items-center gap-1.5 rounded px-3 text-sm transition-colors',
                 selected
-                  ? 'bg-background font-medium text-foreground shadow-sm'
+                  ? 'bg-background font-medium text-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground',
               )}
               onClick={() => onChange(lang)}

@@ -23,7 +23,7 @@ export function PageHeader({ title, service, description, actions, back, classNa
       {back ? (
         <Link
           to={back.to}
-          className="inline-flex items-center gap-1 rounded-md text-sm text-muted-foreground no-underline transition-colors hover:text-foreground hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex items-center gap-1 rounded-md text-sm text-muted-foreground no-underline transition-colors hover:text-foreground hover:no-underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
         >
           <ChevronLeft
             className="size-4"

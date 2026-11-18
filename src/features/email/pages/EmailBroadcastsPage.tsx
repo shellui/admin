@@ -157,7 +157,7 @@ export function EmailBroadcastsPage() {
       ) : null}
 
       {creating && canManage ? (
-        <section className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        <section className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-xs sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-1">
               <h2 className="text-sm font-semibold">{t('emailBroadcastNew')}</h2>

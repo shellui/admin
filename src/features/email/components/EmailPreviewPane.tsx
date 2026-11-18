@@ -56,13 +56,13 @@ export function EmailPreviewPane({
             className={cn(
               'mx-auto block rounded-md border border-border bg-white transition-[width]',
               device === 'mobile' ? 'w-[375px] max-w-full' : 'w-full',
-              large ? 'h-[46rem]' : 'h-[36rem]',
+              large ? 'h-184' : 'h-144',
             )}
           />
         ) : failed ? (
           <Text className="p-4 text-sm text-muted-foreground">{t('emailPreviewUnavailable')}</Text>
         ) : (
-          <Skeleton className={cn('w-full', large ? 'h-[46rem]' : 'h-[36rem]')} />
+          <Skeleton className={cn('w-full', large ? 'h-184' : 'h-144')} />
         )}
       </div>
     </div>

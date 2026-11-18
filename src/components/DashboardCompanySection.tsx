@@ -246,7 +246,7 @@ export function DashboardCompanySection({ accessToken }: Props) {
                 <label
                   key={mode}
                   className={cn(
-                    'flex cursor-pointer flex-col gap-1 rounded-lg border border-border p-3 transition-colors hover:bg-muted/40 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring',
+                    'flex cursor-pointer flex-col gap-1 rounded-lg border border-border p-3 transition-colors hover:bg-muted/40 has-focus-visible:ring-2 has-focus-visible:ring-ring',
                     checked && 'border-primary bg-primary/10',
                   )}
                 >
@@ -259,7 +259,7 @@ export function DashboardCompanySection({ accessToken }: Props) {
                     <input
                       type="radio"
                       name="company-access-mode"
-                      className="accent-[var(--primary)]"
+                      className="accent-(--primary)"
                       checked={checked}
                       onChange={() => setAccessMode(mode)}
                     />

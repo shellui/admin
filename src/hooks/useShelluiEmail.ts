@@ -6,7 +6,7 @@ import { readSettingsEmail, type SettingsEmail } from '@/lib/emailServiceUrl';
 /**
  * email-service origin from the host shell (`email` in shellui.config),
  * delivered via `SHELLUI_SETTINGS` / `SHELLUI_SETTINGS_UPDATED`.
- * `null` when the shell sends no `email.url`. There is no default.
+ * `null` when the shell sends no `email.url` and `VITE_EMAIL_URL` is unset.
  */
 export function useShelluiEmail(): SettingsEmail | null {
   const [email, setEmail] = useState<SettingsEmail | null>(() =>

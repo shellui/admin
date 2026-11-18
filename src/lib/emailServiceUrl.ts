@@ -1,4 +1,5 @@
 import type { Settings, SettingsEmail } from '@shellui/sdk';
+import { readDevServiceUrlFromEnv } from '@/lib/devServiceUrl';
 
 export type { SettingsEmail };
 
@@ -21,7 +22,8 @@ export function resolveEmailServiceUrl(raw: string | null | undefined): string |
 /** `settings.email` with a usable URL, or `null`. */
 export function readSettingsEmail(settings: Settings | null | undefined): SettingsEmail | null {
   const email = settings?.email;
-  const url = resolveEmailServiceUrl(email?.url);
+  const url =
+    resolveEmailServiceUrl(email?.url) ?? readDevServiceUrlFromEnv(import.meta.env.VITE_EMAIL_URL);
   if (!url) return null;
   return {
     url,

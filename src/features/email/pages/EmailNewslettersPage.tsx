@@ -139,7 +139,7 @@ export function EmailNewslettersPage() {
 
       {creating && canManage ? (
         <form
-          className="max-w-xl overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+          className="max-w-xl overflow-hidden rounded-xl border border-border bg-card shadow-xs"
           onSubmit={(ev) => void create(ev)}
         >
           <div className="space-y-3 p-4 sm:p-5">

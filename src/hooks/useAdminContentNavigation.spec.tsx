@@ -55,6 +55,14 @@ vi.mock('@/hooks/useShelluiAuthBackendBaseUrl', () => ({
   useShelluiAuthBackendBaseUrl: () => 'https://id.example',
 }));
 
+vi.mock('@/hooks/useShelluiEmail', () => ({
+  useShelluiEmail: () => ({ url: 'https://email.example', showInAdmin: true }),
+}));
+
+vi.mock('@/hooks/useShelluiAiService', () => ({
+  useShelluiAiService: () => null,
+}));
+
 vi.mock('@/lib/backendUrl', () => ({
   getAuthBackendBaseUrl: () => 'https://id.example',
 }));
@@ -94,6 +102,14 @@ describe('useAdminContentNavigation frame auth rules', () => {
       ignoreMessages: true,
     });
     expect(byUrl['https://hosting.example/api/docs/redoc/']).toMatchObject({
+      safeForAuthToken: false,
+      ignoreMessages: true,
+    });
+    expect(byUrl['https://email.example/api/docs/']).toMatchObject({
+      safeForAuthToken: true,
+      ignoreMessages: true,
+    });
+    expect(byUrl['https://email.example/api/docs/redoc/']).toMatchObject({
       safeForAuthToken: false,
       ignoreMessages: true,
     });

@@ -1,5 +1,5 @@
 import shellui from '@shellui/sdk';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   DEV_AUTH_BACKEND_BASE_URL,
   getAuthBackendBaseUrl,
@@ -23,7 +23,13 @@ describe('resolveAuthBackendBaseUrl', () => {
   it('keeps the dev default only when the shell omits the URL', () => {
     expect(resolveAuthBackendBaseUrl(undefined, dev)).toBe(DEV_AUTH_BACKEND_BASE_URL);
     expect(resolveAuthBackendBaseUrl('  ', dev)).toBe(DEV_AUTH_BACKEND_BASE_URL);
-    expect(resolveAuthBackendBaseUrl(null, dev)).toBe('http://localhost:8000');
+    expect(resolveAuthBackendBaseUrl(null, dev)).toBe('http://localhost:8001');
+  });
+
+  it('prefers VITE_IDENTITY_URL over the dev default', () => {
+    vi.stubEnv('VITE_IDENTITY_URL', 'http://localhost:8999/');
+    expect(resolveAuthBackendBaseUrl(undefined, dev)).toBe('http://localhost:8999');
+    vi.unstubAllEnvs();
   });
 
   it('returns null in production when the shell omits the URL', () => {
@@ -32,6 +38,10 @@ describe('resolveAuthBackendBaseUrl', () => {
     expect(resolveAuthBackendBaseUrl('   ', prod)).toBeNull();
     expect(resolveAuthBackendBaseUrl(null, prod)).toBeNull();
   });
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe('getAuthBackendBaseUrl', () => {

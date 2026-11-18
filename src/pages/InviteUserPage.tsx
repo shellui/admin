@@ -104,7 +104,7 @@ export function InviteUserPage() {
               id="invite-language"
               value={language}
               onChange={(e) => setLanguage(e.target.value as InviteLanguage)}
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-base shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
             >
               {LANGUAGES.map((code) => (
                 <option

@@ -401,7 +401,7 @@ export function UserDetailPage() {
             </Alert>
           ) : null}
 
-          <Card className="shadow-sm">
+          <Card className="shadow-xs">
             <CardHeader className="pb-3">
               <CardTitle className={cardTitle}>{t('userDetailProfile')}</CardTitle>
             </CardHeader>
@@ -443,7 +443,7 @@ export function UserDetailPage() {
           </Card>
 
           <div className="grid gap-4 md:grid-cols-[1.6fr_1fr]">
-            <Card className="flex flex-col overflow-hidden shadow-sm">
+            <Card className="flex flex-col overflow-hidden shadow-xs">
               <CardHeader className="pb-3">
                 <CardTitle className={cardTitle}>{t('userDetailMembershipTitle')}</CardTitle>
                 <CardDescription>{t('userDetailGroupsHint')}</CardDescription>
@@ -503,7 +503,7 @@ export function UserDetailPage() {
               </div>
             </Card>
 
-            <Card className="shadow-sm">
+            <Card className="shadow-xs">
               <CardHeader className="pb-3">
                 <CardTitle className={cardTitle}>{t('userDetailPreferencesTitle')}</CardTitle>
                 <CardDescription>{t('userDetailPrefsHint')}</CardDescription>
@@ -543,7 +543,7 @@ export function UserDetailPage() {
           </div>
 
           <div ref={eventsSectionRef}>
-            <Card className="overflow-hidden shadow-sm">
+            <Card className="overflow-hidden shadow-xs">
               <CardHeader className="pb-2">
                 <CardTitle className={cardTitle}>{t('userDetailEventsTitle')}</CardTitle>
                 <CardDescription>{t('userDetailActivityHint')}</CardDescription>

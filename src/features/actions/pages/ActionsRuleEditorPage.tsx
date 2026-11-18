@@ -409,7 +409,7 @@ export function ActionsRuleEditorPage() {
               <Label htmlFor="webhook-rule-event">{t('actionsColEvent')}</Label>
               <select
                 id="webhook-rule-event"
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                 value={eventKey}
                 onChange={(e) => {
                   clearActionFeedback();
@@ -435,7 +435,7 @@ export function ActionsRuleEditorPage() {
                 <Label htmlFor="webhook-newsletter-filter">{t('webhooksNewsletterFilter')}</Label>
                 <select
                   id="webhook-newsletter-filter"
-                  className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex h-9 w-full cursor-pointer rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                   value={newsletterId == null ? '' : String(newsletterId)}
                   onChange={(e) => {
                     clearActionFeedback();

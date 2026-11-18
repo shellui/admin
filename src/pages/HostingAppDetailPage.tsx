@@ -406,7 +406,7 @@ export function HostingAppDetailPage() {
       ) : null}
 
       {app && isPreviewApp(app) ? (
-        <section className="rounded-xl border border-border bg-card px-4 shadow-sm sm:px-5">
+        <section className="rounded-xl border border-border bg-card px-4 shadow-xs sm:px-5">
           <SettingRow
             title={`${t('hostingColExpires')}: ${formatDate(app.expires_at ?? null, i18n.language)}`}
             badge={

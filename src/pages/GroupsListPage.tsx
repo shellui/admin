@@ -137,7 +137,7 @@ export function GroupsListPage() {
     }
   }
 
-  const cols = ['w-[5rem] hidden sm:table-cell', '', 'w-[6.5rem]', 'w-[10rem]'];
+  const cols = ['w-20 hidden sm:table-cell', '', 'w-26', 'w-40'];
   return (
     <div className="w-full space-y-6">
       <PageHeader
@@ -146,7 +146,7 @@ export function GroupsListPage() {
         description={t('groupsDescription')}
       />
 
-      <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+      <section className="rounded-xl border border-border bg-card p-4 shadow-xs sm:p-5">
         <div className="mb-3 space-y-1">
           <h2 className="text-sm font-semibold">{t('groupsCreateTitle')}</h2>
           <p className="text-sm text-muted-foreground">{t('groupsCreateDescription')}</p>

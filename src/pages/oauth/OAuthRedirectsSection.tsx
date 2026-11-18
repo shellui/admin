@@ -99,7 +99,7 @@ export function OAuthRedirectsSection({ accessToken }: Props) {
     }
   }
 
-  const card = 'overflow-hidden rounded-xl border border-border bg-card shadow-sm';
+  const card = 'overflow-hidden rounded-xl border border-border bg-card shadow-xs';
   const loadingRows = (
     <div className="space-y-2 p-4">
       <span className="sr-only">{t('loginRedirectsLoading')}</span>

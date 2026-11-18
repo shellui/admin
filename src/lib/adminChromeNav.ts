@@ -24,15 +24,23 @@ export function isStandaloneEmailGroupTitle(title: string): boolean {
   return normalized === 'email' || normalized === 'e-mail';
 }
 
-/** The Email group is the last sidebar section. Other sections keep their order. */
-export function placeStandaloneEmailSectionLast<T extends { title: string }>(sections: T[]): T[] {
+/** Standalone AI group title (dynamic section uses i18n `navAiGroup`). */
+export function isStandaloneAiGroupTitle(title: string): boolean {
+  const normalized = title.trim().toLowerCase();
+  return normalized === 'ai' || normalized === 'ia';
+}
+
+/** Email last; AI sits just above Email when both are present. */
+export function orderAdminSidebarSections<T extends { title: string }>(sections: T[]): T[] {
   const rest: T[] = [];
+  const ai: T[] = [];
   const email: T[] = [];
   for (const section of sections) {
     if (isStandaloneEmailGroupTitle(section.title)) email.push(section);
+    else if (isStandaloneAiGroupTitle(section.title)) ai.push(section);
     else rest.push(section);
   }
-  return [...rest, ...email];
+  return [...rest, ...ai, ...email];
 }
 
 /** Hash-router path without query, e.g. `/users` from `#/users?x=1`. */

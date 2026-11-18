@@ -5,6 +5,31 @@
 # image works for every region. FRAME_ANCESTORS sets which origins may embed it.
 
 # Node 25 no longer bundles corepack, so it is installed first.
+FROM node:25.2.0-alpine AS dev
+
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN rm -f /usr/local/bin/yarn /usr/local/bin/yarnpkg && npm install -g corepack@0.34.0 --no-fund --no-audit && corepack enable
+
+# ContentView types for vite.config.ts (bind mount hides nothing under /app).
+ARG SHELLUI_REF=7691cf1a9b6445a9fe5f8467a2a8f5fdf95cb217
+RUN apk add --no-cache git \
+ && git init -q /opt/shellui \
+ && git -C /opt/shellui fetch -q --depth 1 https://github.com/shellui/shellui.git "${SHELLUI_REF}" \
+ && git -C /opt/shellui checkout -q FETCH_HEAD \
+ && rm -rf /opt/shellui/.git
+
+ENV SHELLUI_ROOT=/opt/shellui
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+EXPOSE 5173
+
+CMD ["pnpm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+
+# Production build stage.
 FROM node:25.2.0-alpine AS build
 
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0

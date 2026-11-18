@@ -291,7 +291,7 @@ export function ActionsDeliveriesListPage() {
                       {formatDate(row.created_at)}
                     </TableCell>
                     <TableCell
-                      className="hidden max-w-[14rem] truncate font-mono text-xs text-muted-foreground lg:table-cell"
+                      className="hidden max-w-56 truncate font-mono text-xs text-muted-foreground lg:table-cell"
                       title={row.last_error || undefined}
                     >
                       {row.last_error || '-'}

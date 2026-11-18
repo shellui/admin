@@ -129,7 +129,7 @@ function WaitlistBanner({
     access.status === 'denied' ? 'destructive' : access.status === 'pending' ? 'warning' : 'muted';
 
   return (
-    <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+    <section className="rounded-xl border border-border bg-card p-4 shadow-xs sm:p-5">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-sm font-semibold">{t('hostingWaitlistTitle')}</h2>
         <StatusBadge
@@ -388,7 +388,7 @@ export function HostingAppsPage() {
                         <TableCell className="pl-4">
                           <Link
                             to={`/hosting/apps/${app.name}`}
-                            className="flex min-w-0 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className="flex min-w-0 items-center gap-3 rounded-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                           >
                             <span
                               aria-hidden

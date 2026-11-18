@@ -17,7 +17,7 @@ import { EMAIL_LANGS } from '@/lib/emailTranslations';
 import { parseOrigins, type Newsletter, type NewsletterWrite } from '@/lib/emailNewsletters';
 
 const TEXTAREA =
-  'min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring';
+  'min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-xs shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring';
 
 /** Name, language, where the form may live, where people land, and bot protection. */
 export function NewsletterSettingsPanel({
@@ -91,7 +91,7 @@ export function NewsletterSettingsPanel({
 
   return (
     <form
-      className="max-w-3xl overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+      className="max-w-3xl overflow-hidden rounded-xl border border-border bg-card shadow-xs"
       onSubmit={(ev) => void save(ev)}
     >
       <div className="space-y-5 p-4 sm:p-5">

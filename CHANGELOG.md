@@ -6,20 +6,66 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 <!---
-## [Unreleased] - yyyy-mm-dd
+## [x.y.z] - yyyy-mm-dd
 
-### ✨ Feature – for new features
-### 🛠 Improvements – for general improvements
-### 🚨 Changed – for changes in existing functionality
-### ⚠️ Deprecated – for soon-to-be removed features
-### 📚 Documentation – for documentation update
-### 🗑 Removed – for removed features
-### 🐛 Bug Fixes – for any bug fixes
-### 🔒 Security – in case of vulnerabilities
-### 🏗 Chore – for tidying code
+### ✨ Feature - for new features
+### 🛠 Improvements - for general improvements
+### 🚨 Changed - for changes in existing functionality
+### ⚠️ Deprecated - for soon-to-be removed features
+### 📚 Documentation - for documentation update
+### 🗑 Removed - for removed features
+### 🐛 Bug Fixes - for any bug fixes
+### 🔒 Security - in case of vulnerabilities
+### 🏗 Chore - for tidying code
 
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
+
+## [0.10.0] - 2026-11-18
+
+Needs identity-service with company MCP admin (identity-service PR #110 or newer) and `aiService.url` in the shell config. Tool-call logs need ai-service.
+
+Updating the Docker Hub overview on publish needs the repository secrets `DOCKERHUB_DESCRIPTION_USERNAME` and `DOCKERHUB_DESCRIPTION_TOKEN` (a personal access token with Read, Write, and Delete, from an account with Admin on the repository). Image push still uses `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`. When the description secrets are unset, publish skips the overview and still succeeds.
+
+### ✨ Feature
+
+- **Agents:** Company owners manage MCP agents, services, and approvals. The MCP URL comes from ai-service.
+- **Agents:** Connect an agent with OAuth device login in the shell drawer. Expiry stays within 90 days. A static secret stays available as a fallback, shown once.
+- **Agents:** Company and personal call logs load from ai-service, with service and status filters and Load more. Personal logs still include OAuth consent rows from identity-service.
+- **Agents:** The connect drawer and the statistics page show the per-company MCP URL.
+- **Agents:** The agents list filters by search, status, and creator, and Revoke stops an agent.
+- **AI:** The sidebar adds statistics, agents, and API docs when `aiService.url` is set.
+- **AI:** The statistics page shows active, paused, and revoked agents, pending approvals, tool calls, and failed calls from the last 24 hours.
+- **Dashboard:** The dashboard includes an AI section: active agents, pending approvals, calls, and failed calls from the last 24 hours.
+
+### 🚨 Changed
+
+- **Shellui:** Uses Shellui 0.8.1, which includes the nested frame storage fix.
+
+### 🐛 Bug Fixes
+
+- **Agents:** Call log duration shows measured milliseconds, or `-` when the value is missing.
+- **Agents:** A destructive approval shows a warning before you approve.
+- **Navigation:** Service URLs stay hidden outside developer mode.
+- **Navigation:** Sidebar links keep their full height when the nav scrolls.
+
+### 🔒 Security
+
+- **Agents:** Approve stays disabled until redacted arguments are present, and call logs show those redacted arguments.
+- **Agents:** Production shows an empty state when the MCP admin API is missing. The dev mock runs only when `VITE_COMPANY_AGENTS_MOCK=1`.
+
+### 📚 Documentation
+
+- **Dev stack:** Docker dev target, local `VITE_*` service URL examples, and notes for the Shellui compose stack.
+- **Email:** Developer mode adds Email API docs to the sidebar.
+- **Docker Hub:** Add a repository overview in `docker/README.md` and update it after each image publish.
+
+### 🏗 Chore
+
+- **Tests:** Upgrade vitest to 5.0.5 and add `@types/node`.
+- **Styles:** Migrate styles to Tailwind CSS 4.
+- **Dependencies:** Bump `@hookform/resolvers` 7.0.1, `lucide-react` 1.66.0, `react-email` 6.11.6, `@radix-ui/react-separator` 1.2.0, `docker/build-push-action` v7, and `peter-evans/dockerhub-description` v5.
+- **Dependencies:** Pin `@shellui/sdk` to 0.8.1.
 
 ## [0.9.1] - 2026-10-29
 
