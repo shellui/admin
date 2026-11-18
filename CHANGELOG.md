@@ -33,6 +33,8 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ### 📚 Documentation
 
+- **Docker Hub:** Add a repository overview and update it on each image publish.
+
 ### 🗑 Removed
 
 ### 🐛 Bug Fixes
