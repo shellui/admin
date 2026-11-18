@@ -41,6 +41,8 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ### 🏗 Chore
 
+- **Dependencies:** Pin `@shellui/sdk` to 0.8.0.
+
 ## [0.10.0] - 2026-11-18
 
 ### ✨ Feature
