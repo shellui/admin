@@ -55,8 +55,8 @@ importers:
         specifier: 1.7.3
         version: 1.7.3(@floating-ui/dom@1.8.0)(@tiptap/extension-list@3.31.4(@tiptap/core@3.31.4(@tiptap/pm@3.31.4))(@tiptap/pm@3.31.4))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(happy-dom@21.0.4)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@shellui/sdk':
-        specifier: 0.8.0
-        version: 0.8.0(react@19.3.0)
+        specifier: 0.8.1
+        version: 0.8.1(react@19.3.0)
       '@tiptap/core':
         specifier: 3.31.4
         version: 3.31.4(@tiptap/pm@3.31.4)
@@ -1500,8 +1500,8 @@ packages:
     peerDependencies:
       selderee: ~0.12.0
 
-  '@shellui/sdk@0.8.0':
-    resolution: {integrity: sha512-ECWvBuqUnwWXsgE8oNMqnLUOHx9nzp6D5LptaxqDVgvXUwG03H85rj1MqWvWZDUdDOqj7IYMLdxfRmVe/OnNig==}
+  '@shellui/sdk@0.8.1':
+    resolution: {integrity: sha512-+rbJ3Viu4UrmfPBOqFhTLTSMuAJlu0oBOVvYWP8dFDD5VANiRX2ata/rkzmsK+X2Q4vojWxj3esL1f23JVeG5Q==}
     peerDependencies:
       react: '>=18'
     peerDependenciesMeta:
@@ -4209,7 +4209,7 @@ snapshots:
       domhandler: 5.0.3
       selderee: 0.12.0
 
-  '@shellui/sdk@0.8.0(react@19.3.0)':
+  '@shellui/sdk@0.8.1(react@19.3.0)':
     dependencies:
       roarr: 7.21.4
     optionalDependencies:
