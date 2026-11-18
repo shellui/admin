@@ -38,6 +38,10 @@ Updating the Docker Hub overview on publish needs the repository secrets `DOCKER
 - **AI:** The statistics page shows active, paused, and revoked agents, pending approvals, tool calls, and failed calls from the last 24 hours.
 - **Dashboard:** The dashboard includes an AI section: active agents, pending approvals, calls, and failed calls from the last 24 hours.
 
+### 🚨 Changed
+
+- **Shellui:** Uses Shellui 0.8.1, which includes the nested frame storage fix.
+
 ### 🐛 Bug Fixes
 
 - **Agents:** Call log duration shows measured milliseconds, or `-` when the value is missing.
@@ -61,7 +65,7 @@ Updating the Docker Hub overview on publish needs the repository secrets `DOCKER
 - **Tests:** Upgrade vitest to 5.0.5 and add `@types/node`.
 - **Styles:** Migrate styles to Tailwind CSS 4.
 - **Dependencies:** Bump `@hookform/resolvers` 7.0.1, `lucide-react` 1.66.0, `react-email` 6.11.6, `@radix-ui/react-separator` 1.2.0, `docker/build-push-action` v7, and `peter-evans/dockerhub-description` v5.
-- **Dependencies:** Pin `@shellui/sdk` to 0.8.0.
+- **Dependencies:** Pin `@shellui/sdk` to 0.8.1.
 
 ## [0.9.1] - 2026-10-29
 
