@@ -89,3 +89,13 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # DOCKERHUB_TOKEN needs Read, Write, and Delete scope for description updates.
+      - name: Update Docker Hub description
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: shellui/admin
+          readme-filepath: ./docker/README.md
+          short-description: 'The Shellui admin app as a static nginx image, configured at runtime.'
