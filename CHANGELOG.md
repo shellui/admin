@@ -8,15 +8,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!---
 ## [Unreleased] - yyyy-mm-dd
 
-### ✨ Feature – for new features
-### 🛠 Improvements – for general improvements
-### 🚨 Changed – for changes in existing functionality
-### ⚠️ Deprecated – for soon-to-be removed features
-### 📚 Documentation – for documentation update
-### 🗑 Removed – for removed features
-### 🐛 Bug Fixes – for any bug fixes
-### 🔒 Security – in case of vulnerabilities
-### 🏗 Chore – for tidying code
+### ✨ Feature - for new features
+### 🛠 Improvements - for general improvements
+### 🚨 Changed - for changes in existing functionality
+### ⚠️ Deprecated - for soon-to-be removed features
+### 📚 Documentation - for documentation update
+### 🗑 Removed - for removed features
+### 🐛 Bug Fixes - for any bug fixes
+### 🔒 Security - in case of vulnerabilities
+### 🏗 Chore - for tidying code
 
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
@@ -25,31 +25,54 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ### ✨ Feature
 
-- **Agents:** Call logs load from ai-service (`GET /ai/v1/mcp/call-logs`), with service and status filters, approval details, and load-more pagination.
-- **Agents:** Connect MCP clients uses a Settings-style create flow with a one-time agent prompt (company MCP URL + access token).
+### 🛠 Improvements
 
-### 🐛 Bug Fixes
+### 🚨 Changed
 
-- **Agents:** Call log duration shows measured milliseconds from identity, or `-` when missing.
-
-## [0.10.0] - 2026-11-02
+### ⚠️ Deprecated
 
 ### 📚 Documentation
 
-- **Dev stack:** Dockerfile `dev` target (Vite on 5173, HMR and optional bind-mount polling), `.env.example` for local `VITE_*` service URLs, and notes for the shared Shellui compose stack.
+### 🗑 Removed
 
-### ✨ Feature
+### 🐛 Bug Fixes
 
-- **Agents:** Company MCP admin aligned with identity `/api/v1/mcp/*` (agents, approvals, call logs, services); production shows an empty state when MCP is missing; dev mock is opt-in via `VITE_COMPANY_AGENTS_MOCK=1`; approve stays disabled until redacted arguments are present on approval rows; full-access agents show an explicit warning.
-- **Agents:** MCP page onboarding copy, per-client connect steps, access legend, service URL copy, and docs link for company owners new to MCP.
-- **Agents:** MCP connect copy uses the ai-service `/mcp` URL from `aiService.url` (OAuth still via identity).
-- **Agents:** MCP connect copy and the AI status page show the per-company URL `{aiService.url}/c/<company_id>/mcp`, with the company id from the signed-in session.
-- **AI:** Admin sidebar section (status, agents, API docs) when `settings.aiService.url` is set from the host shell or dashboard.
+### 🔒 Security
 
 ### 🏗 Chore
 
-- **Tests:** Upgrade vitest to 5.0.5 and add @types/node for the Node-based spec files.
-- **Styles:** Migrate to Tailwind CSS 4 (CSS-first config in `src/index.css`, `@tailwindcss/postcss`, utilities renamed by the official upgrade tool).
+## [0.10.0] - 2026-11-18
+
+### ✨ Feature
+
+- **Agents:** Company MCP admin for agents, approvals, call logs, and services, using the ai-service MCP URL.
+- **Agents:** Connect an agent with OAuth device login in the shell drawer, with expiry within 90 days.
+- **Agents:** Company and personal call logs load from ai-service, with service and status filters and Load more.
+- **Agents:** The connect drawer and the statistics page show the per-company MCP URL.
+- **AI:** The sidebar adds statistics, agents, and API docs when an AI service URL is set.
+- **AI:** The statistics page shows active agents, pending approvals, and calls from the last 24 hours.
+- **Dashboard:** The dashboard includes an AI metrics section.
+- **Agents:** The agents list filters by search, status, and creator, and Revoke stops an agent.
+
+### 🐛 Bug Fixes
+
+- **Agents:** Call log duration shows measured milliseconds, or `-` when the value is missing.
+- **Navigation:** Service URLs stay hidden outside developer mode.
+- **Agents:** Approve stays disabled until redacted arguments are present.
+- **Agents:** A destructive approval shows a warning before you approve.
+- **Agents:** Production shows an empty state when MCP is missing, and the dev mock stays opt-in.
+- **Navigation:** Sidebar links keep their full height when the nav scrolls.
+
+### 📚 Documentation
+
+- **Dev stack:** Docker dev target, local service URL examples, and notes for the Shellui compose stack.
+- **Email:** Developer mode adds Email API docs to the sidebar.
+
+### 🏗 Chore
+
+- **Tests:** Upgrade vitest to 5.0.5 and add @types/node.
+- **Styles:** Migrate styles to Tailwind CSS 4.
+- **Dependencies:** Bump @hookform/resolvers 7.0.1, lucide-react 1.66.0, react-email 6.11.6, @radix-ui/react-separator 1.2.0, and docker/build-push-action v7.
 
 ## [0.9.1] - 2026-10-29
 
