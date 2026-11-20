@@ -10,5 +10,6 @@ vi.mock('@shellui/sdk', () => ({
     closeDrawer: vi.fn(),
   },
   addMessageListener: () => () => {},
+  resolveParentTargetOrigin: () => (typeof window === 'undefined' ? null : window.location.origin),
   sendMessageToParent: () => false,
 }));

@@ -21,6 +21,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [Unreleased]
+
+### 🔒 Security
+
+- **Access token:** `SHELLUI_SETTINGS` and `SHELLUI_SETTINGS_UPDATED` update the access token when the message comes from the parent window and the parent origin.
+- **Headers:** Responses send `script-src 'self'`, `object-src 'none'`, and `base-uri 'none'`.
+- **Dependencies:** Upgrade Vite to 6.4.6.
+
 ## [0.10.0] - 2026-11-18
 
 Needs identity-service with company MCP admin (identity-service PR #110 or newer) and `aiService.url` in the shell config. Tool-call logs need ai-service.

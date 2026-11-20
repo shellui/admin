@@ -8,10 +8,14 @@ import {
 import { freshShellAccessToken } from '@/lib/shellAccessToken';
 
 const sdk = vi.hoisted(() => {
-  const listeners: { type: string; fn: (message: { payload?: unknown }) => void }[] = [];
+  const listeners: {
+    type: string;
+    fn: (message: { payload?: unknown }, event: MessageEvent) => void;
+  }[] = [];
   return {
     listeners,
     sendMessageToParent: vi.fn(),
+    expectedOrigin: null as string | null,
     initialSettings: {
       accessToken: null as string | null,
       user: { id: '1' } as { id: string } | null,
@@ -25,7 +29,10 @@ vi.mock('@shellui/sdk', () => ({
       return sdk.initialSettings;
     },
   },
-  addMessageListener: (type: string, fn: (message: { payload?: unknown }) => void) => {
+  addMessageListener: (
+    type: string,
+    fn: (message: { payload?: unknown }, event: MessageEvent) => void,
+  ) => {
     const entry = { type, fn };
     sdk.listeners.push(entry);
     return () => {
@@ -33,6 +40,7 @@ vi.mock('@shellui/sdk', () => ({
       if (index >= 0) sdk.listeners.splice(index, 1);
     };
   },
+  resolveParentTargetOrigin: () => sdk.expectedOrigin,
   sendMessageToParent: (message: unknown) => {
     sdk.sendMessageToParent(message);
     return true;
@@ -47,9 +55,20 @@ function jwtWithExp(exp: number, claims: Record<string, unknown> = {}): string {
   return `h.${body}.s`;
 }
 
-function emit(type: string, settings: Record<string, unknown>) {
+function messageEvent(
+  source: MessageEvent['source'],
+  origin = window.location.origin,
+): MessageEvent {
+  return { source, origin } as MessageEvent;
+}
+
+function emit(
+  type: string,
+  settings: Record<string, unknown>,
+  event: MessageEvent = messageEvent(window.parent),
+) {
   for (const entry of sdk.listeners) {
-    if (entry.type === type) entry.fn({ payload: { settings } });
+    if (entry.type === type) entry.fn({ payload: { settings } }, event);
   }
 }
 
@@ -82,6 +101,7 @@ describe('useShelluiAccessToken', () => {
   beforeEach(() => {
     sdk.listeners.splice(0, sdk.listeners.length);
     sdk.sendMessageToParent.mockClear();
+    sdk.expectedOrigin = window.location.origin;
     sdk.initialSettings = { accessToken: jwtWithExp(Date.now() / 1000 + 3600), user: { id: '1' } };
   });
 
@@ -200,6 +220,54 @@ describe('useShelluiAccessToken', () => {
       emit('SHELLUI_SETTINGS_UPDATED', { user: { id: '1' }, accessToken: owner });
     });
     expect(result.current).toBe(owner);
+  });
+
+  it('applies settings from the parent window at the expected origin', () => {
+    const current = jwtWithExp(Date.now() / 1000 + 3600, { sub: '1', company_id: 7 });
+    sdk.initialSettings = { accessToken: current, user: { id: '1' } };
+    const { result } = renderHook(() => useShelluiAccessToken());
+    const otherIdentity = jwtWithExp(Date.now() / 1000 + 3600, { sub: '2', company_id: 9 });
+    const sameSession = jwtWithExp(Date.now() / 1000 + 7200, {
+      sub: '1',
+      company_id: 7,
+      iat: 9,
+    });
+    const nested = {} as Window;
+
+    act(() => {
+      emit(
+        'SHELLUI_SETTINGS',
+        { user: { id: '1' }, accessToken: sameSession },
+        messageEvent(nested),
+      );
+      emit(
+        'SHELLUI_SETTINGS_UPDATED',
+        { user: { id: '2' }, accessToken: otherIdentity },
+        messageEvent(window.parent, 'https://other.example'),
+      );
+      emit('SHELLUI_SETTINGS', { user: null }, messageEvent(null));
+    });
+    expect(result.current).toBe(current);
+    expect(freshShellAccessToken(current)).toBe(current);
+
+    sdk.expectedOrigin = null;
+    act(() => {
+      emit('SHELLUI_SETTINGS_UPDATED', { user: { id: '2' }, accessToken: otherIdentity });
+    });
+    expect(result.current).toBe(current);
+    expect(freshShellAccessToken(current)).toBe(current);
+
+    sdk.expectedOrigin = window.location.origin;
+    act(() => {
+      emit('SHELLUI_SETTINGS', { user: { id: '1' }, accessToken: sameSession });
+    });
+    expect(result.current).toBe(current);
+    expect(freshShellAccessToken(current)).toBe(sameSession);
+
+    act(() => {
+      emit('SHELLUI_SETTINGS_UPDATED', { user: { id: '2' }, accessToken: otherIdentity });
+    });
+    expect(result.current).toBe(otherIdentity);
   });
 
   it('keeps an omitted access token while user is set, then clears on user null', () => {
