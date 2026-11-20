@@ -23,6 +23,11 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ## [Unreleased]
 
+### 🔒 Security
+
+- **Access token:** `SHELLUI_SETTINGS` and `SHELLUI_SETTINGS_UPDATED` update the access token only when the message comes from the parent window at the parent origin.
+- **Headers:** Responses send `script-src 'self'`, `object-src 'none'`, and `base-uri 'none'`.
+
 ### 🏗 Chore
 
 - **Dependencies:** i18next 27 with react-i18next 18, TypeScript 5.9, @types/node 26, react-email 6.11.17, @hookform/resolvers 7.0.9, Tiptap 3.35.0 (pinned to match the copy `@react-email/editor` pulls in, so one `@tiptap/core` ships), Vite 6.4.6 and other minor updates. The email error helpers take i18next's `TFunction`. `returnEmptyString: true` (i18next 27 defaults it to false) keeps the v24 behavior, so the intentionally empty `emailBroadcastDelivery_` label stays empty. A test fails if more than one `@tiptap/core` is resolved.
