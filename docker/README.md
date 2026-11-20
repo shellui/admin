@@ -49,6 +49,8 @@ This image reads only `FRAME_ANCESTORS`. The shell passes `backend.url`, `storag
 | ----------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `FRAME_ANCESTORS` | Yes in production | Space-separated origins allowed to embed the app. Each entry is `'self'` or an `http(s)` origin. A bare `*` is refused. When you omit it, the Content Security Policy allows only `'self'`. |
 
+Responses also send `script-src 'self'`, `object-src 'none'`, and `base-uri 'none'`.
+
 Read the full image configuration in the [Docker image](https://github.com/shellui/admin/blob/develop/docs/development.md#docker-image) section of the development notes.
 
 ## Image tags

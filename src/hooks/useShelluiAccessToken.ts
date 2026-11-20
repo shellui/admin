@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import shellui, { addMessageListener, sendMessageToParent } from '@shellui/sdk';
+import shellui, {
+  addMessageListener,
+  resolveParentTargetOrigin,
+  sendMessageToParent,
+} from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
 import {
   freshShellAccessToken,
@@ -57,12 +61,32 @@ function requestShellSettings(): void {
   });
 }
 
+/** Parent origin for shell messages. Null when this frame cannot name it. */
+function expectedParentOrigin(): string | null {
+  const origin = resolveParentTargetOrigin();
+  if (typeof origin !== 'string') return null;
+  if (origin.length === 0 || origin === '*' || origin === 'null') return null;
+  return origin;
+}
+
+/**
+ * True when a settings message comes from `window.parent` and `event.origin`
+ * is that parent origin.
+ */
+export function isParentShellSettingsMessage(event: MessageEvent | undefined): boolean {
+  if (!event || typeof window === 'undefined') return false;
+  if (event.source !== window.parent) return false;
+  const expected = expectedParentOrigin();
+  return expected !== null && event.origin === expected;
+}
+
 /**
  * Returns the **JWT access token** from this frame's Shellui `Settings.accessToken`.
  *
  * The shell copies that frame's session token into settings. Admin sends it as
  * `Authorization: Bearer` and does not read a token from any other source.
- * Value is updated when `SHELLUI_SETTINGS` / `SHELLUI_SETTINGS_UPDATED` arrives (e.g. refresh).
+ * Value is updated when `SHELLUI_SETTINGS` / `SHELLUI_SETTINGS_UPDATED` arrives from
+ * `window.parent` at the parent origin (e.g. refresh).
  * After subscribe, and again when the tab is shown with a missing or soon-expiring token, this
  * posts `SHELLUI_SETTINGS_REQUESTED` so a dropped shell push can be replaced.
  *
@@ -80,7 +104,8 @@ export function useShelluiAccessToken(): string | null {
   tokenRef.current = token;
 
   useEffect(() => {
-    const apply = (message: { payload?: unknown }) => {
+    const apply = (message: { payload?: unknown }, event: MessageEvent) => {
+      if (!isParentShellSettingsMessage(event)) return;
       const settings = (message.payload as { settings?: Settings } | undefined)?.settings;
       // Ignore payloads without settings (do not clear the session on unrelated messages).
       if (!settings) return;
