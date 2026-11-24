@@ -21,6 +21,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [Unreleased]
+
+### 🗑 Removed
+
+- **Access tokens:** Token creation and the token list omit global metrics access (`access_global_metrics`).
+- **Dashboard:** The Prometheus text snapshot and the links to metrics endpoints are removed.
+- **Email statistics:** Queue depth, send latency, and provider errors from the Prometheus metrics endpoint are removed. Delivery counts from `GET /api/v1/stats` stay on the page.
+- **Docs:** Development notes describe company figures and JSON statistics.
+
 ## [0.10.0] - 2026-11-18
 
 Needs identity-service with company MCP admin (identity-service PR #110 or newer) and `aiService.url` in the shell config. Tool-call logs need ai-service.

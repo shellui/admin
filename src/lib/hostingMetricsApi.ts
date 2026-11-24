@@ -20,7 +20,6 @@ export const SHELLUI_HOSTING_METRIC_NAMES = {
 } as const;
 
 export type HostingMetricsSnapshot = {
-  rawText: string;
   appsTotal: number;
   appsExpired: number;
   deploymentsTotal: number;
@@ -56,7 +55,7 @@ function parseErrorMessage(body: unknown): string | null {
   return null;
 }
 
-export function buildHostingPrometheusMetricsUrl(hostingBaseUrl: string): string {
+function buildHostingPrometheusMetricsUrl(hostingBaseUrl: string): string {
   return `${hostingBaseUrl.replace(/\/+$/, '')}/hosting/v1/metrics`;
 }
 
@@ -106,10 +105,9 @@ export async function fetchHostingMetricsSnapshot(
   if (!companyId) {
     throw new Error('Missing company_id in access token.');
   }
-  const rawText = await fetchHostingPrometheusMetrics(hostingBaseUrl, accessToken);
-  const samples = parsePrometheusSamples(rawText);
+  const text = await fetchHostingPrometheusMetrics(hostingBaseUrl, accessToken);
+  const samples = parsePrometheusSamples(text);
   return {
-    rawText,
     appsTotal: readCompanySeries(samples, SHELLUI_HOSTING_METRIC_NAMES.appsTotal, companyId),
     appsExpired: readCompanySeries(samples, SHELLUI_HOSTING_METRIC_NAMES.appsExpired, companyId),
     deploymentsTotal: readCompanySeries(

@@ -1,11 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Calendar,
   CalendarDays,
   CalendarRange,
-  ChevronRight,
-  ExternalLink,
   FileText,
   Gauge,
   HardDrive,
@@ -28,20 +26,10 @@ import { AllServicesRetentionAlerts } from '@/components/EventRetentionAlert';
 import { IdentityBackendMissing } from '@/components/ServiceUrlMissing';
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { useShelluiAuthBackendBaseUrl } from '@/hooks/useShelluiAuthBackendBaseUrl';
-import {
-  buildStaffPrometheusMetricsUrl,
-  fetchAuthMetricsSnapshot,
-  type AuthMetricsSnapshot,
-} from '@/lib/authMetricsApi';
-import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
-import {
-  buildHostingPrometheusMetricsUrl,
-  fetchHostingMetricsSnapshot,
-  type HostingMetricsSnapshot,
-} from '@/lib/hostingMetricsApi';
+import { fetchAuthMetricsSnapshot, type AuthMetricsSnapshot } from '@/lib/authMetricsApi';
+import { fetchHostingMetricsSnapshot, type HostingMetricsSnapshot } from '@/lib/hostingMetricsApi';
 import { useHostingBaseUrl } from '@/lib/hostingApi';
 import {
-  buildStoragePrometheusMetricsUrl,
   fetchStorageMetricsSnapshot,
   formatBytes,
   type StorageMetricsSnapshot,
@@ -51,8 +39,6 @@ import { useStorageBaseUrl } from '@/lib/storageStatsApi';
 function formatInt(n: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.round(n));
 }
-
-type MetricsSourceId = 'identity' | 'storage' | 'hosting';
 
 export function DashboardPage() {
   const { t } = useTranslation();
@@ -74,8 +60,6 @@ export function DashboardPage() {
   const [hostingSnapshot, setHostingSnapshot] = useState<HostingMetricsSnapshot | null>(null);
   const [hostingLoading, setHostingLoading] = useState(false);
   const [hostingError, setHostingError] = useState<string | null>(null);
-
-  const [metricsSource, setMetricsSource] = useState<MetricsSourceId>('identity');
 
   const loadIdentity = useCallback(
     async (opts?: { showLoading?: boolean }) => {
@@ -177,63 +161,6 @@ export function DashboardPage() {
 
   const inactive =
     snapshot != null ? Math.max(0, Math.round(snapshot.usersTotal - snapshot.usersActive)) : 0;
-
-  const companyId = accessToken ? getCompanyIdFromJwt(accessToken) : null;
-  const identityMetricsUrl = companyId != null ? buildStaffPrometheusMetricsUrl() : null;
-  const storageMetricsUrl =
-    storageEnabled && storageBaseUrl && companyId != null
-      ? buildStoragePrometheusMetricsUrl(storageBaseUrl)
-      : null;
-  const hostingMetricsUrl =
-    hostingEnabled && hostingBaseUrl && companyId != null
-      ? buildHostingPrometheusMetricsUrl(hostingBaseUrl)
-      : null;
-
-  const sources = useMemo(() => {
-    const list: { id: MetricsSourceId; label: string; url: string | null; rawText: string }[] = [];
-    if (snapshot) {
-      list.push({
-        id: 'identity',
-        label: t('dashboardExpositionSourceIdentity'),
-        url: identityMetricsUrl,
-        rawText: snapshot.rawText,
-      });
-    }
-    if (storageSnapshot) {
-      list.push({
-        id: 'storage',
-        label: t('dashboardExpositionSourceStorage'),
-        url: storageMetricsUrl,
-        rawText: storageSnapshot.rawText,
-      });
-    }
-    if (hostingSnapshot) {
-      list.push({
-        id: 'hosting',
-        label: t('dashboardExpositionSourceHosting'),
-        url: hostingMetricsUrl,
-        rawText: hostingSnapshot.rawText,
-      });
-    }
-    return list;
-  }, [
-    hostingMetricsUrl,
-    hostingSnapshot,
-    identityMetricsUrl,
-    snapshot,
-    storageMetricsUrl,
-    storageSnapshot,
-    t,
-  ]);
-
-  useEffect(() => {
-    if (sources.length === 0) return;
-    if (!sources.some((s) => s.id === metricsSource)) {
-      setMetricsSource(sources[0].id);
-    }
-  }, [metricsSource, sources]);
-
-  const selectedSource = sources.find((s) => s.id === metricsSource) ?? sources[0] ?? null;
 
   return (
     <div className="w-full space-y-7">
@@ -445,65 +372,6 @@ export function DashboardPage() {
       <DashboardAiSection />
 
       <DashboardEmailSection />
-
-      {selectedSource && (
-        <details className="group rounded-xl border border-border bg-card text-card-foreground shadow-xs">
-          <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl px-4 py-3.5 text-sm font-semibold focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring sm:px-5 [&::-webkit-details-marker]:hidden">
-            <ChevronRight
-              className="size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-open:rotate-90"
-              aria-hidden
-            />
-            {t('dashboardExpositionTitle')}
-            <span className="ml-auto hidden font-mono text-[11px] font-normal text-muted-foreground sm:inline">
-              GET /api/v1/metrics
-            </span>
-          </summary>
-          <div className="space-y-3 border-t border-border px-4 py-4 sm:px-5">
-            <p className="text-xs text-muted-foreground">{t('dashboardExpositionDescription')}</p>
-            {sources.length > 1 && (
-              <label className="flex flex-col gap-1.5 text-sm font-medium">
-                {t('dashboardExpositionSourceLabel')}
-                <select
-                  className="h-9 max-w-md rounded-md border border-input bg-background px-2.5 text-sm text-foreground"
-                  value={selectedSource.id}
-                  onChange={(e) => setMetricsSource(e.target.value as MetricsSourceId)}
-                >
-                  {sources.map((source) => (
-                    <option
-                      key={source.id}
-                      value={source.id}
-                    >
-                      {source.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            {selectedSource.url && (
-              <div>
-                <a
-                  href={selectedSource.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-ink underline-offset-4 hover:underline"
-                >
-                  <ExternalLink
-                    className="size-3.5 shrink-0"
-                    aria-hidden
-                  />
-                  {t('dashboardMetricsEndpointLink')}
-                </a>
-                <Text className="mt-1.5 block font-mono text-[10px] text-muted-foreground">
-                  {t('dashboardMetricsEndpointHint')}
-                </Text>
-              </div>
-            )}
-            <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-lg border border-border bg-muted p-3 font-mono text-xs leading-relaxed text-foreground">
-              {selectedSource.rawText.trim()}
-            </pre>
-          </div>
-        </details>
-      )}
 
       <p className="text-xs text-muted-foreground">{t('dashboardUiHint')}</p>
     </div>

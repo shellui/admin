@@ -20,7 +20,6 @@ export type AuthSuccessfulLogin = {
 };
 
 export type AuthMetricsSnapshot = {
-  rawText: string;
   usersTotal: number;
   usersActive: number;
   usersStaff: number;
@@ -82,7 +81,6 @@ export function readSuccessfulLogins(
 export function parseAuthMetricsText(rawText: string, companyId: number): AuthMetricsSnapshot {
   const samples = parsePrometheusSamples(rawText);
   return {
-    rawText,
     usersTotal: readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.usersTotal, companyId),
     usersActive: readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.usersActive, companyId),
     usersStaff: readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.usersStaff, companyId),
@@ -118,8 +116,8 @@ function parseErrorMessage(body: unknown): string | null {
   return null;
 }
 
-/** Full URL for `GET /api/v1/metrics` (Bearer token required). Null when identity URL is unset. */
-export function buildStaffPrometheusMetricsUrl(): string | null {
+/** Company metrics URL. Null when the identity URL is unset. */
+function buildStaffPrometheusMetricsUrl(): string | null {
   const base = getAuthBackendBaseUrl();
   return base ? `${base}/api/v1/metrics` : null;
 }
@@ -148,20 +146,6 @@ export async function fetchStaffPrometheusMetrics(accessToken: string): Promise<
       msg = text.trim() || null;
     }
     throw new Error(msg || `Request failed (${res.status})`);
-  }
-  return res.text();
-}
-
-export async function fetchGlobalStaffPrometheusMetrics(accessToken: string): Promise<string> {
-  const base = getAuthBackendBaseUrl();
-  if (!base) throw new AuthBackendNotConfiguredError();
-  const res = await bearerFetch(
-    `${base}/api/v1/metrics/all`,
-    { headers: { Accept: 'text/plain' } },
-    accessToken,
-  );
-  if (!res.ok) {
-    throw new Error(`Request failed (${res.status})`);
   }
   return res.text();
 }

@@ -7,7 +7,6 @@ import { IdentityStatisticsPage } from '@/pages/IdentityStatisticsPage';
 import type { AuthMetricsSnapshot } from '@/lib/authMetricsApi';
 
 const snapshot: AuthMetricsSnapshot = {
-  rawText: '',
   usersTotal: 8,
   usersActive: 6,
   usersStaff: 1,
