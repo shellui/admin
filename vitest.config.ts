@@ -8,6 +8,11 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@shellui/core/ContentView': path.resolve(__dirname, './src/test/contentViewStub.tsx'),
+      // Real core sandbox rules from the sibling shellui checkout (see contentFrameSandbox.spec.ts).
+      '@shellui/core/contentIframeSandbox': path.resolve(
+        process.env.SHELLUI_ROOT ?? path.join(__dirname, '../shellui'),
+        'packages/core/src/components/contentIframeSandbox.ts',
+      ),
     },
   },
   test: {
