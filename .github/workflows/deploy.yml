@@ -30,6 +30,9 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: shellui/shellui
+          # Keep in step with @shellui/sdk in package.json. Core 0.8.2 drops
+          # allow-same-origin for same-origin frames, which breaks admin content frames.
+          ref: v0.8.1
           path: shellui
 
       - name: Install pnpm

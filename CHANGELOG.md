@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [Unreleased]
+
+### 🐛 Bug Fixes
+
+- **Embedding:** Admin pages render again instead of a second admin sidebar. The GitHub Pages build now pins the Shellui core checkout to `v0.8.1`, because core 0.8.2 removes `allow-same-origin` from same-origin content frames and the nested admin frame then no longer detects that it is a content frame.
+
 ## [0.11.0] - 2026-11-24
 
 ### 🗑 Removed
