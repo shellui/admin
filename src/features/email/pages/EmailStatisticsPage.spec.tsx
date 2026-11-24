@@ -6,7 +6,6 @@ import i18n from '@/i18n';
 import { EmailStatisticsPage } from '@/features/email/pages/EmailStatisticsPage';
 import { EmailApiError } from '@/lib/emailApiErrors';
 import { ScheduledJobsForbiddenError } from '@/lib/scheduledJobsApi';
-import type { EmailMetricsSnapshot } from '@/lib/emailMetrics';
 import type { EmailStats } from '@/lib/emailTypes';
 
 const stats: EmailStats = {
@@ -30,19 +29,10 @@ const stats: EmailStats = {
   byDay: [],
 };
 
-const metrics: EmailMetricsSnapshot = {
-  queueDepth: {},
-  queueAgeSeconds: {},
-  latency: {},
-  providerErrors: [],
-  authTtlExpiries: 0,
-};
-
 const hooks = vi.hoisted(() => ({ isStaff: false }));
 
 const api = vi.hoisted(() => ({
   fetchStats: vi.fn(),
-  fetchMetrics: vi.fn(),
 }));
 
 const jobsApi = vi.hoisted(() => ({
@@ -88,7 +78,6 @@ describe('EmailStatisticsPage', () => {
     cleanup();
     hooks.isStaff = false;
     api.fetchStats.mockReset();
-    api.fetchMetrics.mockReset();
     jobsApi.fetchScheduledJobs.mockReset();
     jobsApi.fetchScheduledJobRuns.mockReset();
     await i18n.changeLanguage('en');
@@ -96,7 +85,6 @@ describe('EmailStatisticsPage', () => {
 
   it('keeps a load failure at the top of the page', async () => {
     api.fetchStats.mockRejectedValue(new EmailApiError('request_failed', 503));
-    api.fetchMetrics.mockResolvedValue(metrics);
     renderPage();
     const failure = await screen.findByText('The email request failed.');
     expect(failure.closest('[role="alert"]')).toBeTruthy();
@@ -107,7 +95,6 @@ describe('EmailStatisticsPage', () => {
     api.fetchStats
       .mockResolvedValueOnce(stats)
       .mockRejectedValueOnce(new EmailApiError('request_failed', 503));
-    api.fetchMetrics.mockResolvedValue(metrics);
     renderPage();
     const refresh = await screen.findByRole('button', { name: 'Refresh' });
     expect(screen.queryByText('The email request failed.')).toBeNull();
@@ -125,7 +112,6 @@ describe('EmailStatisticsPage', () => {
 
   it('hides scheduled jobs for a company owner', async () => {
     api.fetchStats.mockResolvedValue(stats);
-    api.fetchMetrics.mockResolvedValue(metrics);
     renderPage();
     await screen.findByRole('button', { name: 'Refresh' });
     expect(screen.queryByText('Scheduled jobs')).toBeNull();
@@ -135,7 +121,6 @@ describe('EmailStatisticsPage', () => {
   it('shows email scheduled jobs to staff and hides them on 403', async () => {
     hooks.isStaff = true;
     api.fetchStats.mockResolvedValue(stats);
-    api.fetchMetrics.mockResolvedValue(metrics);
     jobsApi.fetchScheduledJobs.mockResolvedValue({
       generated_at: new Date().toISOString(),
       scheduler_enabled: true,

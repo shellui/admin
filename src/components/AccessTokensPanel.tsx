@@ -24,7 +24,7 @@ import {
   revokePersonalAccessToken,
   type AdminPersonalAccessTokenRow,
 } from '@/lib/accessTokensApi';
-import { getIsStaffFromJwt, getUserIdFromJwt } from '@/lib/jwtCompany';
+import { getUserIdFromJwt } from '@/lib/jwtCompany';
 
 function formatDateTime(iso: string | undefined, locale: string): string {
   if (!iso) return '-';
@@ -44,14 +44,12 @@ export function AccessTokensPanel({ accessToken }: AccessTokensPanelProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language || 'en';
   const currentUserId = accessToken ? getUserIdFromJwt(accessToken) : null;
-  const canGlobalMetrics = accessToken ? getIsStaffFromJwt(accessToken) : false;
 
   const [rows, setRows] = useState<AdminPersonalAccessTokenRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [pendingToken, setPendingToken] = useState<string | null>(null);
   const [readOnlyToken, setReadOnlyToken] = useState(false);
-  const [accessGlobalMetrics, setAccessGlobalMetrics] = useState(false);
   const [tokenLabel, setTokenLabel] = useState('');
   const [creating, setCreating] = useState(false);
   const [revokingId, setRevokingId] = useState<string | null>(null);
@@ -80,7 +78,6 @@ export function AccessTokensPanel({ accessToken }: AccessTokensPanelProps) {
   useEffect(() => {
     setPendingToken(null);
     setReadOnlyToken(false);
-    setAccessGlobalMetrics(false);
     setTokenLabel('');
   }, [accessToken, currentUserId]);
 
@@ -90,13 +87,11 @@ export function AccessTokensPanel({ accessToken }: AccessTokensPanelProps) {
     try {
       const res = await createPersonalAccessToken(accessToken, {
         read_only: readOnlyToken,
-        ...(canGlobalMetrics && accessGlobalMetrics ? { access_global_metrics: true } : {}),
         name: tokenLabel.trim() || undefined,
       });
       if (res.access_token) setPendingToken(res.access_token);
       await loadRows();
       setReadOnlyToken(false);
-      setAccessGlobalMetrics(false);
       setTokenLabel('');
     } catch (e) {
       shellui.toast({
@@ -239,25 +234,6 @@ export function AccessTokensPanel({ accessToken }: AccessTokensPanelProps) {
                 </span>
               </span>
             </label>
-            {canGlobalMetrics ? (
-              <label className="flex cursor-pointer items-start gap-3 p-3 text-sm">
-                <input
-                  type="checkbox"
-                  className="mt-0.5 size-4 rounded border accent-primary"
-                  checked={accessGlobalMetrics}
-                  onChange={(ev) => setAccessGlobalMetrics(ev.target.checked)}
-                />
-                <span>
-                  <span className="flex flex-wrap items-center gap-2 font-medium">
-                    {t('accessTokensGlobalMetricsLabel')}
-                    <StatusBadge tone="gold">{t('scheduledJobsStaffBadge')}</StatusBadge>
-                  </span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    {t('accessTokensGlobalMetricsHint')}
-                  </span>
-                </span>
-              </label>
-            ) : null}
           </div>
         </div>
         <div className="flex justify-end border-t border-border bg-muted/30 px-4 py-3">
@@ -311,7 +287,7 @@ export function AccessTokensPanel({ accessToken }: AccessTokensPanelProps) {
           {loading && rows.length === 0 ? (
             <SkeletonRows
               rows={3}
-              columns={['w-32', 'w-20', 'w-24', 'w-28', 'w-28', 'w-16']}
+              columns={['w-32', 'w-20', 'w-28', 'w-28', 'w-16']}
             />
           ) : rows.length === 0 ? (
             <EmptyState
@@ -324,9 +300,6 @@ export function AccessTokensPanel({ accessToken }: AccessTokensPanelProps) {
                 <TableRow className="hover:bg-transparent">
                   <TableHead>{t('accessTokensColName')}</TableHead>
                   <TableHead>{t('accessTokensColAccess')}</TableHead>
-                  <TableHead className="hidden md:table-cell">
-                    {t('accessTokensColMetrics')}
-                  </TableHead>
                   <TableHead className="hidden md:table-cell">
                     {t('accessTokensColCreated')}
                   </TableHead>
@@ -359,11 +332,6 @@ export function AccessTokensPanel({ accessToken }: AccessTokensPanelProps) {
                             ? t('accessTokensAccessReadOnly')
                             : t('accessTokensAccessReadWrite')}
                         </StatusBadge>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {mk.access_global_metrics
-                          ? t('accessTokensMetricsGlobal')
-                          : t('accessTokensMetricsCompany')}
                       </TableCell>
                       <TableCell className="hidden whitespace-nowrap text-muted-foreground md:table-cell">
                         {created}

@@ -26,7 +26,6 @@ import {
   parseVersion,
   parseVersions,
 } from '@/lib/emailApiParsers';
-import { parseEmailMetrics, type EmailMetricsSnapshot } from '@/lib/emailMetrics';
 import {
   parseImportResult,
   parseNewsletter,
@@ -120,7 +119,6 @@ export type EmailApiClient = {
     lane?: string;
     eventType?: string;
   }) => Promise<EmailStats>;
-  fetchMetrics: () => Promise<EmailMetricsSnapshot>;
   fetchBroadcasts: () => Promise<Broadcast[]>;
   fetchBroadcast: (id: number) => Promise<Broadcast>;
   createBroadcast: (body: BroadcastCreate) => Promise<Broadcast>;
@@ -356,11 +354,6 @@ export function createEmailApiClient(
             event_type: query?.eventType,
           },
         ),
-      );
-    },
-    async fetchMetrics() {
-      return parseEmailMetrics(
-        await requestText(baseUrl, '/api/v1/metrics', accessToken, companyId, 'text/plain'),
       );
     },
     async fetchBroadcasts() {

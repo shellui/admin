@@ -51,7 +51,7 @@ const resources = {
       dashboardIdentityLink: 'Users',
       dashboardIdentitySection: 'Identity',
       dashboardOverviewDescription:
-        "Health and usage of this company across Identity, Storage, Hosting and Email. Numbers come from each service's metrics endpoint.",
+        'Health and usage of this company across Identity, Storage, Hosting, and Email.',
       dashboardOverviewTitle: 'Overview',
       userDetailTabHosting: 'Hosting',
       userDetailTabStorage: 'Storage',
@@ -457,7 +457,7 @@ const resources = {
       dashboardTitle: 'Operations overview',
       dashboardEnvBadge: 'shellui-auth',
       dashboardDescription:
-        'Identity figures come from shellui-auth (`GET /api/v1/metrics`). When storage is configured, storage figures come from storage-service (`GET /storage/v1/metrics`). When hosting is configured, hosting figures come from hosting-service (`GET /hosting/v1/metrics`). When Email is shown, delivery counts come from email-service (`GET /api/v1/stats`). All require staff or company-owner access.',
+        'Identity figures for this company. Storage and hosting figures appear when those services are configured. When Email is shown, delivery counts come from email-service (`GET /api/v1/stats`). Staff or a company owner is required.',
       dashboardKpiSection: 'Identity database',
       dashboardStatUsersTotal: 'Users',
       dashboardStatUsersTotalHint: 'Rows in Django auth user table.',
@@ -477,24 +477,13 @@ const resources = {
       dashboardStatMau: 'MAU',
       dashboardStatMauHint:
         'Users with last_seen_at in the current calendar month (timezone-aware, typically UTC).',
-      dashboardExpositionTitle: 'Prometheus snapshot',
-      dashboardExpositionDescription:
-        'Raw text/plain exposition. Collapsed by default - pick an endpoint when you need the scrape payload.',
-      dashboardExpositionSourceLabel: 'Endpoint',
-      dashboardExpositionSourceIdentity: 'Identity - GET /api/v1/metrics',
-      dashboardExpositionSourceStorage: 'Storage - GET /storage/v1/metrics',
-      dashboardExpositionSourceHosting: 'Hosting - GET /hosting/v1/metrics',
-      dashboardMetricsEndpointLink: 'Open metrics endpoint',
-      dashboardMetricsEndpointHint:
-        'This URL expects an Authorization: Bearer header. A new tab may show 401 - copy the link for curl, Prometheus, or Grafana.',
       dashboardLoading: 'Loading metrics…',
       dashboardError: 'Could not load metrics.',
       dashboardForbidden:
         'Could not load metrics (forbidden). You need staff or company-owner access for this company.',
       dashboardStorageSection: 'Storage',
       dashboardStorageBadge: 'storage-service',
-      dashboardStorageDescription:
-        'Company-scoped object counts, quota, and recent uploads from `GET /storage/v1/metrics`.',
+      dashboardStorageDescription: 'Object counts, quota, and recent uploads for this company.',
       dashboardStatStorageObjects: 'Objects',
       dashboardStatStorageObjectsHint: '{{size}} stored.',
       dashboardStatStorageDocuments: 'Documents',
@@ -509,8 +498,7 @@ const resources = {
         'Could not load storage metrics (forbidden). You need staff or company-owner access for this company.',
       dashboardHostingSection: 'Hosting',
       dashboardHostingBadge: 'hosting-service',
-      dashboardHostingDescription:
-        'Company-scoped apps, deployments, and artifact usage from `GET /hosting/v1/metrics`.',
+      dashboardHostingDescription: 'Apps, deployments, and artifact usage for this company.',
       dashboardStatHostingApps: 'Apps',
       dashboardStatHostingAppsHint: '{{expired}} expired previews.',
       dashboardStatHostingDeployments: 'Deployments',
@@ -560,8 +548,7 @@ const resources = {
       dashboardStatEmailSuppressed: 'Suppressed',
       dashboardStatEmailSuppressedHint: 'Addresses blocked for later sends.',
       dashboardNoSession: 'Waiting for shell session… Open Admin from Shellui while signed in.',
-      dashboardUiHint:
-        'Later you can let operators pick cards and queries; for now this page mirrors the guarded metrics route.',
+      dashboardUiHint: 'Company figures for the signed-in company.',
       scheduledJobsTitle: 'Scheduled jobs',
       scheduledJobsStaffBadge: 'Staff only',
       scheduledJobsDescription:
@@ -1033,7 +1020,7 @@ const resources = {
       navAccessTokens: 'Access tokens',
       accessTokensPageTitle: 'Personal access tokens',
       accessTokensPageIntro:
-        'Create and revoke JWT tokens tied to your account (same shape as the Shellui session token). Use them for scripts, APIs, or metrics. The value is shown only once. Choose read-only to allow only GET/HEAD/OPTIONS; otherwise the token acts as you in this organization.',
+        'Create and revoke JWT tokens tied to your account (same shape as the Shellui session token). Use them for scripts or APIs. The value is shown only once. Choose read-only to allow only GET/HEAD/OPTIONS; otherwise the token acts as you in this organization.',
       accessTokensTitle: 'Personal access tokens',
       accessTokensHint:
         'Long-lived JWTs for automation. Read-only tokens cannot call POST, PUT, PATCH, or DELETE (including creating or revoking tokens via the API).',
@@ -1044,13 +1031,10 @@ const resources = {
       accessTokensSessionUserError:
         'Could not read your user id from the session token. Open Admin from Shellui while signed in.',
       accessTokensNameLabel: 'Label (optional)',
-      accessTokensNamePlaceholder: 'e.g. CI metrics',
+      accessTokensNamePlaceholder: 'e.g. CI',
       accessTokensReadOnlyLabel: 'Read-only token',
       accessTokensReadOnlyHint:
         'When enabled, only safe HTTP methods are allowed. Uncheck to allow creating and changing data as yourself.',
-      accessTokensGlobalMetricsLabel: 'Global metrics (all companies)',
-      accessTokensGlobalMetricsHint:
-        'Staff only. Allows GET /api/v1/metrics/all (cross-company). Same privilege as Django staff session JWT.',
       accessTokensColName: 'Label',
       accessTokensColAccess: 'Access',
       accessTokensColCreated: 'Created',
@@ -1059,9 +1043,6 @@ const resources = {
       accessTokensColActions: 'Actions',
       accessTokensAccessReadOnly: 'Read-only',
       accessTokensAccessReadWrite: 'Read & write',
-      accessTokensColMetrics: 'Metrics scope',
-      accessTokensMetricsCompany: 'Company',
-      accessTokensMetricsGlobal: 'All companies',
       accessTokensStatusActive: 'Active',
       accessTokensStatusRevoked: 'Revoked',
       accessTokensRevoke: 'Revoke',
@@ -2060,16 +2041,6 @@ const resources = {
       emailLane_auth: 'Auth',
       emailLane_transactional: 'Transactional',
       emailLane_bulk: 'Bulk',
-      emailMetricsTitle: 'Service metrics',
-      emailMetricsDescription:
-        'Queue depth and age per lane, send latency, provider errors, and auth TTL expiries from the metrics endpoint.',
-      emailMetricQueueDepth: 'Queue depth',
-      emailMetricQueueAge: 'Oldest queued: {{seconds}}s',
-      emailMetricLatency: 'Send latency',
-      emailMetricLatencyValue: 'p50 {{p50}}s, p95 {{p95}}s',
-      emailMetricProviderErrors: 'Provider errors',
-      emailMetricNoProviderErrors: 'No provider errors in the last 24 hours.',
-      emailMetricAuthExpiries: 'Auth TTL expiries',
       emailMetricLane: 'Lane',
       emailFallbackTitle: 'Using the Shellui default provider',
       emailFallbackBody:
@@ -2262,7 +2233,7 @@ const resources = {
       dashboardIdentityLink: 'Utilisateurs',
       dashboardIdentitySection: 'Identity',
       dashboardOverviewDescription:
-        "État et usage de cette entreprise pour Identity, Storage, Hosting et Email. Les chiffres viennent de l'endpoint de métriques de chaque service.",
+        'État et usage de cette entreprise pour Identity, Storage, Hosting et Email.',
       dashboardOverviewTitle: "Vue d'ensemble",
       userDetailTabHosting: 'Hébergement',
       userDetailTabStorage: 'Stockage',
@@ -2675,7 +2646,7 @@ const resources = {
       dashboardTitle: 'Vue opérations',
       dashboardEnvBadge: 'shellui-auth',
       dashboardDescription:
-        'Les chiffres d’identité viennent de shellui-auth (`GET /api/v1/metrics`). Si le stockage est configuré, les chiffres de stockage viennent de storage-service (`GET /storage/v1/metrics`). Si l’hébergement est configuré, les chiffres d’hébergement viennent de hosting-service (`GET /hosting/v1/metrics`). Si E-mail est affiché, les volumes d’envoi viennent d’email-service (`GET /api/v1/stats`). Tous exigent le staff ou un propriétaire d’entreprise.',
+        'Chiffres d’identité pour cette entreprise. Le stockage et l’hébergement s’affichent lorsqu’ils sont configurés. Si E-mail est affiché, les volumes d’envoi viennent d’email-service (`GET /api/v1/stats`). Staff ou propriétaire d’entreprise requis.',
       dashboardKpiSection: 'Base identités',
       dashboardStatUsersTotal: 'Utilisateurs',
       dashboardStatUsersTotalHint: 'Lignes dans la table utilisateurs Django.',
@@ -2695,24 +2666,13 @@ const resources = {
       dashboardStatMau: 'MAU',
       dashboardStatMauHint:
         'Utilisateurs avec last_seen_at dans le mois civil courant (fuseau horaire du serveur, souvent UTC).',
-      dashboardExpositionTitle: 'Instantané Prometheus',
-      dashboardExpositionDescription:
-        'Exposition brute text/plain. Repliée par défaut - choisissez un point d’accès si vous avez besoin du payload de scrape.',
-      dashboardExpositionSourceLabel: 'Point d’accès',
-      dashboardExpositionSourceIdentity: 'Identité - GET /api/v1/metrics',
-      dashboardExpositionSourceStorage: 'Stockage - GET /storage/v1/metrics',
-      dashboardExpositionSourceHosting: 'Hébergement - GET /hosting/v1/metrics',
-      dashboardMetricsEndpointLink: 'Ouvrir le point métriques',
-      dashboardMetricsEndpointHint:
-        'Cette URL attend un en-tête Authorization: Bearer. Un nouvel onglet peut afficher 401 - copiez le lien pour curl, Prometheus ou Grafana.',
       dashboardLoading: 'Chargement des métriques…',
       dashboardError: 'Impossible de charger les métriques.',
       dashboardForbidden:
         'Impossible de charger les métriques (interdit). Il faut le staff Django ou être propriétaire de l’entreprise pour cette société.',
       dashboardStorageSection: 'Stockage',
       dashboardStorageBadge: 'storage-service',
-      dashboardStorageDescription:
-        'Objets, quota et téléversements récents de l’entreprise via `GET /storage/v1/metrics`.',
+      dashboardStorageDescription: 'Objets, quota et téléversements récents de cette entreprise.',
       dashboardStatStorageObjects: 'Objets',
       dashboardStatStorageObjectsHint: '{{size}} stockés.',
       dashboardStatStorageDocuments: 'Documents',
@@ -2727,8 +2687,7 @@ const resources = {
         'Impossible de charger les métriques de stockage (interdit). Il faut le staff Django ou être propriétaire de l’entreprise pour cette société.',
       dashboardHostingSection: 'Hébergement',
       dashboardHostingBadge: 'hosting-service',
-      dashboardHostingDescription:
-        'Applications, déploiements et artefacts de l’entreprise via `GET /hosting/v1/metrics`.',
+      dashboardHostingDescription: 'Applications, déploiements et artefacts de cette entreprise.',
       dashboardStatHostingApps: 'Applications',
       dashboardStatHostingAppsHint: '{{expired}} aperçus expirés.',
       dashboardStatHostingDeployments: 'Déploiements',
@@ -2779,8 +2738,7 @@ const resources = {
       dashboardStatEmailSuppressedHint: 'Adresses bloquées pour les envois suivants.',
       dashboardNoSession:
         'En attente de la session shell… Ouvrez l’admin depuis Shellui en étant connecté.',
-      dashboardUiHint:
-        'Plus tard, les opérateurs pourront choisir cartes et requêtes ; pour l’instant cette page reflète la route métriques protégée.',
+      dashboardUiHint: 'Chiffres de l’entreprise pour la session en cours.',
       scheduledJobsTitle: 'Tâches planifiées',
       scheduledJobsStaffBadge: 'Staff uniquement',
       scheduledJobsDescription:
@@ -3262,7 +3220,7 @@ const resources = {
       navAccessTokens: 'Jetons d’accès',
       accessTokensPageTitle: 'Jetons d’accès personnels',
       accessTokensPageIntro:
-        'Créez et révoquez des JWT liés à votre compte (même forme que le jeton de session Shellui). Pour scripts, API ou métriques. La valeur n’est affichée qu’une fois. Choisissez lecture seule pour n’autoriser que GET/HEAD/OPTIONS ; sinon le jeton agit comme vous dans cette organisation.',
+        'Créez et révoquez des JWT liés à votre compte (même forme que le jeton de session Shellui). Pour les scripts et les API. La valeur n’est affichée qu’une fois. Choisissez lecture seule pour n’autoriser que GET/HEAD/OPTIONS ; sinon le jeton agit comme vous dans cette organisation.',
       accessTokensTitle: 'Jetons d’accès personnels',
       accessTokensHint:
         'JWT longue durée pour l’automatisation. En lecture seule, pas de POST, PUT, PATCH ou DELETE (y compris créer ou révoquer des jetons via l’API).',
@@ -3273,13 +3231,10 @@ const resources = {
       accessTokensSessionUserError:
         'Impossible de lire votre identifiant utilisateur depuis le jeton de session. Ouvrez l’admin depuis Shellui en étant connecté.',
       accessTokensNameLabel: 'Libellé (optionnel)',
-      accessTokensNamePlaceholder: 'ex. CI métriques',
+      accessTokensNamePlaceholder: 'ex. CI',
       accessTokensReadOnlyLabel: 'Jeton lecture seule',
       accessTokensReadOnlyHint:
         'Si activé, seuls les verbes HTTP sûrs sont autorisés. Décochez pour autoriser la création et la modification des données en votre nom.',
-      accessTokensGlobalMetricsLabel: 'Métriques globales (toutes les entreprises)',
-      accessTokensGlobalMetricsHint:
-        'Réservé au staff. Autorise GET /api/v1/metrics/all (toutes entreprises). Équivalent à une session staff Django.',
       accessTokensColName: 'Libellé',
       accessTokensColAccess: 'Accès',
       accessTokensColCreated: 'Création',
@@ -3288,9 +3243,6 @@ const resources = {
       accessTokensColActions: 'Actions',
       accessTokensAccessReadOnly: 'Lecture seule',
       accessTokensAccessReadWrite: 'Lecture et écriture',
-      accessTokensColMetrics: 'Portée métriques',
-      accessTokensMetricsCompany: 'Entreprise',
-      accessTokensMetricsGlobal: 'Toutes entreprises',
       accessTokensStatusActive: 'Actif',
       accessTokensStatusRevoked: 'Révoqué',
       accessTokensRevoke: 'Révoquer',
@@ -4317,16 +4269,6 @@ const resources = {
       emailLane_auth: 'Auth',
       emailLane_transactional: 'Transactionnel',
       emailLane_bulk: 'Groupé',
-      emailMetricsTitle: 'Métriques du service',
-      emailMetricsDescription:
-        'Profondeur et âge de la file par voie, latence d’envoi, erreurs fournisseur et expirations TTL auth, depuis l’endpoint de métriques.',
-      emailMetricQueueDepth: 'Profondeur de file',
-      emailMetricQueueAge: 'Plus ancien en file : {{seconds}}s',
-      emailMetricLatency: 'Latence d’envoi',
-      emailMetricLatencyValue: 'p50 {{p50}}s, p95 {{p95}}s',
-      emailMetricProviderErrors: 'Erreurs fournisseur',
-      emailMetricNoProviderErrors: 'Aucune erreur fournisseur sur les dernières 24 heures.',
-      emailMetricAuthExpiries: 'Expirations TTL auth',
       emailMetricLane: 'Voie',
       emailFallbackTitle: 'Fournisseur Shellui par défaut',
       emailFallbackBody:
