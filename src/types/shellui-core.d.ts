@@ -39,3 +39,7 @@ declare module '@shellui/core/ContentView' {
     navItem: NavigationItem;
   }): ReactElement;
 }
+
+declare module '@shellui/core/contentIframeSandbox' {
+  export function resolveContentIframeSandbox(iframeUrl: string, shellOrigin?: string): string;
+}
