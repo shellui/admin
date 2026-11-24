@@ -17,7 +17,6 @@ export const SHELLUI_STORAGE_METRIC_NAMES = {
 } as const;
 
 export type StorageMetricsSnapshot = {
-  rawText: string;
   objectsTotal: number;
   bytesTotal: number;
   bucketsTotal: number;
@@ -53,7 +52,7 @@ function parseErrorMessage(body: unknown): string | null {
   return null;
 }
 
-export function buildStoragePrometheusMetricsUrl(storageBaseUrl: string): string {
+function buildStoragePrometheusMetricsUrl(storageBaseUrl: string): string {
   return `${storageBaseUrl.replace(/\/+$/, '')}/storage/v1/metrics`;
 }
 
@@ -116,10 +115,9 @@ export async function fetchStorageMetricsSnapshot(
   if (!companyId) {
     throw new Error('Missing company_id in access token.');
   }
-  const rawText = await fetchStoragePrometheusMetrics(storageBaseUrl, accessToken);
-  const samples = parsePrometheusSamples(rawText);
+  const text = await fetchStoragePrometheusMetrics(storageBaseUrl, accessToken);
+  const samples = parsePrometheusSamples(text);
   return {
-    rawText,
     objectsTotal: readCompanySeries(samples, SHELLUI_STORAGE_METRIC_NAMES.objectsTotal, companyId),
     bytesTotal: readCompanySeries(samples, SHELLUI_STORAGE_METRIC_NAMES.bytesTotal, companyId),
     bucketsTotal: readCompanySeries(samples, SHELLUI_STORAGE_METRIC_NAMES.bucketsTotal, companyId),

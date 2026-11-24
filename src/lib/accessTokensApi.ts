@@ -5,7 +5,6 @@ export type AdminPersonalAccessTokenRow = {
   id: string;
   user_id: number;
   read_only: boolean;
-  access_global_metrics: boolean;
   name: string;
   created_at: string;
   last_used_at: string | null;
@@ -60,7 +59,7 @@ export async function fetchPersonalAccessTokens(
 
 export async function createPersonalAccessToken(
   accessToken: string,
-  payload: { read_only?: boolean; access_global_metrics?: boolean; name?: string },
+  payload: { read_only?: boolean; name?: string },
 ): Promise<AdminPersonalAccessTokenCreateResponse> {
   const res = await authFetch('/api/v1/personal-access-tokens', accessToken, {
     method: 'POST',

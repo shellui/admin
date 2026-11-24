@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Ban, Inbox, MailCheck, MailWarning, RefreshCw, Send, Timer, UserX } from 'lucide-react';
-import { KpiCard, KpiRow, KpiSkeletonRow, ServiceSectionHeader } from '@/components/admin/Kpi';
+import { KpiCard, KpiRow, KpiSkeletonRow } from '@/components/admin/Kpi';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { BarSeriesCard, StatTableCard } from '@/components/admin/StatsParts';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -17,16 +17,13 @@ import { DashboardScheduledJobsSection } from '@/components/DashboardScheduledJo
 import { useShelluiAccessToken } from '@/hooks/useShelluiAccessToken';
 import { emailErrorText } from '@/lib/emailApiErrors';
 import { filterByQuery, listNeedsSearch, sectionTitle } from '@/lib/emailList';
-import { EMAIL_LANES, type EmailMetricsSnapshot } from '@/lib/emailMetrics';
 import type { EmailCountBucket, EmailStats } from '@/lib/emailTypes';
 import { cn } from '@/lib/utils';
 
+const EMAIL_LANES = ['auth', 'transactional', 'bulk'] as const;
+
 function formatInt(n: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.round(n));
-}
-
-function formatSeconds(n: number): string {
-  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(n);
 }
 
 const COUNT_LABELS: Array<{
@@ -47,7 +44,6 @@ export function EmailStatisticsPage() {
   const accessToken = useShelluiAccessToken();
   const { api, baseUrl, canManage } = useEmailApi(accessToken);
   const [stats, setStats] = useState<EmailStats | null>(null);
-  const [metrics, setMetrics] = useState<EmailMetricsSnapshot | null>(null);
   const [lane, setLane] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
@@ -75,12 +71,8 @@ export function EmailStatisticsPage() {
         setActionResult(null);
       }
       try {
-        const [nextStats, nextMetrics] = await Promise.all([
-          api.fetchStats(lane ? { lane } : {}),
-          api.fetchMetrics(),
-        ]);
+        const nextStats = await api.fetchStats(lane ? { lane } : {});
         setStats(nextStats);
-        setMetrics(nextMetrics);
         if (source === 'action') {
           setError(null);
           setActionError(null);
@@ -89,7 +81,6 @@ export function EmailStatisticsPage() {
       } catch (err) {
         if (source === 'page') {
           setStats(null);
-          setMetrics(null);
           setError(err);
         } else {
           setActionError(err);
@@ -323,75 +314,6 @@ export function EmailStatisticsPage() {
             </section>
           </div>
         </>
-      ) : null}
-
-      {metrics && !loading ? (
-        <section className="space-y-4">
-          <ServiceSectionHeader title={t('emailMetricsTitle')} />
-          <p className="-mt-2 max-w-3xl text-sm text-muted-foreground">
-            {t('emailMetricsDescription')}
-          </p>
-          <KpiRow label={t('emailMetricsTitle')}>
-            {EMAIL_LANES.map((item) => (
-              <KpiCard
-                key={item}
-                label={`${t('emailMetricQueueDepth')} · ${t(`emailLane_${item}`)}`}
-                value={formatInt(metrics.queueDepth[item] ?? 0)}
-                hint={t('emailMetricQueueAge', {
-                  seconds: formatSeconds(metrics.queueAgeSeconds[item] ?? 0),
-                })}
-                icon={Timer}
-              />
-            ))}
-            <KpiCard
-              label={t('emailMetricAuthExpiries')}
-              value={formatInt(metrics.authTtlExpiries)}
-              icon={MailWarning}
-            />
-          </KpiRow>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <StatTableCard
-              title={t('emailMetricLatency')}
-              columns={[
-                { label: t('emailMetricLane') },
-                { label: 'p50', className: 'text-right' },
-                { label: 'p95', className: 'text-right' },
-              ]}
-              rows={EMAIL_LANES.map((item) => ({
-                key: item,
-                cells: [
-                  t(`emailLane_${item}`),
-                  <span className="tabular-nums">
-                    {formatSeconds(metrics.latency[item]?.p50 ?? 0)}s
-                  </span>,
-                  <span className="tabular-nums">
-                    {formatSeconds(metrics.latency[item]?.p95 ?? 0)}s
-                  </span>,
-                ],
-              }))}
-              empty={t('emailStatsEmpty')}
-            />
-            <StatTableCard
-              title={sectionTitle(t('emailMetricProviderErrors'), metrics.providerErrors.length)}
-              columns={[
-                { label: t('identityStatsColProvider') },
-                { label: t('scheduledJobsColError') },
-                { label: t('hostingColCount'), className: 'text-right' },
-              ]}
-              rows={metrics.providerErrors.map((row) => ({
-                key: `${row.provider}:${row.errorCode}`,
-                cells: [
-                  <span className="font-mono text-xs">{row.provider}</span>,
-                  <span className="font-mono text-xs">
-                    {row.errorCode || t('emailError_request_failed')}
-                  </span>,
-                  num(row.count),
-                ],
-              }))}
-              empty={t('emailMetricNoProviderErrors')}
-            />
-          </div>
-        </section>
       ) : null}
 
       {baseUrl ? (
