@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [0.11.2] - 2026-11-25
+
+### 🐛 Bug Fixes
+
+- **Dashboard & Identity statistics:** Repoint the Identity, Storage, and Hosting dashboard cards and the Identity statistics page from the removed Prometheus `/metrics` endpoints to the JSON statistics endpoints (`GET /api/v1/stats`, `GET /storage/v1/stats`, and `GET /hosting/v1/stats`).
+
 ## [0.11.1] - 2026-11-24
 
 ### 🐛 Bug Fixes
