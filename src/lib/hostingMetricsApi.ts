@@ -1,23 +1,8 @@
 import { bearerFetch } from './shellAccessToken';
-import { parsePrometheusSamples } from '@/lib/prometheusText';
 import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
 import { formatBytes } from '@/lib/storageMetricsApi';
 
 export { formatBytes };
-
-export const SHELLUI_HOSTING_METRIC_NAMES = {
-  appsTotal: 'shellui_hosting_apps_total',
-  appsExpired: 'shellui_hosting_apps_expired',
-  deploymentsTotal: 'shellui_hosting_deployments_total',
-  activeDeployments: 'shellui_hosting_active_deployments',
-  artifactBytes: 'shellui_hosting_artifact_bytes',
-  deployments24h: 'shellui_hosting_deployments_24h',
-  deployments7d: 'shellui_hosting_deployments_7d',
-  deployments30d: 'shellui_hosting_deployments_30d',
-  accessPending: 'shellui_hosting_access_pending',
-  accessApproved: 'shellui_hosting_access_approved',
-  accessDenied: 'shellui_hosting_access_denied',
-} as const;
 
 export type HostingMetricsSnapshot = {
   appsTotal: number;
@@ -33,18 +18,21 @@ export type HostingMetricsSnapshot = {
   accessDenied: number;
 };
 
-function readCompanySeries(
-  samples: Map<string, number>,
-  metricName: string,
-  companyId: number,
-): number {
-  const key = `${metricName}{company_id="${companyId}"}`;
-  const v = samples.get(key);
-  if (v === undefined || !Number.isFinite(v)) {
-    throw new Error(`Missing metric ${key} in exposition`);
-  }
-  return v;
-}
+type HostingStatsJson = {
+  apps?: number;
+  apps_expired?: number;
+  deployments?: number;
+  active_deployments?: number;
+  artifact_bytes?: number;
+  deployments_24h?: number;
+  deployments_7d?: number;
+  deployments_30d?: number;
+  access?: {
+    pending?: number;
+    approved?: number;
+    denied?: number;
+  };
+};
 
 function parseErrorMessage(body: unknown): string | null {
   if (!body || typeof body !== 'object') return null;
@@ -55,48 +43,31 @@ function parseErrorMessage(body: unknown): string | null {
   return null;
 }
 
-function buildHostingPrometheusMetricsUrl(hostingBaseUrl: string): string {
-  return `${hostingBaseUrl.replace(/\/+$/, '')}/hosting/v1/metrics`;
+function num(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
-/** Prometheus text from hosting-service `GET /hosting/v1/metrics` (staff or company owner). */
-export async function fetchHostingPrometheusMetrics(
-  hostingBaseUrl: string,
-  accessToken: string,
-): Promise<string> {
-  const res = await bearerFetch(
-    buildHostingPrometheusMetricsUrl(hostingBaseUrl),
-    {
-      headers: {
-        Accept: 'text/plain',
-      },
-    },
-    accessToken,
-  );
-  const ct = res.headers.get('Content-Type') || '';
-  if (!res.ok) {
-    let msg: string | null = null;
-    if (ct.includes('application/json') || ct.includes('text/plain')) {
-      if (ct.includes('application/json')) {
-        const body = await res.json().catch(() => null);
-        msg = parseErrorMessage(body);
-      } else {
-        const text = await res.text().catch(() => '');
-        try {
-          msg = parseErrorMessage(JSON.parse(text));
-        } catch {
-          msg = text.trim() || null;
-        }
-      }
-    } else {
-      const text = await res.text().catch(() => '');
-      msg = text.trim() || null;
-    }
-    throw new Error(msg || `Request failed (${res.status})`);
+export function parseHostingStatsSnapshot(body: unknown): HostingMetricsSnapshot {
+  if (!body || typeof body !== 'object') {
+    throw new Error('Unexpected hosting stats response.');
   }
-  return res.text();
+  const data = body as HostingStatsJson;
+  return {
+    appsTotal: num(data.apps),
+    appsExpired: num(data.apps_expired),
+    deploymentsTotal: num(data.deployments),
+    activeDeployments: num(data.active_deployments),
+    artifactBytes: num(data.artifact_bytes),
+    deployments24h: num(data.deployments_24h),
+    deployments7d: num(data.deployments_7d),
+    deployments30d: num(data.deployments_30d),
+    accessPending: num(data.access?.pending),
+    accessApproved: num(data.access?.approved),
+    accessDenied: num(data.access?.denied),
+  };
 }
 
+/** Hosting JSON stats from hosting-service `GET /hosting/v1/stats`. */
 export async function fetchHostingMetricsSnapshot(
   hostingBaseUrl: string,
   accessToken: string,
@@ -105,51 +76,18 @@ export async function fetchHostingMetricsSnapshot(
   if (!companyId) {
     throw new Error('Missing company_id in access token.');
   }
-  const text = await fetchHostingPrometheusMetrics(hostingBaseUrl, accessToken);
-  const samples = parsePrometheusSamples(text);
-  return {
-    appsTotal: readCompanySeries(samples, SHELLUI_HOSTING_METRIC_NAMES.appsTotal, companyId),
-    appsExpired: readCompanySeries(samples, SHELLUI_HOSTING_METRIC_NAMES.appsExpired, companyId),
-    deploymentsTotal: readCompanySeries(
-      samples,
-      SHELLUI_HOSTING_METRIC_NAMES.deploymentsTotal,
-      companyId,
-    ),
-    activeDeployments: readCompanySeries(
-      samples,
-      SHELLUI_HOSTING_METRIC_NAMES.activeDeployments,
-      companyId,
-    ),
-    artifactBytes: readCompanySeries(
-      samples,
-      SHELLUI_HOSTING_METRIC_NAMES.artifactBytes,
-      companyId,
-    ),
-    deployments24h: readCompanySeries(
-      samples,
-      SHELLUI_HOSTING_METRIC_NAMES.deployments24h,
-      companyId,
-    ),
-    deployments7d: readCompanySeries(
-      samples,
-      SHELLUI_HOSTING_METRIC_NAMES.deployments7d,
-      companyId,
-    ),
-    deployments30d: readCompanySeries(
-      samples,
-      SHELLUI_HOSTING_METRIC_NAMES.deployments30d,
-      companyId,
-    ),
-    accessPending: readCompanySeries(
-      samples,
-      SHELLUI_HOSTING_METRIC_NAMES.accessPending,
-      companyId,
-    ),
-    accessApproved: readCompanySeries(
-      samples,
-      SHELLUI_HOSTING_METRIC_NAMES.accessApproved,
-      companyId,
-    ),
-    accessDenied: readCompanySeries(samples, SHELLUI_HOSTING_METRIC_NAMES.accessDenied, companyId),
-  };
+  const res = await bearerFetch(
+    `${hostingBaseUrl.replace(/\/+$/, '')}/hosting/v1/stats`,
+    {
+      headers: {
+        Accept: 'application/json',
+      },
+    },
+    accessToken,
+  );
+  const body = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
+  }
+  return parseHostingStatsSnapshot(body);
 }

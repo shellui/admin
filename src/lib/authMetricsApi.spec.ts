@@ -1,31 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  fetchAuthMetricsSnapshot,
-  fetchStaffPrometheusMetrics,
-  parseAuthMetricsText,
-  SHELLUI_AUTH_METRIC_NAMES,
-} from '@/lib/authMetricsApi';
+import { fetchAuthMetricsSnapshot, parseAuthStatsJson } from '@/lib/authMetricsApi';
 
 const COMPANY = 10;
-
-function gauge(name: string, companyId: number, value: number): string {
-  return `${name}{company_id="${companyId}"} ${value}`;
-}
-
-function companyExposition(logins = ''): string {
-  return [
-    gauge(SHELLUI_AUTH_METRIC_NAMES.usersTotal, COMPANY, 8),
-    gauge(SHELLUI_AUTH_METRIC_NAMES.usersActive, COMPANY, 6),
-    gauge(SHELLUI_AUTH_METRIC_NAMES.usersStaff, COMPANY, 1),
-    gauge(SHELLUI_AUTH_METRIC_NAMES.socialAccountsTotal, COMPANY, 3),
-    gauge(SHELLUI_AUTH_METRIC_NAMES.dailyActiveUsers, COMPANY, 2),
-    gauge(SHELLUI_AUTH_METRIC_NAMES.weeklyActiveUsers, COMPANY, 4),
-    gauge(SHELLUI_AUTH_METRIC_NAMES.monthlyActiveUsers, COMPANY, 5),
-    logins,
-  ]
-    .filter(Boolean)
-    .join('\n');
-}
 
 function accessToken(companyId: number): string {
   const payload = btoa(JSON.stringify({ company_id: companyId }))
@@ -35,17 +11,22 @@ function accessToken(companyId: number): string {
   return `header.${payload}.sig`;
 }
 
-describe('parseAuthMetricsText', () => {
-  it('reads company gauges and successful sign-ins for that company only', () => {
-    const text = companyExposition(
-      [
-        `${SHELLUI_AUTH_METRIC_NAMES.successfulLogins}{company_id="10",provider="google"} 4`,
-        `${SHELLUI_AUTH_METRIC_NAMES.successfulLogins}{provider="google",company_id="10"} 2`,
-        `${SHELLUI_AUTH_METRIC_NAMES.successfulLogins}{company_id="10",provider="magic_link"} 1`,
-        `${SHELLUI_AUTH_METRIC_NAMES.successfulLogins}{company_id="99",provider="google"} 50`,
-      ].join('\n'),
-    );
-    const snapshot = parseAuthMetricsText(text, COMPANY);
+describe('parseAuthStatsJson', () => {
+  it('reads company counts and successful sign-ins', () => {
+    const snapshot = parseAuthStatsJson({
+      company_id: COMPANY,
+      users_total: 8,
+      users_active: 6,
+      users_staff: 1,
+      social_accounts_total: 3,
+      daily_active_users: 2,
+      weekly_active_users: 4,
+      monthly_active_users: 5,
+      successful_logins: [
+        { provider: 'magic_link', total: 1 },
+        { provider: 'google', total: 6 },
+      ],
+    });
     expect(snapshot.usersTotal).toBe(8);
     expect(snapshot.usersActive).toBe(6);
     expect(snapshot.usersStaff).toBe(1);
@@ -59,12 +40,8 @@ describe('parseAuthMetricsText', () => {
     ]);
   });
 
-  it('treats a missing login counter as no sign-ins, not an error', () => {
-    expect(parseAuthMetricsText(companyExposition(), COMPANY).successfulLogins).toEqual([]);
-  });
-
-  it('throws when a required company gauge is missing', () => {
-    expect(() => parseAuthMetricsText('# empty\n', COMPANY)).toThrow(/Missing metric/);
+  it('throws when a required count is missing', () => {
+    expect(() => parseAuthStatsJson({})).toThrow(/Missing users_total/);
   });
 });
 
@@ -73,15 +50,24 @@ describe('fetchAuthMetricsSnapshot', () => {
     vi.unstubAllGlobals();
   });
 
-  it('loads the company endpoint and never the global one', async () => {
+  it('loads GET /api/v1/stats with a Bearer token', async () => {
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      expect(String(url)).toBe('http://localhost:8000/api/v1/metrics');
-      expect(String(url)).not.toContain('/metrics/all');
-      expect(new Headers(init?.headers).get('Authorization')).toMatch(/^Bearer /);
-      return new Response(companyExposition(), {
-        status: 200,
-        headers: { 'Content-Type': 'text/plain' },
-      });
+      expect(String(url)).toBe('http://localhost:8000/api/v1/stats');
+      expect(new Headers(init?.headers).get('Accept')).toBe('application/json');
+      return new Response(
+        JSON.stringify({
+          company_id: COMPANY,
+          users_total: 8,
+          users_active: 6,
+          users_staff: 1,
+          social_accounts_total: 3,
+          daily_active_users: 2,
+          weekly_active_users: 4,
+          monthly_active_users: 5,
+          successful_logins: [],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
     });
     vi.stubGlobal('fetch', fetchMock);
     const token = accessToken(COMPANY);
@@ -92,14 +78,17 @@ describe('fetchAuthMetricsSnapshot', () => {
     expect(headers.get('Authorization')).toBe(`Bearer ${token}`);
   });
 
-  it('surfaces a forbidden company scrape as an error', async () => {
+  it('surfaces a forbidden stats response as an error', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(
         async () =>
-          new Response('Forbidden', { status: 403, headers: { 'Content-Type': 'text/plain' } }),
+          new Response(JSON.stringify({ error: 'Forbidden' }), {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' },
+          }),
       ),
     );
-    await expect(fetchStaffPrometheusMetrics(accessToken(COMPANY))).rejects.toThrow(/Forbidden/);
+    await expect(fetchAuthMetricsSnapshot(accessToken(COMPANY))).rejects.toThrow(/Forbidden/);
   });
 });
