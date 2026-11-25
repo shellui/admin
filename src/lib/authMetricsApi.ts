@@ -1,18 +1,6 @@
 import { bearerFetch } from './shellAccessToken';
 import { AuthBackendNotConfiguredError, getAuthBackendBaseUrl } from '@/lib/backendUrl';
 import { getCompanyIdFromJwt } from '@/lib/jwtCompany';
-import { parsePrometheusSamples } from '@/lib/prometheusText';
-
-export const SHELLUI_AUTH_METRIC_NAMES = {
-  usersTotal: 'shellui_auth_company_users_total',
-  usersActive: 'shellui_auth_company_users_active',
-  usersStaff: 'shellui_auth_company_users_staff',
-  socialAccountsTotal: 'shellui_auth_company_social_accounts_total',
-  dailyActiveUsers: 'shellui_auth_company_daily_active_users',
-  weeklyActiveUsers: 'shellui_auth_company_weekly_active_users',
-  monthlyActiveUsers: 'shellui_auth_company_monthly_active_users',
-  successfulLogins: 'shellui_auth_successful_logins_total',
-} as const;
 
 export type AuthSuccessfulLogin = {
   provider: string;
@@ -31,82 +19,17 @@ export type AuthMetricsSnapshot = {
   successfulLogins: AuthSuccessfulLogin[];
 };
 
-function readCompanySeries(
-  samples: Map<string, number>,
-  metricName: string,
-  companyId: number,
-): number {
-  const key = `${metricName}{company_id="${companyId}"}`;
-  const v = samples.get(key);
-  if (v === undefined || !Number.isFinite(v)) {
-    throw new Error(`Missing metric ${key} in exposition`);
-  }
-  return v;
-}
-
-function parsePrometheusLabels(body: string): Record<string, string> {
-  const labels: Record<string, string> = {};
-  const re = /([a-zA-Z_][a-zA-Z0-9_]*)="((?:\\.|[^"\\])*)"/g;
-  for (const match of body.matchAll(re)) {
-    labels[match[1]] = match[2].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-  }
-  return labels;
-}
-
-/**
- * Successful sign-ins for this company only.
- * The counter lives on the company scrape and resets when the process restarts.
- * Series for any other company are ignored.
- */
-export function readSuccessfulLogins(
-  samples: Map<string, number>,
-  companyId: number,
-): AuthSuccessfulLogin[] {
-  const name = SHELLUI_AUTH_METRIC_NAMES.successfulLogins;
-  const prefix = `${name}{`;
-  const byProvider = new Map<string, number>();
-  for (const [lhs, value] of samples) {
-    if (!lhs.startsWith(prefix) || !lhs.endsWith('}')) continue;
-    const labels = parsePrometheusLabels(lhs.slice(prefix.length, -1));
-    if (labels.company_id !== String(companyId)) continue;
-    const provider = labels.provider?.trim();
-    if (!provider || !Number.isFinite(value)) continue;
-    byProvider.set(provider, (byProvider.get(provider) ?? 0) + value);
-  }
-  return [...byProvider.entries()]
-    .map(([provider, total]) => ({ provider, total }))
-    .sort((a, b) => b.total - a.total || a.provider.localeCompare(b.provider));
-}
-
-export function parseAuthMetricsText(rawText: string, companyId: number): AuthMetricsSnapshot {
-  const samples = parsePrometheusSamples(rawText);
-  return {
-    usersTotal: readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.usersTotal, companyId),
-    usersActive: readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.usersActive, companyId),
-    usersStaff: readCompanySeries(samples, SHELLUI_AUTH_METRIC_NAMES.usersStaff, companyId),
-    socialAccountsTotal: readCompanySeries(
-      samples,
-      SHELLUI_AUTH_METRIC_NAMES.socialAccountsTotal,
-      companyId,
-    ),
-    dailyActiveUsers: readCompanySeries(
-      samples,
-      SHELLUI_AUTH_METRIC_NAMES.dailyActiveUsers,
-      companyId,
-    ),
-    weeklyActiveUsers: readCompanySeries(
-      samples,
-      SHELLUI_AUTH_METRIC_NAMES.weeklyActiveUsers,
-      companyId,
-    ),
-    monthlyActiveUsers: readCompanySeries(
-      samples,
-      SHELLUI_AUTH_METRIC_NAMES.monthlyActiveUsers,
-      companyId,
-    ),
-    successfulLogins: readSuccessfulLogins(samples, companyId),
-  };
-}
+type IdentityStatsResponse = {
+  company_id?: number;
+  users_total?: number;
+  users_active?: number;
+  users_staff?: number;
+  social_accounts_total?: number;
+  daily_active_users?: number;
+  weekly_active_users?: number;
+  monthly_active_users?: number;
+  successful_logins?: Array<{ provider?: string; total?: number }>;
+};
 
 function parseErrorMessage(body: unknown): string | null {
   if (!body || typeof body !== 'object') return null;
@@ -116,45 +39,63 @@ function parseErrorMessage(body: unknown): string | null {
   return null;
 }
 
-/** Company metrics URL. Null when the identity URL is unset. */
-function buildStaffPrometheusMetricsUrl(): string | null {
-  const base = getAuthBackendBaseUrl();
-  return base ? `${base}/api/v1/metrics` : null;
-}
-
-/** Prometheus text from shellui-auth `GET /api/v1/metrics` (staff or company owner). */
-export async function fetchStaffPrometheusMetrics(accessToken: string): Promise<string> {
-  const url = buildStaffPrometheusMetricsUrl();
-  if (!url) throw new AuthBackendNotConfiguredError();
-  const res = await bearerFetch(
-    url,
-    {
-      headers: {
-        Accept: 'text/plain',
-      },
-    },
-    accessToken,
-  );
-  const ct = res.headers.get('Content-Type') || '';
-  if (!res.ok) {
-    let msg: string | null = null;
-    if (ct.includes('application/json')) {
-      const body = await res.json().catch(() => null);
-      msg = parseErrorMessage(body);
-    } else {
-      const text = await res.text().catch(() => '');
-      msg = text.trim() || null;
-    }
-    throw new Error(msg || `Request failed (${res.status})`);
+function readInt(value: unknown, field: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`Missing ${field} in identity stats response`);
   }
-  return res.text();
+  return value;
 }
 
+export function parseAuthStatsJson(body: unknown): AuthMetricsSnapshot {
+  if (!body || typeof body !== 'object') {
+    throw new Error('Unexpected identity stats response.');
+  }
+  const data = body as IdentityStatsResponse;
+  const rawLogins = Array.isArray(data.successful_logins) ? data.successful_logins : [];
+  const successfulLogins = rawLogins
+    .filter(
+      (row): row is { provider: string; total: number } =>
+        Boolean(row) &&
+        typeof row.provider === 'string' &&
+        row.provider.trim() !== '' &&
+        typeof row.total === 'number' &&
+        Number.isFinite(row.total),
+    )
+    .map((row) => ({ provider: row.provider.trim(), total: row.total }))
+    .sort((a, b) => b.total - a.total || a.provider.localeCompare(b.provider));
+
+  return {
+    usersTotal: readInt(data.users_total, 'users_total'),
+    usersActive: readInt(data.users_active, 'users_active'),
+    usersStaff: readInt(data.users_staff, 'users_staff'),
+    socialAccountsTotal: readInt(data.social_accounts_total, 'social_accounts_total'),
+    dailyActiveUsers: readInt(data.daily_active_users, 'daily_active_users'),
+    weeklyActiveUsers: readInt(data.weekly_active_users, 'weekly_active_users'),
+    monthlyActiveUsers: readInt(data.monthly_active_users, 'monthly_active_users'),
+    successfulLogins,
+  };
+}
+
+/** Company JSON stats from identity-service `GET /api/v1/stats` (staff or company owner). */
 export async function fetchAuthMetricsSnapshot(accessToken: string): Promise<AuthMetricsSnapshot> {
   const companyId = getCompanyIdFromJwt(accessToken);
   if (!companyId) {
     throw new Error('Missing company_id in access token.');
   }
-  const rawText = await fetchStaffPrometheusMetrics(accessToken);
-  return parseAuthMetricsText(rawText, companyId);
+  const base = getAuthBackendBaseUrl();
+  if (!base) throw new AuthBackendNotConfiguredError();
+  const res = await bearerFetch(
+    `${base}/api/v1/stats`,
+    {
+      headers: {
+        Accept: 'application/json',
+      },
+    },
+    accessToken,
+  );
+  const body = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseErrorMessage(body) || `Request failed (${res.status})`);
+  }
+  return parseAuthStatsJson(body);
 }
