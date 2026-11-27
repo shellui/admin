@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2, Lock, X } from 'lucide-react';
@@ -20,7 +21,7 @@ import { EmailApiError, emailErrorText } from '@/lib/emailApiErrors';
 import { classifyExtraHost, MAX_EXTRA_LINK_HOSTS } from '@/lib/emailLinkHosts';
 import type { AuthLinkHosts } from '@/lib/emailTypes';
 
-function hostErrorText(t: (key: string) => string, error: unknown): ActionFeedbackState {
+function hostErrorText(t: TFunction, error: unknown): ActionFeedbackState {
   if (error instanceof EmailApiError) {
     const code = error.fieldErrors.hosts?.[0];
     if (code) {

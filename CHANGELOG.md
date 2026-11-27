@@ -21,6 +21,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [Unreleased]
+
+### 🏗 Chore
+
+- **Dependencies:** i18next 27 with react-i18next 18, TypeScript 5.9, @types/node 26, react-email 6.11.17, @hookform/resolvers 7.0.9, Tiptap 3.35.0 (pinned to match the copy `@react-email/editor` pulls in, so one `@tiptap/core` ships), Vite 6.4.6 and other minor updates. The email error helpers take i18next's `TFunction`. `returnEmptyString: true` (i18next 27 defaults it to false) keeps the v24 behavior, so the intentionally empty `emailBroadcastDelivery_` label stays empty. A test fails if more than one `@tiptap/core` is resolved.
+- **Docker:** Node 26.13.1 (current LTS) for the build and dev stages, `.nvmrc` and CI. nginx-unprivileged 1.31.
+
 ## [0.11.2] - 2026-11-25
 
 ### 🐛 Bug Fixes

@@ -4430,10 +4430,20 @@ const resources = {
   },
 } as const;
 
+declare module 'i18next' {
+  interface CustomTypeOptions {
+    // Matches the runtime option below: an empty translation stays empty.
+    returnEmptyString: true;
+  }
+}
+
 export const i18nInit = i18n.use(initReactI18next).init({
   resources,
   lng: 'en',
   fallbackLng: 'en',
+  // i18next 27 defaults this to false, which returns the key for an empty string.
+  // `true` keeps the v24 behavior: `emailBroadcastDelivery_` is intentionally empty.
+  returnEmptyString: true,
   interpolation: {
     escapeValue: false,
   },

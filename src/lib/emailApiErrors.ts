@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 export class EmailApiError extends Error {
   readonly errorCode: string;
   readonly fieldErrors: Record<string, string[]>;
@@ -58,9 +59,7 @@ export function parseEmailApiError(body: unknown, status: number): EmailApiError
   return new EmailApiError(errorCode, status, fieldErrors, missingVariables);
 }
 
-type Translate = (key: string, options?: Record<string, unknown>) => string;
-
-export function emailErrorText(t: Translate, error: unknown): string {
+export function emailErrorText(t: TFunction, error: unknown): string {
   if (!(error instanceof EmailApiError)) return t('emailError_request_failed');
   if (error.errorCode === 'template_variables_mismatch') {
     return t('emailError_template_variables_mismatch', {

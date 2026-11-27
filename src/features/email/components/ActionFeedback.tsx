@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import { Text } from '@/components/ui/text';
 import { emailErrorText } from '@/lib/emailApiErrors';
 
@@ -6,9 +7,7 @@ export type ActionFeedbackState = {
   text: string;
 };
 
-type Translate = (key: string) => string;
-
-export function feedbackFromError(t: Translate, error: unknown): ActionFeedbackState {
+export function feedbackFromError(t: TFunction, error: unknown): ActionFeedbackState {
   return { tone: 'error', text: emailErrorText(t, error) };
 }
 
