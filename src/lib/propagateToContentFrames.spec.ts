@@ -6,7 +6,11 @@ const propagateMessage = vi.fn();
 const sendMessage = vi.fn();
 const getLiveIframes = vi.fn();
 
+const SHELL_ORIGIN = 'https://shell.example';
+
 vi.mock('@shellui/sdk', () => ({
+  addMessageListener: (...args: unknown[]) => addMessageListener(...args),
+  resolveParentTargetOrigin: () => SHELL_ORIGIN,
   default: {
     addMessageListener,
     propagateMessage,
@@ -38,6 +42,13 @@ const RULES: ContentFrameAuthRule[] = [
   { url: 'https://billing.example/', safeForAuthToken: true },
 ];
 
+type Forward = (message: unknown, event: Partial<MessageEvent>) => void;
+
+/** Event as the SDK passes it for a message sent by the shell (the parent window). */
+function parentEvent(): Partial<MessageEvent> {
+  return { source: window.parent, origin: SHELL_ORIGIN };
+}
+
 describe('setupContentFrameMessagePropagation', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -60,16 +71,12 @@ describe('setupContentFrameMessagePropagation', () => {
     setContentFrameAuthRules(RULES);
     const { isAdminContentFrame } = await import('@/lib/embed');
     vi.mocked(isAdminContentFrame).mockReturnValue(false);
-    vi.stubGlobal('parent', { location: { origin: 'https://shell.example' } });
+    vi.stubGlobal('parent', { location: { origin: SHELL_ORIGIN } });
 
     const { setupContentFrameMessagePropagation } = await import('./propagateToContentFrames');
     setupContentFrameMessagePropagation();
-    const forward = addMessageListener.mock.calls[0][1] as (message: {
-      type: string;
-      payload: unknown;
-      to?: string[];
-    }) => void;
-    forward(message);
+    const forward = addMessageListener.mock.calls[0][1] as Forward;
+    forward(message, parentEvent());
   }
 
   it('registers settings listeners in chrome mode and forwards via sendMessage', async () => {
@@ -145,8 +152,11 @@ describe('setupContentFrameMessagePropagation', () => {
       ['lookalike', iframe('https://files.example.evil/')],
       ['custom', iframe('https://custom.example/#/')],
     ]);
-    const forward = addMessageListener.mock.calls[0][1] as (message: unknown) => void;
-    forward({ type: 'SHELLUI_SETTINGS', payload: { settings: { ...settings } }, to: ['files'] });
+    const forward = addMessageListener.mock.calls[0][1] as Forward;
+    forward(
+      { type: 'SHELLUI_SETTINGS', payload: { settings: { ...settings } }, to: ['files'] },
+      parentEvent(),
+    );
 
     const byUuid = Object.fromEntries(
       sendMessage.mock.calls.map((call) => [call[0].to[0], call[0].payload.settings.storage]),
@@ -186,6 +196,22 @@ describe('setupContentFrameMessagePropagation', () => {
       { user: null, accessToken: null, appearance: { mode: 'light' } },
       { user: null, accessToken: null, appearance: { mode: 'light' } },
     ]);
+  });
+
+  it('ignores settings sent by a child frame', async () => {
+    getLiveIframes.mockReturnValue([['admin', iframe(`${window.location.origin}/#/users`)]]);
+    await forwardInChrome({ type: 'SHELLUI_SETTINGS', payload: { settings } });
+    sendMessage.mockReset();
+    const forward = addMessageListener.mock.calls[0][1] as Forward;
+    forward(
+      { type: 'SHELLUI_SETTINGS', payload: { settings } },
+      { source: {} as MessageEventSource, origin: SHELL_ORIGIN },
+    );
+    forward(
+      { type: 'SHELLUI_SETTINGS', payload: { settings } },
+      { source: window.parent, origin: 'https://child.example' },
+    );
+    expect(sendMessage).not.toHaveBeenCalled();
   });
 
   it('does nothing in content (nested same-origin) frames', async () => {

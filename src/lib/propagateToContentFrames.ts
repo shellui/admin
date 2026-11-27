@@ -1,4 +1,5 @@
 import shellui, { type ShellUIMessage } from '@shellui/sdk';
+import { addParentSettingsListener } from '@/lib/parentSettingsListener';
 import {
   frameSettingsDelivery,
   getContentFrameAuthRules,
@@ -28,8 +29,6 @@ function withFilesStorage(payload: ShellUIMessage['payload'], frameSrc: string) 
   if (!settings) return payload;
   return { ...(payload as object), settings: { ...settings, storage: ownStorage } };
 }
-
-const SETTINGS_MESSAGE_TYPES = ['SHELLUI_SETTINGS', 'SHELLUI_SETTINGS_UPDATED'] as const;
 
 /**
  * The SDK relays a parent message to `message.to` after listeners run, using the
@@ -97,7 +96,5 @@ export function setupContentFrameMessagePropagation(): void {
     forwardSettingsToContentFrames(message);
   };
 
-  for (const type of SETTINGS_MESSAGE_TYPES) {
-    shellui.addMessageListener(type, forward);
-  }
+  addParentSettingsListener(forward);
 }

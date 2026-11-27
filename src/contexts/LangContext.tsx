@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import shellui, { type Settings, type ShellUIMessage } from '@shellui/sdk';
 import i18n from '@/i18n';
+import { addParentSettingsListener } from '@/lib/parentSettingsListener';
 
 type AppLang = 'en' | 'fr';
 
@@ -37,13 +38,7 @@ export function LangProvider({ children }: { children: ReactNode }) {
 
     applyLang(getLangFromSettings(shellui.initialSettings));
 
-    const cleanupUpdated = shellui.addMessageListener('SHELLUI_SETTINGS_UPDATED', handleSettings);
-    const cleanupSettings = shellui.addMessageListener('SHELLUI_SETTINGS', handleSettings);
-
-    return () => {
-      cleanupUpdated();
-      cleanupSettings();
-    };
+    return addParentSettingsListener(handleSettings);
   }, []);
 
   return <LangContext.Provider value={lang}>{children}</LangContext.Provider>;

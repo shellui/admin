@@ -25,7 +25,7 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ### 🔒 Security
 
-- **Access token:** `SHELLUI_SETTINGS` and `SHELLUI_SETTINGS_UPDATED` update the access token only when the message comes from the parent window at the parent origin.
+- **Settings messages:** Every `SHELLUI_SETTINGS` and `SHELLUI_SETTINGS_UPDATED` listener (access token, identity and service URLs, staff and developer flags, theme, language and the embedded-app origin allowlist) now runs only for messages from the parent window at the parent origin. A nested app cannot change them. When the parent origin cannot be resolved, as in Firefox without a referrer, messages are ignored.
 - **Headers:** Responses send `script-src 'self'`, `object-src 'none'`, and `base-uri 'none'`.
 
 ### 🏗 Chore

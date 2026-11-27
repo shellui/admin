@@ -3,7 +3,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useShelluiAuthBackendBaseUrl } from '@/hooks/useShelluiAuthBackendBaseUrl';
 
 const sdk = vi.hoisted(() => {
-  const listeners: { type: string; fn: (message: { payload?: unknown }) => void }[] = [];
+  const listeners: {
+    type: string;
+    fn: (message: { payload?: unknown }, event: unknown) => void;
+  }[] = [];
   return {
     listeners,
     initialSettings: {
@@ -21,7 +24,11 @@ vi.mock('@shellui/sdk', () => ({
       sdk.initialSettings = value;
     },
   },
-  addMessageListener: (type: string, fn: (message: { payload?: unknown }) => void) => {
+  resolveParentTargetOrigin: () => 'https://shell.example',
+  addMessageListener: (
+    type: string,
+    fn: (message: { payload?: unknown }, event: unknown) => void,
+  ) => {
     const entry = { type, fn };
     sdk.listeners.push(entry);
     return () => {
@@ -31,9 +38,16 @@ vi.mock('@shellui/sdk', () => ({
   },
 }));
 
-function emit(type: string, settings: Record<string, unknown>) {
+function emit(
+  type: string,
+  settings: Record<string, unknown>,
+  event: { source?: unknown; origin: string } = {
+    source: window.parent,
+    origin: 'https://shell.example',
+  },
+) {
   for (const entry of sdk.listeners) {
-    if (entry.type === type) entry.fn({ payload: { settings } });
+    if (entry.type === type) entry.fn({ payload: { settings } }, event);
   }
 }
 
@@ -57,5 +71,22 @@ describe('useShelluiAuthBackendBaseUrl', () => {
       emit('SHELLUI_SETTINGS', { authBackendBaseUrl: 'https://identity.other/' });
     });
     expect(result.current).toBe('https://identity.other');
+  });
+
+  it('ignores an authBackendBaseUrl sent by a child frame', () => {
+    const { result } = renderHook(() => useShelluiAuthBackendBaseUrl());
+    act(() => {
+      emit(
+        'SHELLUI_SETTINGS_UPDATED',
+        { authBackendBaseUrl: 'https://attacker.example/' },
+        { source: {}, origin: 'https://child.example' },
+      );
+      emit(
+        'SHELLUI_SETTINGS',
+        { authBackendBaseUrl: 'https://attacker.example/' },
+        { source: window.parent, origin: 'https://child.example' },
+      );
+    });
+    expect(result.current).toBe('http://identity.example');
   });
 });

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import shellui, { addMessageListener } from '@shellui/sdk';
+import shellui from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
 import { getIsStaffFromJwt } from '@/lib/jwtCompany';
+import { addParentSettingsListener } from '@/lib/parentSettingsListener';
 
 export function readIsStaff(settings: Settings | null | undefined): boolean {
   if (settings?.user?.isStaff === true) return true;
@@ -22,11 +23,9 @@ export function useShelluiIsStaff(): boolean {
       setIsStaff(readIsStaff(settings));
     };
 
-    const offSettings = addMessageListener('SHELLUI_SETTINGS', apply);
-    const offUpdated = addMessageListener('SHELLUI_SETTINGS_UPDATED', apply);
+    const off = addParentSettingsListener(apply);
     return () => {
-      offSettings();
-      offUpdated();
+      off();
     };
   }, []);
 

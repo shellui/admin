@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import shellui, { addMessageListener } from '@shellui/sdk';
+import shellui from '@shellui/sdk';
 import type { Settings, SettingsStorage } from '@shellui/sdk';
 import { readDevServiceUrlFromEnv } from '@/lib/devServiceUrl';
 import { normalizeServiceOrigin } from '@/lib/emailServiceUrl';
+import { addParentSettingsListener } from '@/lib/parentSettingsListener';
 
 function readStorage(settings: Settings | null | undefined): SettingsStorage | null {
   const fromShell = settings?.storage ?? null;
@@ -41,11 +42,9 @@ export function useShelluiStorage(): SettingsStorage | null {
       });
     };
 
-    const offSettings = addMessageListener('SHELLUI_SETTINGS', apply);
-    const offUpdated = addMessageListener('SHELLUI_SETTINGS_UPDATED', apply);
+    const off = addParentSettingsListener(apply);
     return () => {
-      offSettings();
-      offUpdated();
+      off();
     };
   }, []);
 

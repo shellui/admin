@@ -1,5 +1,6 @@
-import shellui, { addMessageListener } from '@shellui/sdk';
+import shellui from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
+import { addParentSettingsListener } from '@/lib/parentSettingsListener';
 import { readDevServiceUrlFromEnv } from '@/lib/devServiceUrl';
 import { normalizeServiceOrigin } from '@/lib/emailServiceUrl';
 
@@ -89,12 +90,7 @@ export function hydrateAiServiceUrlFromSdk(): void {
 
 if (typeof window !== 'undefined' && window.parent !== window) {
   rememberAiServiceUrlFromSettings(shellui.initialSettings);
-  addMessageListener('SHELLUI_SETTINGS', (message) => {
-    rememberAiServiceUrlFromSettings(
-      (message.payload as { settings?: Settings } | undefined)?.settings,
-    );
-  });
-  addMessageListener('SHELLUI_SETTINGS_UPDATED', (message) => {
+  addParentSettingsListener((message) => {
     rememberAiServiceUrlFromSettings(
       (message.payload as { settings?: Settings } | undefined)?.settings,
     );

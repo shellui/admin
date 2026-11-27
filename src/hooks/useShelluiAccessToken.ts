@@ -1,15 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import shellui, {
-  addMessageListener,
-  resolveParentTargetOrigin,
-  sendMessageToParent,
-} from '@shellui/sdk';
+import shellui, { sendMessageToParent } from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
 import {
   freshShellAccessToken,
   isSameShellSession,
   setLatestShellAccessToken,
 } from '@/lib/shellAccessToken';
+import { addParentSettingsListener } from '@/lib/parentSettingsListener';
 
 /** Ask the shell again when JWT `exp` is this close, in seconds. */
 export const SHELL_ACCESS_TOKEN_LEEWAY_SECONDS = 90;
@@ -61,25 +58,6 @@ function requestShellSettings(): void {
   });
 }
 
-/** Parent origin for shell messages. Null when this frame cannot name it. */
-function expectedParentOrigin(): string | null {
-  const origin = resolveParentTargetOrigin();
-  if (typeof origin !== 'string') return null;
-  if (origin.length === 0 || origin === '*' || origin === 'null') return null;
-  return origin;
-}
-
-/**
- * True when a settings message comes from `window.parent` and `event.origin`
- * is that parent origin.
- */
-export function isParentShellSettingsMessage(event: MessageEvent | undefined): boolean {
-  if (!event || typeof window === 'undefined') return false;
-  if (event.source !== window.parent) return false;
-  const expected = expectedParentOrigin();
-  return expected !== null && event.origin === expected;
-}
-
 /**
  * Returns the **JWT access token** from this frame's Shellui `Settings.accessToken`.
  *
@@ -104,8 +82,7 @@ export function useShelluiAccessToken(): string | null {
   tokenRef.current = token;
 
   useEffect(() => {
-    const apply = (message: { payload?: unknown }, event: MessageEvent) => {
-      if (!isParentShellSettingsMessage(event)) return;
+    const apply = (message: { payload?: unknown }) => {
       const settings = (message.payload as { settings?: Settings } | undefined)?.settings;
       // Ignore payloads without settings (do not clear the session on unrelated messages).
       if (!settings) return;
@@ -115,8 +92,7 @@ export function useShelluiAccessToken(): string | null {
         return prev === next || isSameShellSession(prev, next) ? prev : next;
       });
     };
-    const offSettings = addMessageListener('SHELLUI_SETTINGS', apply);
-    const offUpdated = addMessageListener('SHELLUI_SETTINGS_UPDATED', apply);
+    const off = addParentSettingsListener(apply);
     requestShellSettings();
 
     const onResume = () => {
@@ -129,8 +105,7 @@ export function useShelluiAccessToken(): string | null {
     window.addEventListener('focus', onResume);
     window.addEventListener('pageshow', onResume);
     return () => {
-      offSettings();
-      offUpdated();
+      off();
       document.removeEventListener('visibilitychange', onResume);
       window.removeEventListener('focus', onResume);
       window.removeEventListener('pageshow', onResume);

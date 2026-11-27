@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import shellui, { addMessageListener } from '@shellui/sdk';
+import shellui from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
 import { readSettingsEmail, type SettingsEmail } from '@/lib/emailServiceUrl';
+import { addParentSettingsListener } from '@/lib/parentSettingsListener';
 
 /**
  * email-service origin from the host shell (`email` in shellui.config),
@@ -24,11 +25,9 @@ export function useShelluiEmail(): SettingsEmail | null {
       });
     };
 
-    const offSettings = addMessageListener('SHELLUI_SETTINGS', apply);
-    const offUpdated = addMessageListener('SHELLUI_SETTINGS_UPDATED', apply);
+    const off = addParentSettingsListener(apply);
     return () => {
-      offSettings();
-      offUpdated();
+      off();
     };
   }, []);
 

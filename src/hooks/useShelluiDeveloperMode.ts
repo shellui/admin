@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import shellui, { addMessageListener } from '@shellui/sdk';
+import shellui from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
+import { addParentSettingsListener } from '@/lib/parentSettingsListener';
 
 export function useShelluiDeveloperMode(): boolean {
   const [enabled, setEnabled] = useState<boolean>(
@@ -8,7 +9,7 @@ export function useShelluiDeveloperMode(): boolean {
   );
 
   useEffect(() => {
-    const off = addMessageListener('SHELLUI_SETTINGS', (message) => {
+    const off = addParentSettingsListener((message) => {
       const settings = (message.payload as { settings?: Settings } | undefined)?.settings;
       setEnabled(settings?.developerFeatures?.enabled ?? false);
     });

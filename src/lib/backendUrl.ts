@@ -1,5 +1,6 @@
-import shellui, { addMessageListener } from '@shellui/sdk';
+import shellui from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
+import { addParentSettingsListener } from '@/lib/parentSettingsListener';
 import { readDevServiceUrlFromEnv } from '@/lib/devServiceUrl';
 
 /** Default identity-service origin in dev when the shell and env omit a URL (Shellui dev stack host port). */
@@ -60,12 +61,7 @@ export function hydrateAuthBackendBaseUrlFromSdk(): void {
 
 if (typeof window !== 'undefined' && window.parent !== window) {
   rememberAuthBackendBaseUrlFromSettings(shellui.initialSettings);
-  addMessageListener('SHELLUI_SETTINGS', (message) => {
-    rememberAuthBackendBaseUrlFromSettings(
-      (message.payload as { settings?: Settings } | undefined)?.settings,
-    );
-  });
-  addMessageListener('SHELLUI_SETTINGS_UPDATED', (message) => {
+  addParentSettingsListener((message) => {
     rememberAuthBackendBaseUrlFromSettings(
       (message.payload as { settings?: Settings } | undefined)?.settings,
     );

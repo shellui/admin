@@ -174,6 +174,8 @@ The image holds no secrets and no region-specific URLs. Identity, email, storage
 | ----------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `FRAME_ANCESTORS` | Yes in production | Space-separated exact origins allowed to embed the app (the dashboard shell of each region). Sets the `frame-ancestors` CSP header. Each entry must be `'self'` or an `http(s)` origin. A bare `*` is refused. When unset, only same-origin framing is allowed. |
 
+Settings messages (`SHELLUI_SETTINGS`, `SHELLUI_SETTINGS_UPDATED`) are handled only through `addParentSettingsListener` in `src/lib/parentSettingsListener.ts`, which accepts the parent window at the parent origin and nothing else. A spec fails if another file subscribes to them directly.
+
 Responses also send `script-src 'self'`, `object-src 'none'`, and `base-uri 'none'`. `frame-ancestors` stays in its own header, set from `FRAME_ANCESTORS` at container start.
 
 Releases are published by `.github/workflows/publish.yml`. It needs the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets (a Read and Write token for the `shellui` namespace). The Docker Hub overview update needs `DOCKERHUB_DESCRIPTION_USERNAME` and `DOCKERHUB_DESCRIPTION_TOKEN`, a personal access token with Read, Write, and Delete, from an account with Admin on the repository. When those description secrets are unset, publish skips the overview and still succeeds. A manual run only moves `latest` when it publishes the highest stable tag.

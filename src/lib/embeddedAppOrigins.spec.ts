@@ -4,7 +4,7 @@ import type { Settings } from '@shellui/sdk';
 const sdk = vi.hoisted(() => ({
   configureMessageSecurity: vi.fn(),
   initialSettings: null as unknown,
-  listeners: new Map<string, (message: { payload?: unknown }) => void>(),
+  listeners: new Map<string, (message: { payload?: unknown }, event: unknown) => void>(),
 }));
 
 // Same contract as the SDK helper: absolute http(s) URLs only, deduped origins.
@@ -15,7 +15,11 @@ vi.mock('@shellui/sdk', () => ({
       return sdk.initialSettings;
     },
   },
-  addMessageListener: (type: string, cb: (message: { payload?: unknown }) => void) => {
+  resolveParentTargetOrigin: () => 'https://shell.example',
+  addMessageListener: (
+    type: string,
+    cb: (message: { payload?: unknown }, event: unknown) => void,
+  ) => {
     sdk.listeners.set(type, cb);
     return () => sdk.listeners.delete(type);
   },
@@ -92,6 +96,8 @@ describe('collectEmbeddedAppOrigins', () => {
   });
 });
 
+const parentEvent = { source: window.parent, origin: 'https://shell.example' };
+
 describe('setupEmbeddedAppMessageSecurity', () => {
   beforeEach(() => {
     sdk.configureMessageSecurity.mockReset();
@@ -107,18 +113,30 @@ describe('setupEmbeddedAppMessageSecurity', () => {
       allowedOrigins: ['https://files.shellui.com'],
     });
 
-    sdk.listeners.get('SHELLUI_SETTINGS_UPDATED')?.({
+    const widened = {
       payload: {
         settings: settings({
           storage: { url: 'https://storage.example.com', filesUrl: 'https://files.example.com' },
         }),
       },
+    };
+    // A child frame (any other source or origin) cannot change the allowlist.
+    sdk.listeners.get('SHELLUI_SETTINGS_UPDATED')?.(widened, {
+      source: {},
+      origin: 'https://shell.example',
     });
+    sdk.listeners.get('SHELLUI_SETTINGS_UPDATED')?.(widened, {
+      source: window.parent,
+      origin: 'https://files.shellui.com',
+    });
+    expect(sdk.configureMessageSecurity).toHaveBeenCalledTimes(1);
+
+    sdk.listeners.get('SHELLUI_SETTINGS_UPDATED')?.(widened, parentEvent);
     expect(sdk.configureMessageSecurity).toHaveBeenLastCalledWith({
       allowedOrigins: ['https://files.example.com'],
     });
 
-    sdk.listeners.get('SHELLUI_SETTINGS')?.({ payload: {} });
+    sdk.listeners.get('SHELLUI_SETTINGS')?.({ payload: {} }, parentEvent);
     expect(sdk.configureMessageSecurity).toHaveBeenCalledTimes(2);
 
     off();
