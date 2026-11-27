@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import shellui from '@shellui/sdk';
+import { getTrustedShellSettings } from '@/lib/trustedShellSettings';
 import type { Settings } from '@shellui/sdk';
 import { addParentSettingsListener } from '@/lib/parentSettingsListener';
 
 export function useShelluiDeveloperMode(): boolean {
   const [enabled, setEnabled] = useState<boolean>(
-    () => shellui.initialSettings?.developerFeatures?.enabled ?? false,
+    () => getTrustedShellSettings()?.developerFeatures?.enabled ?? false,
   );
 
   useEffect(() => {

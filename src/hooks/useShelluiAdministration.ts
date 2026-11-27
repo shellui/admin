@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import shellui from '@shellui/sdk';
 import type { Settings, SettingsAdministration } from '@shellui/sdk';
 import { addParentSettingsListener } from '@/lib/parentSettingsListener';
+import { getTrustedShellSettings } from '@/lib/trustedShellSettings';
 
 function readAdministration(settings: Settings | null | undefined): SettingsAdministration | null {
   return settings?.administration ?? null;
@@ -13,7 +13,7 @@ function readAdministration(settings: Settings | null | undefined): SettingsAdmi
  */
 export function useShelluiAdministration(): SettingsAdministration | null {
   const [administration, setAdministration] = useState<SettingsAdministration | null>(() =>
-    readAdministration(shellui.initialSettings),
+    readAdministration(getTrustedShellSettings()),
   );
 
   useEffect(() => {

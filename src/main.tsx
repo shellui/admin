@@ -8,6 +8,7 @@ import { getAppearanceFromSettings, applyThemeToDocument } from '@/lib/theme';
 import { isEmbeddedInShell } from '@/lib/embed';
 import { hydrateAiServiceUrlFromSdk } from '@/lib/aiServiceUrl';
 import { hydrateAuthBackendBaseUrlFromSdk } from '@/lib/backendUrl';
+import { snapshotTrustedShellSettings, getTrustedShellSettings } from '@/lib/trustedShellSettings';
 import { setupContentFrameMessagePropagation } from '@/lib/propagateToContentFrames';
 import { setupEmbeddedAppMessageSecurity } from '@/lib/embeddedAppOrigins';
 import { StandaloneNotice } from '@/components/StandaloneNotice';
@@ -29,13 +30,15 @@ async function bootstrap() {
   }
 
   await shellui.init();
+  snapshotTrustedShellSettings(shellui.initialSettings);
   setupEmbeddedAppMessageSecurity();
   hydrateAuthBackendBaseUrlFromSdk();
   hydrateAiServiceUrlFromSdk();
   setupContentFrameMessagePropagation();
-  const initialLang = getLangFromSettings(shellui.initialSettings);
+  const trusted = getTrustedShellSettings();
+  const initialLang = getLangFromSettings(trusted);
   await i18n.changeLanguage(initialLang);
-  const initialTheme = getAppearanceFromSettings(shellui.initialSettings);
+  const initialTheme = getAppearanceFromSettings(trusted);
   applyThemeToDocument(initialTheme);
   createRoot(document.getElementById('root')!).render(
     <StrictMode>

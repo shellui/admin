@@ -25,7 +25,7 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ### 🔒 Security
 
-- **Settings messages:** Every `SHELLUI_SETTINGS` and `SHELLUI_SETTINGS_UPDATED` listener (access token, identity and service URLs, staff and developer flags, theme, language and the embedded-app origin allowlist) now runs only for messages from the parent window at the parent origin. A nested app cannot change them. When the parent origin cannot be resolved, as in Firefox without a referrer, messages are ignored.
+- **Settings messages:** Every `SHELLUI_SETTINGS` and `SHELLUI_SETTINGS_UPDATED` listener (access token, identity and service URLs, staff and developer flags, theme, language and the embedded-app origin allowlist) now runs only for messages from the parent window at the parent origin. A nested app cannot change them. When the parent origin cannot be resolved, as in Firefox without a referrer, messages are ignored. The app also pins `@shellui/sdk` 0.8.6, which rejects child settings in an embedded frame, and snapshots settings right after `init()`. Hooks and URL caches seed from that snapshot or from a later parent message, never from the live `shellui.initialSettings` object. The GitHub Pages build still checks out Shellui core `v0.8.1`, so same-origin frames keep `allow-same-origin`.
 - **Headers:** Responses send `script-src 'self'`, `object-src 'none'`, and `base-uri 'none'`.
 
 ### 🏗 Chore

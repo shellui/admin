@@ -1,6 +1,8 @@
 import { addMessageListener } from '@shellui/sdk';
 import type { ShellUIMessage } from '@shellui/sdk';
 import { isParentShellSettingsMessage } from '@/lib/parentOrigin';
+import { applyTrustedShellSettings } from '@/lib/trustedShellSettings';
+import type { Settings } from '@shellui/sdk';
 
 export const SETTINGS_MESSAGE_TYPES = ['SHELLUI_SETTINGS', 'SHELLUI_SETTINGS_UPDATED'] as const;
 
@@ -15,6 +17,8 @@ export type ParentSettingsHandler = (message: ShellUIMessage, event: MessageEven
 export function addParentSettingsListener(handler: ParentSettingsHandler): () => void {
   const guarded: ParentSettingsHandler = (message, event) => {
     if (!isParentShellSettingsMessage(event)) return;
+    const settings = (message.payload as { settings?: Settings } | undefined)?.settings;
+    if (settings) applyTrustedShellSettings(settings);
     handler(message, event);
   };
   const offs = SETTINGS_MESSAGE_TYPES.map((type) => addMessageListener(type, guarded));

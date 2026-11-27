@@ -39,6 +39,7 @@ vi.mock('@shellui/sdk', () => ({
 }));
 
 import { collectEmbeddedAppOrigins, setupEmbeddedAppMessageSecurity } from './embeddedAppOrigins';
+import { snapshotTrustedShellSettings } from '@/lib/trustedShellSettings';
 
 function settings(partial: Record<string, unknown>): Settings {
   return partial as unknown as Settings;
@@ -108,6 +109,7 @@ describe('setupEmbeddedAppMessageSecurity', () => {
     sdk.initialSettings = settings({
       storage: { url: 'https://storage.shellui.com', filesUrl: 'https://files.shellui.com/' },
     });
+    snapshotTrustedShellSettings(sdk.initialSettings as object);
     const off = setupEmbeddedAppMessageSecurity();
     expect(sdk.configureMessageSecurity).toHaveBeenLastCalledWith({
       allowedOrigins: ['https://files.shellui.com'],

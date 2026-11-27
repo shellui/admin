@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import shellui, { sendMessageToParent } from '@shellui/sdk';
+import { sendMessageToParent } from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
 import {
   freshShellAccessToken,
+  getLatestShellAccessToken,
   isSameShellSession,
   setLatestShellAccessToken,
 } from '@/lib/shellAccessToken';
 import { addParentSettingsListener } from '@/lib/parentSettingsListener';
+import { getTrustedShellSettings } from '@/lib/trustedShellSettings';
 
 /** Ask the shell again when JWT `exp` is this close, in seconds. */
 export const SHELL_ACCESS_TOKEN_LEEWAY_SECONDS = 90;
@@ -74,7 +76,8 @@ function requestShellSettings(): void {
  */
 export function useShelluiAccessToken(): string | null {
   const [token, setToken] = useState<string | null>(() => {
-    const initial = shellui.initialSettings?.accessToken ?? null;
+    const seed = getLatestShellAccessToken() ?? getTrustedShellSettings()?.accessToken ?? null;
+    const initial = seed ? freshShellAccessToken(seed) : null;
     setLatestShellAccessToken(initial);
     return initial;
   });

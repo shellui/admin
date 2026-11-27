@@ -5,7 +5,9 @@ import {
   shellAccessTokenRefreshDue,
   useShelluiAccessToken,
 } from '@/hooks/useShelluiAccessToken';
-import { freshShellAccessToken } from '@/lib/shellAccessToken';
+import { freshShellAccessToken, setLatestShellAccessToken } from '@/lib/shellAccessToken';
+import { snapshotTrustedShellSettings } from '@/lib/trustedShellSettings';
+import { hydrateAuthBackendBaseUrlFromSdk, readExplicitAuthBackendBaseUrl } from '@/lib/backendUrl';
 
 const sdk = vi.hoisted(() => {
   const listeners: {
@@ -19,6 +21,10 @@ const sdk = vi.hoisted(() => {
     initialSettings: {
       accessToken: null as string | null,
       user: { id: '1' } as { id: string } | null,
+    } as {
+      accessToken: string | null;
+      user: { id: string } | null;
+      authBackendBaseUrl?: string;
     },
   };
 });
@@ -98,11 +104,17 @@ describe('reconcileShellAccessToken', () => {
 });
 
 describe('useShelluiAccessToken', () => {
+  function seed(settings: typeof sdk.initialSettings) {
+    sdk.initialSettings = settings;
+    snapshotTrustedShellSettings(settings);
+    setLatestShellAccessToken(null);
+  }
+
   beforeEach(() => {
     sdk.listeners.splice(0, sdk.listeners.length);
     sdk.sendMessageToParent.mockClear();
     sdk.expectedOrigin = window.location.origin;
-    sdk.initialSettings = { accessToken: jwtWithExp(Date.now() / 1000 + 3600), user: { id: '1' } };
+    seed({ accessToken: jwtWithExp(Date.now() / 1000 + 3600), user: { id: '1' } });
   });
 
   afterEach(() => {
@@ -120,7 +132,7 @@ describe('useShelluiAccessToken', () => {
   });
 
   it('asks again on show when the token is missing or exp is within 90s', () => {
-    sdk.initialSettings = { accessToken: null, user: null };
+    seed({ accessToken: null, user: null });
     const { result, rerender } = renderHook(() => useShelluiAccessToken());
     sdk.sendMessageToParent.mockClear();
 
@@ -153,7 +165,7 @@ describe('useShelluiAccessToken', () => {
 
   it('sends the renewed token after a resume request without a new hook value', () => {
     const stale = jwtWithExp(Date.now() / 1000 + 30, { sub: '1', company_id: 7 });
-    sdk.initialSettings = { accessToken: stale, user: { id: '1' } };
+    seed({ accessToken: stale, user: { id: '1' } });
     const { result } = renderHook(() => useShelluiAccessToken());
     expect(result.current).toBe(stale);
 
@@ -176,7 +188,7 @@ describe('useShelluiAccessToken', () => {
 
   it('does not re-render consumers on a renewal for the same session', () => {
     const first = jwtWithExp(Date.now() / 1000 + 300, { sub: '1', company_id: 7, iat: 1 });
-    sdk.initialSettings = { accessToken: first, user: { id: '1' } };
+    seed({ accessToken: first, user: { id: '1' } });
     let renders = 0;
     const { result } = renderHook(() => {
       renders += 1;
@@ -201,7 +213,7 @@ describe('useShelluiAccessToken', () => {
 
   it('changes the value when the user, company or roles change', () => {
     const first = jwtWithExp(Date.now() / 1000 + 300, { sub: '1', company_id: 7 });
-    sdk.initialSettings = { accessToken: first, user: { id: '1' } };
+    seed({ accessToken: first, user: { id: '1' } });
     const { result } = renderHook(() => useShelluiAccessToken());
 
     const otherCompany = jwtWithExp(Date.now() / 1000 + 300, { sub: '1', company_id: 8 });
@@ -224,7 +236,7 @@ describe('useShelluiAccessToken', () => {
 
   it('applies settings from the parent window at the expected origin', () => {
     const current = jwtWithExp(Date.now() / 1000 + 3600, { sub: '1', company_id: 7 });
-    sdk.initialSettings = { accessToken: current, user: { id: '1' } };
+    seed({ accessToken: current, user: { id: '1' } });
     const { result } = renderHook(() => useShelluiAccessToken());
     const otherIdentity = jwtWithExp(Date.now() / 1000 + 3600, { sub: '2', company_id: 9 });
     const sameSession = jwtWithExp(Date.now() / 1000 + 7200, {
@@ -272,7 +284,7 @@ describe('useShelluiAccessToken', () => {
 
   it('keeps an omitted access token while user is set, then clears on user null', () => {
     const token = jwtWithExp(Date.now() / 1000 + 3600);
-    sdk.initialSettings = { accessToken: token, user: { id: '1' } };
+    seed({ accessToken: token, user: { id: '1' } });
     const { result } = renderHook(() => useShelluiAccessToken());
 
     act(() => {
@@ -284,5 +296,24 @@ describe('useShelluiAccessToken', () => {
       emit('SHELLUI_SETTINGS_UPDATED', { user: null });
     });
     expect(result.current).toBeNull();
+  });
+
+  it('keeps the token and identity URL when live initialSettings are poisoned after hydrate', () => {
+    const good = jwtWithExp(Date.now() / 1000 + 3600, { sub: 'user-1' });
+    seed({
+      accessToken: good,
+      authBackendBaseUrl: 'https://id.example',
+      user: { id: '1' },
+    });
+    hydrateAuthBackendBaseUrlFromSdk();
+    // A child frame overwrote the live object. The hook must not reread it.
+    sdk.initialSettings = {
+      accessToken: jwtWithExp(Date.now() / 1000 + 3600, { sub: 'attacker' }),
+      authBackendBaseUrl: 'https://evil.example',
+      user: { id: 'attacker' },
+    };
+    const { result } = renderHook(() => useShelluiAccessToken());
+    expect(result.current).toBe(good);
+    expect(readExplicitAuthBackendBaseUrl()).toBe('https://id.example');
   });
 });

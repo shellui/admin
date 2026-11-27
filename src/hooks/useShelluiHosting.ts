@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import shellui from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
 import { readDevServiceUrlFromEnv } from '@/lib/devServiceUrl';
 import { normalizeServiceOrigin } from '@/lib/emailServiceUrl';
 import { addParentSettingsListener } from '@/lib/parentSettingsListener';
+import { getTrustedShellSettings } from '@/lib/trustedShellSettings';
 
 /** Hosting-service connection from host `hosting` in shellui.config.json. */
 export interface SettingsHosting {
@@ -36,7 +36,7 @@ export function isHostingAdminEnabled(hosting: SettingsHosting | null | undefine
  */
 export function useShelluiHosting(): SettingsHosting | null {
   const [hosting, setHosting] = useState<SettingsHosting | null>(() =>
-    readHosting(shellui.initialSettings),
+    readHosting(getTrustedShellSettings()),
   );
 
   useEffect(() => {

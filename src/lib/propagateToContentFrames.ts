@@ -6,9 +6,10 @@ import {
   settingsPayloadForDelivery,
 } from '@/lib/contentFrameAuth';
 import { isAdminContentFrame } from '@/lib/embed';
+import { getTrustedShellSettings } from '@/lib/trustedShellSettings';
 
 /** Admin's own `storage` settings, handed to the Files app it embeds. */
-let ownStorage: unknown = shellui.initialSettings?.storage ?? null;
+let ownStorage: unknown = null;
 
 function originOf(url: unknown): string | null {
   try {
@@ -91,6 +92,7 @@ export function forwardSettingsToContentFrames(message: ShellUIMessage): void {
 export function setupContentFrameMessagePropagation(): void {
   if (typeof window === 'undefined' || window.parent === window) return;
   if (isAdminContentFrame()) return;
+  ownStorage = getTrustedShellSettings()?.storage ?? ownStorage;
 
   const forward = (message: ShellUIMessage) => {
     forwardSettingsToContentFrames(message);

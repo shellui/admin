@@ -1,6 +1,6 @@
-import shellui from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
 import { addParentSettingsListener } from '@/lib/parentSettingsListener';
+import { getTrustedShellSettings } from '@/lib/trustedShellSettings';
 import { readDevServiceUrlFromEnv } from '@/lib/devServiceUrl';
 import { normalizeServiceOrigin } from '@/lib/emailServiceUrl';
 
@@ -53,7 +53,7 @@ function rememberAiServiceUrlFromSettings(settings: Settings | null | undefined)
 /** Explicit ai-service URL from this frame's shell settings, with no Vite fallback. */
 export function readExplicitAiServiceUrl(): string | null {
   return (
-    aiServiceUrlFromShellMessages ?? readSettingsAiService(shellui.initialSettings)?.url ?? null
+    aiServiceUrlFromShellMessages ?? readSettingsAiService(getTrustedShellSettings())?.url ?? null
   );
 }
 
@@ -85,11 +85,10 @@ export function requireAiServiceBaseUrl(): string {
 }
 
 export function hydrateAiServiceUrlFromSdk(): void {
-  rememberAiServiceUrlFromSettings(shellui.initialSettings);
+  rememberAiServiceUrlFromSettings(getTrustedShellSettings());
 }
 
 if (typeof window !== 'undefined' && window.parent !== window) {
-  rememberAiServiceUrlFromSettings(shellui.initialSettings);
   addParentSettingsListener((message) => {
     rememberAiServiceUrlFromSettings(
       (message.payload as { settings?: Settings } | undefined)?.settings,

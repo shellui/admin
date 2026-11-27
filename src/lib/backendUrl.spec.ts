@@ -6,6 +6,7 @@ import {
   hydrateAuthBackendBaseUrlFromSdk,
   resolveAuthBackendBaseUrl,
 } from '@/lib/backendUrl';
+import { snapshotTrustedShellSettings } from '@/lib/trustedShellSettings';
 
 const prod = { dev: false };
 const dev = { dev: true };
@@ -51,6 +52,7 @@ describe('getAuthBackendBaseUrl', () => {
       ...previous,
       authBackendBaseUrl: 'https://id.example/',
     } as typeof previous;
+    snapshotTrustedShellSettings(shellui.initialSettings);
     hydrateAuthBackendBaseUrlFromSdk();
     expect(getAuthBackendBaseUrl()).toBe('https://id.example');
     shellui.initialSettings = previous;

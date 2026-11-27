@@ -3,6 +3,7 @@ import type { Settings } from '@shellui/sdk';
 import { addParentSettingsListener } from '@/lib/parentSettingsListener';
 import { readIsStaff } from '@/hooks/useShelluiIsStaff';
 import { resolveAdminAppUrl } from '@/lib/resolveAdminAppUrl';
+import { getTrustedShellSettings } from '@/lib/trustedShellSettings';
 
 /**
  * URLs of the cross-origin apps the admin chrome embeds and talks to over postMessage.
@@ -46,7 +47,7 @@ function applyEmbeddedAppMessageSecurity(settings: Settings | null | undefined):
  * dropped and the Files page stays blank.
  */
 export function setupEmbeddedAppMessageSecurity(): () => void {
-  applyEmbeddedAppMessageSecurity(shellui.initialSettings);
+  applyEmbeddedAppMessageSecurity(getTrustedShellSettings());
   // Only the parent shell may change the allowlist. A child frame cannot widen it.
   return addParentSettingsListener((message) => {
     const settings = (message.payload as { settings?: Settings } | undefined)?.settings;

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import shellui from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
 import { readSettingsEmail, type SettingsEmail } from '@/lib/emailServiceUrl';
 import { addParentSettingsListener } from '@/lib/parentSettingsListener';
+import { getTrustedShellSettings } from '@/lib/trustedShellSettings';
 
 /**
  * email-service origin from the host shell (`email` in shellui.config),
@@ -11,7 +11,7 @@ import { addParentSettingsListener } from '@/lib/parentSettingsListener';
  */
 export function useShelluiEmail(): SettingsEmail | null {
   const [email, setEmail] = useState<SettingsEmail | null>(() =>
-    readSettingsEmail(shellui.initialSettings),
+    readSettingsEmail(getTrustedShellSettings()),
   );
 
   useEffect(() => {

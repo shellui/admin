@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import shellui from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
 import { readSettingsAiService, type SettingsAiService } from '@/lib/aiServiceUrl';
 import { addParentSettingsListener } from '@/lib/parentSettingsListener';
+import { getTrustedShellSettings } from '@/lib/trustedShellSettings';
 
 /**
  * ai-service origin from the host shell (`aiService` in shellui.config),
@@ -11,7 +11,7 @@ import { addParentSettingsListener } from '@/lib/parentSettingsListener';
  */
 export function useShelluiAiService(): SettingsAiService | null {
   const [aiService, setAiService] = useState<SettingsAiService | null>(() =>
-    readSettingsAiService(shellui.initialSettings),
+    readSettingsAiService(getTrustedShellSettings()),
   );
 
   useEffect(() => {
