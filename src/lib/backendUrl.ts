@@ -23,6 +23,11 @@ function normalizeBaseUrl(raw: string | null | undefined): string | null {
  */
 let authBackendBaseUrlFromShellMessages: string | null = null;
 
+/** Test-only. Clears the in-memory URL so reads fall back to the trusted snapshot. */
+export function resetAuthBackendBaseUrlCache(): void {
+  authBackendBaseUrlFromShellMessages = null;
+}
+
 function rememberAuthBackendBaseUrlFromSettings(settings: Settings | null | undefined): void {
   const next = normalizeBaseUrl(settings?.authBackendBaseUrl ?? undefined);
   if (next) {

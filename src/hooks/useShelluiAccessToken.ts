@@ -3,12 +3,13 @@ import { sendMessageToParent } from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
 import {
   freshShellAccessToken,
-  getLatestShellAccessToken,
   isSameShellSession,
   setLatestShellAccessToken,
 } from '@/lib/shellAccessToken';
 import { addParentSettingsListener } from '@/lib/parentSettingsListener';
-import { getTrustedShellSettings } from '@/lib/trustedShellSettings';
+import { getTrustedShellSettings, reconcileShellAccessToken } from '@/lib/trustedShellSettings';
+
+export { reconcileShellAccessToken };
 
 /** Ask the shell again when JWT `exp` is this close, in seconds. */
 export const SHELL_ACCESS_TOKEN_LEEWAY_SECONDS = 90;
@@ -38,17 +39,6 @@ export function shellAccessTokenRefreshDue(
   return exp - nowSeconds <= SHELL_ACCESS_TOKEN_LEEWAY_SECONDS;
 }
 
-/**
- * Keep the previous token when a settings payload omits `accessToken` while `user` is still set.
- * A payload with `user: null` and no token clears it.
- */
-export function reconcileShellAccessToken(prev: string | null, settings: Settings): string | null {
-  const incoming = settings.accessToken;
-  if (typeof incoming === 'string' && incoming.length > 0) return incoming;
-  if (settings.user === null) return null;
-  return prev;
-}
-
 function freshShellAccessTokenOrNull(token: string | null): string | null {
   return token ? freshShellAccessToken(token) : null;
 }
@@ -76,8 +66,7 @@ function requestShellSettings(): void {
  */
 export function useShelluiAccessToken(): string | null {
   const [token, setToken] = useState<string | null>(() => {
-    const seed = getLatestShellAccessToken() ?? getTrustedShellSettings()?.accessToken ?? null;
-    const initial = seed ? freshShellAccessToken(seed) : null;
+    const initial = getTrustedShellSettings()?.accessToken ?? null;
     setLatestShellAccessToken(initial);
     return initial;
   });

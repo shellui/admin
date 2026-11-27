@@ -7,7 +7,12 @@ import {
 } from '@/hooks/useShelluiAccessToken';
 import { freshShellAccessToken, setLatestShellAccessToken } from '@/lib/shellAccessToken';
 import { snapshotTrustedShellSettings } from '@/lib/trustedShellSettings';
-import { hydrateAuthBackendBaseUrlFromSdk, readExplicitAuthBackendBaseUrl } from '@/lib/backendUrl';
+import { addParentSettingsListener } from '@/lib/parentSettingsListener';
+import {
+  hydrateAuthBackendBaseUrlFromSdk,
+  readExplicitAuthBackendBaseUrl,
+  resetAuthBackendBaseUrlCache,
+} from '@/lib/backendUrl';
 
 const sdk = vi.hoisted(() => {
   const listeners: {
@@ -315,5 +320,54 @@ describe('useShelluiAccessToken', () => {
     const { result } = renderHook(() => useShelluiAccessToken());
     expect(result.current).toBe(good);
     expect(readExplicitAuthBackendBaseUrl()).toBe('https://id.example');
+  });
+
+  it('reads the identity URL from the snapshot when the shell-message cache is empty', () => {
+    seed({
+      accessToken: jwtWithExp(Date.now() / 1000 + 3600, { sub: 'user-1' }),
+      authBackendBaseUrl: 'https://id.example',
+      user: { id: '1' },
+    });
+    resetAuthBackendBaseUrlCache();
+    sdk.initialSettings = {
+      accessToken: jwtWithExp(Date.now() / 1000 + 3600, { sub: 'attacker' }),
+      authBackendBaseUrl: 'https://evil.example',
+      user: { id: 'attacker' },
+    };
+    expect(readExplicitAuthBackendBaseUrl()).toBe('https://id.example');
+  });
+
+  it('uses a parent refresh that arrived while no hook was mounted', () => {
+    const first = jwtWithExp(Date.now() / 1000 + 60, { sub: '1', company_id: 7 });
+    const renewed = jwtWithExp(Date.now() / 1000 + 3600, { sub: '1', company_id: 7 });
+    seed({ accessToken: first, user: { id: '1' } });
+    const { result, unmount } = renderHook(() => useShelluiAccessToken());
+    expect(result.current).toBe(first);
+    unmount();
+
+    const off = addParentSettingsListener(() => {});
+    act(() => {
+      emit('SHELLUI_SETTINGS_UPDATED', { user: { id: '1' }, accessToken: renewed });
+    });
+    off();
+
+    const { result: remounted } = renderHook(() => useShelluiAccessToken());
+    expect(remounted.current).toBe(renewed);
+  });
+
+  it('clears the token after a logout that arrived while no hook was mounted', () => {
+    const token = jwtWithExp(Date.now() / 1000 + 3600, { sub: '1' });
+    seed({ accessToken: token, user: { id: '1' } });
+    const { unmount } = renderHook(() => useShelluiAccessToken());
+    unmount();
+
+    const off = addParentSettingsListener(() => {});
+    act(() => {
+      emit('SHELLUI_SETTINGS', { user: null });
+    });
+    off();
+
+    const { result } = renderHook(() => useShelluiAccessToken());
+    expect(result.current).toBeNull();
   });
 });

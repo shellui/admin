@@ -1,6 +1,17 @@
 import type { Settings } from '@shellui/sdk';
 
 /**
+ * Keep the previous token when a settings payload omits `accessToken` while `user` is still set.
+ * A payload with `user: null` and no token clears it. Same rule as the SDK's embedded reconcile.
+ */
+export function reconcileShellAccessToken(prev: string | null, settings: Settings): string | null {
+  const incoming = settings.accessToken;
+  if (typeof incoming === 'string' && incoming.length > 0) return incoming;
+  if (settings.user === null) return null;
+  return prev;
+}
+
+/**
  * Trusted shell settings for this frame.
  *
  * SDK 0.8.1 could write `shellui.initialSettings` from an allowlisted child frame.
@@ -22,7 +33,12 @@ export function snapshotTrustedShellSettings(settings: Settings | null | undefin
 
 /** Parent settings payload. Missing fields keep their previous trusted values. */
 export function applyTrustedShellSettings(settings: Settings): void {
-  snapshot = { ...(snapshot ?? {}), ...settings };
+  const prev = snapshot;
+  snapshot = {
+    ...(prev ?? {}),
+    ...settings,
+    accessToken: reconcileShellAccessToken(prev?.accessToken ?? null, settings),
+  };
   captured = true;
 }
 
