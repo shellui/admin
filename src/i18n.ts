@@ -4434,6 +4434,8 @@ export const i18nInit = i18n.use(initReactI18next).init({
   resources,
   lng: 'en',
   fallbackLng: 'en',
+  // `emailBroadcastDelivery_` is intentionally empty (no delivery mode).
+  returnEmptyString: true,
   interpolation: {
     escapeValue: false,
   },

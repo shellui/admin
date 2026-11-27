@@ -21,6 +21,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog-emoji/master/CHANGELOG.md
 -->
 
+## [Unreleased]
+
+### 🏗 Chore
+
+- **Dependencies:** i18next 27 with react-i18next 18, TypeScript 5.9, @types/node 26, react-email 6.11.17, @hookform/resolvers 7.0.9, Vite 6.4.6 and other minor updates. The email error helpers take i18next's `TFunction`. `returnEmptyString: true` keeps the intentionally empty `emailBroadcastDelivery_` label empty.
+- **Docker:** Node 26.13.1 (current LTS) for the build and dev stages, `.nvmrc` and CI. nginx-unprivileged 1.31.
+
 ## [0.11.2] - 2026-11-25
 
 ### 🐛 Bug Fixes

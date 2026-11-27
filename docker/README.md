@@ -8,7 +8,7 @@ nginx in this image serves the static admin build. It stores no secrets and no s
 
 The image includes:
 
-- **Base**: `nginxinc/nginx-unprivileged:1.29-alpine-slim`
+- **Base**: `nginxinc/nginx-unprivileged:1.31-alpine-slim`
 - **Port**: `8080`
 - **Entrypoint**: `/docker-entrypoint.sh`, which runs `/docker-entrypoint.d/40-shellui-frame-ancestors.sh` before `nginx`
 - **User**: `101` (non-root)
