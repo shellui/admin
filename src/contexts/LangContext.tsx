@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import shellui, { type Settings, type ShellUIMessage } from '@shellui/sdk';
+import { type Settings, type ShellUIMessage } from '@shellui/sdk';
 import i18n from '@/i18n';
+import { addParentSettingsListener } from '@/lib/parentSettingsListener';
+import { getTrustedShellSettings } from '@/lib/trustedShellSettings';
 
 type AppLang = 'en' | 'fr';
 
@@ -18,7 +20,7 @@ function settingsFromMessage(message: ShellUIMessage): Settings | undefined {
 }
 
 export function LangProvider({ children }: { children: ReactNode }) {
-  const [lang, setLang] = useState<AppLang>(() => getLangFromSettings(shellui.initialSettings));
+  const [lang, setLang] = useState<AppLang>(() => getLangFromSettings(getTrustedShellSettings()));
 
   useEffect(() => {
     const applyLang = (newLang: AppLang) => {
@@ -35,15 +37,9 @@ export function LangProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    applyLang(getLangFromSettings(shellui.initialSettings));
+    applyLang(getLangFromSettings(getTrustedShellSettings()));
 
-    const cleanupUpdated = shellui.addMessageListener('SHELLUI_SETTINGS_UPDATED', handleSettings);
-    const cleanupSettings = shellui.addMessageListener('SHELLUI_SETTINGS', handleSettings);
-
-    return () => {
-      cleanupUpdated();
-      cleanupSettings();
-    };
+    return addParentSettingsListener(handleSettings);
   }, []);
 
   return <LangContext.Provider value={lang}>{children}</LangContext.Provider>;

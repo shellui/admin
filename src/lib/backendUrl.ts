@@ -1,5 +1,6 @@
-import shellui, { addMessageListener } from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
+import { addParentSettingsListener } from '@/lib/parentSettingsListener';
+import { getTrustedShellSettings } from '@/lib/trustedShellSettings';
 import { readDevServiceUrlFromEnv } from '@/lib/devServiceUrl';
 
 /** Default identity-service origin in dev when the shell and env omit a URL (Shellui dev stack host port). */
@@ -22,6 +23,11 @@ function normalizeBaseUrl(raw: string | null | undefined): string | null {
  */
 let authBackendBaseUrlFromShellMessages: string | null = null;
 
+/** Test-only. Clears the in-memory URL so reads fall back to the trusted snapshot. */
+export function resetAuthBackendBaseUrlCache(): void {
+  authBackendBaseUrlFromShellMessages = null;
+}
+
 function rememberAuthBackendBaseUrlFromSettings(settings: Settings | null | undefined): void {
   const next = normalizeBaseUrl(settings?.authBackendBaseUrl ?? undefined);
   if (next) {
@@ -33,7 +39,7 @@ function rememberAuthBackendBaseUrlFromSettings(settings: Settings | null | unde
 export function readExplicitAuthBackendBaseUrl(): string | null {
   return (
     authBackendBaseUrlFromShellMessages ??
-    normalizeBaseUrl(shellui.initialSettings?.authBackendBaseUrl)
+    normalizeBaseUrl(getTrustedShellSettings()?.authBackendBaseUrl)
   );
 }
 
@@ -55,17 +61,11 @@ export function resolveAuthBackendBaseUrl(
 
 /** Call after `await shellui.init()` so API modules see the shell `backend.url` before the first fetch. */
 export function hydrateAuthBackendBaseUrlFromSdk(): void {
-  rememberAuthBackendBaseUrlFromSettings(shellui.initialSettings);
+  rememberAuthBackendBaseUrlFromSettings(getTrustedShellSettings());
 }
 
 if (typeof window !== 'undefined' && window.parent !== window) {
-  rememberAuthBackendBaseUrlFromSettings(shellui.initialSettings);
-  addMessageListener('SHELLUI_SETTINGS', (message) => {
-    rememberAuthBackendBaseUrlFromSettings(
-      (message.payload as { settings?: Settings } | undefined)?.settings,
-    );
-  });
-  addMessageListener('SHELLUI_SETTINGS_UPDATED', (message) => {
+  addParentSettingsListener((message) => {
     rememberAuthBackendBaseUrlFromSettings(
       (message.payload as { settings?: Settings } | undefined)?.settings,
     );

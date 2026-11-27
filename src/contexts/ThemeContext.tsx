@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import shellui from '@shellui/sdk';
+import { addParentSettingsListener } from '@/lib/parentSettingsListener';
+import { getTrustedShellSettings } from '@/lib/trustedShellSettings';
 import { getAppearanceFromPayload, applyThemeToDocument } from '@/lib/theme';
 
 const ThemeContext = createContext<import('@shellui/sdk').Appearance | null>(null);
@@ -21,7 +22,7 @@ export function ThemeProvider({
   children: ReactNode;
 }) {
   const [appearance, setAppearance] = useState(
-    () => initialAppearance ?? shellui.initialSettings?.appearance ?? null,
+    () => initialAppearance ?? getTrustedShellSettings()?.appearance ?? null,
   );
 
   useEffect(() => {
@@ -38,15 +39,9 @@ export function ThemeProvider({
       }
     };
 
-    apply(initialAppearance ?? shellui.initialSettings?.appearance ?? null);
+    apply(initialAppearance ?? getTrustedShellSettings()?.appearance ?? null);
 
-    const cleanupUpdated = shellui.addMessageListener('SHELLUI_SETTINGS_UPDATED', handleSettings);
-    const cleanupSettings = shellui.addMessageListener('SHELLUI_SETTINGS', handleSettings);
-
-    return () => {
-      cleanupUpdated();
-      cleanupSettings();
-    };
+    return addParentSettingsListener(handleSettings);
   }, [initialAppearance]);
 
   return <ThemeContext.Provider value={appearance}>{children}</ThemeContext.Provider>;

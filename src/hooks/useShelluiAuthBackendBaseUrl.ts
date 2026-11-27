@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { addMessageListener } from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
 import { readExplicitAuthBackendBaseUrl, resolveAuthBackendBaseUrl } from '@/lib/backendUrl';
+import { addParentSettingsListener } from '@/lib/parentSettingsListener';
 
 function normalizeExplicit(raw: string | null | undefined): string | null {
   if (typeof raw !== 'string' || !raw.trim()) return null;
@@ -24,11 +24,9 @@ export function useShelluiAuthBackendBaseUrl(): string | null {
       if (next) setExplicit(next);
     };
 
-    const offSettings = addMessageListener('SHELLUI_SETTINGS', apply);
-    const offUpdated = addMessageListener('SHELLUI_SETTINGS_UPDATED', apply);
+    const off = addParentSettingsListener(apply);
     return () => {
-      offSettings();
-      offUpdated();
+      off();
     };
   }, []);
 

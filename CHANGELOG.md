@@ -23,6 +23,11 @@ See for sample https://raw.githubusercontent.com/favoloso/conventional-changelog
 
 ## [Unreleased]
 
+### 🔒 Security
+
+- **Settings messages:** Every `SHELLUI_SETTINGS` and `SHELLUI_SETTINGS_UPDATED` listener (access token, identity and service URLs, staff and developer flags, theme, language and the embedded-app origin allowlist) now runs only for messages from the parent window at the parent origin. A nested app cannot change them. When the parent origin cannot be resolved, as in Firefox without a referrer, messages are ignored. The app also pins `@shellui/sdk` 0.8.6, which rejects child settings in an embedded frame, and snapshots settings right after `init()`. Hooks and URL caches seed from that snapshot or from a later parent message, never from the live `shellui.initialSettings` object. A parent refresh or logout is applied to the snapshot with the SDK token-reconcile rule, so a page that mounts later still sees the new token or a cleared session. The GitHub Pages build still checks out Shellui core `v0.8.1`, so same-origin frames keep `allow-same-origin`.
+- **Headers:** Responses send `script-src 'self'`, `object-src 'none'`, and `base-uri 'none'`.
+
 ### 🏗 Chore
 
 - **Dependencies:** i18next 27 with react-i18next 18, TypeScript 5.9, @types/node 26, react-email 6.11.17, @hookform/resolvers 7.0.9, Tiptap 3.35.0 (pinned to match the copy `@react-email/editor` pulls in, so one `@tiptap/core` ships), Vite 6.4.6 and other minor updates. The email error helpers take i18next's `TFunction`. `returnEmptyString: true` (i18next 27 defaults it to false) keeps the v24 behavior, so the intentionally empty `emailBroadcastDelivery_` label stays empty. A test fails if more than one `@tiptap/core` is resolved.

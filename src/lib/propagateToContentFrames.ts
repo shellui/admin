@@ -1,13 +1,15 @@
 import shellui, { type ShellUIMessage } from '@shellui/sdk';
+import { addParentSettingsListener } from '@/lib/parentSettingsListener';
 import {
   frameSettingsDelivery,
   getContentFrameAuthRules,
   settingsPayloadForDelivery,
 } from '@/lib/contentFrameAuth';
 import { isAdminContentFrame } from '@/lib/embed';
+import { getTrustedShellSettings } from '@/lib/trustedShellSettings';
 
 /** Admin's own `storage` settings, handed to the Files app it embeds. */
-let ownStorage: unknown = shellui.initialSettings?.storage ?? null;
+let ownStorage: unknown = null;
 
 function originOf(url: unknown): string | null {
   try {
@@ -28,8 +30,6 @@ function withFilesStorage(payload: ShellUIMessage['payload'], frameSrc: string) 
   if (!settings) return payload;
   return { ...(payload as object), settings: { ...settings, storage: ownStorage } };
 }
-
-const SETTINGS_MESSAGE_TYPES = ['SHELLUI_SETTINGS', 'SHELLUI_SETTINGS_UPDATED'] as const;
 
 /**
  * The SDK relays a parent message to `message.to` after listeners run, using the
@@ -92,12 +92,11 @@ export function forwardSettingsToContentFrames(message: ShellUIMessage): void {
 export function setupContentFrameMessagePropagation(): void {
   if (typeof window === 'undefined' || window.parent === window) return;
   if (isAdminContentFrame()) return;
+  ownStorage = getTrustedShellSettings()?.storage ?? ownStorage;
 
   const forward = (message: ShellUIMessage) => {
     forwardSettingsToContentFrames(message);
   };
 
-  for (const type of SETTINGS_MESSAGE_TYPES) {
-    shellui.addMessageListener(type, forward);
-  }
+  addParentSettingsListener(forward);
 }

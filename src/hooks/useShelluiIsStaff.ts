@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import shellui, { addMessageListener } from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
 import { getIsStaffFromJwt } from '@/lib/jwtCompany';
+import { addParentSettingsListener } from '@/lib/parentSettingsListener';
+import { getTrustedShellSettings } from '@/lib/trustedShellSettings';
 
 export function readIsStaff(settings: Settings | null | undefined): boolean {
   if (settings?.user?.isStaff === true) return true;
@@ -14,7 +15,7 @@ export function readIsStaff(settings: Settings | null | undefined): boolean {
  * Whether the signed-in user is staff (`settings.user.isStaff`, with JWT fallback).
  */
 export function useShelluiIsStaff(): boolean {
-  const [isStaff, setIsStaff] = useState<boolean>(() => readIsStaff(shellui.initialSettings));
+  const [isStaff, setIsStaff] = useState<boolean>(() => readIsStaff(getTrustedShellSettings()));
 
   useEffect(() => {
     const apply = (message: { payload?: unknown }) => {
@@ -22,11 +23,9 @@ export function useShelluiIsStaff(): boolean {
       setIsStaff(readIsStaff(settings));
     };
 
-    const offSettings = addMessageListener('SHELLUI_SETTINGS', apply);
-    const offUpdated = addMessageListener('SHELLUI_SETTINGS_UPDATED', apply);
+    const off = addParentSettingsListener(apply);
     return () => {
-      offSettings();
-      offUpdated();
+      off();
     };
   }, []);
 

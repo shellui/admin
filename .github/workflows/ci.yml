@@ -30,8 +30,9 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: shellui/shellui
-          # Keep in step with @shellui/sdk in package.json. Core 0.8.2 drops
-          # allow-same-origin for same-origin frames, which breaks admin content frames.
+          # ContentView comes from this core checkout. Stay on v0.8.1: core 0.8.2
+          # drops allow-same-origin for same-origin frames, which breaks admin
+          # content frames. The published @shellui/sdk remains 0.8.6.
           ref: v0.8.1
           path: shellui
 
@@ -151,6 +152,9 @@ jobs:
           curl -fsS http://127.0.0.1:8080/health
           curl -fsS http://127.0.0.1:8080/some/deep/route | grep -q '<div id="root">'
           curl -fsSI http://127.0.0.1:8080/ | grep -qi "frame-ancestors https://dashboard.example.com https://admin.example.com"
+          curl -fsSI http://127.0.0.1:8080/ | grep -qi "script-src 'self'"
+          curl -fsSI http://127.0.0.1:8080/ | grep -qi "object-src 'none'"
+          curl -fsSI http://127.0.0.1:8080/ | grep -qi "base-uri 'none'"
           test "$(docker inspect -f '{{.Config.User}}' shellui-admin:ci)" = "101"
           if docker run --rm -e FRAME_ANCESTORS='*' shellui-admin:ci; then
             echo '::error::FRAME_ANCESTORS=* must be refused'

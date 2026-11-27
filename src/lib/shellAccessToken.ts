@@ -47,6 +47,10 @@ export function isSameShellSession(prev: string | null, next: string | null): bo
   return a !== null && a === shellAccessTokenIdentity(next);
 }
 
+export function getLatestShellAccessToken(): string | null {
+  return latest;
+}
+
 export function setLatestShellAccessToken(token: string | null): void {
   const changed = token !== latest;
   latest = token;

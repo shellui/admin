@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import shellui, { addMessageListener } from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
 import { readSettingsAiService, type SettingsAiService } from '@/lib/aiServiceUrl';
+import { addParentSettingsListener } from '@/lib/parentSettingsListener';
+import { getTrustedShellSettings } from '@/lib/trustedShellSettings';
 
 /**
  * ai-service origin from the host shell (`aiService` in shellui.config),
@@ -10,7 +11,7 @@ import { readSettingsAiService, type SettingsAiService } from '@/lib/aiServiceUr
  */
 export function useShelluiAiService(): SettingsAiService | null {
   const [aiService, setAiService] = useState<SettingsAiService | null>(() =>
-    readSettingsAiService(shellui.initialSettings),
+    readSettingsAiService(getTrustedShellSettings()),
   );
 
   useEffect(() => {
@@ -24,11 +25,9 @@ export function useShelluiAiService(): SettingsAiService | null {
       });
     };
 
-    const offSettings = addMessageListener('SHELLUI_SETTINGS', apply);
-    const offUpdated = addMessageListener('SHELLUI_SETTINGS_UPDATED', apply);
+    const off = addParentSettingsListener(apply);
     return () => {
-      offSettings();
-      offUpdated();
+      off();
     };
   }, []);
 

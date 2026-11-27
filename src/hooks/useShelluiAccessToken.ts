@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import shellui, { addMessageListener, sendMessageToParent } from '@shellui/sdk';
+import { sendMessageToParent } from '@shellui/sdk';
 import type { Settings } from '@shellui/sdk';
 import {
   freshShellAccessToken,
   isSameShellSession,
   setLatestShellAccessToken,
 } from '@/lib/shellAccessToken';
+import { addParentSettingsListener } from '@/lib/parentSettingsListener';
+import { getTrustedShellSettings, reconcileShellAccessToken } from '@/lib/trustedShellSettings';
+
+export { reconcileShellAccessToken };
 
 /** Ask the shell again when JWT `exp` is this close, in seconds. */
 export const SHELL_ACCESS_TOKEN_LEEWAY_SECONDS = 90;
@@ -35,17 +39,6 @@ export function shellAccessTokenRefreshDue(
   return exp - nowSeconds <= SHELL_ACCESS_TOKEN_LEEWAY_SECONDS;
 }
 
-/**
- * Keep the previous token when a settings payload omits `accessToken` while `user` is still set.
- * A payload with `user: null` and no token clears it.
- */
-export function reconcileShellAccessToken(prev: string | null, settings: Settings): string | null {
-  const incoming = settings.accessToken;
-  if (typeof incoming === 'string' && incoming.length > 0) return incoming;
-  if (settings.user === null) return null;
-  return prev;
-}
-
 function freshShellAccessTokenOrNull(token: string | null): string | null {
   return token ? freshShellAccessToken(token) : null;
 }
@@ -62,7 +55,8 @@ function requestShellSettings(): void {
  *
  * The shell copies that frame's session token into settings. Admin sends it as
  * `Authorization: Bearer` and does not read a token from any other source.
- * Value is updated when `SHELLUI_SETTINGS` / `SHELLUI_SETTINGS_UPDATED` arrives (e.g. refresh).
+ * Value is updated when `SHELLUI_SETTINGS` / `SHELLUI_SETTINGS_UPDATED` arrives from
+ * `window.parent` at the parent origin (e.g. refresh).
  * After subscribe, and again when the tab is shown with a missing or soon-expiring token, this
  * posts `SHELLUI_SETTINGS_REQUESTED` so a dropped shell push can be replaced.
  *
@@ -72,7 +66,7 @@ function requestShellSettings(): void {
  */
 export function useShelluiAccessToken(): string | null {
   const [token, setToken] = useState<string | null>(() => {
-    const initial = shellui.initialSettings?.accessToken ?? null;
+    const initial = getTrustedShellSettings()?.accessToken ?? null;
     setLatestShellAccessToken(initial);
     return initial;
   });
@@ -90,8 +84,7 @@ export function useShelluiAccessToken(): string | null {
         return prev === next || isSameShellSession(prev, next) ? prev : next;
       });
     };
-    const offSettings = addMessageListener('SHELLUI_SETTINGS', apply);
-    const offUpdated = addMessageListener('SHELLUI_SETTINGS_UPDATED', apply);
+    const off = addParentSettingsListener(apply);
     requestShellSettings();
 
     const onResume = () => {
@@ -104,8 +97,7 @@ export function useShelluiAccessToken(): string | null {
     window.addEventListener('focus', onResume);
     window.addEventListener('pageshow', onResume);
     return () => {
-      offSettings();
-      offUpdated();
+      off();
       document.removeEventListener('visibilitychange', onResume);
       window.removeEventListener('focus', onResume);
       window.removeEventListener('pageshow', onResume);
